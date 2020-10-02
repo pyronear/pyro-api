@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import json
-import pickle
 import requests
 
 from pprint import pprint
