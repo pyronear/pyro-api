@@ -8,4 +8,5 @@ clean:
 up:
 	python manage.py makemigrations
 	python manage.py migrate
+	python manage.py migrate --run-syncdb
 	gunicorn --timeout 30 --workers $(WORKERS) -b 127.0.0.1:8000 pyronear.wsgi:application
