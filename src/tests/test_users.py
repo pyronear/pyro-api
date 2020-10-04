@@ -48,7 +48,7 @@ def test_get_user_incorrect_id(test_app, monkeypatch):
 
     response = test_app.get("/users/999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["detail"] == "Entry not found"
 
     response = test_app.get("/users/0")
     assert response.status_code == 422
@@ -134,7 +134,7 @@ def test_remove_note_incorrect_id(test_app, monkeypatch):
 
     response = test_app.delete("/users/999/")
     assert response.status_code == 404
-    assert response.json()["detail"] == "User not found"
+    assert response.json()["detail"] == "Entry not found"
 
     response = test_app.delete("/users/0/")
     assert response.status_code == 422
