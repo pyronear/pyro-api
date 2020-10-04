@@ -1,4 +1,4 @@
-name: django-project
+name: fastapi-project
 
 on: push
 
