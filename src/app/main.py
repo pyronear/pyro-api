@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
 from app import config as cfg
-from app.api import ping, users, sites, events, devices, media, installations, alerts
+from app.api.routes import ping, users, sites, events, devices, media, installations, alerts
 from app.db import engine, metadata, database
 
 metadata.create_all(engine)
