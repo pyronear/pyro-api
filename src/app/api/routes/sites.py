@@ -7,6 +7,7 @@ from app.api.schemas import SiteOut, SiteIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=SiteOut, status_code=201)
 async def create_site(payload: SiteIn):
     return await routing.create_entry(sites, payload)

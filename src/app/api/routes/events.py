@@ -7,6 +7,7 @@ from app.api.schemas import EventOut, EventIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=EventOut, status_code=201)
 async def create_event(payload: EventIn):
     return await routing.create_entry(events, payload)

@@ -7,6 +7,7 @@ from app.api.schemas import MediaOut, MediaIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=MediaOut, status_code=201)
 async def create_media(payload: MediaIn):
     return await routing.create_entry(media, payload)

@@ -7,6 +7,7 @@ from app.api.schemas import InstallationOut, InstallationIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=InstallationOut, status_code=201)
 async def create_installation(payload: InstallationIn):
     return await routing.create_entry(installations, payload)

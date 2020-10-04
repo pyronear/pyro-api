@@ -7,6 +7,7 @@ from app.api.schemas import AlertOut, AlertIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=AlertOut, status_code=201)
 async def create_alert(payload: AlertIn):
     return await routing.create_entry(alerts, payload)

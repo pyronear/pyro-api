@@ -7,6 +7,7 @@ from app.api.schemas import DeviceOut, DeviceIn
 
 router = APIRouter()
 
+
 @router.post("/", response_model=DeviceOut, status_code=201)
 async def create_device(payload: DeviceIn):
     return await routing.create_entry(devices, payload)

@@ -22,7 +22,7 @@ async def fetch_entries(table: Table):
 
 
 async def update_entry(table: Table, payload: BaseModel, id: int = Path(..., gt=0)):
-    entry = await get_entry(table, id)
+    await get_entry(table, id)
     entry_id = await crud.put(id, payload, table)
 
     return {**payload.dict(), "id": entry_id}
