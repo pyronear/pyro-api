@@ -99,8 +99,6 @@ def test_update_user(test_app, monkeypatch):
         [0, {"username": "foo"}, 422],
     ],
 )
-
-
 def test_update_user_invalid(test_app, monkeypatch, id, payload, status_code):
     async def mock_get(id):
         return None
