@@ -1,4 +1,3 @@
-import os
 import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
                         ForeignKey, MetaData, create_engine)
