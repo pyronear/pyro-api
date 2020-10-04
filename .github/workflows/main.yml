@@ -51,4 +51,4 @@ jobs:
       - name: Build & run docker
         run: PORT=8002 docker-compose up -d --build
       - name: Run docker test
-        run: PORT=8002 docker-compose exec web pytest .
+        run: PORT=8002 docker-compose exec -T web pytest .
