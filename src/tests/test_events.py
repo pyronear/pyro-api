@@ -3,10 +3,13 @@ import pytest
 
 from app.api import crud
 
+MIN_PAYLOAD = {"lat": 0., "lon": 0.}
+FULL_PAYLOAD = {**MIN_PAYLOAD, "type": "wildfire", "start_ts": None, "end_ts": None}
+
 
 def test_create_event(test_app, monkeypatch):
-    test_request_payload = {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
-    test_response_payload = {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
+    test_request_payload = FULL_PAYLOAD
+    test_response_payload = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_post(payload, table):
         return 1
@@ -28,7 +31,7 @@ def test_create_event_invalid_json(test_app):
 
 
 def test_get_event(test_app, monkeypatch):
-    test_data = {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
+    test_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return test_data
@@ -56,8 +59,8 @@ def test_get_event_incorrect_id(test_app, monkeypatch):
 
 def test_fetch_events(test_app, monkeypatch):
     test_data = [
-        {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None},
-        {"id": 2, "lat": 10., "lon": 10., "type": "wildfire", "start_ts": None, "end_ts": None},
+        {"id": 1, **FULL_PAYLOAD},
+        {"id": 2, **FULL_PAYLOAD},
     ]
 
     async def mock_get_all(table):
@@ -71,7 +74,7 @@ def test_fetch_events(test_app, monkeypatch):
 
 
 def test_update_event(test_app, monkeypatch):
-    test_update_data = {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
+    test_update_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return True
@@ -93,9 +96,9 @@ def test_update_event(test_app, monkeypatch):
     [
         [1, {}, 422],
         [1, {"lats": 0.}, 422],
-        [999, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 404],
+        [999, FULL_PAYLOAD, 404],
         [1, {"lat": 0., "lon": 0., "type": "1", "start_ts": None, "end_ts": None}, 422],
-        [0, {"lat": 0., "lon": 0., "type": "foo", "start_ts": None, "end_ts": None}, 422],
+        [0, FULL_PAYLOAD, 422],
     ],
 )
 def test_update_event_invalid(test_app, monkeypatch, id, payload, status_code):
@@ -109,7 +112,7 @@ def test_update_event_invalid(test_app, monkeypatch, id, payload, status_code):
 
 
 def test_remove_event(test_app, monkeypatch):
-    test_data = {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
+    test_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return test_data

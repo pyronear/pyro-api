@@ -3,10 +3,13 @@ import pytest
 
 from app.api import crud
 
+MIN_PAYLOAD = {"name": "my_site", "lat": 0., "lon": 0.}
+FULL_PAYLOAD = {**MIN_PAYLOAD, "type": "tower"}
+
 
 def test_create_site(test_app, monkeypatch):
-    test_request_payload = {"name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
-    test_response_payload = {"id": 1, "name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_request_payload = FULL_PAYLOAD
+    test_response_payload = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_post(payload, table):
         return 1
@@ -28,7 +31,7 @@ def test_create_site_invalid_json(test_app):
 
 
 def test_get_site(test_app, monkeypatch):
-    test_data = {"id": 1, "name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return test_data
@@ -56,8 +59,8 @@ def test_get_site_incorrect_id(test_app, monkeypatch):
 
 def test_fetch_sites(test_app, monkeypatch):
     test_data = [
-        {"id": 1, "name": "my_site", "lat": 0., "lon": 0., "type": "tower"},
-        {"id": 2, "name": "another_site", "lat": 0., "lon": 0., "type": "tower"},
+        {"id": 1, **FULL_PAYLOAD},
+        {"id": 2, **FULL_PAYLOAD},
     ]
 
     async def mock_get_all(table):
@@ -71,7 +74,7 @@ def test_fetch_sites(test_app, monkeypatch):
 
 
 def test_update_site(test_app, monkeypatch):
-    test_update_data = {"id": 1, "name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_update_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return True
@@ -109,7 +112,7 @@ def test_update_site_invalid(test_app, monkeypatch, id, payload, status_code):
 
 
 def test_remove_site(test_app, monkeypatch):
-    test_data = {"id": 1, "name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_data = {"id": 1, **FULL_PAYLOAD}
 
     async def mock_get(id, table):
         return test_data
