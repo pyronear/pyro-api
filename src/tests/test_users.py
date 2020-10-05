@@ -126,7 +126,7 @@ def test_remove_user(test_app, monkeypatch):
     assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
 
 
-def test_remove_note_incorrect_id(test_app, monkeypatch):
+def test_remove_user_incorrect_id(test_app, monkeypatch):
     async def mock_get(id, table):
         return None
 
