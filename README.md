@@ -31,7 +31,7 @@ You can clone and install the project dependencies as follows:
 
 ```bash
 git clone https://github.com/pyronear/pyronear-api.git
-pip install -r pyronear-api/requirements.txt
+pip install -r pyronear-api/src/requirements.txt
 ```
 
 
