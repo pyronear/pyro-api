@@ -7,6 +7,8 @@ Everything you need to know to contribute efficiently to the project.
 ## Codebase structure
 
 - [src](https://github.com/pyronear/pyronear-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
+- [src/app](https://github.com/pyronear/pyronear-api/blob/master/src/app) - The source code of the API
+- [src/tests](https://github.com/pyronear/pyronear-api/blob/master/src/tests) - The unittests for the app
 
 
 
