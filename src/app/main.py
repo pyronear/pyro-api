@@ -3,6 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
 from app import config as cfg
+from app.api.routes import ping, users, sites, events, devices, media, installations, alerts, authorization
 from app.api.routes import ping, login, users, sites, events, devices, media, installations, alerts
 from app.db import engine, metadata, database
 
@@ -32,6 +33,7 @@ app.include_router(devices.router, prefix="/devices", tags=["devices"])
 app.include_router(media.router, prefix="/media", tags=["media"])
 app.include_router(installations.router, prefix="/installations", tags=["installations"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+app.include_router(authorization.router, prefix="/authorization", tags=["authorization"])
 
 
 # Middleware

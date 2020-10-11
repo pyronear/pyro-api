@@ -31,6 +31,12 @@ async def update_device(payload: DeviceIn, id: int = Path(..., gt=0)):
     return await routing.update_entry(devices, payload, id)
 
 
+@router.put("/{id}/heartbeat/")  # , response_model=HeartbeatOut)
+async def heartbeat(id: int = Path(..., gt=0), current_device: Device = Depends(get_current_active_device)):
+    # , payload=HeartbeatIn, id: int = Path(..., gt=0)): #payload: DeviceIn, id: int = Path(..., gt=0)):
+    return current_device  # await routing.update_entry(devices, payload, id)
+
+
 @router.delete("/{id}/", response_model=DeviceOut)
 async def delete_device(id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
     return await routing.delete_entry(devices, id)

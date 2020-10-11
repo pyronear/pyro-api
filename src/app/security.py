@@ -25,3 +25,6 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 async def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+def create_unlimited_access_token(data: Union[str, Any]) -> str:
+    return create_access_token(data, timedelta(minutes=config.ACCESS_TOKEN_UNLIMITED_MINUTES))
