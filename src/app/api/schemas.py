@@ -1,7 +1,17 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, Field, validator
 
 from app.db import SiteType, EventType, MediaType, AlertType
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenPayload(BaseModel):
+    sub: Optional[int] = None
 
 
 class UserIn(BaseModel):
@@ -50,7 +60,7 @@ class EventOut(EventIn):
         return v or datetime.utcnow()
 
 
-class DeviceIn(BaseModel):
+class BaseDevice(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
@@ -62,11 +72,40 @@ class DeviceIn(BaseModel):
     last_ping: datetime = None
 
 
-class DeviceOut(DeviceIn):
+class DeviceIn(BaseDevice):
+    password: str = Field(..., min_length=8, max_length=50)
+
+
+class DeviceDBIn(BaseDevice):
+    hashed_password: str = Field(...)
+
+
+class DeviceOut(BaseDevice):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
     @validator('created_at', pre=True, always=True)
+    def default_ts_created(cls, v):
+        return v or datetime.utcnow()
+
+
+class Device(DeviceOut):
+    hashed_password: str = Field(...)
+
+
+class HeartbeatIn(BaseModel):
+    id: int = Field(..., gt=0)
+    ping: datetime = None
+
+    @validator('ping', pre=True, always=True)
+    def default_ts_created(cls, v):
+        return v or datetime.utcnow()
+
+
+class HeartbeatOut(BaseModel):
+    ping: datetime = None
+
+    @validator('ping', pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 

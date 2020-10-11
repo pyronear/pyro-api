@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 async def create_entry(table: Table, payload: BaseModel):
     entry_id = await crud.post(payload, table)
-
     return {**payload.dict(), "id": entry_id}
 
 

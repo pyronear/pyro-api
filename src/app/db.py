@@ -72,6 +72,7 @@ devices = Table(
     Column("last_pitch", Float(1, asdecimal=True), default=None, nullable=True),
     Column("last_ping", DateTime, default=None, nullable=True),
     Column("created_at", DateTime, default=func.now()),
+    Column("hashed_password", String(100))
 )
 
 
