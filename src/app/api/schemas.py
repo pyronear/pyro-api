@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field, validator
 
 from app.db import SiteType, EventType, MediaType, AlertType
@@ -13,6 +13,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[int] = None
+    scopes: List[str] = []
 
 
 class UserIn(BaseModel):
@@ -125,10 +126,6 @@ class HeartbeatIn(BaseModel):
 
 class HeartbeatOut(BaseModel):
     last_ping: datetime = None
-
-    @validator('last_ping', pre=True, always=True)
-    def default_ts_created(cls, v):
-        return v or datetime.utcnow()
 
 
 class MediaIn(BaseModel):

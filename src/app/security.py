@@ -12,6 +12,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
+def create_unlimited_access_token(data: Dict) -> str:
+    return create_access_token(data, timedelta(minutes=config.ACCESS_TOKEN_UNLIMITED_MINUTES))
 async def create_access_token(content: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Encode content dict using security algorithm, setting expiration."""
     expires_delta = timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES) if not expires_delta else expires_delta
