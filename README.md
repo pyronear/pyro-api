@@ -8,13 +8,16 @@ The building blocks of our wildfire detection & monitoring API.
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [Usage](#usage)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+- [Pyronear API](#pyronear-api)
+  - [Table of Contents](#table-of-contents)
+  - [Getting started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+  - [Usage](#usage)
+  - [Run tests on Docker](#run-tests-on-docker)
+  - [Documentation](#documentation)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 
 
@@ -46,6 +49,13 @@ PORT=8002 docker-compose up -d --build
 
 Once completed, you will notice that you have a docker container running on the port you selected, which can process requests just like any django server.
 
+
+## Run tests on Docker
+Once the project has been built with docker using the previous command above. One can launch the unit tests using the following instruction:
+
+```bash
+PORT=8002 docker-compose exec web pyttest .
+```
 
 
 ## Documentation
