@@ -103,9 +103,9 @@ class HeartbeatIn(BaseModel):
 
 
 class HeartbeatOut(BaseModel):
-    ping: datetime = None
+    last_ping: datetime = None
 
-    @validator('ping', pre=True, always=True)
+    @validator('last_ping', pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 

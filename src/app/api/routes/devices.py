@@ -5,7 +5,7 @@ from app.db import devices
 from app.api.schemas import Device, DeviceOut, DeviceIn, DeviceDBIn, HeartbeatOut, HeartbeatIn
 from app.security import get_password_hash
 from app.deps import get_current_active_device
-
+from datetime import datetime
 
 router = APIRouter()
 
@@ -31,11 +31,11 @@ async def update_device(payload: DeviceIn, id: int = Path(..., gt=0)):
     return await routing.update_entry(devices, payload, id)
 
 
-@router.put("/{id}/heartbeat/")  # , response_model=HeartbeatOut)
-async def heartbeat(id: int = Path(..., gt=0), current_device: Device = Depends(get_current_active_device)):
-    # , payload=HeartbeatIn, id: int = Path(..., gt=0)): #payload: DeviceIn, id: int = Path(..., gt=0)):
-    return current_device  # await routing.update_entry(devices, payload, id)
-
+@router.put("/{id}/heartbeat/", response_model=HeartbeatOut)
+async def heartbeat(current_device: Device = Depends(get_current_active_device), id: int = Path(..., gt=0)):
+    current_device.last_ping = datetime.utcnow()
+    return await routing.update_entry(devices, Device(**current_device), id)
+    
 
 @router.delete("/{id}/", response_model=DeviceOut)
 async def delete_device(id: int = Path(..., gt=0)):
