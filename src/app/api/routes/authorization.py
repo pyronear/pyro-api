@@ -26,5 +26,5 @@ async def login_device(form_data: OAuth2PasswordRequestForm = Depends()):
     if not device:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    access_token = create_unlimited_access_token(data=device.id)
+    access_token = create_unlimited_access_token(data={"sub": device.id, "scopes": form_data.scopes} )
     return {"access_token": access_token, "token_type": "bearer"}
