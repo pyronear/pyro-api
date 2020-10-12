@@ -9,28 +9,26 @@ from app.api.schemas import Device, TokenPayload
 from pydantic import ValidationError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="authorization/token",
-    scopes={"heartbeat": "Send heartbeat signal to the API for only one device"},
-)
+                                     scopes={"heartbeat": "Send heartbeat signal to the API for only one device"},
+                                     )
 
 
-async def get_current_device(
-    security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
+async def get_current_device(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
-        authenticate_value = f"Bearer"
+        authenticate_value = "Bearer"
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": authenticate_value},
     )
-    try:        
+    try:
         payload = jwt.decode(token, config.SECRET_KEY, algorithms=[security.ALGORITHM])
         sub: int = payload.get("sub")
         if sub is None:
             raise credentials_exception
-        token_scopes = payload.get("scopes", [])
-        
+
         token_data = TokenPayload(**payload)
     except (JWTError, ValidationError):
         raise credentials_exception
@@ -48,7 +46,8 @@ async def get_current_device(
     return device
 
 
-async def get_current_active_device(current_device: Device = Security(get_current_device, scopes=["heartbeat"])) -> Device:
+async def get_current_active_device(
+        current_device: Device = Security(get_current_device, scopes=["heartbeat"])) -> Device:
     # If one include the notion of active/disabled, the following code may be useful.
     # if current_device.disabled:
     #     raise HTTPException(status_code=400, detail="Inactive device")
