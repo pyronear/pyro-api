@@ -62,4 +62,4 @@ Please refer to `CONTRIBUTING` if you wish to contribute to this project.
 
 ## License
 
-Distributed under the GPLv3 License. See `LICENSE` for more information.
+Distributed under the CeCILL and AGPLv3 Licenses. See `LICENSE` for more information.
