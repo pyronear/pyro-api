@@ -20,6 +20,7 @@ users = Table(
     Column("id", Integer, primary_key=True),
     Column("username", String(50)),
     Column("created_at", DateTime, default=func.now()),
+    Column("hashed_password", nullable=False),
 )
 
 

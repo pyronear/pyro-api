@@ -1,6 +1,10 @@
+from typing import *
+
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
+
+from .schemas import UserInDb
 
 
 async def post(payload: BaseModel, table: Table):
@@ -32,3 +36,29 @@ async def put(id: int, payload: BaseModel, table: Table):
 async def delete(id: int, table: Table):
     query = table.delete().where(id == table.c.id)
     return await database.execute(query=query)
+
+
+class UserCRUD:
+
+    async def get_by_username(self, username: str) -> UserInDb:
+        from app.db import users
+
+        query = users.select().where(username == users.c.username)
+        record = await database.fetch_one(query=query)
+        if record is None:
+            return None
+        return UserInDb(**record)
+
+    async def authenticate(self, username: str, password: str) -> Optional[UserInDb]:
+        from app.security import verify_password
+
+        usr = await self.get_by_username(username=username)
+
+        if not usr:
+            return None
+        if not await verify_password(password, usr.hashed_password):
+            return None
+        return usr
+
+
+user = UserCRUD()
