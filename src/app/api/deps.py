@@ -8,7 +8,9 @@ from pydantic import ValidationError
 
 from app.api import crud, schemas
 from app.security import ALGORITHM
+from app.db import users
 import app.config as cfg
+from app.api.schemas import UserOut
 
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -37,15 +39,15 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        user_id = int(payload["sub"])
+        if user_id is None:
             raise credentials_exception
         token_scopes = payload.get("scopes", [])
-        token_data = schemas.TokenPayload(scopes=token_scopes, username=username)
-    except (JWTError, ValidationError):
+        token_data = schemas.TokenPayload(scopes=token_scopes, user_id=user_id)
+    except (JWTError, ValidationError, KeyError):
         raise credentials_exception
 
-    user = await crud.user.get_by_username(username=token_data.username)
+    user = await crud.get(id=user_id, table=users)
 
     if user is None:
         raise credentials_exception
@@ -56,4 +58,4 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
                 detail="Not enough permissions",
                 headers={"WWW-Authenticate": authenticate_value},
             )
-    return user
+    return UserOut(**user)

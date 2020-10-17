@@ -29,7 +29,7 @@ class Token(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    username: Optional[str] = None  # token sub
+    user_id: Optional[str] = None  # token sub
     scopes: List[str] = []
 
 
