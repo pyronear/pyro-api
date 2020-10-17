@@ -7,6 +7,8 @@ Everything you need to know to contribute efficiently to the project.
 ## Codebase structure
 
 - [src](https://github.com/pyronear/pyronear-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
+- [src/app](https://github.com/pyronear/pyronear-api/blob/master/src/app) - The source code of the API
+- [src/tests](https://github.com/pyronear/pyronear-api/blob/master/src/tests) - The unittests for the app
 
 
 
@@ -17,6 +19,7 @@ This project uses the following integrations to ensure proper codebase maintenan
 - [Github Worklow](https://help.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow) - run jobs for package build and coverage
 - [Codacy](https://www.codacy.com/) - analyzes commits for code quality
 - [Codecov](https://codecov.io/) - reports back coverage results
+- [Heroku](https://www.heroku.com/) - where the app is deployed from the `master` branch
 
 As a contributor, you will only have to ensure coverage of your code by adding appropriate unit testing of your code.
 
