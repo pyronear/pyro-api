@@ -4,7 +4,8 @@ from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
-from .schemas import UserInDb
+from app.api.schemas import UserInDb, DeviceOut
+from app.db import devices
 
 
 async def post(payload: BaseModel, table: Table):
@@ -38,6 +39,13 @@ async def delete(id: int, table: Table):
     return await database.execute(query=query)
 
 
+class DevideCRUD:
+
+    async def fetch_by_owner(self, owner_id: int):
+        query = devices.select().where(devices.c.owner_id == owner_id)
+        return await database.fetch_all(query=query)
+
+
 class UserCRUD:
 
     async def get_by_username(self, username: str) -> UserInDb:
@@ -62,3 +70,5 @@ class UserCRUD:
 
 
 user = UserCRUD()
+device = DevideCRUD()
+
