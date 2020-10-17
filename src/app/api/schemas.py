@@ -9,6 +9,11 @@ class UserIn(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
 
 
+class UserCreate(UserIn):
+    password: str
+    scopes: Optional[str]
+
+
 class UserOut(UserIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
@@ -19,8 +24,8 @@ class UserOut(UserIn):
 
 
 class UserInDb(UserOut):
-    """Extended user as it appears in db"""
     hashed_password: str
+    scopes: str
 
 
 class Token(BaseModel):

@@ -4,8 +4,9 @@ from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
-from app.api.schemas import UserInDb, DeviceOut
-from app.db import devices
+from app.api.schemas import UserIn, UserCreate, UserOut, UserInDb, DeviceOut
+from app.db import users, devices
+from app.security import get_password_hash, verify_password
 
 
 async def post(payload: BaseModel, table: Table):
@@ -48,9 +49,13 @@ class DevideCRUD:
 
 class UserCRUD:
 
-    async def get_by_username(self, username: str) -> UserInDb:
-        from app.db import users
+    async def create(self, user_in: UserCreate) -> UserOut:
+        pwd = await get_password_hash(user_in.password)
+        query = users.insert().values(username=user_in.username, hashed_password=pwd, scopes=user_in.scopes)
+        id = await database.execute(query=query)
+        return UserOut(id=id, username=user_in.username)
 
+    async def get_by_username(self, username: str) -> UserInDb:
         query = users.select().where(username == users.c.username)
         record = await database.fetch_one(query=query)
         if record is None:
@@ -58,8 +63,6 @@ class UserCRUD:
         return UserInDb(**record)
 
     async def authenticate(self, username: str, password: str) -> Optional[UserInDb]:
-        from app.security import verify_password
-
         usr = await self.get_by_username(username=username)
 
         if not usr:

@@ -31,6 +31,7 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
         authenticate_value = f"Bearer"
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -40,8 +41,6 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload["sub"])
-        if user_id is None:
-            raise credentials_exception
         token_scopes = payload.get("scopes", [])
         token_data = schemas.TokenPayload(scopes=token_scopes, user_id=user_id)
     except (JWTError, ValidationError, KeyError):
@@ -51,6 +50,7 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
     if user is None:
         raise credentials_exception
+
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
             raise HTTPException(

@@ -21,6 +21,7 @@ users = Table(
     Column("username", String(50)),
     Column("created_at", DateTime, default=func.now()),
     Column("hashed_password", nullable=False),
+    Column("scopes", String(30), default="me", nullable=False),
 )
 
 
