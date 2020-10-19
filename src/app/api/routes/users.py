@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import routing
 from app.db import users
-from app.api.schemas import UserOut, UserCreate, UserIn, UserOut
+from app.api.schemas import UserOut, UserCreate, UserIn
 from app.api.deps import get_current_user
 from app.api import crud
 

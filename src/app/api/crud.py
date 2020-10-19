@@ -1,10 +1,9 @@
-from typing import *
-
+from typing import Optional
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
-from app.api.schemas import UserIn, UserCreate, UserOut, UserInDb, DeviceOut
+from app.api.schemas import UserCreate, UserOut, UserInDb
 from app.db import users, devices
 from app.security import get_password_hash, verify_password
 
@@ -52,8 +51,8 @@ class UserCRUD:
     async def create(self, user_in: UserCreate) -> UserOut:
         pwd = await get_password_hash(user_in.password)
         query = users.insert().values(username=user_in.username, hashed_password=pwd, scopes=user_in.scopes)
-        id = await database.execute(query=query)
-        return UserOut(id=id, username=user_in.username)
+        user_id = await database.execute(query=query)
+        return UserOut(id=user_id, username=user_in.username)
 
     async def get_by_username(self, username: str) -> UserInDb:
         query = users.select().where(username == users.c.username)
@@ -74,4 +73,3 @@ class UserCRUD:
 
 user = UserCRUD()
 device = DevideCRUD()
-
