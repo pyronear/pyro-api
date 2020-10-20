@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing, crud
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceIn, UserInDb, HeartbeatOut
+from app.api.schemas import DeviceOut, DeviceIn, UserInDb, HeartbeatOut, UpdatedLocation
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -33,6 +33,12 @@ async def update_device(payload: DeviceIn, id: int = Path(..., gt=0)):
 @router.post("/heartbeat", response_model=HeartbeatOut)
 async def heartbeat(device_user: UserInDb = Security(get_current_user, scopes=["device"])):
     return await crud.device.heartbeat(user_id=device_user.id)
+
+
+@router.post("/{id}/update_location", response_model=DeviceOut)
+async def update_location(payload: UpdatedLocation, device_user: UserInDb = Security(get_current_user, scopes=["me"]), id: int = Path(..., gt=0)):
+    return await crud.device.update_location(payload, device_id=id, user_id=device_user.id)
+
 
 
 @router.delete("/{id}/", response_model=DeviceOut)

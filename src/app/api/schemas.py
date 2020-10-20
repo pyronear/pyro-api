@@ -93,6 +93,14 @@ class DeviceOut(DeviceIn):
         return v or datetime.utcnow()
 
 
+class UpdatedLocation(BaseModel):
+    elevation: float = Field(None, ge=0., lt=10000)
+    lat: float = Field(None, gt=-90, lt=90)
+    lon: float = Field(None, gt=-180, lt=180)
+    yaw: float = Field(None, gt=-180, lt=180)
+    pitch: float = Field(None, gt=-90, lt=90)
+
+
 class HeartbeatOut(BaseModel):
     last_ping: datetime = None
 

@@ -1,9 +1,10 @@
 from typing import Optional
 from app.db import database
-from sqlalchemy import Table
+from sqlalchemy import Table, and_
 from pydantic import BaseModel
+from fastapi import HTTPException
 
-from app.api.schemas import UserCreate, UserOut, UserInDb, DeviceOut, HeartbeatOut
+from app.api.schemas import UserCreate, UserOut, UserInDb, DeviceOut, HeartbeatOut, UpdatedLocation
 from app.db import users, devices
 from app.security import get_password_hash, verify_password
 from datetime import datetime
@@ -42,6 +43,10 @@ async def delete(id: int, table: Table):
 
 class DevideCRUD:
 
+    async def user_owns_device(self, device_id: int, owner_id: int) -> bool:
+        query = devices.select().where(and_(devices.c.id == device_id, devices.c.owner_id == owner_id))
+        return bool(await database.fetch_one(query=query))
+
     async def fetch_by_owner(self, owner_id: int):
         query = devices.select().where(devices.c.owner_id == owner_id)
         return await database.fetch_all(query=query)
@@ -53,6 +58,21 @@ class DevideCRUD:
     async def heartbeat(self, user_id: int) -> HeartbeatOut:
         device = DeviceOut(** await self.fetch_by_user(user_id))
         device.last_ping = datetime.utcnow()
+        await put(device.id, device, devices)
+        return device
+
+    async def update_location(self, payload: UpdatedLocation, device_id: int, user_id: int):
+        user_owns_device = await self.user_owns_device(device_id, user_id)
+        if not user_owns_device:
+            raise HTTPException(
+                status_code=400,
+                detail="You don't own this device."
+            )
+        device = DeviceOut(** await get(device_id, devices))
+        device.last_lat = payload.lat
+        device.last_lon = payload.lon
+        device.last_yaw = payload.yaw
+        device.last_pitch = payload.pitch
         await put(device.id, device, devices)
         return device
 
