@@ -3,11 +3,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing, crud
 from app.db import devices
-from app.api.schemas import BaseDevice, Device, DeviceOut, DeviceIn, DeviceDBIn, HeartbeatOut, HeartbeatIn
-from app.security import get_password_hash
-from app.deps import get_current_active_device
-from datetime import datetime
-from app.api.schemas import DeviceOut, DeviceIn, UserInDb
+from app.api.schemas import DeviceOut, DeviceIn, UserInDb, HeartbeatOut
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -24,7 +20,7 @@ async def get_device(id: int = Path(..., gt=0), _=Security(get_current_user, sco
 
 
 @router.get("/", response_model=List[DeviceOut])
-async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
+async def fetch_devices():  # _=Security(get_current_user, scopes=["admin"])):
     return await routing.fetch_entries(devices)
 
 
@@ -35,10 +31,8 @@ async def update_device(payload: DeviceIn, id: int = Path(..., gt=0)):
 
 
 @router.post("/heartbeat", response_model=HeartbeatOut)
-async def heartbeat(current_device: Device = Depends(get_current_active_device)):
-    payload = dict(**current_device)
-    payload["last_ping"] = datetime.utcnow()
-    return await routing.update_entry(devices, BaseDevice(**payload), current_device["id"])
+async def heartbeat(device_user: UserInDb = Security(get_current_user, scopes=["device"])):
+    return await crud.device.heartbeat(user_id=device_user.id)
 
 
 @router.delete("/{id}/", response_model=DeviceOut)

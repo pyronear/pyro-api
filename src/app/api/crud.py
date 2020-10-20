@@ -3,9 +3,10 @@ from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
-from app.api.schemas import UserCreate, UserOut, UserInDb, DeviceOut
+from app.api.schemas import UserCreate, UserOut, UserInDb, DeviceOut, HeartbeatOut
 from app.db import users, devices
 from app.security import get_password_hash, verify_password
+from datetime import datetime
 
 
 async def post(payload: BaseModel, table: Table):
@@ -45,6 +46,16 @@ class DevideCRUD:
         query = devices.select().where(devices.c.owner_id == owner_id)
         return await database.fetch_all(query=query)
 
+    async def fetch_by_user(self, user_id: int):
+        query = devices.select().where(devices.c.user_id == user_id)
+        return await database.fetch_one(query=query)
+
+    async def heartbeat(self, user_id: int) -> HeartbeatOut:
+        device = DeviceOut(** await self.fetch_by_user(user_id))
+        device.last_ping = datetime.utcnow()
+        await put(device.id, device, devices)
+        return device
+
 
 class UserCRUD:
 
@@ -73,4 +84,3 @@ class UserCRUD:
 
 user = UserCRUD()
 device = DevideCRUD()
-

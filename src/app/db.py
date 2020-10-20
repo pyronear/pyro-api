@@ -20,7 +20,7 @@ users = Table(
     Column("id", Integer, primary_key=True),
     Column("username", String(50)),
     Column("created_at", DateTime, default=func.now()),
-    Column("hashed_password", nullable=False),
+    Column("hashed_password", String(100)),
     Column("scopes", String(30), default="me", nullable=False),
 )
 
@@ -66,6 +66,7 @@ devices = Table(
     Column("id", Integer, primary_key=True),
     Column("name", String(50)),
     Column("owner_id", Integer, ForeignKey("users.id")),
+    Column("user_id", Integer, ForeignKey("users.id"), unique=True),
     Column("specs", String(50)),
     Column("last_elevation", Float(1, asdecimal=True), default=None, nullable=True),
     Column("last_lat", Float(4, asdecimal=True), default=None, nullable=True),
@@ -73,8 +74,7 @@ devices = Table(
     Column("last_yaw", Float(1, asdecimal=True), default=None, nullable=True),
     Column("last_pitch", Float(1, asdecimal=True), default=None, nullable=True),
     Column("last_ping", DateTime, default=None, nullable=True),
-    Column("created_at", DateTime, default=func.now()),
-    Column("hashed_password", String(100))
+    Column("created_at", DateTime, default=func.now())
 )
 
 

@@ -19,9 +19,9 @@ async def login_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     access_token_expires = timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES)
-
     # create access token using user user_id/user_scopes
     return {
-        "access_token": await create_access_token({"sub": str(user.id), "scopes": user.scopes.split()}, expires_delta=access_token_expires),
+        "access_token": await create_access_token({"sub": str(user.id), "scopes": user.scopes.split()},
+                                                  expires_delta=access_token_expires),
         "token_type": "bearer",
     }
