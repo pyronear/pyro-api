@@ -19,15 +19,17 @@ def test_create_installation(test_app, monkeypatch):
     response = test_app.post("/installations/", data=json.dumps(test_request_payload))
 
     assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
 
 
 def test_create_installation_invalid_json(test_app):
     response = test_app.post("/installations/", data=json.dumps({"device": 1}))
     assert response.status_code == 422
 
-    response = test_app.post("/installations/", data=json.dumps({"device_id": 1, "site_id": "1", "elevation": 0,
-                                                                 "lat": 0, "lon": 0, "yaw": 0, "pitch": 0}))
+    response = test_app.post(
+        "/installations/",
+        data=json.dumps({"device_id": 1, "site_id": "1", "elevation": 0, "lat": 0, "lon": 0, "yaw": 0, "pitch": 0}),
+    )
     assert response.status_code == 422
 
 
@@ -41,7 +43,7 @@ def test_get_installation(test_app, monkeypatch):
 
     response = test_app.get("/installations/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_get_installation_incorrect_id(test_app, monkeypatch):
@@ -71,7 +73,7 @@ def test_fetch_installations(test_app, monkeypatch):
 
     response = test_app.get("/installations/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
+    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == test_data
 
 
 def test_update_installation(test_app, monkeypatch):
@@ -89,7 +91,7 @@ def test_update_installation(test_app, monkeypatch):
 
     response = test_app.put("/installations/1/", data=json.dumps(test_update_data))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_update_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_update_data
 
 
 @pytest.mark.parametrize(
@@ -108,7 +110,10 @@ def test_update_installation_invalid(test_app, monkeypatch, id, payload, status_
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/installations/{id}/", data=json.dumps(payload),)
+    response = test_app.put(
+        f"/installations/{id}/",
+        data=json.dumps(payload),
+    )
     assert response.status_code == status_code, print(payload)
 
 
@@ -127,7 +132,7 @@ def test_remove_installation(test_app, monkeypatch):
 
     response = test_app.delete("/installations/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_remove_installation_incorrect_id(test_app, monkeypatch):

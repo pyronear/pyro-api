@@ -73,7 +73,7 @@ def test_get_user(test_app, monkeypatch):
 
     response = test_app.get("/users/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_get_user_incorrect_id(test_app, monkeypatch):
@@ -103,7 +103,7 @@ def test_fetch_users(test_app, monkeypatch):
 
     response = test_app.get("/users/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
+    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == test_data
 
 
 def test_update_user(test_app, monkeypatch):
@@ -145,7 +145,10 @@ def test_update_user_invalid(test_app, monkeypatch, id, payload, status_code):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/users/{id}/", data=json.dumps(payload),)
+    response = test_app.put(
+        f"/users/{id}/",
+        data=json.dumps(payload),
+    )
     assert response.status_code == status_code, print(payload)
 
 
@@ -164,7 +167,7 @@ def test_remove_user(test_app, monkeypatch):
 
     response = test_app.delete("/users/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_remove_note_incorrect_id(test_app, monkeypatch):

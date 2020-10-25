@@ -3,7 +3,7 @@ import pytest
 
 from app.api import crud
 
-MIN_PAYLOAD = {"lat": 0., "lon": 0.}
+MIN_PAYLOAD = {"lat": 0.0, "lon": 0.0}
 FULL_PAYLOAD = {**MIN_PAYLOAD, "type": "wildfire", "start_ts": None, "end_ts": None}
 
 
@@ -19,14 +19,14 @@ def test_create_event(test_app, monkeypatch):
     response = test_app.post("/events/", data=json.dumps(test_request_payload))
 
     assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
 
 
 def test_create_event_invalid_json(test_app):
-    response = test_app.post("/events/", data=json.dumps({"lats": 0., "lon": 0., "type": "wildfire"}))
+    response = test_app.post("/events/", data=json.dumps({"lats": 0.0, "lon": 0.0, "type": "wildfire"}))
     assert response.status_code == 422
 
-    response = test_app.post("/events/", data=json.dumps({"lati": 0., "long": 0.}))
+    response = test_app.post("/events/", data=json.dumps({"lati": 0.0, "long": 0.0}))
     assert response.status_code == 422
 
 
@@ -40,7 +40,7 @@ def test_get_event(test_app, monkeypatch):
 
     response = test_app.get("/events/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_get_event_incorrect_id(test_app, monkeypatch):
@@ -70,7 +70,7 @@ def test_fetch_events(test_app, monkeypatch):
 
     response = test_app.get("/events/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
+    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == test_data
 
 
 def test_update_event(test_app, monkeypatch):
@@ -88,16 +88,16 @@ def test_update_event(test_app, monkeypatch):
 
     response = test_app.put("/events/1/", data=json.dumps(test_update_data))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_update_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_update_data
 
 
 @pytest.mark.parametrize(
     "id, payload, status_code",
     [
         [1, {}, 422],
-        [1, {"lats": 0.}, 422],
+        [1, {"lats": 0.0}, 422],
         [999, FULL_PAYLOAD, 404],
-        [1, {"lat": 0., "lon": 0., "type": "1", "start_ts": None, "end_ts": None}, 422],
+        [1, {"lat": 0.0, "lon": 0.0, "type": "1", "start_ts": None, "end_ts": None}, 422],
         [0, FULL_PAYLOAD, 422],
     ],
 )
@@ -107,7 +107,10 @@ def test_update_event_invalid(test_app, monkeypatch, id, payload, status_code):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/events/{id}/", data=json.dumps(payload),)
+    response = test_app.put(
+        f"/events/{id}/",
+        data=json.dumps(payload),
+    )
     assert response.status_code == status_code, print(payload)
 
 
@@ -126,7 +129,7 @@ def test_remove_event(test_app, monkeypatch):
 
     response = test_app.delete("/events/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
 
 
 def test_remove_event_incorrect_id(test_app, monkeypatch):

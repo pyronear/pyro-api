@@ -24,13 +24,7 @@ async def fetch_all(table: Table):
 
 
 async def put(id: int, payload: BaseModel, table: Table):
-    query = (
-        table
-        .update()
-        .where(id == table.c.id)
-        .values(**payload.dict())
-        .returning(table.c.id)
-    )
+    query = table.update().where(id == table.c.id).values(**payload.dict()).returning(table.c.id)
     return await database.execute(query=query)
 
 
@@ -40,14 +34,12 @@ async def delete(id: int, table: Table):
 
 
 class DevideCRUD:
-
     async def fetch_by_owner(self, owner_id: int):
         query = devices.select().where(devices.c.owner_id == owner_id)
         return await database.fetch_all(query=query)
 
 
 class UserCRUD:
-
     async def create(self, user_in: UserCreate) -> UserOut:
         pwd = await get_password_hash(user_in.password)
         query = users.insert().values(username=user_in.username, hashed_password=pwd, scopes=user_in.scopes)

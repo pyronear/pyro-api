@@ -18,7 +18,7 @@ class UserOut(UserIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -49,7 +49,7 @@ class SiteOut(SiteIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -66,7 +66,7 @@ class EventOut(EventIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -75,7 +75,7 @@ class DeviceIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
-    last_elevation: float = Field(None, gt=0., lt=10000)
+    last_elevation: float = Field(None, gt=0.0, lt=10000)
     last_lat: float = Field(None, gt=-90, lt=90)
     last_lon: float = Field(None, gt=-180, lt=180)
     last_yaw: float = Field(None, gt=-180, lt=180)
@@ -87,7 +87,7 @@ class DeviceOut(DeviceIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -101,7 +101,7 @@ class MediaOut(MediaIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -109,7 +109,7 @@ class MediaOut(MediaIn):
 class InstallationIn(BaseModel):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
-    elevation: float = Field(..., gt=0., lt=10000)
+    elevation: float = Field(..., gt=0.0, lt=10000)
     lat: float = Field(..., gt=-90, lt=90)
     lon: float = Field(..., gt=-180, lt=180)
     yaw: float = Field(..., gt=-180, lt=180)
@@ -122,7 +122,7 @@ class InstallationOut(InstallationIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
 
@@ -141,6 +141,6 @@ class AlertOut(AlertIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
