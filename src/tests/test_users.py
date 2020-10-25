@@ -1,18 +1,8 @@
 import json
 import pytest
-from datetime import datetime as dt
 
 from app.api import crud
-from app.api.schemas import UserCreate, UserInDb, UserOut
-
-
-@pytest.fixture(scope="function")
-def existing_users():
-    return [
-        UserInDb(id=1, username="first", created_at=dt.now(), hashed_password="hash", scopes="me"),
-        UserInDb(id=2, username="second", created_at=dt.now(), hashed_password="hash", scopes="me"),
-        UserInDb(id=3, username="third", created_at=dt.now(), hashed_password="hash", scopes="me admin"),
-    ]
+from app.api.schemas import UserCreate, UserOut
 
 
 def test_get_me(test_app):
