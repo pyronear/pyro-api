@@ -2,6 +2,7 @@ from fastapi import HTTPException, Path
 from app.api import crud
 from sqlalchemy import Table
 from pydantic import BaseModel
+from typing import Optional, Tuple, Any
 
 
 async def create_entry(table: Table, payload: BaseModel):

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
