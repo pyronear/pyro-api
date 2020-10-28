@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
 from app import config as cfg
-from app.api.routes import ping, users, sites, events, devices, media, installations, alerts
+from app.api.routes import ping, login, users, sites, events, devices, media, installations, alerts
 from app.db import engine, metadata, database
 
 metadata.create_all(engine)
@@ -24,6 +24,7 @@ async def shutdown():
 
 # Routing
 app.include_router(ping.router)
+app.include_router(login.router, prefix="/login", tags=["login"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(sites.router, prefix="/sites", tags=["sites"])
 app.include_router(events.router, prefix="/events", tags=["events"])

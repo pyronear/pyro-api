@@ -1,3 +1,4 @@
+from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
 
@@ -8,6 +9,11 @@ class UserIn(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
 
 
+class UserCreate(UserIn):
+    password: str
+    scopes: Optional[str]
+
+
 class UserOut(UserIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
@@ -15,6 +21,21 @@ class UserOut(UserIn):
     @validator('created_at', pre=True, always=True)
     def default_ts_created(cls, v):
         return v or datetime.utcnow()
+
+
+class UserInDb(UserOut):
+    hashed_password: str
+    scopes: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenPayload(BaseModel):
+    user_id: Optional[str] = None  # token sub
+    scopes: List[str] = []
 
 
 class SiteIn(BaseModel):

@@ -5,8 +5,34 @@ from app.api import crud
 
 MIN_PAYLOAD = {"name": "my_device", "owner_id": 1, "specs": "my_specs"}
 
-FULL_PAYLOAD = {**MIN_PAYLOAD, "last_lat": None, "last_lon": None, "last_elevation": None,
-                "last_yaw": None, "last_pitch": None, "last_ping": None}
+FULL_PAYLOAD = {
+    **MIN_PAYLOAD,
+    "last_lat": None,
+    "last_lon": None,
+    "last_elevation": None,
+    "last_yaw": None,
+    "last_pitch": None,
+    "last_ping": None,
+}
+
+
+@pytest.fixture(scope="function")
+def existing_devices():
+    # device id 1->4 owned by user 99 (connected_user), id 5->6 owned by user 1
+    return [{"id": did, **FULL_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
+
+
+def test_fetch_my_devices(test_app, monkeypatch, existing_devices):
+    async def fetch_by_owner(owner_id):
+        return [d for d in existing_devices if d["owner_id"] == owner_id]
+
+    monkeypatch.setattr(crud.device, "fetch_by_owner", fetch_by_owner)
+
+    response = test_app.get("/devices/my-devices")
+    assert response.status_code == 200
+    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == [
+        d for d in existing_devices if d["id"] <= 4
+    ]
 
 
 def test_create_device(test_app, monkeypatch):
