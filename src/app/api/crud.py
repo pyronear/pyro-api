@@ -41,13 +41,6 @@ async def delete(id: int, table: Table):
     return await database.execute(query=query)
 
 
-class DevideCRUD:
-
-    async def fetch_by_owner(self, owner_id: int):
-        query = devices.select().where(devices.c.owner_id == owner_id)
-        return await database.fetch_all(query=query)
-
-
 class UserCRUD:
 
     async def create(self, user_in: UserCreate) -> UserOut:
@@ -74,4 +67,3 @@ class UserCRUD:
 
 
 user = UserCRUD()
-device = DevideCRUD()

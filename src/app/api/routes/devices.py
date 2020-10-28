@@ -38,4 +38,4 @@ async def delete_device(id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 @router.get("/my-devices", response_model=List[DeviceOut])
 async def fetch_my_devices(me: UserInDb = Security(get_current_user, scopes=["me"])):
-    return await crud.device.fetch_by_owner(owner_id=me.id)
+    return await routing.fetch_entries(devices, ("owner_id", me.id))
