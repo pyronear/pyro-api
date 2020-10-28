@@ -1,17 +1,6 @@
 import enum
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Integer,
-    Float,
-    String,
-    Table,
-    Enum,
-    Boolean,
-    ForeignKey,
-    MetaData,
-    create_engine,
-)
+from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
+                        ForeignKey, MetaData, create_engine)
 from sqlalchemy.sql import func
 from app import config as cfg
 from databases import Database
@@ -37,8 +26,8 @@ users = Table(
 
 
 class SiteType(str, enum.Enum):
-    tower: str = "tower"
-    station: str = "station"
+    tower: str = 'tower'
+    station: str = 'station'
 
 
 sites = Table(
@@ -54,7 +43,7 @@ sites = Table(
 
 
 class EventType(str, enum.Enum):
-    wildfire: str = "wildfire"
+    wildfire: str = 'wildfire'
 
 
 events = Table(
@@ -89,8 +78,8 @@ devices = Table(
 
 
 class MediaType(str, enum.Enum):
-    image: str = "image"
-    video: str = "video"
+    image: str = 'image'
+    video: str = 'video'
 
 
 media = Table(
@@ -121,8 +110,8 @@ installations = Table(
 
 
 class AlertType(str, enum.Enum):
-    start: str = "start"
-    end: str = "end"
+    start: str = 'start'
+    end: str = 'end'
 
 
 alerts = Table(

@@ -47,7 +47,7 @@ def test_create_device(test_app, monkeypatch):
     response = test_app.post("/devices/", data=json.dumps(test_request_payload))
 
     assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
 
 
 def test_create_device_invalid_json(test_app):
@@ -68,7 +68,7 @@ def test_get_device(test_app, monkeypatch):
 
     response = test_app.get("/devices/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
 
 
 def test_get_device_incorrect_id(test_app, monkeypatch):
@@ -98,7 +98,7 @@ def test_fetch_devices(test_app, monkeypatch):
 
     response = test_app.get("/devices/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == test_data
+    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
 
 
 def test_update_device(test_app, monkeypatch):
@@ -116,7 +116,7 @@ def test_update_device(test_app, monkeypatch):
 
     response = test_app.put("/devices/1/", data=json.dumps(test_update_data))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_update_data
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_update_data
 
 
 @pytest.mark.parametrize(
@@ -135,10 +135,7 @@ def test_update_device_invalid(test_app, monkeypatch, id, payload, status_code):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(
-        f"/devices/{id}/",
-        data=json.dumps(payload),
-    )
+    response = test_app.put(f"/devices/{id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 
@@ -157,7 +154,7 @@ def test_remove_device(test_app, monkeypatch):
 
     response = test_app.delete("/devices/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_data
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
 
 
 def test_remove_device_incorrect_id(test_app, monkeypatch):
