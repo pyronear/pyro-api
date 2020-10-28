@@ -4,7 +4,6 @@ from jose import JWTError, jwt
 from pydantic import ValidationError
 
 from app.api import crud, schemas
-from app.security import ALGORITHM
 from app.db import users
 import app.config as cfg
 from app.api.schemas import UserOut
@@ -36,7 +35,7 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
     )
 
     try:
-        payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.JWT_ENCODING_ALGORITHM])
         user_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
         token_data = schemas.TokenPayload(scopes=token_scopes, user_id=user_id)
