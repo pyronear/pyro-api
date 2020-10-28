@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
@@ -18,8 +18,10 @@ async def get(id: int, table: Table):
     return await database.fetch_one(query=query)
 
 
-async def fetch_all(table: Table):
+async def fetch(table: Table, query_filter: Optional[Tuple[str, Any]] = None):
     query = table.select()
+    if isinstance(query_filter, tuple):
+        query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
     return await database.fetch_all(query=query)
 
 
