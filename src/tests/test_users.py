@@ -86,10 +86,10 @@ def test_fetch_users(test_app, monkeypatch):
         {"username": "someone else", "id": 2},
     ]
 
-    async def mock_get_all(table):
+    async def mock_get_all(table, query_filter=None):
         return test_data
 
-    monkeypatch.setattr(crud, "fetch_all", mock_get_all)
+    monkeypatch.setattr(crud, "fetch", mock_get_all)
 
     response = test_app.get("/users/")
     assert response.status_code == 200
