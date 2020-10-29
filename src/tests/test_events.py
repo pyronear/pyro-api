@@ -66,7 +66,7 @@ def test_fetch_events(test_app, monkeypatch):
     async def mock_get_all(table, query_filter=None):
         return test_data
 
-    monkeypatch.setattr(crud, "fetch", mock_get_all)
+    monkeypatch.setattr(crud, "fetch_all", mock_get_all)
 
     response = test_app.get("/events/")
     assert response.status_code == 200

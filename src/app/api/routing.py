@@ -19,7 +19,7 @@ async def get_entry(table: Table, id: int = Path(..., gt=0)):
 
 
 async def fetch_entries(table: Table, query_filter: Optional[Tuple[str, Any]] = None):
-    return await crud.fetch(table, query_filter)
+    return await crud.fetch_all(table, query_filter)
 
 
 async def update_entry(table: Table, payload: BaseModel, id: int = Path(..., gt=0)):

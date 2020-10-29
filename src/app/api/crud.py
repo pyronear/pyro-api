@@ -18,7 +18,7 @@ async def get(id: int, table: Table):
     return await database.fetch_one(query=query)
 
 
-async def fetch(table: Table, query_filter: Optional[Tuple[str, Any]] = None):
+async def fetch_all(table: Table, query_filter: Optional[Tuple[str, Any]] = None):
     query = table.select()
     if isinstance(query_filter, tuple):
         query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])

@@ -23,7 +23,7 @@ def test_fetch_my_devices(test_app, monkeypatch):
     async def mock_fetch_by_owner(table, query_filter):
         return [entry for entry in test_data if entry[query_filter[0]] == query_filter[1]]
 
-    monkeypatch.setattr(crud, "fetch", mock_fetch_by_owner)
+    monkeypatch.setattr(crud, "fetch_all", mock_fetch_by_owner)
 
     response = test_app.get("/devices/my-devices")
     assert response.status_code == 200
@@ -91,7 +91,7 @@ def test_fetch_devices(test_app, monkeypatch):
     async def mock_get_all(table, query_filter=None):
         return test_data
 
-    monkeypatch.setattr(crud, "fetch", mock_get_all)
+    monkeypatch.setattr(crud, "fetch_all", mock_get_all)
 
     response = test_app.get("/devices/")
     assert response.status_code == 200
