@@ -3,9 +3,6 @@ from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
-from app.api.schemas import UserCreate, UserOut, UserInDb
-from app import security
-
 
 async def post(payload: BaseModel, table: Table):
     query = table.insert().values(**payload.dict())
