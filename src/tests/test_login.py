@@ -28,7 +28,6 @@ def test_access_token(test_app, monkeypatch, payload, status_code):
 
     monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
 
-
     async def verify_password(plain_password, hashed_password):
         return hashed_password == f"{plain_password}_hashed"
 
