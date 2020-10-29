@@ -12,7 +12,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def create_access_token(content: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Encode content dict using security algorithm, setting expiration."""
-    expires_delta = timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES) if not expires_delta else expires_delta
+    if expires_delta is None:
+        expires_delta = timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES)
     expire = datetime.utcnow() + expires_delta
     return jwt.encode({**content, "exp": expire}, cfg.SECRET_KEY, algorithm=cfg.JWT_ENCODING_ALGORITHM)
 
@@ -21,5 +22,5 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-async def get_password_hash(password: str) -> str:
+async def hash_password(password: str) -> str:
     return pwd_context.hash(password)

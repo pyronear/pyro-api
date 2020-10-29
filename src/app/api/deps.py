@@ -3,16 +3,25 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from pydantic import ValidationError
 
-from app.api import crud, schemas
+from app.api import crud
 from app.db import users
 import app.config as cfg
-from app.api.schemas import UserOut
+from app.api.schemas import UserRead, TokenPayload
 
 
+# Scope definition
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl="login/access-token",
     scopes={"me": "Read information about the current user.", "admin": "Admin rights on all routes."},
 )
+
+
+def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": authenticate_value},
+    )
 
 
 async def get_current_user(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)):
@@ -28,30 +37,21 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
     else:
         authenticate_value = "Bearer"
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": authenticate_value},
-    )
-
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.JWT_ENCODING_ALGORITHM])
         user_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
-        token_data = schemas.TokenPayload(scopes=token_scopes, user_id=user_id)
+        token_data = TokenPayload(user_id=user_id, scopes=token_scopes)
     except (JWTError, ValidationError, KeyError):
-        raise credentials_exception
+        raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    user = await crud.get(id=user_id, table=users)
+    entry = await crud.get(id=user_id, table=users)
 
-    if user is None:
-        raise credentials_exception
+    if entry is None:
+        raise unauthorized_exception("Invalid credentials", authenticate_value)
 
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not enough permissions",
-                headers={"WWW-Authenticate": authenticate_value},
-            )
-    return UserOut(**user)
+            raise unauthorized_exception("Permission denied", authenticate_value)
+
+    return UserRead(**entry)
