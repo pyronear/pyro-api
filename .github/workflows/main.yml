@@ -18,11 +18,13 @@ jobs:
           architecture: x64
       - name: Cache python modules
         uses: actions/cache@v2
+        env:
+          cache-name: project-reqs
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-deps-${{ hashFiles('requirements.txt') }}-${{ hashFiles('**/*.py') }}
+          key: ${{ runner.os }}-deps-${{ env.cache-name }}-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-deps-${{ hashFiles('requirements.txt') }}-
+            ${{ runner.os }}-deps-${{ env.cache-name }}-
             ${{ runner.os }}-deps-
             ${{ runner.os }}-
       - name: Install project
