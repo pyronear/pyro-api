@@ -1,7 +1,6 @@
 import pytest
 
-from app.api import crud
-from app import security
+from app.api import crud, security
 
 
 @pytest.mark.parametrize(
@@ -14,16 +13,25 @@ from app import security
         [{"username": "first", "password": "second"}, 400],  # wrong pwd
     ],
 )
-def test_access_token(test_app, monkeypatch, existing_users, payload, status_code):
-    async def get_by_username(username: str):
-        for u in existing_users:
-            if u.username == username:
-                return u
+def test_access_token(test_app, monkeypatch, payload, status_code):
+
+    test_data = [
+        {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
+        {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
+        {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+    ]
+
+    async def mock_fetch_one(table, query_filter):
+        for entry in test_data:
+            if entry[query_filter[0]] == query_filter[1]:
+                return entry
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
 
     async def verify_password(plain_password, hashed_password):
         return hashed_password == f"{plain_password}_hashed"
 
-    monkeypatch.setattr(crud.user, "get_by_username", get_by_username)
     monkeypatch.setattr(security, "verify_password", verify_password)
 
     response = test_app.post("/login/access-token", data=payload)

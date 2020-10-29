@@ -1,8 +1,8 @@
 import json
 import pytest
+from datetime import datetime as dt
 
 from app.api import crud
-from app.api.schemas import UserCreate, UserOut
 
 
 def test_get_me(test_app):
@@ -13,17 +13,25 @@ def test_get_me(test_app):
     assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
 
 
-def test_create_user(test_app, monkeypatch, existing_users):
-    async def get_by_username(username: str):
-        for u in existing_users:
-            if u.username == username:
-                return u
+def test_create_user(test_app, monkeypatch):
 
-    async def mock_create(user_in: UserCreate):
-        return UserOut(id=4, username=user_in.username)
+    test_data = [
+        {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
+        {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
+        {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+    ]
 
-    monkeypatch.setattr(crud.user, "get_by_username", get_by_username)
-    monkeypatch.setattr(crud.user, "create", mock_create)
+    async def mock_fetch_one(table, query_filter):
+        for entry in test_data:
+            if entry[query_filter[0]] == query_filter[1]:
+                return entry
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
+    async def mock_post(payload, table):
+        return len(test_data) + 1
+
+    monkeypatch.setattr(crud, "post", mock_post)
 
     # test valid
     test_request_payload = {"username": "someone", "password": "any pwd"}
