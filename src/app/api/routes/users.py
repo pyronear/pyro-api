@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Path, Security, HTTPException
 
-from app.api import routing, crud, security
+from app.api import routing, security
 from app.db import users
 from app.api.schemas import UserInfo, UserRead, UserAuth, UserCreation
 from app.api.deps import get_current_user

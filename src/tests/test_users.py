@@ -1,6 +1,5 @@
 import json
 import pytest
-from datetime import datetime as dt
 
 from app.api import crud
 
