@@ -22,6 +22,10 @@ async def fetch_entries(table: Table, query_filter: Optional[Tuple[str, Any]] = 
     return await crud.fetch_all(table, query_filter)
 
 
+async def fetch_entry(table: Table, query_filter: Tuple[str, Any]):
+    return await crud.fetch_one(table, query_filter)
+
+
 async def update_entry(table: Table, payload: BaseModel, id: int = Path(..., gt=0)):
     await get_entry(table, id)
     entry_id = await crud.put(id, payload, table)
