@@ -32,9 +32,9 @@ async def create_user(user_in: UserCreate, _=Security(get_current_user, scopes=[
     return await crud.user.create(user_in)
 
 
-@router.get("/{id}/", response_model=UserOut)
-async def get_user(id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await routing.get_entry(users, id)
+@router.get("/{user_id}/", response_model=UserOut)
+async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+    return await routing.get_entry(users, user_id)
 
 
 @router.get("/", response_model=List[UserOut])
@@ -42,11 +42,11 @@ async def fetch_users(_=Security(get_current_user, scopes=["admin"])):
     return await routing.fetch_entries(users)
 
 
-@router.put("/{id}/", response_model=UserOut)
-async def update_user(payload: UserIn, id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await routing.update_entry(users, payload, id)
+@router.put("/{user_id}/", response_model=UserOut)
+async def update_user(payload: UserIn, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+    return await routing.update_entry(users, payload, user_id)
 
 
-@router.delete("/{id}/", response_model=UserOut)
-async def delete_user(id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await routing.delete_entry(users, id)
+@router.delete("/{user_id}/", response_model=UserOut)
+async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+    return await routing.delete_entry(users, user_id)

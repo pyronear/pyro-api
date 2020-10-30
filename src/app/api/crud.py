@@ -13,8 +13,8 @@ async def post(payload: BaseModel, table: Table):
     return await database.execute(query=query)
 
 
-async def get(id: int, table: Table):
-    query = table.select().where(id == table.c.id)
+async def get(entry_id: int, table: Table):
+    query = table.select().where(entry_id == table.c.id)
     return await database.fetch_one(query=query)
 
 
@@ -23,19 +23,19 @@ async def fetch_all(table: Table):
     return await database.fetch_all(query=query)
 
 
-async def put(id: int, payload: BaseModel, table: Table):
+async def put(entry_id: int, payload: BaseModel, table: Table):
     query = (
         table
         .update()
-        .where(id == table.c.id)
+        .where(entry_id == table.c.id)
         .values(**payload.dict())
         .returning(table.c.id)
     )
     return await database.execute(query=query)
 
 
-async def delete(id: int, table: Table):
-    query = table.delete().where(id == table.c.id)
+async def delete(entry_id: int, table: Table):
+    query = table.delete().where(entry_id == table.c.id)
     return await database.execute(query=query)
 
 

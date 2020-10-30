@@ -33,7 +33,7 @@ def test_create_event_invalid_json(test_app):
 def test_get_event(test_app, monkeypatch):
     test_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -44,7 +44,7 @@ def test_get_event(test_app, monkeypatch):
 
 
 def test_get_event_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -76,12 +76,12 @@ def test_fetch_events(test_app, monkeypatch):
 def test_update_event(test_app, monkeypatch):
     test_update_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return True
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_put(id, payload, table):
+    async def mock_put(entry_id, payload, table):
         return 1
 
     monkeypatch.setattr(crud, "put", mock_put)
@@ -102,7 +102,7 @@ def test_update_event(test_app, monkeypatch):
     ],
 )
 def test_update_event_invalid(test_app, monkeypatch, id, payload, status_code):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -114,13 +114,13 @@ def test_update_event_invalid(test_app, monkeypatch, id, payload, status_code):
 def test_remove_event(test_app, monkeypatch):
     test_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_delete(id, table):
-        return id
+    async def mock_delete(entry_id, table):
+        return entry_id
 
     monkeypatch.setattr(crud, "delete", mock_delete)
 
@@ -130,7 +130,7 @@ def test_remove_event(test_app, monkeypatch):
 
 
 def test_remove_event_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)

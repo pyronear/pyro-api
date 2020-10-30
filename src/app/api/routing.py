@@ -10,8 +10,8 @@ async def create_entry(table: Table, payload: BaseModel):
     return {**payload.dict(), "id": entry_id}
 
 
-async def get_entry(table: Table, id: int = Path(..., gt=0)):
-    entry = await crud.get(id, table)
+async def get_entry(table: Table, entry_id: int = Path(..., gt=0)):
+    entry = await crud.get(entry_id, table)
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
@@ -21,15 +21,15 @@ async def fetch_entries(table: Table):
     return await crud.fetch_all(table)
 
 
-async def update_entry(table: Table, payload: BaseModel, id: int = Path(..., gt=0)):
-    await get_entry(table, id)
-    entry_id = await crud.put(id, payload, table)
+async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)):
+    await get_entry(table, entry_id)
+    entry_id = await crud.put(entry_id, payload, table)
 
     return {**payload.dict(), "id": entry_id}
 
 
-async def delete_entry(table: Table, id: int = Path(..., gt=0)):
-    entry = await get_entry(table, id)
-    await crud.delete(id, table)
+async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)):
+    entry = await get_entry(table, entry_id)
+    await crud.delete(entry_id, table)
 
     return entry
