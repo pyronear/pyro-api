@@ -120,7 +120,7 @@ def test_update_device(test_app, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "id, payload, status_code",
+    "device_id, payload, status_code",
     [
         [1, {}, 422],
         [1, {"last_ping": None}, 422],
@@ -129,13 +129,13 @@ def test_update_device(test_app, monkeypatch):
         [0, {"name": "foo", "owner_id": 1, "specs": "my_specs"}, 422],
     ],
 )
-def test_update_device_invalid(test_app, monkeypatch, id, payload, status_code):
+def test_update_device_invalid(test_app, monkeypatch, device_id, payload, status_code):
     async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/devices/{id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/devices/{device_id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 

@@ -120,7 +120,7 @@ def test_update_user(test_app, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "id, payload, status_code",
+    "user_id, payload, status_code",
     [
         [1, {}, 422],
         [1, {"description": "bar"}, 422],
@@ -129,13 +129,13 @@ def test_update_user(test_app, monkeypatch):
         [0, {"username": "foo"}, 422],
     ],
 )
-def test_update_user_invalid(test_app, monkeypatch, id, payload, status_code):
+def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
     async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/users/{id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 

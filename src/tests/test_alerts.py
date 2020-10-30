@@ -93,7 +93,7 @@ def test_update_alert(test_app, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "id, payload, status_code",
+    "alert_id, payload, status_code",
     [
         [1, {}, 422],
         [1, {"site_id": 1}, 422],
@@ -102,13 +102,13 @@ def test_update_alert(test_app, monkeypatch):
         [0, FULL_PAYLOAD, 422],
     ],
 )
-def test_update_alert_invalid(test_app, monkeypatch, id, payload, status_code):
+def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_code):
     async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/alerts/{id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/alerts/{alert_id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 
