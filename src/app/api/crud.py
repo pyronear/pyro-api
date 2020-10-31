@@ -6,8 +6,8 @@ from fastapi import HTTPException
 
 from app.api.schemas import UserCreate, UserOut, UserInDb, DeviceOut, HeartbeatOut, UpdatedLocation
 from app.db import users, devices
-from app.security import get_password_hash, verify_password
 from datetime import datetime
+from app import security
 
 
 async def post(payload: BaseModel, table: Table):
@@ -80,7 +80,7 @@ class DevideCRUD:
 class UserCRUD:
 
     async def create(self, user_in: UserCreate) -> UserOut:
-        pwd = await get_password_hash(user_in.password)
+        pwd = await security.get_password_hash(user_in.password)
         query = users.insert().values(username=user_in.username, hashed_password=pwd, scopes=user_in.scopes)
         user_id = await database.execute(query=query)
         return UserOut(id=user_id, username=user_in.username)
@@ -97,7 +97,7 @@ class UserCRUD:
 
         if not usr:
             return None
-        if not await verify_password(password, usr.hashed_password):
+        if not await security.verify_password(password, usr.hashed_password):
             return None
         return usr
 

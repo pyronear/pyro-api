@@ -1,3 +1,4 @@
+from typing import List, Optional
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator

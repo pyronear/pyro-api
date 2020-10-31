@@ -20,7 +20,7 @@ async def get_device(id: int = Path(..., gt=0), _=Security(get_current_user, sco
 
 
 @router.get("/", response_model=List[DeviceOut])
-async def fetch_devices():  # _=Security(get_current_user, scopes=["admin"])):
+async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
     return await routing.fetch_entries(devices)
 
 

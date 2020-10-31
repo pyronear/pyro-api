@@ -2,21 +2,47 @@ import json
 import pytest
 
 from app.api import crud
+from app.api.schemas import UserCreate, UserOut
 
 
-def test_create_user(test_app, monkeypatch):
-    test_request_payload = {"username": "someone"}
-    test_response_payload = {"id": 1, "username": "someone"}
+def test_get_me(test_app):
+    # connected user mocked in test_app fixture
+    test_response_payload = {"id": 99, "username": "connected_user"}
+    response = test_app.get("/users/me")
+    assert response.status_code == 200
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
 
-    async def mock_post(payload, table):
-        return 1
 
-    monkeypatch.setattr(crud, "post", mock_post)
+def test_create_user(test_app, monkeypatch, existing_users):
+    async def get_by_username(username: str):
+        for u in existing_users:
+            if u.username == username:
+                return u
 
-    response = test_app.post("/users/", data=json.dumps(test_request_payload),)
+    async def mock_create(user_in: UserCreate):
+        return UserOut(id=4, username=user_in.username)
 
+    monkeypatch.setattr(crud.user, "get_by_username", get_by_username)
+    monkeypatch.setattr(crud.user, "create", mock_create)
+
+    # test valid
+    test_request_payload = {"username": "someone", "password": "any pwd"}
+    test_response_payload = {"id": 4, "username": "someone"}
+
+    response = test_app.post(
+        "/users/",
+        data=json.dumps(test_request_payload),
+    )
     assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
+
+    # test if username already exists
+    test_request_payload = {"username": "second", "password": "any pwd"}
+    response = test_app.post(
+        "/users/",
+        data=json.dumps(test_request_payload),
+    )
+    assert response.status_code == 400
 
 
 def test_create_user_invalid_json(test_app):
@@ -71,21 +97,26 @@ def test_fetch_users(test_app, monkeypatch):
 
 
 def test_update_user(test_app, monkeypatch):
-    test_update_data = {"username": "someone", "id": 1}
-
     async def mock_get(id, table):
         return True
 
     monkeypatch.setattr(crud, "get", mock_get)
 
     async def mock_put(id, payload, table):
-        return 1
+        return id
 
     monkeypatch.setattr(crud, "put", mock_put)
 
+    test_update_data = {"username": "someone", "id": 1}
     response = test_app.put("/users/1/", data=json.dumps(test_update_data))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_update_data
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == test_update_data
+
+    # test update connected_user (dont alter username for other tests)
+    test_update_data = {"username": "connected_user"}
+    response = test_app.put("/users/update-me", data=json.dumps(test_update_data))
+    assert response.status_code == 200
+    assert {k: v for k, v in response.json().items() if k != "created_at"} == {**test_update_data, "id": 99}
 
 
 @pytest.mark.parametrize(
