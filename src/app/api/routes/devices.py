@@ -15,9 +15,9 @@ async def create_device(payload: DeviceIn, _=Security(get_current_user, scopes=[
     return await routing.create_entry(devices, payload)
 
 
-@router.get("/{id}/", response_model=DeviceOut)
-async def get_device(id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await routing.get_entry(devices, id)
+@router.get("/{device_id}/", response_model=DeviceOut)
+async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+    return await routing.get_entry(devices, device_id)
 
 
 @router.get("/", response_model=List[DeviceOut])
@@ -25,15 +25,15 @@ async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
     return await routing.fetch_entries(devices)
 
 
-@router.put("/{id}/", response_model=DeviceOut)
-async def update_device(payload: DeviceIn, id: int = Path(..., gt=0)):
+@router.put("/{device_id}/", response_model=DeviceOut)
+async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
     # TODO add device auth
-    return await routing.update_entry(devices, payload, id)
+    return await routing.update_entry(devices, payload, device_id)
 
 
-@router.delete("/{id}/", response_model=DeviceOut)
-async def delete_device(id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await routing.delete_entry(devices, id)
+@router.delete("/{device_id}/", response_model=DeviceOut)
+async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+    return await routing.delete_entry(devices, device_id)
 
 
 @router.get("/my-devices", response_model=List[DeviceOut])

@@ -13,9 +13,9 @@ async def create_event(payload: EventIn):
     return await routing.create_entry(events, payload)
 
 
-@router.get("/{id}/", response_model=EventOut)
-async def get_event(id: int = Path(..., gt=0)):
-    return await routing.get_entry(events, id)
+@router.get("/{event_id}/", response_model=EventOut)
+async def get_event(event_id: int = Path(..., gt=0)):
+    return await routing.get_entry(events, event_id)
 
 
 @router.get("/", response_model=List[EventOut])
@@ -23,11 +23,11 @@ async def fetch_events():
     return await routing.fetch_entries(events)
 
 
-@router.put("/{id}/", response_model=EventOut)
-async def update_event(payload: EventIn, id: int = Path(..., gt=0)):
-    return await routing.update_entry(events, payload, id)
+@router.put("/{event_id}/", response_model=EventOut)
+async def update_event(payload: EventIn, event_id: int = Path(..., gt=0)):
+    return await routing.update_entry(events, payload, event_id)
 
 
-@router.delete("/{id}/", response_model=EventOut)
-async def delete_event(id: int = Path(..., gt=0)):
-    return await routing.delete_entry(events, id)
+@router.delete("/{event_id}/", response_model=EventOut)
+async def delete_event(event_id: int = Path(..., gt=0)):
+    return await routing.delete_entry(events, event_id)
