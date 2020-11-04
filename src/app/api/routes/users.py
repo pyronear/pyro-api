@@ -23,16 +23,7 @@ async def update_me(payload: UserInfo, me: UserRead = Security(get_current_user,
 
 @router.post("/", response_model=UserRead, status_code=201)
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
-    entry = await routing.fetch_entry(users, ('username', payload.username))
-    if entry is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this username already exists.",
-        )
-    pwd = await security.hash_password(payload.password)
-    ####
-    payload = UserCreation(username=payload.username, hashed_password=pwd, scopes=payload.scopes)
-    return await routing.create_entry(users, payload)
+    return await routing.create_user(users, payload)
 
 
 @router.get("/{id}/", response_model=UserRead)

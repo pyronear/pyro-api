@@ -1,8 +1,10 @@
-from fastapi import HTTPException, Path
-from app.api import crud
 from sqlalchemy import Table
 from pydantic import BaseModel
 from typing import Optional, Tuple, Any
+from fastapi import HTTPException, Path
+
+from app.api import crud, security
+from app.api.schemas import UserAuth, UserCreation
 
 
 async def create_entry(table: Table, payload: BaseModel):
@@ -38,3 +40,17 @@ async def delete_entry(table: Table, id: int = Path(..., gt=0)):
     await crud.delete(id, table)
 
     return entry
+
+
+async def create_user(user_table: Table, payload: UserAuth):
+    # Check that username does not already exist
+    if await fetch_entry(user_table, ('username', payload.username)) is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"An entry with username='{payload.username}' already exists.",
+        )
+
+    # Hash the password
+    pwd = await security.hash_password(payload.password)
+    payload = UserCreation(username=payload.username, hashed_password=pwd, scopes=payload.scopes)
+    return await create_entry(user_table, payload)
