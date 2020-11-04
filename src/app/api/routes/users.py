@@ -37,7 +37,11 @@ async def fetch_users(_=Security(get_current_user, scopes=["admin"])):
 
 
 @router.put("/{user_id}/", response_model=UserRead)
-async def update_user(payload: UserInfo, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def update_user(
+    payload: UserInfo,
+    user_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
     return await routing.update_entry(users, payload, user_id)
 
 
