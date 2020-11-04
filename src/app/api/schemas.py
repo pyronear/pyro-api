@@ -15,8 +15,9 @@ class UserRead(UserInfo):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -53,8 +54,9 @@ class SiteOut(SiteIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -70,8 +72,9 @@ class EventOut(EventIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -91,8 +94,9 @@ class DeviceOut(DeviceIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -105,8 +109,9 @@ class MediaOut(MediaIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -126,8 +131,9 @@ class InstallationOut(InstallationIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -145,6 +151,7 @@ class AlertOut(AlertIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()

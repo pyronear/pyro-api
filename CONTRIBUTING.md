@@ -38,3 +38,24 @@ Use Github [issues](https://github.com/pyronear/pyronear-api/issues) for feature
 
 - **Code**: ensure to provide docstrings to your Python code. In doing so, please follow [Google-style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) so it can ease the process of documentation later.
 - **Commit message**: please follow [Udacity guide](http://udacity.github.io/git-styleguide/)
+
+### Running CI verifications locally
+
+#### Unit tests
+
+In order to run the same unit tests as the CI workflows, you can run the dockerized version of the server locally and run the tests over there:
+
+```bash
+PORT=8002 docker-compose up -d --build
+PORT=8002 docker-compose exec -T web coverage run -m pytest .
+```
+Please note that you can pick another port number, it only has to be consistent once you have started your containers.
+
+#### Lint verification
+
+To ensure that your incoming PR complies with the lint settings, you need to install [flake8](https://flake8.pycqa.org/en/latest/) and run the following command from the repository's root folder:
+
+```bash
+flake8 ./
+```
+This will read the `.flake8` setting file and let you know whether your commits need some adjustments.

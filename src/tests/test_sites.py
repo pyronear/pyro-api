@@ -33,7 +33,7 @@ def test_create_site_invalid_json(test_app):
 def test_get_site(test_app, monkeypatch):
     test_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -44,7 +44,7 @@ def test_get_site(test_app, monkeypatch):
 
 
 def test_get_site_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -76,12 +76,12 @@ def test_fetch_sites(test_app, monkeypatch):
 def test_update_site(test_app, monkeypatch):
     test_update_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return True
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_put(id, payload, table):
+    async def mock_put(entry_id, payload, table):
         return 1
 
     monkeypatch.setattr(crud, "put", mock_put)
@@ -92,7 +92,7 @@ def test_update_site(test_app, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "id, payload, status_code",
+    "site_id, payload, status_code",
     [
         [1, {}, 422],
         [1, {"site_name": "foo"}, 422],
@@ -101,26 +101,26 @@ def test_update_site(test_app, monkeypatch):
         [0, {"name": "foo", "lat": 0., "lon": 0., "type": "tower"}, 422],
     ],
 )
-def test_update_site_invalid(test_app, monkeypatch, id, payload, status_code):
-    async def mock_get(id, table):
+def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_code):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/sites/{id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/sites/{site_id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 
 def test_remove_site(test_app, monkeypatch):
     test_data = {"id": 1, **FULL_PAYLOAD}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_delete(id, table):
-        return id
+    async def mock_delete(entry_id, table):
+        return entry_id
 
     monkeypatch.setattr(crud, "delete", mock_delete)
 
@@ -130,7 +130,7 @@ def test_remove_site(test_app, monkeypatch):
 
 
 def test_remove_site_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
