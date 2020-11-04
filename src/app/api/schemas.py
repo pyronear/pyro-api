@@ -24,13 +24,13 @@ class UserRead(UserInfo):
 # Authentication request
 class UserAuth(UserInfo):
     password: str
-    scopes: Optional[str]
+    scopes: Optional[str] = "me"
 
 
 # Creation payload
 class UserCreation(UserInfo):
     hashed_password: str
-    scopes: Optional[str]
+    scopes: str
 
 
 class Token(BaseModel):
