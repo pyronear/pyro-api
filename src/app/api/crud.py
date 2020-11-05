@@ -76,10 +76,10 @@ class DevideCRUD:
                 detail="You don't own this device."
             )
         device = DeviceOut(** await get(device_id, devices))
-        device.last_lat = payload.lat
-        device.last_lon = payload.lon
-        device.last_yaw = payload.yaw
-        device.last_pitch = payload.pitch
+        device.lat = payload.lat
+        device.lon = payload.lon
+        device.yaw = payload.yaw
+        device.pitch = payload.pitch
         await put(device.id, device, devices)
         return device
 
