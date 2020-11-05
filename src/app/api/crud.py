@@ -5,9 +5,8 @@ from pydantic import BaseModel
 from fastapi import HTTPException
 
 from app.api.schemas import DeviceOut, HeartbeatOut, UpdatedLocation
-from app.db import devices, users
+from app.db import devices
 from datetime import datetime
-from app.api import security
 
 
 async def post(payload: BaseModel, table: Table):
