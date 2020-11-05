@@ -5,11 +5,11 @@ from app.api import crud
 MIN_PAYLOAD = {"name": "my_device", "owner_id": 1, "specs": "my_specs", "password": "my_password"}
 FULL_PAYLOAD = {
     **MIN_PAYLOAD,
-    "last_lat": None,
-    "last_lon": None,
-    "last_elevation": None,
-    "last_yaw": None,
-    "last_pitch": None,
+    "lat": None,
+    "lon": None,
+    "elevation": None,
+    "yaw": None,
+    "pitch": None,
     "last_ping": None,
 }
 REPLY_PAYLOAD = FULL_PAYLOAD.copy()
@@ -18,7 +18,7 @@ REPLY_PAYLOAD.pop("password")
 
 def test_fetch_my_devices(test_app, monkeypatch):
     # device id 1->4 owned by user 99 (connected_user), id 5->6 owned by user 1
-    test_data = [{"id": did, **FULL_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
+    test_data = [{"id": did, **REPLY_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
 
     async def mock_fetch_by_owner(table, query_filter):
         return [entry for entry in test_data if entry[query_filter[0]] == query_filter[1]]
@@ -36,6 +36,11 @@ def test_create_device(test_app, monkeypatch):
     test_request_payload = FULL_PAYLOAD
     test_response_payload = {"id": 1, **REPLY_PAYLOAD}
 
+    async def mock_fetch_one(table, query_filter):
+        return None
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
     async def mock_post(payload, table):
         return 1
 
@@ -46,6 +51,25 @@ def test_create_device(test_app, monkeypatch):
     assert response.status_code == 201
     assert {k: v for k, v in response.json().items() if k not in ('created_at')} == test_response_payload
 
+
+def test_create_device_if_already_exists(test_app, monkeypatch):
+    test_request_payload = FULL_PAYLOAD
+    test_response_payload = {"id": 1, **REPLY_PAYLOAD}
+
+    async def mock_fetch_one(table, query_filter):
+        return test_request_payload
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
+    async def mock_post(payload, table):
+        return 1
+
+    monkeypatch.setattr(crud, "post", mock_post)
+
+    response = test_app.post("/devices/", data=json.dumps(test_request_payload))
+
+    assert response.status_code == 400
+    
 
 def test_create_device_invalid_json(test_app):
     response = test_app.post("/devices/", data=json.dumps({"username": "my_device", "owner_id": 1, "specs": "s"}))
@@ -167,3 +191,13 @@ def test_remove_device_incorrect_id(test_app, monkeypatch):
 
     response = test_app.delete("/devices/0/")
     assert response.status_code == 422
+
+
+def test_heartbeat(test_app, monkeypatch):
+    # TODO
+    pass
+
+
+def test_update_location(test_app, monkeypatch):
+    # TODO
+    pass
