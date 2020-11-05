@@ -1,6 +1,5 @@
 import json
 import pytest
-
 from app.api import crud
 
 MIN_PAYLOAD = {"name": "my_device", "owner_id": 1, "specs": "my_specs", "password": "my_password"}
@@ -15,7 +14,6 @@ FULL_PAYLOAD = {
 }
 REPLY_PAYLOAD = FULL_PAYLOAD.copy()
 REPLY_PAYLOAD.pop("password")
-
 
 
 def test_fetch_my_devices(test_app, monkeypatch):
