@@ -54,7 +54,6 @@ def test_create_device(test_app, monkeypatch):
 
 def test_create_device_if_already_exists(test_app, monkeypatch):
     test_request_payload = FULL_PAYLOAD
-    test_response_payload = {"id": 1, **REPLY_PAYLOAD}
 
     async def mock_fetch_one(table, query_filter):
         return test_request_payload
@@ -69,7 +68,7 @@ def test_create_device_if_already_exists(test_app, monkeypatch):
     response = test_app.post("/devices/", data=json.dumps(test_request_payload))
 
     assert response.status_code == 400
-    
+
 
 def test_create_device_invalid_json(test_app):
     response = test_app.post("/devices/", data=json.dumps({"username": "my_device", "owner_id": 1, "specs": "s"}))
