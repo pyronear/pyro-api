@@ -63,7 +63,7 @@ def test_fetch_sites(test_app, monkeypatch):
         {"id": 2, **FULL_PAYLOAD},
     ]
 
-    async def mock_get_all(table):
+    async def mock_get_all(table, query_filter=None):
         return test_data
 
     monkeypatch.setattr(crud, "fetch_all", mock_get_all)

@@ -16,22 +16,19 @@ FULL_PAYLOAD = {
 }
 
 
-@pytest.fixture(scope="function")
-def existing_devices():
+def test_fetch_my_devices(test_app, monkeypatch):
     # device id 1->4 owned by user 99 (connected_user), id 5->6 owned by user 1
-    return [{"id": did, **FULL_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
+    test_data = [{"id": did, **FULL_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
 
+    async def mock_fetch_by_owner(table, query_filter):
+        return [entry for entry in test_data if entry[query_filter[0]] == query_filter[1]]
 
-def test_fetch_my_devices(test_app, monkeypatch, existing_devices):
-    async def fetch_by_owner(owner_id):
-        return [d for d in existing_devices if d["owner_id"] == owner_id]
-
-    monkeypatch.setattr(crud.device, "fetch_by_owner", fetch_by_owner)
+    monkeypatch.setattr(crud, "fetch_all", mock_fetch_by_owner)
 
     response = test_app.get("/devices/my-devices")
     assert response.status_code == 200
     assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == [
-        d for d in existing_devices if d["id"] <= 4
+        d for d in test_data if d["id"] <= 4
     ]
 
 
@@ -91,7 +88,7 @@ def test_fetch_devices(test_app, monkeypatch):
         {"id": 2, **FULL_PAYLOAD},
     ]
 
-    async def mock_get_all(table):
+    async def mock_get_all(table, query_filter=None):
         return test_data
 
     monkeypatch.setattr(crud, "fetch_all", mock_get_all)

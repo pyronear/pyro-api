@@ -5,16 +5,13 @@ from pydantic import BaseModel, Field, validator
 from app.db import SiteType, EventType, MediaType, AlertType
 
 
-class UserIn(BaseModel):
+# Abstract information about a user
+class UserInfo(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
 
 
-class UserCreate(UserIn):
-    password: str
-    scopes: Optional[str]
-
-
-class UserOut(UserIn):
+# Visible info
+class UserRead(UserInfo):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
@@ -24,7 +21,14 @@ class UserOut(UserIn):
         return v or datetime.utcnow()
 
 
-class UserInDb(UserOut):
+# Authentication request
+class UserAuth(UserInfo):
+    password: str
+    scopes: Optional[str] = "me"
+
+
+# Creation payload
+class UserCreation(UserInfo):
     hashed_password: str
     scopes: str
 
