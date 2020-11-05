@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from fastapi import HTTPException
 
 from app.api.schemas import DeviceOut, HeartbeatOut, UpdatedLocation
-from app.db import devices
+from app.db import devices, users
 from datetime import datetime
-from app import security
+from app.api import security
 
 
 async def post(payload: BaseModel, table: Table):
@@ -54,16 +54,7 @@ class DevideCRUD:
         query = devices.select().where(and_(devices.c.id == device_id, devices.c.owner_id == owner_id))
         return bool(await database.fetch_one(query=query))
 
-    async def fetch_by_owner(self, owner_id: int):
-        query = devices.select().where(devices.c.owner_id == owner_id)
-        return await database.fetch_all(query=query)
-
-    async def fetch_by_user(self, user_id: int):
-        query = devices.select().where(devices.c.user_id == user_id)
-        return await database.fetch_one(query=query)
-
-    async def heartbeat(self, user_id: int) -> HeartbeatOut:
-        device = DeviceOut(** await self.fetch_by_user(user_id))
+    async def heartbeat(self, device: DeviceOut) -> HeartbeatOut:
         device.last_ping = datetime.utcnow()
         await put(device.id, device, devices)
         return device
@@ -82,5 +73,6 @@ class DevideCRUD:
         device.pitch = payload.pitch
         await put(device.id, device, devices)
         return device
+
 
 device = DevideCRUD()

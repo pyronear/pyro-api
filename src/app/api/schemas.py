@@ -1,6 +1,5 @@
 from typing import List, Optional
 from datetime import datetime
-from typing import Optional, List
 from pydantic import BaseModel, Field, validator
 
 from app.db import SiteType, EventType, MediaType, AlertType
@@ -30,8 +29,17 @@ class UserAuth(UserInfo):
 
 # Creation payload
 class UserCreation(UserInfo):
+    access_id: int = Field(..., gt=0)
+
+
+class AccessIn(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
     hashed_password: str
     scopes: str
+
+
+class AccessRead(AccessIn):
+    id: int = Field(..., gt=0)
 
 
 class Token(BaseModel):
@@ -82,7 +90,6 @@ class EventOut(EventIn):
 class DeviceIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     owner_id: int = Field(..., gt=0)
-    user_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
     elevation: float = Field(None, gt=0., lt=10000)
     lat: float = Field(None, gt=-90, lt=90)
@@ -90,6 +97,15 @@ class DeviceIn(BaseModel):
     yaw: float = Field(None, gt=-180, lt=180)
     pitch: float = Field(None, gt=-90, lt=90)
     last_ping: datetime = None
+
+
+class DeviceAuth(DeviceIn):
+    password: str
+    scopes: Optional[str] = "device"
+
+
+class DeviceCreation(DeviceIn):
+    access_id: int = Field(..., gt=0)
 
 
 class DeviceOut(DeviceIn):

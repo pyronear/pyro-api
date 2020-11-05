@@ -4,9 +4,9 @@ from jose import JWTError, jwt
 from pydantic import ValidationError
 
 from app.api import crud
-from app.db import users
+from app.db import access, users, devices
 import app.config as cfg
-from app.api.schemas import UserRead, TokenPayload
+from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
 
 
 # Scope definition
@@ -25,11 +25,11 @@ def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPExceptio
     )
 
 
-async def get_current_user(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)):
+async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)):
     """Dependency to use as fastapi.security.Security with scopes.
 
     >>> @app.get("/users/me")
-    >>> async def read_users_me(current_user: User = Security(get_current_user, scopes=["me"])):
+    >>> async def read_users_me(current_user: User = Security(get_current_access, scopes=["me"])):
     >>>     return current_user
     """
 
@@ -40,13 +40,13 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.JWT_ENCODING_ALGORITHM])
-        user_id = int(payload["sub"])
+        access_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
-        token_data = TokenPayload(user_id=user_id, scopes=token_scopes)
+        token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    entry = await crud.get(id=user_id, table=users)
+    entry = await crud.get(entry_id=access_id, table=access)
 
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
@@ -55,4 +55,22 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
         if scope not in token_data.scopes:
             raise unauthorized_exception("Permission denied", authenticate_value)
 
-    return UserRead(**entry)
+    return AccessRead(**entry)
+
+
+async def get_current_user(access=Depends(get_current_access)):
+    user = await crud.fetch_one(users, ('access_id', access.id))
+    if user is None:
+        # Could be a "permission denied error as well"
+        raise HTTPException(status_code=400, detail="No existing user")
+
+    return UserRead(**user)
+
+
+async def get_current_device(access=Depends(get_current_access)):
+    device = await crud.fetch_one(devices, ('access_id', access.id))
+    if device is None:
+        # Could be a "permission denied error as well"
+        raise HTTPException(status_code=400, detail="No existing device")
+
+    return DeviceOut(**device)

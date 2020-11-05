@@ -3,15 +3,15 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing, crud
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceIn, UserRead, HeartbeatOut, UpdatedLocation
-from app.api.deps import get_current_user
+from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, UpdatedLocation, AccessRead
+from app.api.deps import get_current_device, get_current_user
 
 router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201)
-async def create_device(payload: DeviceIn, _=Security(get_current_user, scopes=["admin"])):
-    return await routing.create_entry(devices, payload)
+async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
+    return await routing.create_device(devices, payload)
 
 
 @router.get("/{device_id}/", response_model=DeviceOut)
@@ -31,13 +31,15 @@ async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
 
 
 @router.post("/heartbeat", response_model=HeartbeatOut)
-async def heartbeat(device_user: UserRead = Security(get_current_user, scopes=["device"])):
-    return await crud.device.heartbeat(user_id=device_user.id)
+async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    return await crud.device.heartbeat(device)
 
 
 @router.post("/{id}/update_location", response_model=DeviceOut)
-async def update_location(payload: UpdatedLocation, device_user: UserRead = Security(get_current_user, scopes=["me"]), id: int = Path(..., gt=0)):
-    return await crud.device.update_location(payload, device_id=id, user_id=device_user.id)
+async def update_location(payload: UpdatedLocation,
+                          user: UserRead = Security(get_current_user, scopes=["me"]),
+                          device_id: int = Path(..., gt=0)):
+    return await crud.device.update_location(payload, device_id=id, user_id=user.id)
 
 
 @router.delete("/{id}/", response_model=DeviceOut)
