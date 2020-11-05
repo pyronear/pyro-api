@@ -6,25 +6,30 @@ from pydantic import BaseModel, Field, validator
 from app.db import SiteType, EventType, MediaType, AlertType
 
 
-class UserIn(BaseModel):
+# Abstract information about a user
+class UserInfo(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
 
 
-class UserCreate(UserIn):
-    password: str
-    scopes: Optional[str]
-
-
-class UserOut(UserIn):
+# Visible info
+class UserRead(UserInfo):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
-class UserInDb(UserOut):
+# Authentication request
+class UserAuth(UserInfo):
+    password: str
+    scopes: Optional[str] = "me"
+
+
+# Creation payload
+class UserCreation(UserInfo):
     hashed_password: str
     scopes: str
 
@@ -50,8 +55,9 @@ class SiteOut(SiteIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -67,8 +73,9 @@ class EventOut(EventIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -89,8 +96,9 @@ class DeviceOut(DeviceIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -115,8 +123,9 @@ class MediaOut(MediaIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -136,8 +145,9 @@ class InstallationOut(InstallationIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()
 
 
@@ -155,6 +165,7 @@ class AlertOut(AlertIn):
     id: int = Field(..., gt=0)
     created_at: datetime = None
 
+    @staticmethod
     @validator('created_at', pre=True, always=True)
-    def default_ts_created(cls, v):
+    def default_ts_created(v):
         return v or datetime.utcnow()

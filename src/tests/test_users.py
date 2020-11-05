@@ -2,7 +2,6 @@ import json
 import pytest
 
 from app.api import crud
-from app.api.schemas import UserCreate, UserOut
 
 
 def test_get_me(test_app):
@@ -13,17 +12,25 @@ def test_get_me(test_app):
     assert {k: v for k, v in response.json().items() if k != "created_at"} == test_response_payload
 
 
-def test_create_user(test_app, monkeypatch, existing_users):
-    async def get_by_username(username: str):
-        for u in existing_users:
-            if u.username == username:
-                return u
+def test_create_user(test_app, monkeypatch):
 
-    async def mock_create(user_in: UserCreate):
-        return UserOut(id=4, username=user_in.username)
+    test_data = [
+        {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
+        {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
+        {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+    ]
 
-    monkeypatch.setattr(crud.user, "get_by_username", get_by_username)
-    monkeypatch.setattr(crud.user, "create", mock_create)
+    async def mock_fetch_one(table, query_filter):
+        for entry in test_data:
+            if entry[query_filter[0]] == query_filter[1]:
+                return entry
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
+    async def mock_post(payload, table):
+        return len(test_data) + 1
+
+    monkeypatch.setattr(crud, "post", mock_post)
 
     # test valid
     test_request_payload = {"username": "someone", "password": "any pwd"}
@@ -56,7 +63,7 @@ def test_create_user_invalid_json(test_app):
 def test_get_user(test_app, monkeypatch):
     test_data = {"id": 1, "username": "someone"}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -67,7 +74,7 @@ def test_get_user(test_app, monkeypatch):
 
 
 def test_get_user_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
@@ -86,7 +93,7 @@ def test_fetch_users(test_app, monkeypatch):
         {"username": "someone else", "id": 2},
     ]
 
-    async def mock_get_all(table):
+    async def mock_get_all(table, query_filter=None):
         return test_data
 
     monkeypatch.setattr(crud, "fetch_all", mock_get_all)
@@ -97,13 +104,13 @@ def test_fetch_users(test_app, monkeypatch):
 
 
 def test_update_user(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return True
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_put(id, payload, table):
-        return id
+    async def mock_put(entry_id, payload, table):
+        return entry_id
 
     monkeypatch.setattr(crud, "put", mock_put)
 
@@ -120,7 +127,7 @@ def test_update_user(test_app, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "id, payload, status_code",
+    "user_id, payload, status_code",
     [
         [1, {}, 422],
         [1, {"description": "bar"}, 422],
@@ -129,26 +136,26 @@ def test_update_user(test_app, monkeypatch):
         [0, {"username": "foo"}, 422],
     ],
 )
-def test_update_user_invalid(test_app, monkeypatch, id, payload, status_code):
-    async def mock_get(id, table):
+def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/users/{id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload),)
     assert response.status_code == status_code, print(payload)
 
 
 def test_remove_user(test_app, monkeypatch):
     test_data = {"username": "someone", "id": 1}
 
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return test_data
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_delete(id, table):
-        return id
+    async def mock_delete(entry_id, table):
+        return entry_id
 
     monkeypatch.setattr(crud, "delete", mock_delete)
 
@@ -158,7 +165,7 @@ def test_remove_user(test_app, monkeypatch):
 
 
 def test_remove_note_incorrect_id(test_app, monkeypatch):
-    async def mock_get(id, table):
+    async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
