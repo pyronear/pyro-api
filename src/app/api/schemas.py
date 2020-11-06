@@ -32,13 +32,20 @@ class UserCreation(UserInfo):
     access_id: int = Field(..., gt=0)
 
 
-class AccessIn(BaseModel):
+class AccessBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    hashed_password: str
     scopes: str
 
 
-class AccessRead(AccessIn):
+class AccessAuth(AccessBase):
+    password: str
+
+
+class AccessCreation(AccessBase):
+    hashed_password: str
+
+
+class AccessRead(AccessBase):
     id: int = Field(..., gt=0)
 
 
