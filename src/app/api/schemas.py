@@ -10,6 +10,15 @@ class UserInfo(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
 
 
+# Sensitive information about the user
+class UserCred(BaseModel):
+    password: str
+
+
+class UserCredHash(BaseModel):
+    hashed_password: str
+
+
 # Visible info
 class UserRead(UserInfo):
     id: int = Field(..., gt=0)

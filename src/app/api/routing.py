@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Any
 from fastapi import HTTPException, Path
 
 from app.api import crud, security
-from app.api.schemas import UserAuth, UserCreation
+from app.api.schemas import UserAuth, UserCreation, UserCred, UserCredHash
 
 
 async def create_entry(table: Table, payload: BaseModel):
@@ -54,3 +54,14 @@ async def create_user(user_table: Table, payload: UserAuth):
     pwd = await security.hash_password(payload.password)
     payload = UserCreation(username=payload.username, hashed_password=pwd, scopes=payload.scopes)
     return await create_entry(user_table, payload)
+
+
+async def update_user_pwd(user_table: Table, payload: UserCred, entry_id: int = Path(..., gt=0)):
+    entry = await get_entry(user_table, entry_id)
+    # Hash the password
+    pwd = await security.hash_password(payload.password)
+    # Update the password
+    payload = UserCredHash(hashed_password=pwd)
+    await crud.put(entry_id, payload, user_table)
+    # Return non-sensitive information
+    return {"username": entry["username"]}
