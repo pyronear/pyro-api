@@ -103,7 +103,7 @@ def test_fetch_users(test_app, monkeypatch):
     assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
 
 
-def test_update_user(test_app, monkeypatch):
+def test_update_user_info(test_app, monkeypatch):
     async def mock_get(entry_id, table):
         return True
 
@@ -121,7 +121,7 @@ def test_update_user(test_app, monkeypatch):
 
     # test update connected_user (dont alter username for other tests)
     test_update_data = {"username": "connected_user"}
-    response = test_app.put("/users/update-me", data=json.dumps(test_update_data))
+    response = test_app.put("/users/update-info", data=json.dumps(test_update_data))
     assert response.status_code == 200
     assert {k: v for k, v in response.json().items() if k != "created_at"} == {**test_update_data, "id": 99}
 
@@ -136,13 +136,13 @@ def test_update_user(test_app, monkeypatch):
         [0, {"username": "foo"}, 422],
     ],
 )
-def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
+def test_update_user_info_invalid(test_app, monkeypatch, user_id, payload, status_code):
     async def mock_get(entry_id, table):
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 

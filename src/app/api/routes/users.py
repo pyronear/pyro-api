@@ -16,8 +16,8 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=["me"])):
     return me
 
 
-@router.put("/update-me", response_model=UserRead)
-async def update_me(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["me"])):
+@router.put("/update-info", response_model=UserRead)
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["me"])):
     return await routing.update_entry(users, payload, me.id)
 
 
