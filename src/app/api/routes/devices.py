@@ -26,20 +26,7 @@ async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
 
 @router.put("/{device_id}/", response_model=DeviceOut)
 async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
-    # TODO add device auth
     return await routing.update_entry(devices, payload, device_id)
-
-
-@router.post("/heartbeat", response_model=HeartbeatOut)
-async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
-    return await crud.device.heartbeat(device)
-
-
-@router.post("/{device_id}/update_location", response_model=DeviceOut)
-async def update_location(payload: UpdatedLocation,
-                          user: UserRead = Security(get_current_user, scopes=["me"]),
-                          device_id: int = Path(..., gt=0)):
-    return await crud.device.update_location(payload, device_id=id, user_id=user.id)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut)
@@ -50,3 +37,15 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 @router.get("/my-devices", response_model=List[DeviceOut])
 async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me"])):
     return await routing.fetch_entries(devices, ("owner_id", me.id))
+
+
+@router.post("/heartbeat", response_model=HeartbeatOut)
+async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    return await crud.DeviceCRUD.heartbeat(device)
+
+
+@router.post("/{device_id}/update_location", response_model=DeviceOut)
+async def update_location(payload: UpdatedLocation,
+                          user: UserRead = Security(get_current_user, scopes=["me"]),
+                          device_id: int = Path(..., gt=0)):
+    return await crud.DeviceCRUD.update_location(payload, device_id=id, user_id=user.id)

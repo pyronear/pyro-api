@@ -47,31 +47,29 @@ async def delete(entry_id: int, table: Table):
     return await database.execute(query=query)
 
 
-class DevideCRUD:
+class DeviceCRUD:
 
-    async def user_owns_device(self, device_id: int, owner_id: int) -> bool:
-        query = devices.select().where(and_(devices.c.id == device_id, devices.c.owner_id == owner_id))
-        return bool(await database.fetch_one(query=query))
-
-    async def heartbeat(self, device: DeviceOut) -> HeartbeatOut:
+    @classmethod
+    async def heartbeat(cls, device: DeviceOut) -> HeartbeatOut:
         device.last_ping = datetime.utcnow()
         await put(device.id, device, devices)
         return device
 
-    async def update_location(self, payload: UpdatedLocation, device_id: int, user_id: int):
-        user_owns_device = await self.user_owns_device(device_id, user_id)
+    @classmethod
+    async def user_owns_device(cls, device_id: int, owner_id: int) -> bool:
+        query = devices.select().where(and_(devices.c.id == device_id, devices.c.owner_id == owner_id))
+        return bool(await database.fetch_one(query=query))
+
+    @classmethod
+    async def update_location(cls, payload: UpdatedLocation, device_id: int, user_id: int):
+        user_owns_device = await cls.user_owns_device(device_id, user_id)
         if not user_owns_device:
             raise HTTPException(
                 status_code=400,
                 detail="You don't own this device."
             )
-        device = DeviceOut(** await get(device_id, devices))
-        device.lat = payload.lat
-        device.lon = payload.lon
-        device.yaw = payload.yaw
-        device.pitch = payload.pitch
+        device = (await get(device_id, devices))
+        device.update(payload.dict())
+        device = DeviceOut(**device)
         await put(device.id, device, devices)
         return device
-
-
-device = DevideCRUD()

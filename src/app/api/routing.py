@@ -45,6 +45,12 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)):
 
 
 async def _create_access(username: str, password: str, scopes: str) -> AccessRead:
+    # Check that username does not already exist
+    if await fetch_entry(access_table, ('username', username)) is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"An entry with username='{username}' already exists.",
+        )
     # Hash the password
     pwd = await security.hash_password(password)
     access = AccessCreation(username=username, hashed_password=pwd, scopes=scopes)
@@ -57,24 +63,12 @@ async def create_access(access_table: Table, payload: AccessAuth) -> AccessRead:
 
 
 async def create_user(user_table: Table, payload: UserAuth) -> UserRead:
-    # Check that username does not already exist
-    if await fetch_entry(user_table, ('username', payload.username)) is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"An entry with username='{payload.username}' already exists.",
-        )
     access_entry = await _create_access(payload.username, payload.password, scopes=payload.scopes)
     user = UserCreation(username=payload.username, access_id=access_entry.id)
     return await create_entry(user_table, user)
 
 
 async def create_device(device_table: Table, payload: DeviceAuth) -> DeviceOut:
-    # Check that device does not already exist
-    if await fetch_entry(device_table, ('name', payload.name)) is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"An entry with name='{payload.name}' already exists.",
-        )
     access_entry = await _create_access(payload.name, payload.password, scopes=payload.scopes)
     payload = DeviceCreation(**payload.dict(), access_id=access_entry.id)
     return await create_entry(device_table, payload)

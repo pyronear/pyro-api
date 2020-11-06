@@ -14,6 +14,11 @@ def test_create_access(test_app, monkeypatch):
     test_request_payload = FULL_PAYLOAD
     test_response_payload = {"id": 1, **REPLY_PAYLOAD}
 
+    async def mock_fetch_one(table, query_filter):
+        return None
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+
     async def mock_post(payload, table):
         return 1
 
@@ -111,9 +116,6 @@ def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status
     monkeypatch.setattr(crud, "get", mock_get)
 
     response = test_app.put(f"/access/{access_id}/", data=json.dumps(payload),)
-    print(access_id)
-    print(response.text)
-    print(response.status_code)
     assert response.status_code == status_code, print(payload)
 
 

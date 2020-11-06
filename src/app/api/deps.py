@@ -43,6 +43,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
         access_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
         token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
+
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
@@ -60,6 +61,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 
 async def get_current_user(access=Depends(get_current_access)):
     user = await crud.fetch_one(users, ('access_id', access.id))
+
     if user is None:
         # Could be a "permission denied error as well"
         raise HTTPException(status_code=400, detail="No existing user")

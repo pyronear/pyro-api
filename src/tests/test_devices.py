@@ -1,6 +1,8 @@
 import json
 import pytest
 from app.api import crud
+from datetime import datetime
+
 
 MIN_PAYLOAD = {"name": "my_device", "owner_id": 1, "specs": "my_specs", "password": "my_password"}
 FULL_PAYLOAD = {
@@ -193,10 +195,62 @@ def test_remove_device_incorrect_id(test_app, monkeypatch):
 
 
 def test_heartbeat(test_app, monkeypatch):
-    # TODO
-    pass
+    async def mock_put(entry_id, payload, table):
+        return None
+
+    monkeypatch.setattr(crud, "put", mock_put)
+
+    response = test_app.post("/devices/heartbeat")
+    assert response.status_code == 200
+    assert "last_ping" in response.json()
+    try:
+        last_ping = response.json()["last_ping"]
+        datetime.fromisoformat(last_ping)
+
+    except Exception as e:
+        raise(e)
 
 
 def test_update_location(test_app, monkeypatch):
-    # TODO
-    pass
+    test_data = {"id": 1, **REPLY_PAYLOAD}
+    update_location_data = {"lat": 1.0,
+                            "lon": 2.0,
+                            "elevation": 3.0,
+                            "yaw": 4.0,
+                            "pitch": 5.0
+                            }
+    test_response_payload = test_data.copy()
+    for k, v in update_location_data.items():
+        test_response_payload[k] = v
+
+    async def mock_get(entry_id, table):
+        return test_data
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    async def mock_user_owns_device(entry_id, payload):
+        return True
+    monkeypatch.setattr(crud.DeviceCRUD, "user_owns_device", mock_user_owns_device)
+
+    async def mock_put(entry_id, payload, table):
+        return None
+    monkeypatch.setattr(crud, "put", mock_put)
+
+    response = test_app.post("/devices/1/update_location", data=json.dumps(update_location_data))
+    assert response.status_code == 200
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+
+
+def test_update_location_on_not_owned_device(test_app, monkeypatch):
+    update_location_data = {"lat": 1.0,
+                            "lon": 2.0,
+                            "elevation": 3.0,
+                            "yaw": 4.0,
+                            "pitch": 5.0
+                            }
+
+    async def mock_user_owns_device(entry_id, payload):
+        return False
+    monkeypatch.setattr(crud.DeviceCRUD, "user_owns_device", mock_user_owns_device)
+
+    response = test_app.post("/devices/1/update_location", data=json.dumps(update_location_data))
+    assert response.status_code == 400
