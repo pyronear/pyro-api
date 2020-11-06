@@ -19,6 +19,7 @@ def test_access_token(test_app, monkeypatch, payload, status_code):
         {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
         {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
         {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+        {"username": "fourth", "hashed_password": "fourth_hashed", "scopes": "device", "id": 4},
     ]
 
     async def mock_fetch_one(table, query_filter):

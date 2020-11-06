@@ -16,7 +16,13 @@ async def login_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     if entry is None or not await security.verify_password(form_data.password, entry['hashed_password']):
         raise HTTPException(status_code=400, detail="Incorrect login or password")
     # create access token using user user_id/user_scopes
-    token = await security.create_access_token({"sub": str(entry['id']), "scopes": entry['scopes'].split()},
-                                               expires_delta=timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES))
+    token_data = {"sub": str(entry['id']), "scopes": entry['scopes'].split()}
+    is_device = entry["scopes"] == "device"
+    if is_device:
+        token = await security.create_unlimited_access_token(token_data)
+    else:
+        token = await security.create_access_token(token_data,
+                                                   expires_delta=timedelta(minutes=cfg.ACCESS_TOKEN_EXPIRE_MINUTES)
+                                                   )
 
     return {"access_token": token, "token_type": "bearer"}
