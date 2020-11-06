@@ -146,6 +146,71 @@ def test_update_user_info_invalid(test_app, monkeypatch, user_id, payload, statu
     assert response.status_code == status_code, print(payload)
 
 
+def test_update_user_pwd(test_app, monkeypatch):
+
+    test_data = [
+        {"id": 1, "username": "someone", "hashed_password": "first_hashed", "scopes": "me"},
+        {"id": 99, "username": "connected_user", "hashed_password": "first_hashed", "scopes": "me"}
+    ]
+
+    async def mock_get(entry_id, table):
+        for entry in test_data:
+            if entry['id'] == entry_id:
+                return entry
+        return None
+
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    async def mock_put(entry_id, payload, table):
+        return entry_id
+
+    monkeypatch.setattr(crud, "put", mock_put)
+
+    test_update_data = {"password": "my_password"}
+    test_response = {"username": "someone"}
+    response = test_app.put("/users/1/pwd", data=json.dumps(test_update_data))
+    assert response.status_code == 200
+    assert response.json() == test_response
+
+    # test update connected_user (dont alter username for other tests)
+    test_update_data = {"password": "my_password"}
+    test_response = {"username": "connected_user"}
+    response = test_app.put("/users/update-pwd", data=json.dumps(test_update_data))
+    assert response.status_code == 200
+    assert response.json() == test_response
+
+
+@pytest.mark.parametrize(
+    "user_id, payload, status_code",
+    [
+        [1, {}, 422],
+        [1, {"description": "bar"}, 422],
+        [999, {"password": "my_pwd"}, 404],
+        [0, {"password": "my_pwd"}, 422],
+    ],
+)
+def test_update_user_pwd_invalid(test_app, monkeypatch, user_id, payload, status_code):
+    test_data = [
+        {"id": 1, "username": "someone", "hashed_password": "first_hashed", "scopes": "me"},
+        {"id": 99, "username": "connected_user", "hashed_password": "first_hashed", "scopes": "me"}
+    ]
+
+    async def mock_get(entry_id, table):
+        for entry in test_data:
+            if entry['id'] == entry_id:
+                return entry
+        return None
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    async def mock_put(entry_id, payload, table):
+        return entry_id
+
+    monkeypatch.setattr(crud, "put", mock_put)
+
+    response = test_app.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
+    assert response.status_code == status_code, print(payload)
+
+
 def test_remove_user(test_app, monkeypatch):
     test_data = {"username": "someone", "id": 1}
 
