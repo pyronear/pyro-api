@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing
 from app.db import users
-from app.api.schemas import UserInfo, UserCred, UserRead, UserAuth
+from app.api.schemas import UserInfo, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
 
@@ -22,8 +22,8 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 
 
 @router.put("/update-pwd", response_model=UserInfo)
-async def update_my_password(payload: UserCred, me: UserRead = Security(get_current_user, scopes=["me"])):
-    return await routing.update_user_pwd(users, payload, me.id)
+async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["me"])):
+    return await routing.update_pwd(users, payload, me.id)
 
 
 @router.post("/", response_model=UserRead, status_code=201)
@@ -52,11 +52,11 @@ async def update_user(
 
 @router.put("/{user_id}/pwd", response_model=UserInfo)
 async def reset_password(
-    payload: UserCred,
+    payload: Cred,
     user_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
-    return await routing.update_user_pwd(users, payload, user_id)
+    return await routing.update_pwd(users, payload, user_id)
 
 
 @router.delete("/{user_id}/", response_model=UserRead)

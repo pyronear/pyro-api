@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Any, List
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
-from app.api.schemas import (UserAuth, UserCreation, UserRead, UserCredHash, UserCred,
+from app.api.schemas import (UserAuth, UserCreation, UserRead, CredHash, Cred,
                              AccessCreation, AccessRead, AccessAuth,
                              DeviceAuth, DeviceCreation, DeviceOut,
                              HeartbeatOut, UpdatedLocation)
@@ -75,15 +75,21 @@ async def create_device(device_table: Table, payload: DeviceAuth) -> DeviceOut:
     return await create_entry(device_table, payload)
 
 
-async def update_user_pwd(user_table: Table, payload: UserCred, entry_id: int = Path(..., gt=0)):
-    entry = await get_entry(user_table, entry_id)
+async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)):
+    entry = await get_entry(access_table, entry_id)
     # Hash the password
     pwd = await security.hash_password(payload.password)
     # Update the password
-    payload = UserCredHash(hashed_password=pwd)
-    await crud.put(entry_id, payload, user_table)
+    payload = CredHash(hashed_password=pwd)
+    await crud.put(entry_id, payload, access_table)
     # Return non-sensitive information
-    return {"username": entry["username"]}
+    return {"login": entry["login"]}
+
+
+async def update_pwd(table: Table, payload: Cred, entry_id: int = Path(..., gt=0)):
+    entry = await get_entry(table, entry_id)
+    await update_access_pwd(payload, entry["access_id"])
+    return entry
 
 
 async def heartbeat(device_table: Table, device: DeviceOut) -> HeartbeatOut:

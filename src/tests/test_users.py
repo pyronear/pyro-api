@@ -153,15 +153,21 @@ def test_update_user_info_invalid(test_app, monkeypatch, user_id, payload, statu
 def test_update_user_pwd(test_app, monkeypatch):
 
     test_data = [
-        {"id": 1, "username": "someone", "hashed_password": "first_hashed", "scopes": "me"},
-        {"id": 99, "username": "connected_user", "hashed_password": "first_hashed", "scopes": "me"}
+        {"id": 1, "username": "someone", "access_id": 1},
+        {"id": 99, "username": "connected_user", "access_id": 99}
     ]
 
     async def mock_get(entry_id, table):
-        for entry in test_data:
-            if entry['id'] == entry_id:
-                return entry
-        return None
+        if str(table) == "users":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return entry
+            return None
+        elif str(table) == "accesses":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return {"login": entry["username"]}
+            return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 

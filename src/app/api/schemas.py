@@ -21,11 +21,11 @@ class UserInfo(BaseModel):
 
 
 # Sensitive information about the user
-class UserCred(BaseModel):
+class Cred(BaseModel):
     password: str
 
 
-class UserCredHash(BaseModel):
+class CredHash(BaseModel):
     hashed_password: str
 
 
@@ -35,7 +35,7 @@ class UserRead(UserInfo, _CreatedAt):
 
 
 # Authentication request
-class UserAuth(UserInfo, UserCred):
+class UserAuth(UserInfo, Cred):
     scopes: Optional[str] = "me"
 
 

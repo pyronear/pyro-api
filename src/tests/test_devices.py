@@ -260,3 +260,37 @@ def test_update_location_on_not_owned_device(test_app, monkeypatch):
 
     response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
     assert response.status_code == 400
+
+
+
+def test_reset_device_pwd(test_app, monkeypatch):
+
+    test_data = [
+        {"id": 1, "access_id": 1, **REPLY_PAYLOAD},
+        {"id": 99, "access_id": 99, **REPLY_PAYLOAD}
+    ]
+
+    async def mock_get(entry_id, table):
+        if str(table) == "devices":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return entry
+            return None
+        elif str(table) == "accesses":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return {"login": entry["name"]}
+            return None
+
+    monkeypatch.setattr(crud, "get", mock_get)
+
+    async def mock_put(entry_id, payload, table):
+        return entry_id
+
+    monkeypatch.setattr(crud, "put", mock_put)
+
+    test_update_data = {"password": "my_password"}
+    test_response = {"id": 1, **REPLY_PAYLOAD}
+    response = test_app.put("/devices/1/pwd", data=json.dumps(test_update_data))
+    assert response.status_code == 200
+    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response

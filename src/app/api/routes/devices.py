@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, UpdatedLocation
+from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, UpdatedLocation, Cred
 from app.api.deps import get_current_device, get_current_user
 
 router = APIRouter()
@@ -49,3 +49,13 @@ async def update_location(payload: UpdatedLocation,
                           user: UserRead = Security(get_current_user, scopes=["me"]),
                           device_id: int = Path(..., gt=0)):
     return await routing.update_location(devices, payload, device_id=id, user_id=user.id)
+
+
+@router.put("/{device_id}/pwd", response_model=DeviceOut)
+async def reset_password(
+    payload: Cred,
+    device_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
+    print("update the pswd")
+    return await routing.update_pwd(devices, payload, device_id)
