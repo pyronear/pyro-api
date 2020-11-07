@@ -4,10 +4,10 @@ from typing import Optional, Tuple, Any, List
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
-from app.api.schemas import UserAuth, UserCreation, UserRead, UserCredHash, UserCred
-from app.api.schemas import AccessCreation, AccessRead, AccessAuth
-from app.api.schemas import DeviceAuth, DeviceCreation, DeviceOut
-from app.api.schemas import HeartbeatOut, UpdatedLocation
+from app.api.schemas import (UserAuth, UserCreation, UserRead, UserCredHash, UserCred,
+                             AccessCreation, AccessRead, AccessAuth,
+                             DeviceAuth, DeviceCreation, DeviceOut,
+                             HeartbeatOut, UpdatedLocation)
 from app.db import access as access_table
 
 
