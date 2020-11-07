@@ -22,9 +22,13 @@ def test_access_token(test_app, monkeypatch, payload, status_code):
         {"login": "fourth", "hashed_password": "fourth_hashed", "scopes": "device", "id": 4},
     ]
 
-    async def mock_fetch_one(table, query_filter):
+    async def mock_fetch_one(table, query_filters):
         for entry in test_data:
-            if entry[query_filter[0]] == query_filter[1]:
+            for query_filter in query_filters:
+                valid_entry = True
+                if entry[query_filter[0]] != query_filter[1]:
+                    valid_entry = False
+            if valid_entry:
                 return entry
 
     monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)

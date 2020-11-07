@@ -19,15 +19,18 @@ async def get(entry_id: int, table: Table):
     return await database.fetch_one(query=query)
 
 
-async def fetch_all(table: Table, query_filter: Optional[Tuple[str, Any]] = None):
+async def fetch_all(table: Table, query_filters: Optional[List[Tuple[str, Any]]] = None):
     query = table.select()
-    if isinstance(query_filter, tuple):
-        query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
+    if isinstance(query_filters, list):
+        for query_filter in query_filters:
+            query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
     return await database.fetch_all(query=query)
 
 
-async def fetch_one(table: Table, query_filter: Tuple[str, Any]):
-    query = table.select().where(getattr(table.c, query_filter[0]) == query_filter[1])
+async def fetch_one(table: Table, query_filters: List[Tuple[str, Any]]):
+    query = table.select()
+    for query_filter in query_filters:
+        query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
     return await database.fetch_one(query=query)
 
 
