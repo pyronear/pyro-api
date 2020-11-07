@@ -59,7 +59,7 @@ async def _create_access(login: str, password: str, scopes: str) -> AccessRead:
     return access_entry
 
 
-async def create_access(access_table: Table, payload: AccessAuth) -> AccessRead:
+async def create_access(payload: AccessAuth) -> AccessRead:
     return await _create_access(payload.login, payload.password, scopes=payload.scopes)
 
 
