@@ -2,11 +2,12 @@ from sqlalchemy import Table
 from pydantic import BaseModel
 from typing import Optional, Tuple, Any
 from fastapi import HTTPException, Path
-
+from datetime import datetime
 from app.api import crud, security
 from app.api.schemas import UserAuth, UserCreation, UserRead, UserCredHash, UserCred
 from app.api.schemas import AccessCreation, AccessRead, AccessAuth
 from app.api.schemas import DeviceAuth, DeviceCreation, DeviceOut
+from app.api.schemas import HeartbeatOut
 from app.db import access as access_table
 
 
@@ -83,3 +84,9 @@ async def update_user_pwd(user_table: Table, payload: UserCred, entry_id: int = 
     await crud.put(entry_id, payload, user_table)
     # Return non-sensitive information
     return {"username": entry["username"]}
+
+
+async def heartbeat(device_table: Table, device: DeviceOut) -> HeartbeatOut:
+        device.last_ping = datetime.utcnow()
+        await update_entry(device_table, device, device.id)
+        return device

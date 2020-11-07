@@ -49,11 +49,6 @@ async def delete(entry_id: int, table: Table):
 
 class DeviceCRUD:
 
-    @classmethod
-    async def heartbeat(cls, device: DeviceOut) -> HeartbeatOut:
-        device.last_ping = datetime.utcnow()
-        await put(device.id, device, devices)
-        return device
 
     @classmethod
     async def user_owns_device(cls, device_id: int, owner_id: int) -> bool:

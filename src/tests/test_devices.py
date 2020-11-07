@@ -195,6 +195,11 @@ def test_remove_device_incorrect_id(test_app, monkeypatch):
 
 
 def test_heartbeat(test_app, monkeypatch):
+    async def mock_get(entry_id, table):
+        return True
+
+    monkeypatch.setattr(crud, "get", mock_get)
+
     async def mock_put(entry_id, payload, table):
         return None
 

@@ -41,7 +41,7 @@ async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me
 
 @router.post("/heartbeat", response_model=HeartbeatOut)
 async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
-    return await crud.DeviceCRUD.heartbeat(device)
+    return await routing.heartbeat(devices, device)
 
 
 @router.post("/{device_id}/update-location", response_model=DeviceOut)
