@@ -45,7 +45,7 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    entry = await crud.get(id=user_id, table=users)
+    entry = await crud.get(user_id, table=users)
 
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
