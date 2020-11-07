@@ -262,7 +262,6 @@ def test_update_location_on_not_owned_device(test_app, monkeypatch):
     assert response.status_code == 400
 
 
-
 def test_reset_device_pwd(test_app, monkeypatch):
 
     test_data = [
