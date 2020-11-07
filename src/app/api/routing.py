@@ -97,7 +97,7 @@ async def update_location(device_table: Table, payload: UpdatedLocation, device_
     if not user_owns_device:
         raise HTTPException(
             status_code=400,
-            detail="You don't own this device."
+            detail="Permission denied"
         )
     device = (await get_entry(device_id, device_table))
     device.update(payload.dict())
