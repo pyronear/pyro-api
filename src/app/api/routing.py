@@ -1,13 +1,13 @@
 from sqlalchemy import Table
 from pydantic import BaseModel
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, List
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
 from app.api.schemas import UserAuth, UserCreation, UserRead, UserCredHash, UserCred
 from app.api.schemas import AccessCreation, AccessRead, AccessAuth
 from app.api.schemas import DeviceAuth, DeviceCreation, DeviceOut
-from app.api.schemas import HeartbeatOut
+from app.api.schemas import HeartbeatOut, UpdatedLocation
 from app.db import access as access_table
 
 
@@ -87,6 +87,20 @@ async def update_user_pwd(user_table: Table, payload: UserCred, entry_id: int = 
 
 
 async def heartbeat(device_table: Table, device: DeviceOut) -> HeartbeatOut:
-        device.last_ping = datetime.utcnow()
-        await update_entry(device_table, device, device.id)
-        return device
+    device.last_ping = datetime.utcnow()
+    await update_entry(device_table, device, device.id)
+    return device
+
+
+async def update_location(device_table: Table, payload: UpdatedLocation, device_id: int, user_id: int):
+    user_owns_device = bool(await fetch_entry(device_table, [("id", device_id), ("owner_id", user_id)]))
+    if not user_owns_device:
+        raise HTTPException(
+            status_code=400,
+            detail="You don't own this device."
+        )
+    device = (await get_entry(device_id, device_table))
+    device.update(payload.dict())
+    device = DeviceOut(**device)
+    await update_entry(device_table, device, device.id)
+    return device

@@ -1,6 +1,6 @@
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, List
 from app.db import database
-from sqlalchemy import Table, and_
+from sqlalchemy import Table
 from pydantic import BaseModel
 from fastapi import HTTPException
 
@@ -48,26 +48,3 @@ async def put(entry_id: int, payload: BaseModel, table: Table):
 async def delete(entry_id: int, table: Table):
     query = table.delete().where(entry_id == table.c.id)
     return await database.execute(query=query)
-
-
-class DeviceCRUD:
-
-
-    @classmethod
-    async def user_owns_device(cls, device_id: int, owner_id: int) -> bool:
-        query = devices.select().where(and_(devices.c.id == device_id, devices.c.owner_id == owner_id))
-        return bool(await database.fetch_one(query=query))
-
-    @classmethod
-    async def update_location(cls, payload: UpdatedLocation, device_id: int, user_id: int):
-        user_owns_device = await cls.user_owns_device(device_id, user_id)
-        if not user_owns_device:
-            raise HTTPException(
-                status_code=400,
-                detail="You don't own this device."
-            )
-        device = (await get(device_id, devices))
-        device.update(payload.dict())
-        device = DeviceOut(**device)
-        await put(device.id, device, devices)
-        return device

@@ -232,9 +232,10 @@ def test_update_location(test_app, monkeypatch):
         return test_data
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_user_owns_device(entry_id, payload):
+    async def mock_fetch_one(table, query_filters):
         return True
-    monkeypatch.setattr(crud.DeviceCRUD, "user_owns_device", mock_user_owns_device)
+
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
 
     async def mock_put(entry_id, payload, table):
         return None
@@ -253,9 +254,9 @@ def test_update_location_on_not_owned_device(test_app, monkeypatch):
                             "pitch": 5.0
                             }
 
-    async def mock_user_owns_device(entry_id, payload):
+    async def mock_fetch_one(table, query_filters):
         return False
-    monkeypatch.setattr(crud.DeviceCRUD, "user_owns_device", mock_user_owns_device)
+    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
 
     response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
     assert response.status_code == 400
