@@ -21,11 +21,11 @@ class UserInfo(BaseModel):
 
 
 # Sensitive information about the user
-class UserCred(BaseModel):
+class Cred(BaseModel):
     password: str
 
 
-class UserCredHash(BaseModel):
+class CredHash(BaseModel):
     hashed_password: str
 
 
@@ -35,13 +35,30 @@ class UserRead(UserInfo, _CreatedAt):
 
 
 # Authentication request
-class UserAuth(UserInfo, UserCred):
+class UserAuth(UserInfo, Cred):
     scopes: Optional[str] = "me"
 
 
 # Creation payload
-class UserCreation(UserInfo, UserCredHash):
+class UserCreation(UserInfo):
+    access_id: int = Field(..., gt=0)
+
+
+class AccessBase(BaseModel):
+    login: str = Field(..., min_length=3, max_length=50)
     scopes: str
+
+
+class AccessAuth(AccessBase):
+    password: str
+
+
+class AccessCreation(AccessBase):
+    hashed_password: str
+
+
+class AccessRead(AccessBase):
+    id: int = Field(..., gt=0)
 
 
 class Token(BaseModel):
@@ -81,16 +98,37 @@ class DeviceIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
-    last_elevation: float = Field(None, gt=0., lt=10000)
-    last_lat: float = Field(None, gt=-90, lt=90)
-    last_lon: float = Field(None, gt=-180, lt=180)
-    last_yaw: float = Field(None, gt=-180, lt=180)
-    last_pitch: float = Field(None, gt=-90, lt=90)
+    elevation: float = Field(None, gt=0., lt=10000)
+    lat: float = Field(None, gt=-90, lt=90)
+    lon: float = Field(None, gt=-180, lt=180)
+    yaw: float = Field(None, gt=-180, lt=180)
+    pitch: float = Field(None, gt=-90, lt=90)
     last_ping: datetime = None
+
+
+class DeviceAuth(DeviceIn):
+    password: str
+    scopes: Optional[str] = "device"
+
+
+class DeviceCreation(DeviceIn):
+    access_id: int = Field(..., gt=0)
 
 
 class DeviceOut(DeviceIn, _CreatedAt):
     id: int = Field(..., gt=0)
+
+
+class UpdatedLocation(BaseModel):
+    elevation: float = Field(None, ge=0., lt=10000)
+    lat: float = Field(None, gt=-90, lt=90)
+    lon: float = Field(None, gt=-180, lt=180)
+    yaw: float = Field(None, gt=-180, lt=180)
+    pitch: float = Field(None, gt=-90, lt=90)
+
+
+class HeartbeatOut(BaseModel):
+    last_ping: datetime = None
 
 
 class MediaIn(BaseModel):

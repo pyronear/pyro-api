@@ -15,14 +15,18 @@ def test_get_me(test_app):
 def test_create_user(test_app, monkeypatch):
 
     test_data = [
-        {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
-        {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
-        {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+        {"login": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
+        {"login": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
+        {"login": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
     ]
 
-    async def mock_fetch_one(table, query_filter):
+    async def mock_fetch_one(table, query_filters):
         for entry in test_data:
-            if entry[query_filter[0]] == query_filter[1]:
+            for query_filter in query_filters:
+                valid_entry = True
+                if entry[query_filter[0]] != query_filter[1]:
+                    valid_entry = False
+            if valid_entry:
                 return entry
 
     monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
@@ -149,15 +153,21 @@ def test_update_user_info_invalid(test_app, monkeypatch, user_id, payload, statu
 def test_update_user_pwd(test_app, monkeypatch):
 
     test_data = [
-        {"id": 1, "username": "someone", "hashed_password": "first_hashed", "scopes": "me"},
-        {"id": 99, "username": "connected_user", "hashed_password": "first_hashed", "scopes": "me"}
+        {"id": 1, "username": "someone", "access_id": 1},
+        {"id": 99, "username": "connected_user", "access_id": 99}
     ]
 
     async def mock_get(entry_id, table):
-        for entry in test_data:
-            if entry['id'] == entry_id:
-                return entry
-        return None
+        if str(table) == "users":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return entry
+            return None
+        elif str(table) == "accesses":
+            for entry in test_data:
+                if entry['id'] == entry_id:
+                    return {"login": entry["username"]}
+            return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 

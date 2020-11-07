@@ -10,6 +10,11 @@ from app import config as cfg
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+async def create_unlimited_access_token(content: dict) -> str:
+    # Used for devices
+    return await create_access_token(content, timedelta(minutes=cfg.ACCESS_TOKEN_UNLIMITED_MINUTES))
+
+
 async def create_access_token(content: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Encode content dict using security algorithm, setting expiration."""
     if expires_delta is None:
