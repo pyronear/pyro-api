@@ -8,7 +8,7 @@ from app.api.schemas import (UserAuth, UserCreation, UserRead, UserCredHash, Use
                              AccessCreation, AccessRead, AccessAuth,
                              DeviceAuth, DeviceCreation, DeviceOut,
                              HeartbeatOut, UpdatedLocation)
-from app.db import access as access_table
+from app.db import accesses as access_table
 
 
 async def create_entry(table: Table, payload: BaseModel):

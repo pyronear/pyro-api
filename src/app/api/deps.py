@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from pydantic import ValidationError
 
 from app.api import crud
-from app.db import access, users, devices
+from app.db import accesses, users, devices
 import app.config as cfg
 from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
 
@@ -47,7 +47,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    entry = await crud.get(entry_id=access_id, table=access)
+    entry = await crud.get(entry_id=access_id, table=accesses)
 
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
