@@ -235,7 +235,7 @@ def test_update_location(test_app, monkeypatch):
         return None
     monkeypatch.setattr(crud, "put", mock_put)
 
-    response = test_app.post("/devices/1/update_location", data=json.dumps(update_location_data))
+    response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
     assert response.status_code == 200
     assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
 
@@ -252,5 +252,5 @@ def test_update_location_on_not_owned_device(test_app, monkeypatch):
         return False
     monkeypatch.setattr(crud.DeviceCRUD, "user_owns_device", mock_user_owns_device)
 
-    response = test_app.post("/devices/1/update_location", data=json.dumps(update_location_data))
+    response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
     assert response.status_code == 400
