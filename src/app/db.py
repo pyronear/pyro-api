@@ -27,7 +27,7 @@ access = Table(
     "access",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("username", String(50)),
+    Column("login", String(50)),
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", String(30), default="me", nullable=False),
 )

@@ -44,22 +44,22 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)):
     return entry
 
 
-async def _create_access(username: str, password: str, scopes: str) -> AccessRead:
+async def _create_access(login: str, password: str, scopes: str) -> AccessRead:
     # Check that username does not already exist
-    if await fetch_entry(access_table, ('username', username)) is not None:
+    if await fetch_entry(access_table, ('login', login)) is not None:
         raise HTTPException(
             status_code=400,
-            detail=f"An entry with username='{username}' already exists.",
+            detail=f"An entry with login='{login}' already exists.",
         )
     # Hash the password
     pwd = await security.hash_password(password)
-    access = AccessCreation(username=username, hashed_password=pwd, scopes=scopes)
+    access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
     access_entry = AccessRead(** await create_entry(access_table, access))
     return access_entry
 
 
 async def create_access(access_table: Table, payload: AccessAuth) -> AccessRead:
-    return await _create_access(payload.username, payload.password, scopes=payload.scopes)
+    return await _create_access(payload.login, payload.password, scopes=payload.scopes)
 
 
 async def create_user(user_table: Table, payload: UserAuth) -> UserRead:

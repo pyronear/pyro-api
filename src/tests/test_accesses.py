@@ -3,7 +3,7 @@ import pytest
 
 from app.api import crud
 
-BASE_PAYLOAD = {"username": "scope_username", "scopes": "ada"}
+BASE_PAYLOAD = {"login": "scope_login", "scopes": "ada"}
 MIN_PAYLOAD = {**BASE_PAYLOAD, "password": "password"}
 FULL_PAYLOAD = {**MIN_PAYLOAD}
 REPLY_PAYLOAD = FULL_PAYLOAD.copy()

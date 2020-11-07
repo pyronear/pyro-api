@@ -15,9 +15,9 @@ def test_get_me(test_app):
 def test_create_user(test_app, monkeypatch):
 
     test_data = [
-        {"username": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
-        {"username": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
-        {"username": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
+        {"login": "first", "hashed_password": "first_hashed", "scopes": "me", "id": 1},
+        {"login": "second", "hashed_password": "second_hashed", "scopes": "me", "id": 2},
+        {"login": "third", "hashed_password": "third_hashed", "scopes": "me admin", "id": 3},
     ]
 
     async def mock_fetch_one(table, query_filter):
