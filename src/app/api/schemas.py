@@ -5,14 +5,8 @@ from pydantic import BaseModel, Field, validator
 from app.db import SiteType, EventType, MediaType, AlertType
 
 
-# Abstract information about a user
-class UserInfo(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
-
-
-# Visible info
-class UserRead(UserInfo):
-    id: int = Field(..., gt=0)
+# Template class
+class _CreatedAt(BaseModel):
     created_at: datetime = None
 
     @staticmethod
@@ -21,9 +15,27 @@ class UserRead(UserInfo):
         return v or datetime.utcnow()
 
 
-# Authentication request
-class UserAuth(UserInfo):
+# Abstract information about a user
+class UserInfo(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+
+
+# Sensitive information about the user
+class UserCred(BaseModel):
     password: str
+
+
+class UserCredHash(BaseModel):
+    hashed_password: str
+
+
+# Visible info
+class UserRead(UserInfo, _CreatedAt):
+    id: int = Field(..., gt=0)
+
+
+# Authentication request
+class UserAuth(UserInfo, UserCred):
     scopes: Optional[str] = "me"
 
 
@@ -66,14 +78,8 @@ class SiteIn(BaseModel):
     type: SiteType = SiteType.tower
 
 
-class SiteOut(SiteIn):
+class SiteOut(SiteIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
 
 
 class EventIn(BaseModel):
@@ -84,14 +90,8 @@ class EventIn(BaseModel):
     start_ts: datetime = None
 
 
-class EventOut(EventIn):
+class EventOut(EventIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
 
 
 class DeviceIn(BaseModel):
@@ -115,14 +115,8 @@ class DeviceCreation(DeviceIn):
     access_id: int = Field(..., gt=0)
 
 
-class DeviceOut(DeviceIn):
+class DeviceOut(DeviceIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
 
 
 class UpdatedLocation(BaseModel):
@@ -142,14 +136,8 @@ class MediaIn(BaseModel):
     type: MediaType = MediaType.image
 
 
-class MediaOut(MediaIn):
+class MediaOut(MediaIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
 
 
 class InstallationIn(BaseModel):
@@ -164,14 +152,8 @@ class InstallationIn(BaseModel):
     end_ts: datetime = None
 
 
-class InstallationOut(InstallationIn):
+class InstallationOut(InstallationIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
 
 
 class AlertIn(BaseModel):
@@ -184,11 +166,5 @@ class AlertIn(BaseModel):
     is_acknowledged: bool = False
 
 
-class AlertOut(AlertIn):
+class AlertOut(AlertIn, _CreatedAt):
     id: int = Field(..., gt=0)
-    created_at: datetime = None
-
-    @staticmethod
-    @validator('created_at', pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
