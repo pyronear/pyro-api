@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import routing, security
 from app.db import users
-from app.api.schemas import UserInfo, UserRead, UserAuth, UserCreation
+from app.api.schemas import UserInfo, UserCred, UserRead, UserAuth, UserCreation
 from app.api.deps import get_current_user
 
 
@@ -16,9 +16,14 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=["me"])):
     return me
 
 
-@router.put("/update-me", response_model=UserRead)
-async def update_me(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["me"])):
+@router.put("/update-info", response_model=UserRead)
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["me"])):
     return await routing.update_entry(users, payload, me.id)
+
+
+@router.put("/update-pwd", response_model=UserInfo)
+async def update_my_password(payload: UserCred, me: UserRead = Security(get_current_user, scopes=["me"])):
+    return await routing.update_user_pwd(users, payload, me.id)
 
 
 @router.post("/", response_model=UserRead, status_code=201)
@@ -43,6 +48,15 @@ async def update_user(
     _=Security(get_current_user, scopes=["admin"])
 ):
     return await routing.update_entry(users, payload, user_id)
+
+
+@router.put("/{user_id}/pwd", response_model=UserInfo)
+async def reset_password(
+    payload: UserCred,
+    user_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
+    return await routing.update_user_pwd(users, payload, user_id)
 
 
 @router.delete("/{user_id}/", response_model=UserRead)
