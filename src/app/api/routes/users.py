@@ -1,10 +1,10 @@
 from typing import List
 
-from fastapi import APIRouter, Path, Security, HTTPException
+from fastapi import APIRouter, Path, Security
 
-from app.api import routing, security
+from app.api import routing
 from app.db import users
-from app.api.schemas import UserInfo, UserCred, UserRead, UserAuth, UserCreation
+from app.api.schemas import UserInfo, UserCred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
 

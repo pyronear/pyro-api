@@ -2,11 +2,6 @@ from typing import Optional, Tuple, Any, List
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
-from fastapi import HTTPException
-
-from app.api.schemas import DeviceOut, HeartbeatOut, UpdatedLocation
-from app.db import devices
-from datetime import datetime
 
 
 async def post(payload: BaseModel, table: Table):

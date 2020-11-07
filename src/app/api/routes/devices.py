@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Path, Security
 
-from app.api import routing, crud
+from app.api import routing
 from app.db import devices
 from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, UpdatedLocation
 from app.api.deps import get_current_device, get_current_user
