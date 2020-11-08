@@ -1,9 +1,9 @@
-from typing import List
 from fastapi import APIRouter, Path, Security, File, UploadFile
 from app.api import routing
 from app.db import media
-from app.api.schemas import MediaOut, MediaIn, UserInDb
-from app.api.deps import get_current_user
+from typing import List
+from app.api.schemas import MediaOut, MediaIn, DeviceOut
+from app.api.deps import get_current_device
 from app.services.bucketService import bucket_service
 
 
@@ -11,10 +11,12 @@ router = APIRouter()
 
 
 @router.post("/upload_file", response_model=MediaOut, status_code=201)
-async def create_media(file: UploadFile = File(...)), device_user: UserInDb = Security(get_current_user, scopes=["device"]):
+async def upload_media(file: UploadFile = File(...),
+                       current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
     bucket_service.upload_file("mypyroneartest", file.filename, file.file)
-    MediaIn(device_id=device_user.id)
-    return await routing.create_entry(media, payload)
+    media_created = MediaIn(device_id=current_device.id)
+    return await routing.create_entry(media, media_created)
+
 
 @router.post("/", response_model=MediaOut, status_code=201)
 async def create_media(payload: MediaIn):

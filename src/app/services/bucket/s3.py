@@ -54,12 +54,8 @@ class S3Service(BaseBucketService):
 
         # Upload the file
         try:
-            # response = self.s3_client.upload_file(file_name, bucket_name, object_name)
-            #with open(file_name, "rb") as f:
-            response = self.s3_client.upload_fileobj(file_name, bucket_name, object_name)
+            self.s3_client.upload_fileobj(file_name, bucket_name, object_name)
 
-            #data = open(file_name, 'rb')
-            #self.s3_client.Bucket(bucket_name).put_object(Key=object_name, Body=data)
         except ClientError as e:
             logging.error(e)
             return False
@@ -77,7 +73,6 @@ class S3Service(BaseBucketService):
         print('Existing buckets:')
         for bucket in response['Buckets']:
             print(f'  {bucket["Name"]}')
-            
+
     def fetch_bucket_files(self, bucket_name: str):
         pass
-

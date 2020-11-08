@@ -14,7 +14,7 @@ ALGORITHM = "HS256"
 
 async def create_unlimited_access_token(content: dict) -> str:
     # Used for devices
-    return create_access_token(content, timedelta(minutes=config.ACCESS_TOKEN_UNLIMITED_MINUTES))
+    return create_access_token(content, timedelta(minutes=cfg.ACCESS_TOKEN_UNLIMITED_MINUTES))
 
 
 async def create_access_token(content: dict, expires_delta: Optional[timedelta] = None) -> str:

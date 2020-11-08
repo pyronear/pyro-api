@@ -1,6 +1,5 @@
 from typing import List, Optional
 from datetime import datetime
-from typing import Optional, List
 from pydantic import BaseModel, Field, validator
 
 from app.db import SiteType, EventType, MediaType, AlertType
@@ -72,21 +71,6 @@ class TokenPayload(BaseModel):
     scopes: List[str] = []
 
 
-class UserInDb(UserOut):
-    hashed_password: str
-    scopes: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenPayload(BaseModel):
-    user_id: Optional[str] = None  # token sub
-    scopes: List[str] = []
-
-
 class SiteIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     lat: float = Field(..., gt=-90, lt=90)
@@ -134,18 +118,6 @@ class DeviceCreation(DeviceIn):
 
 class DeviceOut(DeviceIn, _CreatedAt):
     id: int = Field(..., gt=0)
-
-
-class UpdatedLocation(BaseModel):
-    elevation: float = Field(None, ge=0., lt=10000)
-    lat: float = Field(None, gt=-90, lt=90)
-    lon: float = Field(None, gt=-180, lt=180)
-    yaw: float = Field(None, gt=-180, lt=180)
-    pitch: float = Field(None, gt=-90, lt=90)
-
-
-class HeartbeatOut(BaseModel):
-    last_ping: datetime = None
 
 
 class UpdatedLocation(BaseModel):

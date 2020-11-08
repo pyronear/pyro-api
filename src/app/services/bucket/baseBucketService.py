@@ -23,4 +23,3 @@ class BaseBucketService(ABC):
     @abstractmethod
     def fetch_bucket_files(self, bucket_name: str):
         pass
-
