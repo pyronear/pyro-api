@@ -20,7 +20,7 @@ users = Table(
     Column("id", Integer, primary_key=True),
     Column("username", String(50)),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
-    Column("created_at", DateTime, default=func.now())
+    Column("created_at", DateTime, default=func.now()),
 )
 
 accesses = Table(
