@@ -17,12 +17,12 @@ class _CreatedAt(BaseModel):
 
 # Abstract information about a user
 class UserInfo(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
+    username: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
 
 
 # Sensitive information about the user
 class Cred(BaseModel):
-    password: str
+    password: str = Field(..., example="PickARobustOne")
 
 
 class CredHash(BaseModel):
@@ -45,12 +45,12 @@ class UserCreation(UserInfo):
 
 
 class AccessBase(BaseModel):
-    login: str = Field(..., min_length=3, max_length=50)
-    scopes: str
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    scopes: str = Field(..., example="me")
 
 
 class AccessAuth(AccessBase):
-    password: str
+    password: str = Field(..., example="PickARobustOne")
 
 
 class AccessCreation(AccessBase):
@@ -62,8 +62,8 @@ class AccessRead(AccessBase):
 
 
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwic2NvcGVzIjpbImFkbWluIl0sImV4cCI6MTYwNDg0NTAyNH0.423fgFGTfttrvU6D1k7vF92hH5Flcd9LkvaJHCGFYd8E")
+    token_type: str = Field(..., example="bearer")
 
 
 class TokenPayload(BaseModel):
@@ -72,9 +72,9 @@ class TokenPayload(BaseModel):
 
 
 class SiteIn(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
+    name: str = Field(..., min_length=3, max_length=50, example="watchtower12")
+    lat: float = Field(..., gt=-90, lt=90, example=44.758673)
+    lon: float = Field(..., gt=-180, lt=180, example=4.516586)
     type: SiteType = SiteType.tower
 
 
@@ -83,8 +83,8 @@ class SiteOut(SiteIn, _CreatedAt):
 
 
 class EventIn(BaseModel):
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
+    lat: float = Field(..., gt=-90, lt=90, example=44.765181)
+    lon: float = Field(..., gt=-180, lt=180, exempl=4.514880)
     type: EventType = EventType.wildfire
     end_ts: datetime = None
     start_ts: datetime = None
@@ -95,20 +95,25 @@ class EventOut(EventIn, _CreatedAt):
 
 
 class DeviceIn(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50)
+    name: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
-    elevation: float = Field(None, gt=0., lt=10000)
-    lat: float = Field(None, gt=-90, lt=90)
-    lon: float = Field(None, gt=-180, lt=180)
-    yaw: float = Field(None, gt=-180, lt=180)
-    pitch: float = Field(None, gt=-90, lt=90)
+    elevation: float = Field(None, gt=0., lt=10000, example=1582)
+    lat: float = Field(None, gt=-90, lt=90, example = 44.123456)
+    lon: float = Field(None, gt=-180, lt=180, example=4.123456)
+    yaw: float = Field(None, gt=-180, lt=180, example=110)
+    pitch: float = Field(None, gt=-90, lt=90, example=-5)
     last_ping: datetime = None
 
 
 class DeviceAuth(DeviceIn):
     password: str
     scopes: Optional[str] = "device"
+
+    class Config:
+        schema_extra = { "example": {
+            "password": "PickARobustOne",
+            "scopes": "device"}}
 
 
 class DeviceCreation(DeviceIn):
@@ -120,11 +125,11 @@ class DeviceOut(DeviceIn, _CreatedAt):
 
 
 class UpdatedLocation(BaseModel):
-    elevation: float = Field(None, ge=0., lt=10000)
-    lat: float = Field(None, gt=-90, lt=90)
-    lon: float = Field(None, gt=-180, lt=180)
-    yaw: float = Field(None, gt=-180, lt=180)
-    pitch: float = Field(None, gt=-90, lt=90)
+    elevation: float = Field(None, ge=0., lt=10000, example=855)
+    lat: float = Field(None, gt=-90, lt=90, example=48.8534)
+    lon: float = Field(None, gt=-180, lt=180, example=2.3488)
+    yaw: float = Field(None, gt=-180, lt=180, example=10)
+    pitch: float = Field(None, gt=-90, lt=90, example=-7)
 
 
 class HeartbeatOut(BaseModel):
@@ -143,11 +148,11 @@ class MediaOut(MediaIn, _CreatedAt):
 class InstallationIn(BaseModel):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
-    elevation: float = Field(..., gt=0., lt=10000)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
-    yaw: float = Field(..., gt=-180, lt=180)
-    pitch: float = Field(..., gt=-90, lt=90)
+    elevation: float = Field(..., gt=0., lt=10000, example=1110)
+    lat: float = Field(..., gt=-90, lt=90, example=48.8534)
+    lon: float = Field(..., gt=-180, lt=180, example=2.3488)
+    yaw: float = Field(..., gt=-180, lt=180, example=42)
+    pitch: float = Field(..., gt=-90, lt=90, example=16)
     start_ts: datetime = None
     end_ts: datetime = None
 
@@ -160,8 +165,8 @@ class AlertIn(BaseModel):
     device_id: int = Field(..., gt=0)
     event_id: int = Field(..., gt=0)
     media_id: int = Field(None, gt=0)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
+    lat: float = Field(..., gt=-90, lt=90, example=48.654321)
+    lon: float = Field(..., gt=-180, lt=180, example=2.654321)
     type: AlertType = AlertType.start
     is_acknowledged: bool = False
 
