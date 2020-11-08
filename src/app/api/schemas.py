@@ -62,7 +62,7 @@ class AccessRead(AccessBase):
 
 
 class Token(BaseModel):
-    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwic2NvcGVzIjpbImFkbWluIl0sImV4cCI6MTYwNDg0NTAyNH0.423fgFGTfttrvU6D1k7vF92hH5Flcd9LkvaJHCGFYd8E")
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E")
     token_type: str = Field(..., example="bearer")
 
 
@@ -99,7 +99,7 @@ class DeviceIn(BaseModel):
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
     elevation: float = Field(None, gt=0., lt=10000, example=1582)
-    lat: float = Field(None, gt=-90, lt=90, example = 44.123456)
+    lat: float = Field(None, gt=-90, lt=90, example=44.123456)
     lon: float = Field(None, gt=-180, lt=180, example=4.123456)
     yaw: float = Field(None, gt=-180, lt=180, example=110)
     pitch: float = Field(None, gt=-90, lt=90, example=-5)
@@ -111,7 +111,7 @@ class DeviceAuth(DeviceIn):
     scopes: Optional[str] = "device"
 
     class Config:
-        schema_extra = { "example": {
+        schema_extra = {"example": {
             "password": "PickARobustOne",
             "scopes": "device"}}
 
