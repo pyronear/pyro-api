@@ -20,9 +20,7 @@ users = Table(
     Column("id", Integer, primary_key=True),
     Column("username", String(50)),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
-    Column("created_at", DateTime, default=func.now()),
-    Column("hashed_password", String(100)),
-    Column("scopes", String(30), default="me", nullable=False),
+    Column("created_at", DateTime, default=func.now())
 )
 
 accesses = Table(

@@ -97,7 +97,6 @@ class EventOut(EventIn, _CreatedAt):
 class DeviceIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     owner_id: int = Field(..., gt=0)
-    user_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100)
     elevation: float = Field(None, gt=0., lt=10000)
     lat: float = Field(None, gt=-90, lt=90)
