@@ -163,7 +163,7 @@ class AlertIn(BaseModel):
     lat: float = Field(..., gt=-90, lt=90, example=48.654321)
     lon: float = Field(..., gt=-180, lt=180, example=2.654321)
     type: AlertType = AlertType.start
-    is_acknowledged: bool = False
+    is_acknowledged: bool = Field(False, example=False)
 
 
 class AlertOut(AlertIn, _CreatedAt):
