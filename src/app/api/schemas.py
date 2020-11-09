@@ -36,7 +36,7 @@ class UserRead(UserInfo, _CreatedAt):
 
 # Authentication request
 class UserAuth(UserInfo, Cred):
-    scopes: Optional[str] = "me"
+    scopes: str = Field("me", example="me")
 
 
 # Creation payload
@@ -97,7 +97,7 @@ class EventOut(EventIn, _CreatedAt):
 class DeviceIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
-    specs: str = Field(..., min_length=3, max_length=100)
+    specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     elevation: float = Field(None, gt=0., lt=10000, example=1582)
     lat: float = Field(None, gt=-90, lt=90, example=44.123456)
     lon: float = Field(None, gt=-180, lt=180, example=4.123456)
@@ -107,13 +107,8 @@ class DeviceIn(BaseModel):
 
 
 class DeviceAuth(DeviceIn):
-    password: str
-    scopes: Optional[str] = "device"
-
-    class Config:
-        schema_extra = {"example": {
-            "password": "PickARobustOne",
-            "scopes": "device"}}
+    password: str = Field(..., example="PickARobustOne")
+    scopes: str = Field("device", example="device")
 
 
 class DeviceCreation(DeviceIn):
