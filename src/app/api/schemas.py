@@ -44,24 +44,25 @@ class AccessCreation(AccessBase, CredHash):
 class AccessRead(AccessBase, _Id):
     pass
 
+
 # Users
-# Abstract information about a user
 class UserInfo(BaseModel):
+    # Abstract information about a user
     username: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
 
 
-# Visible info
 class UserRead(UserInfo, _CreatedAt, _Id):
+    # Visible info
     pass
 
 
-# Authentication request
 class UserAuth(UserInfo, Cred):
+    # Authentication request
     scopes: str = Field("me")
 
 
-# Creation payload
 class UserCreation(UserInfo):
+    # Creation payload
     access_id: int = Field(..., gt=0)
 
 
@@ -95,6 +96,7 @@ class DefaultLocation(BaseModel):
 class _Rotation(BaseModel):
     yaw: float = Field(..., gt=-180, lt=180, example=110)
     pitch: float = Field(..., gt=-90, lt=90, example=-5)
+
 
 class _DefaultRotation(BaseModel):
     yaw: float = Field(None, gt=-180, lt=180, example=110)
