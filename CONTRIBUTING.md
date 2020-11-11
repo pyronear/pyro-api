@@ -1,4 +1,4 @@
-# Contributing to pyronear-api
+# Contributing to pyro-api
 
 Everything you need to know to contribute efficiently to the project.
 
@@ -6,9 +6,9 @@ Everything you need to know to contribute efficiently to the project.
 
 ## Codebase structure
 
-- [src](https://github.com/pyronear/pyronear-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
-- [src/app](https://github.com/pyronear/pyronear-api/blob/master/src/app) - The source code of the API
-- [src/tests](https://github.com/pyronear/pyronear-api/blob/master/src/tests) - The unittests for the app
+- [src](https://github.com/pyronear/pyro-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
+- [src/app](https://github.com/pyronear/pyro-api/blob/master/src/app) - The source code of the API
+- [src/tests](https://github.com/pyronear/pyro-api/blob/master/src/tests) - The unittests for the app
 
 
 
@@ -27,11 +27,11 @@ As a contributor, you will only have to ensure coverage of your code by adding a
 
 ## Issues
 
-Use Github [issues](https://github.com/pyronear/pyronear-api/issues) for feature requests, or bug reporting. When doing so, use issue templates whenever possible and provide enough information for other contributors to jump in.
+Use Github [issues](https://github.com/pyronear/pyro-api/issues) for feature requests, or bug reporting. When doing so, use issue templates whenever possible and provide enough information for other contributors to jump in.
 
 
 
-## Developing pyronear-api
+## Developing pyro-api
 
 
 ### Commits
