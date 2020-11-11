@@ -80,7 +80,7 @@ class TokenPayload(BaseModel):
 # Location
 class _FlatLocation(BaseModel):
     lat: float = Field(..., gt=-90, lt=90, example=44.765181)
-    lon: float = Field(..., gt=-180, lt=180, exempl=4.514880)
+    lon: float = Field(..., gt=-180, lt=180, example=4.514880)
 
 
 class Location(_FlatLocation):
@@ -89,7 +89,7 @@ class Location(_FlatLocation):
 
 class DefaultLocation(BaseModel):
     lat: float = Field(None, gt=-90, lt=90, example=44.765181)
-    lon: float = Field(None, gt=-180, lt=180, exempl=4.514880)
+    lon: float = Field(None, gt=-180, lt=180, example=4.514880)
     elevation: float = Field(None, gt=0., lt=10000, example=1582)
 
 
