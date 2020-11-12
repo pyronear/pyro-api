@@ -205,7 +205,7 @@ def test_heartbeat(test_app, monkeypatch):
 
     monkeypatch.setattr(crud, "put", mock_put)
 
-    response = test_app.post("/devices/heartbeat")
+    response = test_app.put("/devices/heartbeat")
     assert response.status_code == 200
     assert "last_ping" in response.json()
     try:

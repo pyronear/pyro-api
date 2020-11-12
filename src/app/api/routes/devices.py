@@ -39,7 +39,7 @@ async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me
     return await routing.fetch_entries(devices, ("owner_id", me.id))
 
 
-@router.post("/heartbeat", response_model=HeartbeatOut)
+@router.put("/heartbeat", response_model=HeartbeatOut)
 async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
     return await routing.heartbeat(devices, device)
 
