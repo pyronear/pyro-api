@@ -57,5 +57,4 @@ async def reset_password(
     device_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
-    print("update the pswd")
     return await routing.update_pwd(devices, payload, device_id)
