@@ -48,7 +48,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
 async def update_location(payload: UpdatedLocation,
                           user: UserRead = Security(get_current_user, scopes=["me"]),
                           device_id: int = Path(..., gt=0)):
-    return await routing.update_location(devices, payload, device_id=id, user_id=user.id)
+    return await routing.update_location(devices, payload, device_id, user.id)
 
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut)
