@@ -7,6 +7,7 @@ from app.api import crud
 
 MOCK_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None, "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 
@@ -20,8 +21,14 @@ def _patch_crud(monkeypatch, mock_table):
 
     monkeypatch.setattr(crud, "get", mock_get)
 
-    async def mock_fetch_all(entry_id, table):
-        return mock_table
+    async def mock_fetch_all(table, query_filters):
+        if query_filters is None:
+            return mock_table
+        response = []
+        for entry in mock_table:
+            if all(entry[k] == v for k, v in query_filters):
+                response.append(entry)
+        return response
 
     monkeypatch.setattr(crud, "fetch_all", mock_fetch_all)
 
