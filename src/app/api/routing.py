@@ -18,7 +18,7 @@ async def create_entry(table: Table, payload: BaseModel):
 
 async def get_entry(table: Table, entry_id: int = Path(..., gt=0)):
     entry = await crud.get(entry_id, table)
-    if not entry:
+    if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
 
