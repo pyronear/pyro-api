@@ -7,7 +7,7 @@ from app.api import crud, security
 from app.api.schemas import (UserAuth, UserCreation, UserRead, CredHash, Cred,
                              AccessCreation, AccessRead, AccessAuth,
                              DeviceAuth, DeviceCreation, DeviceOut,
-                             HeartbeatOut, UpdatedLocation)
+                             HeartbeatOut, DefaultPosition)
 from app.db import accesses as access_table
 
 
@@ -98,7 +98,7 @@ async def heartbeat(device_table: Table, device: DeviceOut) -> HeartbeatOut:
     return device
 
 
-async def update_location(device_table: Table, payload: UpdatedLocation, device_id: int, user_id: int):
+async def update_location(device_table: Table, payload: DefaultPosition, device_id: int, user_id: int):
     user_owns_device = bool(await fetch_entry(device_table, [("id", device_id), ("owner_id", user_id)]))
     if not user_owns_device:
         raise HTTPException(
