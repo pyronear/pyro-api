@@ -39,4 +39,4 @@ def test_access_token(test_app, monkeypatch, payload, status_code):
     monkeypatch.setattr(security, "verify_password", verify_password)
 
     response = test_app.post("/login/access-token", data=payload)
-    assert response.status_code == status_code, (payload, status_code,)
+    assert response.status_code == status_code, print(payload)
