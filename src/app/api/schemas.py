@@ -21,7 +21,7 @@ class _Id(BaseModel):
 
 # Accesses
 class Cred(BaseModel):
-    password: str = Field(..., example="PickARobustOne")
+    password: str = Field(..., min_length=3, example="PickARobustOne")
 
 
 class CredHash(BaseModel):
@@ -137,7 +137,7 @@ class DeviceIn(DefaultPosition):
 
 
 class DeviceAuth(DeviceIn):
-    password: str = Field(..., example="PickARobustOne")
+    password: str = Field(..., min_length=3, example="PickARobustOne")
     scopes: str = Field("device", example="device")
 
 
