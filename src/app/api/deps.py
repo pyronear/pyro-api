@@ -25,7 +25,7 @@ def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPExceptio
     )
 
 
-async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)):
+async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)) -> AccessRead:
     """Dependency to use as fastapi.security.Security with scopes.
 
     >>> @app.get("/users/me")
@@ -59,7 +59,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     return AccessRead(**entry)
 
 
-async def get_current_user(access=Depends(get_current_access)):
+async def get_current_user(access=Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, [('access_id', access.id)])
 
     if user is None:
@@ -69,7 +69,7 @@ async def get_current_user(access=Depends(get_current_access)):
     return UserRead(**user)
 
 
-async def get_current_device(access=Depends(get_current_access)):
+async def get_current_device(access=Depends(get_current_access)) -> DeviceOut:
     device = await crud.fetch_one(devices, [('access_id', access.id)])
     if device is None:
         # Could be a "permission denied error as well"

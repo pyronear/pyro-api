@@ -1,20 +1,20 @@
-from typing import Optional, Tuple, Any, List
+from typing import Optional, Tuple, Any, List, Dict
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 
 
-async def post(payload: BaseModel, table: Table):
+async def post(payload: BaseModel, table: Table) -> int:
     query = table.insert().values(**payload.dict())
     return await database.execute(query=query)
 
 
-async def get(entry_id: int, table: Table):
+async def get(entry_id: int, table: Table) -> Dict[str, Any]:
     query = table.select().where(entry_id == table.c.id)
     return await database.fetch_one(query=query)
 
 
-async def fetch_all(table: Table, query_filters: Optional[List[Tuple[str, Any]]] = None):
+async def fetch_all(table: Table, query_filters: Optional[List[Tuple[str, Any]]] = None) -> List[Dict[str, Any]]:
     query = table.select()
     if isinstance(query_filters, list):
         for query_filter in query_filters:
@@ -22,14 +22,14 @@ async def fetch_all(table: Table, query_filters: Optional[List[Tuple[str, Any]]]
     return await database.fetch_all(query=query)
 
 
-async def fetch_one(table: Table, query_filters: List[Tuple[str, Any]]):
+async def fetch_one(table: Table, query_filters: List[Tuple[str, Any]]) -> Dict[str, Any]:
     query = table.select()
     for query_filter in query_filters:
         query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
     return await database.fetch_one(query=query)
 
 
-async def put(entry_id: int, payload: BaseModel, table: Table):
+async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
     query = (
         table
         .update()

@@ -1,6 +1,6 @@
 from sqlalchemy import Table
 from pydantic import BaseModel
-from typing import Optional, Tuple, Any, List
+from typing import Optional, Tuple, Any, List, Dict
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
@@ -11,34 +11,34 @@ from app.api.schemas import (UserAuth, UserCreation, UserRead, CredHash, Cred,
 from app.db import accesses as access_table
 
 
-async def create_entry(table: Table, payload: BaseModel):
+async def create_entry(table: Table, payload: BaseModel) -> Dict[str, Any]:
     entry_id = await crud.post(payload, table)
     return {**payload.dict(), "id": entry_id}
 
 
-async def get_entry(table: Table, entry_id: int = Path(..., gt=0)):
+async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await crud.get(entry_id, table)
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
 
 
-async def fetch_entries(table: Table, query_filter: Optional[List[Tuple[str, Any]]] = None):
+async def fetch_entries(table: Table, query_filter: Optional[List[Tuple[str, Any]]] = None) -> List[Dict[str, Any]]:
     return await crud.fetch_all(table, query_filter)
 
 
-async def fetch_entry(table: Table, query_filter: List[Tuple[str, Any]]):
+async def fetch_entry(table: Table, query_filter: List[Tuple[str, Any]]) -> Dict[str, Any]:
     return await crud.fetch_one(table, query_filter)
 
 
-async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)):
+async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     await get_entry(table, entry_id)
     entry_id = await crud.put(entry_id, payload, table)
 
     return {**payload.dict(), "id": entry_id}
 
 
-async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)):
+async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await get_entry(table, entry_id)
     await crud.delete(entry_id, table)
 
@@ -75,7 +75,7 @@ async def create_device(device_table: Table, payload: DeviceAuth) -> DeviceOut:
     return await create_entry(device_table, payload)
 
 
-async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)):
+async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await get_entry(access_table, entry_id)
     # Hash the password
     pwd = await security.hash_password(payload.password)
@@ -86,7 +86,7 @@ async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)):
     return {"login": entry["login"]}
 
 
-async def update_pwd(table: Table, payload: Cred, entry_id: int = Path(..., gt=0)):
+async def update_pwd(table: Table, payload: Cred, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await get_entry(table, entry_id)
     await update_access_pwd(payload, entry["access_id"])
     return entry
@@ -98,7 +98,12 @@ async def heartbeat(device_table: Table, device: DeviceOut) -> HeartbeatOut:
     return device
 
 
-async def update_location(device_table: Table, payload: DefaultPosition, device_id: int, user_id: int):
+async def update_location(
+    device_table: Table,
+    payload: DefaultPosition,
+    device_id: int,
+    user_id: int
+) -> Dict[str, Any]:
     user_owns_device = bool(await fetch_entry(device_table, [("id", device_id), ("owner_id", user_id)]))
     if not user_owns_device:
         raise HTTPException(
