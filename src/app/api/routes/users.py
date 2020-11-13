@@ -7,6 +7,8 @@ from app.db import users
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
+from app.api.routes.accesses import post_access, update_access_pwd
+
 
 router = APIRouter()
 
@@ -23,12 +25,14 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 
 @router.put("/update-pwd", response_model=UserInfo)
 async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["me"])):
-    return await routing.update_pwd(users, payload, me.id)
+    entry = await routing.get_entry(users, me.id)
+    await update_access_pwd(payload, entry["access_id"])
+    return entry
 
 
 @router.post("/", response_model=UserRead, status_code=201)
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
-    access_entry = await routing.create_access(payload.username, payload.password, scopes=payload.scopes)
+    access_entry = await post_access(payload.username, payload.password, payload.scopes)
     _payload = UserCreation(username=payload.username, access_id=access_entry.id)
     return await routing.create_entry(users, _payload)
 
@@ -53,12 +57,14 @@ async def update_user(
 
 
 @router.put("/{user_id}/pwd", response_model=UserInfo)
-async def update_password(
+async def update_user_password(
     payload: Cred,
     user_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
-    return await routing.update_pwd(users, payload, user_id)
+    entry = await routing.get_entry(users, user_id)
+    await update_access_pwd(payload, entry["access_id"])
+    return entry
 
 
 @router.delete("/{user_id}/", response_model=UserRead)
