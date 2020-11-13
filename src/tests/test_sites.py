@@ -6,8 +6,10 @@ from app.api import crud
 
 
 MOCK_TABLE = [
-    {"id": 1, "name": "my_first_tower", "lat": 0., "lon": 0., "type": "tower", "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "my_first_station", "lat": 10., "lon": 5., "type": "station", "created_at": "2020-09-13T08:18:45.447773"},
+    {"id": 1, "name": "my_first_tower", "lat": 0., "lon": 0., "type": "tower",
+     "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "name": "my_first_station", "lat": 10., "lon": 5., "type": "station",
+     "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 

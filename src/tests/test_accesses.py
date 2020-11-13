@@ -116,7 +116,6 @@ def test_create_access(test_app, monkeypatch):
     test_payload = {"login": "third_login", "scopes": "me", "password": "PickARobustOne"}
     test_response = {"id": len(local_db) + 1, **test_payload}
 
-    utc_dt = datetime.utcnow()
     response = test_app.post("/accesses/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
@@ -126,7 +125,8 @@ def test_create_access(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "payload, status_code, status_details",
     [
-        [{"login": "first_login", "password": "PickARobustOne", "scopes": "me"}, 400, "An entry with login='first_login' already exists."],
+        [{"login": "first_login", "password": "PickARobustOne", "scopes": "me"}, 400,
+         "An entry with login='first_login' already exists."],
         [{"login": "third_login", "scopes": "me", "hashed_password": "PickARobustOne"}, 422, None],
         [{"login": 1, "scopes": "me", "password": "PickARobustOne"}, 422, None],
         [{"login": "third_login", "scopes": "me"}, 422, None],
