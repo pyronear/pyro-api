@@ -8,6 +8,7 @@ python-multipart==0.0.5
 
 # dev
 pytest>=5.3.2
+pytest-asyncio>=0.14.0
 requests>=2.22.0
 asyncpg>=0.20.0
 coverage>=4.5.4
