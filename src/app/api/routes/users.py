@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing
 from app.db import users
-from app.api.schemas import UserInfo, Cred, UserRead, UserAuth
+from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
 
@@ -28,7 +28,9 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
 
 @router.post("/", response_model=UserRead, status_code=201)
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
-    return await routing.create_user(users, payload)
+    access_entry = await routing.create_access(payload.username, payload.password, scopes=payload.scopes)
+    _payload = UserCreation(username=payload.username, access_id=access_entry.id)
+    return await routing.create_entry(users, _payload)
 
 
 @router.get("/{user_id}/", response_model=UserRead)

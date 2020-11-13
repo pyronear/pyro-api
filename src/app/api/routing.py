@@ -45,7 +45,7 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[st
     return entry
 
 
-async def _create_access(login: str, password: str, scopes: str) -> AccessRead:
+async def create_access(login: str, password: str, scopes: str) -> AccessRead:
     # Check that username does not already exist
     if await fetch_entry(access_table, [('login', login)]) is not None:
         raise HTTPException(
@@ -57,22 +57,6 @@ async def _create_access(login: str, password: str, scopes: str) -> AccessRead:
     access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
     access_entry = AccessRead(** await create_entry(access_table, access))
     return access_entry
-
-
-async def create_access(payload: AccessAuth) -> AccessRead:
-    return await _create_access(payload.login, payload.password, scopes=payload.scopes)
-
-
-async def create_user(user_table: Table, payload: UserAuth) -> UserRead:
-    access_entry = await _create_access(payload.username, payload.password, scopes=payload.scopes)
-    user = UserCreation(username=payload.username, access_id=access_entry.id)
-    return await create_entry(user_table, user)
-
-
-async def create_device(device_table: Table, payload: DeviceAuth) -> DeviceOut:
-    access_entry = await _create_access(payload.name, payload.password, scopes=payload.scopes)
-    payload = DeviceCreation(**payload.dict(), access_id=access_entry.id)
-    return await create_entry(device_table, payload)
 
 
 async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:

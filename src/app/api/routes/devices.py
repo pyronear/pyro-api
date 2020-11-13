@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import routing
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, DefaultPosition, Cred
+from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, DefaultPosition, Cred, DeviceCreation
 from app.api.deps import get_current_device, get_current_user
 
 router = APIRouter()
@@ -11,7 +11,8 @@ router = APIRouter()
 
 @router.post("/", response_model=DeviceOut, status_code=201)
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
-    return await routing.create_device(devices, payload)
+    access_entry = await routing.create_access(payload.name, payload.password, scopes=payload.scopes)
+    return await routing.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
 
 @router.get("/{device_id}/", response_model=DeviceOut)

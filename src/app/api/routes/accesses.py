@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.post("/", response_model=AccessRead, status_code=201)
 async def create_access(payload: AccessAuth):
-    return await routing.create_access(payload)
+    return await routing.create_access(**payload.dict())
 
 
 @router.get("/{access_id}/", response_model=AccessRead)
