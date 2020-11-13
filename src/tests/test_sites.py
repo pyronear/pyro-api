@@ -1,5 +1,6 @@
 import json
 import pytest
+from datetime import datetime
 
 from app.api import crud
 
@@ -7,20 +8,33 @@ MIN_PAYLOAD = {"name": "my_site", "lat": 0., "lon": 0.}
 FULL_PAYLOAD = {**MIN_PAYLOAD, "type": "tower"}
 
 
-def test_create_site(test_app, monkeypatch):
-    test_request_payload = FULL_PAYLOAD
-    test_response_payload = {"id": 1, **FULL_PAYLOAD}
+MOCK_DB = [
+    {"id": 1, "name": "my_first_site", "lat": 0., "lon": 0., "type": "tower", "created_at": "2020-10-13T08:18:45.447773"},
+]
 
-    # Sterilize DB interactions
+def test_create_site(test_app, monkeypatch):
+
+    local_db = MOCK_DB.copy()
     async def mock_post(payload, table):
-        return 1
+        payload_dict = payload.dict()
+        payload_dict['created_at'] = datetime.utcnow()
+        payload_dict['id'] = len(local_db) + 1
+        local_db.append(payload_dict)
+        return payload_dict['id']
 
     monkeypatch.setattr(crud, "post", mock_post)
 
-    response = test_app.post("/sites/", data=json.dumps(test_request_payload))
+
+    test_payload = FULL_PAYLOAD
+    test_response = {"id": len(local_db) + 1, **FULL_PAYLOAD}
+
+    utc_dt = datetime.utcnow()
+    response = test_app.post("/sites/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    json_response = response.json()
+    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+    assert local_db[-1]['created_at'] > utc_dt
 
 
 @pytest.mark.parametrize(
@@ -36,10 +50,10 @@ def test_create_site_invalid_json(test_app, payload, status_code):
 
 
 def test_get_site(test_app, monkeypatch):
-    test_table = [{"id": 1, **FULL_PAYLOAD}]
 
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
-        for entry in test_table:
+        for entry in local_db:
             if entry['id'] == entry_id:
                 return entry
         return None
@@ -48,7 +62,7 @@ def test_get_site(test_app, monkeypatch):
 
     response = test_app.get("/sites/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_table[0]
+    assert response.json() == local_db[0]
 
 
 @pytest.mark.parametrize(
@@ -59,9 +73,9 @@ def test_get_site(test_app, monkeypatch):
     ],
 )
 def test_get_site_incorrect_id(test_app, monkeypatch, site_id, status_code, status_details):
-    test_table = [{"id": 1, **FULL_PAYLOAD}]
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
-        for entry in test_table:
+        for entry in local_db:
             if entry['id'] == entry_id:
                 return entry
         return None
@@ -75,26 +89,21 @@ def test_get_site_incorrect_id(test_app, monkeypatch, site_id, status_code, stat
 
 
 def test_fetch_sites(test_app, monkeypatch):
-    test_table = [
-        {"id": 1, **FULL_PAYLOAD},
-        {"id": 2, **FULL_PAYLOAD},
-    ]
-
+    local_db = MOCK_DB.copy()
     async def mock_fetch_all(table, query_filter=None):
-        return test_table
+        return local_db
 
     monkeypatch.setattr(crud, "fetch_all", mock_fetch_all)
 
     response = test_app.get("/sites/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_table
+    assert response.json() == local_db
 
 
 def test_update_site(test_app, monkeypatch):
-    test_table = [{"id": 1, **FULL_PAYLOAD}]
-
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
-        for entry in test_table:
+        for entry in local_db:
             if entry['id'] == entry_id:
                 return entry
         return None
@@ -102,13 +111,19 @@ def test_update_site(test_app, monkeypatch):
     monkeypatch.setattr(crud, "get", mock_get)
 
     async def mock_put(entry_id, payload, table):
+        for idx, entry in enumerate(local_db):
+            if entry['id'] == entry_id:
+                for k, v in payload.dict().items():
+                    local_db[idx][k] = v
         return entry_id
 
     monkeypatch.setattr(crud, "put", mock_put)
 
-    response = test_app.put("/sites/1/", data=json.dumps(test_table[0]))
+    test_payload = {"name": "renamed_site", "lat": 0., "lon": 0., "type": "tower"}
+    response = test_app.put("/sites/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_table[0]
+    for k, v in local_db[0].items():
+        assert v == test_payload.get(k, MOCK_DB[0][k])
 
 
 @pytest.mark.parametrize(
@@ -122,9 +137,9 @@ def test_update_site(test_app, monkeypatch):
     ],
 )
 def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_code):
-    test_table = [{"id": 1, **FULL_PAYLOAD}]
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
-        for entry in test_table:
+        for entry in local_db:
             if entry['id'] == entry_id:
                 return entry
         return None
@@ -132,6 +147,10 @@ def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_cod
     monkeypatch.setattr(crud, "get", mock_get)
 
     async def mock_put(entry_id, payload, table):
+        for idx, entry in enumerate(local_db):
+            if entry['id'] == entry_id:
+                for k, v in payload.dict().items():
+                    local_db[idx][k] = v
         return entry_id
 
     monkeypatch.setattr(crud, "put", mock_put)
@@ -141,21 +160,29 @@ def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_cod
 
 
 def test_remove_site(test_app, monkeypatch):
-    test_data = {"id": 1, **FULL_PAYLOAD}
-
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
-        return test_data
+        for entry in local_db:
+            if entry['id'] == entry_id:
+                return entry
+        return None
 
     monkeypatch.setattr(crud, "get", mock_get)
 
     async def mock_delete(entry_id, table):
+        for idx, entry in enumerate(local_db):
+            if entry['id'] == entry_id:
+                del local_db[idx]
+                break
         return entry_id
 
     monkeypatch.setattr(crud, "delete", mock_delete)
 
     response = test_app.delete("/sites/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert response.json() == MOCK_DB[0]
+    for entry in local_db:
+        assert entry['id'] != 1
 
 
 @pytest.mark.parametrize(
@@ -166,7 +193,11 @@ def test_remove_site(test_app, monkeypatch):
     ],
 )
 def test_remove_site_incorrect_id(test_app, monkeypatch, site_id, status_code, status_details):
+    local_db = MOCK_DB.copy()
     async def mock_get(entry_id, table):
+        for entry in local_db:
+            if entry['id'] == entry_id:
+                return entry
         return None
 
     monkeypatch.setattr(crud, "get", mock_get)
