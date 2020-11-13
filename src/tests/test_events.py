@@ -149,7 +149,7 @@ def test_update_event(test_app, monkeypatch):
         [0, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 422],
     ],
 )
-def test_update_site_invalid(test_app, monkeypatch, event_id, payload, status_code):
+def test_update_event_invalid(test_app, monkeypatch, event_id, payload, status_code):
     # Sterilize DB interactions
     local_db = MOCK_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
@@ -177,7 +177,7 @@ def test_delete_event(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_delete_site_invalid(test_app, monkeypatch, event_id, status_code, status_details):
+def test_delete_event_invalid(test_app, monkeypatch, event_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = MOCK_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
