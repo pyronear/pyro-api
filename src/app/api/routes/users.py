@@ -51,7 +51,7 @@ async def update_user(
 
 
 @router.put("/{user_id}/pwd", response_model=UserInfo)
-async def reset_password(
+async def update_password(
     payload: Cred,
     user_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
