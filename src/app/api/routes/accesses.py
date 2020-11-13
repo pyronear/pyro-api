@@ -19,7 +19,7 @@ async def get_access(access_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[AccessRead])
-async def fetch_access():
+async def fetch_accesses():
     return await routing.fetch_entries(accesses)
 
 
