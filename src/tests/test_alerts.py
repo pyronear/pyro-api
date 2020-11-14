@@ -5,8 +5,7 @@ from datetime import datetime
 from app.api import crud
 
 
-
-MOCK_TABLE = [
+ALERT_TABLE = [
     {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "start", "is_acknowledged": True,
      "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end", "is_acknowledged": True,
@@ -68,7 +67,7 @@ def _patch_crud(monkeypatch, mock_table):
 def test_get_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/alerts/1")
@@ -85,7 +84,7 @@ def test_get_alert(test_app, monkeypatch):
 )
 def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get(f"/alerts/{alert_id}")
@@ -96,7 +95,7 @@ def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_
 
 def test_fetch_alerts(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/alerts/")
@@ -107,7 +106,7 @@ def test_fetch_alerts(test_app, monkeypatch):
 def test_create_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end"}
@@ -131,7 +130,7 @@ def test_create_alert(test_app, monkeypatch):
 )
 def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.post("/alerts/", data=json.dumps(payload))
@@ -140,14 +139,14 @@ def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_alert(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "start"}
     response = test_app.put("/alerts/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in local_db[0].items():
-        assert v == test_payload.get(k, MOCK_TABLE[0][k])
+        assert v == test_payload.get(k, ALERT_TABLE[0][k])
 
 
 @pytest.mark.parametrize(
@@ -162,7 +161,7 @@ def test_update_alert(test_app, monkeypatch):
 )
 def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.put(f"/alerts/{alert_id}/", data=json.dumps(payload))
@@ -171,12 +170,12 @@ def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_c
 
 def test_delete_alert(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete("/alerts/1/")
     assert response.status_code == 200
-    assert response.json() == MOCK_TABLE[0]
+    assert response.json() == ALERT_TABLE[0]
     for entry in local_db:
         assert entry['id'] != 1
 
@@ -190,7 +189,7 @@ def test_delete_alert(test_app, monkeypatch):
 )
 def test_delete_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ALERT_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete(f"/alerts/{alert_id}/")

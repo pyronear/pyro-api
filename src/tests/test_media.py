@@ -5,7 +5,7 @@ from datetime import datetime
 from app.api import crud
 
 
-MOCK_TABLE = [
+MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
 ]
@@ -63,7 +63,7 @@ def _patch_crud(monkeypatch, mock_table):
 def test_get_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/media/1")
@@ -80,7 +80,7 @@ def test_get_media(test_app, monkeypatch):
 )
 def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get(f"/media/{media_id}")
@@ -91,7 +91,7 @@ def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_
 
 def test_fetch_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/media/")
@@ -102,7 +102,7 @@ def test_fetch_media(test_app, monkeypatch):
 def test_create_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"device_id": 1}
@@ -126,7 +126,7 @@ def test_create_media(test_app, monkeypatch):
 )
 def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.post("/media/", data=json.dumps(payload))
@@ -135,14 +135,14 @@ def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "type": "video"}
     response = test_app.put("/media/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in local_db[0].items():
-        assert v == test_payload.get(k, MOCK_TABLE[0][k])
+        assert v == test_payload.get(k, MEDIA_TABLE[0][k])
 
 
 @pytest.mark.parametrize(
@@ -158,7 +158,7 @@ def test_update_media(test_app, monkeypatch):
 )
 def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.put(f"/media/{media_id}/", data=json.dumps(payload))
@@ -167,12 +167,12 @@ def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_c
 
 def test_delete_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete("/media/1/")
     assert response.status_code == 200
-    assert response.json() == MOCK_TABLE[0]
+    assert response.json() == MEDIA_TABLE[0]
     for entry in local_db:
         assert entry['id'] != 1
 
@@ -186,7 +186,7 @@ def test_delete_media(test_app, monkeypatch):
 )
 def test_delete_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = MEDIA_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete(f"/media/{media_id}/")

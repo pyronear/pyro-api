@@ -9,12 +9,12 @@ from app.api.schemas import AccessRead, AccessCreation
 
 
 
-MOCK_TABLE = [
+USER_TABLE = [
     {"id": 1, "username": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 99, "username": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
-MOCK_ACCESSES = [
+ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "connected_user", "hashed_password": "pwd_hashed", "scopes": "me"},
 ]
@@ -102,7 +102,7 @@ def _patch_session(monkeypatch, user_table, access_table=None):
 def test_get_user(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get("/users/1")
@@ -126,7 +126,7 @@ def test_get_user(test_app, monkeypatch):
 )
 def test_get_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get(f"/users/{user_id}")
@@ -137,7 +137,7 @@ def test_get_user_invalid(test_app, monkeypatch, user_id, status_code, status_de
 
 def test_fetch_users(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get("/users/")
@@ -148,8 +148,8 @@ def test_fetch_users(test_app, monkeypatch):
 def test_create_user(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
-    local_accesses = MOCK_ACCESSES.copy()
+    local_table = USER_TABLE.copy()
+    local_accesses = ACCESS_TABLE.copy()
     _patch_session(monkeypatch, local_table, local_accesses)
 
     test_payload = {"username": "third_user", "password": "third_pwd"}
@@ -172,8 +172,8 @@ def test_create_user(test_app, monkeypatch):
 )
 def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
-    local_accesses = MOCK_ACCESSES.copy()
+    local_table = USER_TABLE.copy()
+    local_accesses = ACCESS_TABLE.copy()
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.post("/users/", data=json.dumps(payload))
@@ -182,21 +182,21 @@ def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_user(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     test_payload = {"username": "renamed_user"}
     response = test_app.put("/users/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in local_table[0].items():
-        assert v == test_payload.get(k, MOCK_TABLE[0][k])
+        assert v == test_payload.get(k, USER_TABLE[0][k])
 
     # Self version
     test_payload = {"username": "renamed_me"}
     response = test_app.put("/users/update-info", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in local_table[1].items():
-        assert v == test_payload.get(k, MOCK_TABLE[1][k])
+        assert v == test_payload.get(k, USER_TABLE[1][k])
 
 
 @pytest.mark.parametrize(
@@ -211,7 +211,7 @@ def test_update_user(test_app, monkeypatch):
 )
 def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload))
@@ -228,7 +228,7 @@ def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_cod
 )
 def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.put(f"/users/update-info", data=json.dumps(payload))
@@ -237,8 +237,8 @@ def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_password(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
-    local_accesses = MOCK_ACCESSES.copy()
+    local_table = USER_TABLE.copy()
+    local_accesses = ACCESS_TABLE.copy()
     _patch_session(monkeypatch, local_table, local_accesses)
 
     test_payload = {"password": "new_password"}
@@ -267,8 +267,8 @@ def test_update_password(test_app, monkeypatch):
 )
 def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
-    local_accesses = MOCK_ACCESSES.copy()
+    local_table = USER_TABLE.copy()
+    local_accesses = ACCESS_TABLE.copy()
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
@@ -285,8 +285,8 @@ def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status
 )
 def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
-    local_accesses = MOCK_ACCESSES.copy()
+    local_table = USER_TABLE.copy()
+    local_accesses = ACCESS_TABLE.copy()
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.put(f"/users/update-pwd", data=json.dumps(payload))
@@ -295,12 +295,12 @@ def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code)
 
 def test_delete_user(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.delete("/users/1/")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in MOCK_TABLE[0].items() if k in ['id', 'username', 'created_at']}
+    assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'username', 'created_at']}
     for entry in local_table:
         assert entry['id'] != 1
 
@@ -314,7 +314,7 @@ def test_delete_user(test_app, monkeypatch):
 )
 def test_delete_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = MOCK_TABLE.copy()
+    local_table = USER_TABLE.copy()
     _patch_session(monkeypatch, local_table)
 
     response = test_app.delete(f"/users/{user_id}/")

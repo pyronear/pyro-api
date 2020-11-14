@@ -5,7 +5,7 @@ from datetime import datetime
 from app.api import crud
 
 
-MOCK_TABLE = [
+ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "me"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "me"},
 ]
@@ -71,7 +71,7 @@ def _patch_crud(monkeypatch, mock_table):
 def test_get_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/accesses/1")
@@ -88,7 +88,7 @@ def test_get_access(test_app, monkeypatch):
 )
 def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get(f"/accesses/{access_id}")
@@ -99,7 +99,7 @@ def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, statu
 
 def test_fetch_accesses(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.get("/accesses/")
@@ -110,7 +110,7 @@ def test_fetch_accesses(test_app, monkeypatch):
 def test_create_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"login": "third_login", "scopes": "me", "password": "PickARobustOne"}
@@ -134,7 +134,7 @@ def test_create_access(test_app, monkeypatch):
 )
 def test_create_access_invalid(test_app, monkeypatch, payload, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.post("/accesses/", data=json.dumps(payload))
@@ -145,14 +145,14 @@ def test_create_access_invalid(test_app, monkeypatch, payload, status_code, stat
 
 def test_update_access(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     test_payload = {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}
     response = test_app.put("/accesses/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in local_db[0].items():
-        assert v == test_payload.get(k, MOCK_TABLE[0][k])
+        assert v == test_payload.get(k, ACCESS_TABLE[0][k])
 
 
 @pytest.mark.parametrize(
@@ -167,7 +167,7 @@ def test_update_access(test_app, monkeypatch):
 )
 def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.put(f"/accesses/{access_id}/", data=json.dumps(payload))
@@ -176,12 +176,12 @@ def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status
 
 def test_delete_access(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete("/accesses/1/")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in MOCK_TABLE[0].items() if k != "hashed_password"}
+    assert response.json() == {k: v for k, v in ACCESS_TABLE[0].items() if k != "hashed_password"}
     for entry in local_db:
         assert entry['id'] != 1
 
@@ -195,7 +195,7 @@ def test_delete_access(test_app, monkeypatch):
 )
 def test_delete_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     _patch_crud(monkeypatch, local_db)
 
     response = test_app.delete(f"/accesses/{access_id}/")

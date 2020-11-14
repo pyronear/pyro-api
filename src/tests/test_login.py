@@ -3,7 +3,7 @@ import pytest
 from app.api import crud, security
 
 
-MOCK_TABLE = [
+ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "first_pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "second_login", "hashed_password": "second_pwd_hashed", "scopes": "me"},
 ]
@@ -22,7 +22,7 @@ MOCK_TABLE = [
 def test_create_access_token(test_app, monkeypatch, payload, status_code, status_detail):
 
     # Sterilize DB interactions
-    local_db = MOCK_TABLE.copy()
+    local_db = ACCESS_TABLE.copy()
     async def mock_fetch_one(table, query_filters):
         for entry in local_db:
             if all(entry[k] == v for k, v in query_filters):
