@@ -50,10 +50,12 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
     return device
 
 
-@router.put("/{device_id}/update-location", response_model=DeviceOut)
-async def update_location(payload: DefaultPosition,
-                          device_id: int = Path(..., gt=0),
-                          user: UserRead = Security(get_current_user, scopes=["me"])):
+@router.put("/{device_id}/location", response_model=DeviceOut)
+async def update_device_location(
+    payload: DefaultPosition,
+    device_id: int = Path(..., gt=0),
+    user: UserRead = Security(get_current_user, scopes=["me"])
+):
     entry = await routing.fetch_entry(devices, [("id", device_id), ("owner_id", user.id)])
     if entry is None:
         raise HTTPException(
