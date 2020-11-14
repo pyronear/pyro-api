@@ -32,6 +32,7 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
 
 @router.post("/", response_model=UserRead, status_code=201)
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
+    # Create a new access
     access_entry = await post_access(payload.username, payload.password, payload.scopes)
     return await routing.create_entry(users, UserCreation(username=payload.username, access_id=access_entry.id))
 
@@ -61,7 +62,9 @@ async def update_user_password(
     user_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
+    # Check that user does exist
     entry = await routing.get_entry(users, user_id)
+    # Update the credentials
     await update_access_pwd(payload, entry["access_id"])
     return entry
 

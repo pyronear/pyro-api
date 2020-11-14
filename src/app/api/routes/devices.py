@@ -56,12 +56,14 @@ async def update_device_location(
     device_id: int = Path(..., gt=0),
     user: UserRead = Security(get_current_user, scopes=["me"])
 ):
+    # Check that device is accessible to this user
     entry = await routing.fetch_entry(devices, [("id", device_id), ("owner_id", user.id)])
     if entry is None:
         raise HTTPException(
             status_code=400,
             detail="Permission denied"
         )
+    # Update only the location
     device = await routing.get_entry(devices, device_id)
     device.update(payload.dict())
     device = DeviceOut(**device)
