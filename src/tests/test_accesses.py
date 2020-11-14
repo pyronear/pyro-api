@@ -1,7 +1,6 @@
 import json
 import pytest
 from copy import deepcopy
-from datetime import datetime
 
 from app.api import crud
 from app.api.routes import accesses
