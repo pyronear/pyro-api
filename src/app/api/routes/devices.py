@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import routing
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceAuth, DeviceIn, UserRead, HeartbeatOut, DefaultPosition, Cred, DeviceCreation
+from app.api.schemas import DeviceOut, DeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
 from app.api.deps import get_current_device, get_current_user
 
 from app.api.routes.accesses import post_access, update_access_pwd
@@ -43,7 +43,7 @@ async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me
     return await routing.fetch_entries(devices, [("owner_id", me.id)])
 
 
-@router.put("/heartbeat", response_model=HeartbeatOut)
+@router.put("/heartbeat", response_model=DeviceOut)
 async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
     device.last_ping = datetime.utcnow()
     await routing.update_entry(devices, device, device.id)

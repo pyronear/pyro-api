@@ -149,10 +149,6 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
     pass
 
 
-class HeartbeatOut(BaseModel):
-    last_ping: datetime = None
-
-
 # Media
 class MediaIn(BaseModel):
     device_id: int = Field(..., gt=0)
