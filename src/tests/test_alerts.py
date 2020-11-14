@@ -7,12 +7,12 @@ from app.api import crud
 
 
 ALERT_TABLE = [
-    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "start", "is_acknowledged": True,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end", "is_acknowledged": True,
-     "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": False,
-     "created_at": "2020-11-03T11:18:45.447773"},
+    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "start",
+     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end",
+     "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start",
+     "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
 ]
 
 
@@ -155,9 +155,9 @@ def test_update_alert(test_app, monkeypatch):
     [
         [1, {}, 422],
         [1, {"type": "start"}, 422],
-        [999, {"device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 404],
-        [1, {"device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "restart", "is_acknowledged": True}, 422],
-        [0, {"device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 422],
+        [999, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 404],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "restart", "is_acknowledged": True}, 422],
+        [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 422],
     ],
 )
 def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_code):

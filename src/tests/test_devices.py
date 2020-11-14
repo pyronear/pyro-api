@@ -14,8 +14,9 @@ DEVICE_TABLE = [
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "name": "second_device", "owner_id": 99, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 99, "name": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 99, "name": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None,
+     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
+     "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
 ACCESS_TABLE = [
@@ -153,7 +154,8 @@ def test_fetch_devices(test_app, monkeypatch):
     # Self version
     response = test_app.get("/devices/my-devices")
     assert response.status_code == 200
-    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in local_table if entry['owner_id'] == 99]
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"}
+                               for entry in local_table if entry['owner_id'] == 99]
 
 
 def test_create_device(test_app, monkeypatch):
@@ -346,4 +348,3 @@ def test_delete_device_invalid(test_app, monkeypatch, device_id, status_code, st
     assert response.status_code == status_code, print(payload)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(payload)
-

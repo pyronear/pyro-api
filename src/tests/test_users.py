@@ -9,7 +9,6 @@ from app.api.routes import users
 from app.api.schemas import AccessRead, AccessCreation
 
 
-
 USER_TABLE = [
     {"id": 1, "username": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 99, "username": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
@@ -233,7 +232,7 @@ def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
     local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
-    response = test_app.put(f"/users/update-info", data=json.dumps(payload))
+    response = test_app.put("/users/update-info", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
@@ -291,7 +290,7 @@ def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code)
     local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
-    response = test_app.put(f"/users/update-pwd", data=json.dumps(payload))
+    response = test_app.put("/users/update-pwd", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 

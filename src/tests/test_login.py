@@ -24,6 +24,7 @@ def test_create_access_token(test_app, monkeypatch, payload, status_code, status
 
     # Sterilize DB interactions
     local_db = deepcopy(ACCESS_TABLE)
+
     async def mock_fetch_one(table, query_filters):
         for entry in local_db:
             if all(entry[k] == v for k, v in query_filters):
