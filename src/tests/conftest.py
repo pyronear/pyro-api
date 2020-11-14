@@ -23,7 +23,7 @@ async def mock_get(entry_id, table):
     return None
 
 
-async def mock_fetch_all(table, query_filters):
+async def mock_fetch_all(table, query_filters=None):
     if query_filters is None:
         return table
     response = []
@@ -33,7 +33,7 @@ async def mock_fetch_all(table, query_filters):
     return response
 
 
-async def mock_fetch_one(table, query_filters):
+async def mock_fetch_one(table, query_filters=None):
     for entry in table:
         if all(entry[k] == v for k, v in query_filters):
             return entry
