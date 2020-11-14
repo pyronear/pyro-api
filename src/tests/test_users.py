@@ -319,6 +319,6 @@ def test_delete_user_invalid(test_app, monkeypatch, user_id, status_code, status
     _patch_session(monkeypatch, local_table)
 
     response = test_app.delete(f"/users/{user_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(user_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(user_id)
