@@ -2,12 +2,22 @@ import pytest
 from copy import deepcopy
 
 from app.api import crud, security
+from app.api.routes import login
 
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "first_pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "second_login", "hashed_password": "second_pwd_hashed", "scopes": "me"},
 ]
+
+
+def _patch_session(monkeypatch, mock_table):
+    # DB patching
+    monkeypatch.setattr(login, "accesses", mock_table)
+    # Sterilize all DB interactions through CRUD override
+    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
+    # Password
+    monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
 
 
 @pytest.mark.parametrize(
@@ -23,21 +33,8 @@ ACCESS_TABLE = [
 def test_create_access_token(test_app, monkeypatch, payload, status_code, status_detail):
 
     # Sterilize DB interactions
-    local_db = deepcopy(ACCESS_TABLE)
-
-    async def mock_fetch_one(table, query_filters):
-        for entry in local_db:
-            if all(entry[k] == v for k, v in query_filters):
-                return entry
-        return None
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    # Override cred verification
-    async def verify_password(plain_password, hashed_password):
-        return hashed_password == f"{plain_password}_hashed"
-
-    monkeypatch.setattr(security, "verify_password", verify_password)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_access_table)
 
     response = test_app.post("/login/access-token", data=payload)
 

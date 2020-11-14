@@ -26,88 +26,38 @@ ACCESS_TABLE = [
 ]
 
 
-def _patch_session(monkeypatch, device_table, access_table=None):
-    # Sterilize all DB interactions
-    async def mock_get(entry_id, table):
-        for entry in device_table:
-            if entry['id'] == entry_id:
-                return entry
-        return None
-
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    async def mock_fetch_all(table, query_filters):
-        if query_filters is None:
-            return device_table
-        response = []
-        for entry in device_table:
-            if all(entry[k] == v for k, v in query_filters):
-                response.append(entry)
-        return response
-
-    monkeypatch.setattr(crud, "fetch_all", mock_fetch_all)
-
-    async def mock_fetch_one(table, query_filters):
-        for entry in device_table:
-            if all(entry[k] == v for k, v in query_filters):
-                return entry
-        return None
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    async def mock_post(payload, table):
-        payload_dict = payload.dict()
-        payload_dict['created_at'] = datetime.utcnow()
-        payload_dict['id'] = len(device_table) + 1
-        device_table.append(payload_dict)
-        return payload_dict['id']
-
-    monkeypatch.setattr(crud, "post", mock_post)
-
-    async def mock_put(entry_id, payload, table):
-        for idx, entry in enumerate(device_table):
-            if entry['id'] == entry_id:
-                for k, v in payload.dict().items():
-                    device_table[idx][k] = v
-        return entry_id
-
-    monkeypatch.setattr(crud, "put", mock_put)
-
-    async def mock_delete(entry_id, table):
-        for idx, entry in enumerate(device_table):
-            if entry['id'] == entry_id:
-                del device_table[idx]
-                break
-        return entry_id
-
-    monkeypatch.setattr(crud, "delete", mock_delete)
-
-    # Override cred verification
-    async def mock_hash(password):
-        return f"{password}_hashed"
-
-    monkeypatch.setattr(security, "hash_password", mock_hash)
-
-    # Update mock accesses
-    if access_table is not None:
+def _patch_session(monkeypatch, mock_device_table, mock_access_table=None):
+    # DB patching
+    monkeypatch.setattr(devices, "devices", mock_device_table)
+    # Sterilize all DB interactions through CRUD override
+    monkeypatch.setattr(crud, "get", pytest.mock_get)
+    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
+    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
+    monkeypatch.setattr(crud, "post", pytest.mock_post)
+    monkeypatch.setattr(crud, "put", pytest.mock_put)
+    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
+    # Password
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    # Access table specific
+    if mock_access_table is not None:
         async def mock_update_pwd(payload, entry_id):
-            for idx, entry in enumerate(access_table):
+            for idx, entry in enumerate(mock_access_table):
                 if entry["id"] == entry_id:
-                    access_table[idx]["hashed_password"] = await security.hash_password(payload.password)
+                    mock_access_table[idx]["hashed_password"] = await security.hash_password(payload.password)
                     return {"login": entry["login"]}
 
         monkeypatch.setattr(devices, "update_access_pwd", mock_update_pwd)
 
         async def mock_post_access(login, password, scopes):
-            if any(entry['login'] == login for entry in access_table):
+            if any(entry['login'] == login for entry in mock_access_table):
                 raise HTTPException(status_code=400, detail=f"An entry with login='{login}' already exists.")
 
-            pwd = await mock_hash(password)
+            pwd = await pytest.mock_hash_password(password)
             access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
             # Post on access table
             payload_dict = access.dict()
-            payload_dict['id'] = len(access_table) + 1
-            access_table.append(payload_dict)
+            payload_dict['id'] = len(mock_access_table) + 1
+            mock_access_table.append(payload_dict)
             return AccessRead(id=payload_dict['id'], **access.dict())
 
         monkeypatch.setattr(devices, "post_access", mock_post_access)
@@ -116,12 +66,12 @@ def _patch_session(monkeypatch, device_table, access_table=None):
 def test_get_device(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.get("/devices/1")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in local_table[0].items() if k != "access_id"}
+    assert response.json() == {k: v for k, v in mock_device_table[0].items() if k != "access_id"}
 
 
 @pytest.mark.parametrize(
@@ -133,8 +83,8 @@ def test_get_device(test_app, monkeypatch):
 )
 def test_get_device_invalid(test_app, monkeypatch, device_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.get(f"/devices/{device_id}")
     assert response.status_code == status_code, device_id
@@ -144,29 +94,29 @@ def test_get_device_invalid(test_app, monkeypatch, device_id, status_code, statu
 
 def test_fetch_devices(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.get("/devices/")
     assert response.status_code == 200
-    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in local_table]
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in mock_device_table]
 
     # Self version
     response = test_app.get("/devices/my-devices")
     assert response.status_code == 200
     assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"}
-                               for entry in local_table if entry['owner_id'] == 99]
+                               for entry in mock_device_table if entry['owner_id'] == 99]
 
 
 def test_create_device(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     test_payload = {"name": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}
-    test_response = {"id": len(local_table) + 1, "name": "third_device", "owner_id": 1, "specs": "v0.2"}
+    test_response = {"id": len(mock_device_table) + 1, "name": "third_device", "owner_id": 1, "specs": "v0.2"}
 
     utc_dt = datetime.utcnow()
     response = test_app.post("/devices/", data=json.dumps(test_payload))
@@ -177,9 +127,9 @@ def test_create_device(test_app, monkeypatch):
     for k, v in test_response.items():
         assert v == json_response[k]
     # Timestamp consistency
-    assert local_table[-1]['created_at'] > utc_dt and local_table[-1]['created_at'] < datetime.utcnow()
+    assert mock_device_table[-1]['created_at'] > utc_dt and mock_device_table[-1]['created_at'] < datetime.utcnow()
     # Access table updated
-    assert local_accesses[-1]['hashed_password'] == f"{test_payload['password']}_hashed"
+    assert mock_access_table[-1]['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -192,9 +142,9 @@ def test_create_device(test_app, monkeypatch):
 )
 def test_create_device_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     response = test_app.post("/devices/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -202,13 +152,13 @@ def test_create_device_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_device(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     test_payload = {"name": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}
     response = test_app.put("/devices/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    for k, v in local_table[0].items():
+    for k, v in mock_device_table[0].items():
         assert v == test_payload.get(k, DEVICE_TABLE[0][k])
 
 
@@ -224,8 +174,8 @@ def test_update_device(test_app, monkeypatch):
 )
 def test_update_device_invalid(test_app, monkeypatch, device_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.put(f"/devices/{device_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -233,15 +183,15 @@ def test_update_device_invalid(test_app, monkeypatch, device_id, payload, status
 
 def test_update_device_password(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     test_payload = {"password": "new_password"}
     response = test_app.put("/devices/1/pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in local_table[0].items() if k != 'access_id'}
-    assert local_accesses[0]['hashed_password'] == f"{test_payload['password']}_hashed"
+    assert response.json() == {k: v for k, v in mock_device_table[0].items() if k != 'access_id'}
+    assert mock_access_table[0]['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -256,9 +206,9 @@ def test_update_device_password(test_app, monkeypatch):
 )
 def test_update_device_password_invalid(test_app, monkeypatch, device_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     response = test_app.put(f"/devices/{device_id}/pwd", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -266,18 +216,18 @@ def test_update_device_password_invalid(test_app, monkeypatch, device_id, payloa
 
 def test_update_device_location(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     test_payload = {"lon": 5.}
     response = test_app.put("/devices/2/location", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in response.json().items():
         if k not in ['access_id', 'created_at']:
-            assert v == local_table[1][k]
+            assert v == mock_device_table[1][k]
     for k, v in test_payload.items():
-        assert local_table[1][k] == v
+        assert mock_device_table[1][k] == v
 
 
 @pytest.mark.parametrize(
@@ -291,9 +241,9 @@ def test_update_device_location(test_app, monkeypatch):
 )
 def test_update_device_location_invalid(test_app, monkeypatch, device_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    local_accesses = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, local_table, local_accesses)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
     response = test_app.put(f"/devices/{device_id}/location", data=json.dumps(payload))
     assert response.status_code == status_code, print(device_id, payload)
@@ -301,8 +251,8 @@ def test_update_device_location_invalid(test_app, monkeypatch, device_id, payloa
 
 def test_heartbeat(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     utc_dt = datetime.utcnow()
 
@@ -313,7 +263,7 @@ def test_heartbeat(test_app, monkeypatch):
     assert datetime.utcnow() > datetime.fromisoformat(json_response['last_ping'])
     assert utc_dt < datetime.fromisoformat(json_response['last_ping'])
 
-    for k, v in local_table[2].items():
+    for k, v in mock_device_table[2].items():
         if k == 'last_ping':
             assert v != DEVICE_TABLE[2][k]
         elif k != 'created_at':
@@ -322,13 +272,13 @@ def test_heartbeat(test_app, monkeypatch):
 
 def test_delete_device(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.delete("/devices/1/")
     assert response.status_code == 200
     assert response.json() == {k: v for k, v in DEVICE_TABLE[0].items() if k != 'access_id'}
-    for entry in local_table:
+    for entry in mock_device_table:
         assert entry['id'] != 1
 
 
@@ -341,8 +291,8 @@ def test_delete_device(test_app, monkeypatch):
 )
 def test_delete_device_invalid(test_app, monkeypatch, device_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = deepcopy(DEVICE_TABLE)
-    _patch_session(monkeypatch, local_table)
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.delete(f"/devices/{device_id}/")
     assert response.status_code == status_code, print(payload)
