@@ -62,20 +62,18 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     return AccessRead(**entry)
 
 
-async def get_current_user(access=Depends(get_current_access)) -> UserRead:
+async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, [('access_id', access.id)])
 
     if user is None:
-        # Could be a "permission denied error as well"
-        raise HTTPException(status_code=400, detail="Non existing user")
+        raise HTTPException(status_code=400, detail="Permission denied")
 
     return UserRead(**user)
 
 
-async def get_current_device(access=Depends(get_current_access)) -> DeviceOut:
+async def get_current_device(access: AccessRead = Depends(get_current_access)) -> DeviceOut:
     device = await crud.fetch_one(devices, [('access_id', access.id)])
     if device is None:
-        # Could be a "permission denied error as well"
-        raise HTTPException(status_code=400, detail="Non existing device")
+        raise HTTPException(status_code=400, detail="Permission denied")
 
     return DeviceOut(**device)
