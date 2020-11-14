@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 from fastapi import HTTPException
 
-from app.api import crud, security, routing
+from app.api import crud, security
 from app.api.routes import devices
 from app.api.schemas import AccessRead, AccessCreation
 
