@@ -1,5 +1,6 @@
 import json
 import pytest
+from copy import deepcopy
 from datetime import datetime
 
 from app.api import crud
@@ -65,7 +66,7 @@ def _patch_session(monkeypatch, mock_table):
 def test_get_site(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/sites/1")
@@ -82,7 +83,7 @@ def test_get_site(test_app, monkeypatch):
 )
 def test_get_site_invalid(test_app, monkeypatch, site_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/sites/{site_id}")
@@ -93,7 +94,7 @@ def test_get_site_invalid(test_app, monkeypatch, site_id, status_code, status_de
 
 def test_fetch_sites(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/sites/")
@@ -104,7 +105,7 @@ def test_fetch_sites(test_app, monkeypatch):
 def test_create_site(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
@@ -133,7 +134,7 @@ def test_create_site_invalid(test_app, payload, status_code):
 
 def test_update_site(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"name": "renamed_site", "lat": 0., "lon": 0., "type": "tower"}
@@ -155,7 +156,7 @@ def test_update_site(test_app, monkeypatch):
 )
 def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/sites/{site_id}/", data=json.dumps(payload))
@@ -164,7 +165,7 @@ def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_cod
 
 def test_delete_site(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/sites/1/")
@@ -183,7 +184,7 @@ def test_delete_site(test_app, monkeypatch):
 )
 def test_delete_site_invalid(test_app, monkeypatch, site_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = SITE_TABLE.copy()
+    local_db = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/sites/{site_id}/")

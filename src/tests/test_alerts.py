@@ -1,5 +1,6 @@
 import json
 import pytest
+from copy import deepcopy
 from datetime import datetime
 
 from app.api import crud
@@ -67,7 +68,7 @@ def _patch_session(monkeypatch, mock_table):
 def test_get_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/alerts/1")
@@ -84,7 +85,7 @@ def test_get_alert(test_app, monkeypatch):
 )
 def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/alerts/{alert_id}")
@@ -95,7 +96,7 @@ def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_
 
 def test_fetch_alerts(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/alerts/")
@@ -106,7 +107,7 @@ def test_fetch_alerts(test_app, monkeypatch):
 def test_create_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end"}
@@ -130,7 +131,7 @@ def test_create_alert(test_app, monkeypatch):
 )
 def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/alerts/", data=json.dumps(payload))
@@ -139,14 +140,14 @@ def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_alert(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "start"}
     response = test_app.put("/alerts/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    for k, v in local_db[0].items():
-        assert v == test_payload.get(k, ALERT_TABLE[0][k])
+    for k, v in test_payload.items():
+        assert v == local_db[0][k]
 
 
 @pytest.mark.parametrize(
@@ -161,7 +162,7 @@ def test_update_alert(test_app, monkeypatch):
 )
 def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/alerts/{alert_id}/", data=json.dumps(payload))
@@ -170,7 +171,7 @@ def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_c
 
 def test_delete_alert(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/alerts/1/")
@@ -189,7 +190,7 @@ def test_delete_alert(test_app, monkeypatch):
 )
 def test_delete_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = ALERT_TABLE.copy()
+    local_db = deepcopy(ALERT_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/alerts/{alert_id}/")

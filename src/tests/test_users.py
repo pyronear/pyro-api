@@ -1,5 +1,6 @@
 import json
 import pytest
+from copy import deepcopy
 from datetime import datetime
 from fastapi import HTTPException
 
@@ -102,7 +103,7 @@ def _patch_session(monkeypatch, user_table, access_table=None):
 def test_get_user(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get("/users/1")
@@ -126,7 +127,7 @@ def test_get_user(test_app, monkeypatch):
 )
 def test_get_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get(f"/users/{user_id}")
@@ -137,7 +138,7 @@ def test_get_user_invalid(test_app, monkeypatch, user_id, status_code, status_de
 
 def test_fetch_users(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.get("/users/")
@@ -148,8 +149,8 @@ def test_fetch_users(test_app, monkeypatch):
 def test_create_user(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
-    local_accesses = ACCESS_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
+    local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
     test_payload = {"username": "third_user", "password": "third_pwd"}
@@ -162,6 +163,7 @@ def test_create_user(test_app, monkeypatch):
     json_response = response.json()
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
     assert local_table[-1]['created_at'] > utc_dt and local_table[-1]['created_at'] < datetime.utcnow()
+    assert local_accesses[-1]['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -172,8 +174,8 @@ def test_create_user(test_app, monkeypatch):
 )
 def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
-    local_accesses = ACCESS_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
+    local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.post("/users/", data=json.dumps(payload))
@@ -182,7 +184,7 @@ def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_user(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     test_payload = {"username": "renamed_user"}
@@ -211,7 +213,7 @@ def test_update_user(test_app, monkeypatch):
 )
 def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload))
@@ -228,7 +230,7 @@ def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_cod
 )
 def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.put(f"/users/update-info", data=json.dumps(payload))
@@ -237,8 +239,8 @@ def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_password(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
-    local_accesses = ACCESS_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
+    local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
     test_payload = {"password": "new_password"}
@@ -267,8 +269,8 @@ def test_update_password(test_app, monkeypatch):
 )
 def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
-    local_accesses = ACCESS_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
+    local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
@@ -285,8 +287,8 @@ def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status
 )
 def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
-    local_accesses = ACCESS_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
+    local_accesses = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_table, local_accesses)
 
     response = test_app.put(f"/users/update-pwd", data=json.dumps(payload))
@@ -295,7 +297,7 @@ def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code)
 
 def test_delete_user(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.delete("/users/1/")
@@ -314,7 +316,7 @@ def test_delete_user(test_app, monkeypatch):
 )
 def test_delete_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    local_table = USER_TABLE.copy()
+    local_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, local_table)
 
     response = test_app.delete(f"/users/{user_id}/")

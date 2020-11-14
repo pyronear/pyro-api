@@ -1,5 +1,6 @@
 import json
 import pytest
+from copy import deepcopy
 from datetime import datetime
 
 from app.api import crud
@@ -71,7 +72,7 @@ def _patch_session(monkeypatch, mock_table):
 def test_get_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/accesses/1")
@@ -88,7 +89,7 @@ def test_get_access(test_app, monkeypatch):
 )
 def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/accesses/{access_id}")
@@ -99,7 +100,7 @@ def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, statu
 
 def test_fetch_accesses(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/accesses/")
@@ -110,7 +111,7 @@ def test_fetch_accesses(test_app, monkeypatch):
 def test_create_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"login": "third_login", "scopes": "me", "password": "PickARobustOne"}
@@ -134,7 +135,7 @@ def test_create_access(test_app, monkeypatch):
 )
 def test_create_access_invalid(test_app, monkeypatch, payload, status_code, status_details):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/accesses/", data=json.dumps(payload))
@@ -145,7 +146,7 @@ def test_create_access_invalid(test_app, monkeypatch, payload, status_code, stat
 
 def test_update_access(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}
@@ -167,7 +168,7 @@ def test_update_access(test_app, monkeypatch):
 )
 def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/accesses/{access_id}/", data=json.dumps(payload))
@@ -176,7 +177,7 @@ def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status
 
 def test_delete_access(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/accesses/1/")
@@ -195,7 +196,7 @@ def test_delete_access(test_app, monkeypatch):
 )
 def test_delete_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/accesses/{access_id}/")

@@ -1,5 +1,6 @@
 import json
 import pytest
+from copy import deepcopy
 from datetime import datetime
 
 from app.api import crud
@@ -63,7 +64,7 @@ def _patch_session(monkeypatch, mock_table):
 def test_get_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/media/1")
@@ -80,7 +81,7 @@ def test_get_media(test_app, monkeypatch):
 )
 def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/media/{media_id}")
@@ -91,7 +92,7 @@ def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_
 
 def test_fetch_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/media/")
@@ -102,7 +103,7 @@ def test_fetch_media(test_app, monkeypatch):
 def test_create_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1}
@@ -126,7 +127,7 @@ def test_create_media(test_app, monkeypatch):
 )
 def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/media/", data=json.dumps(payload))
@@ -135,7 +136,7 @@ def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
 
 def test_update_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "type": "video"}
@@ -158,7 +159,7 @@ def test_update_media(test_app, monkeypatch):
 )
 def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_code):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/media/{media_id}/", data=json.dumps(payload))
@@ -167,7 +168,7 @@ def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_c
 
 def test_delete_media(test_app, monkeypatch):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/media/1/")
@@ -186,7 +187,7 @@ def test_delete_media(test_app, monkeypatch):
 )
 def test_delete_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
-    local_db = MEDIA_TABLE.copy()
+    local_db = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/media/{media_id}/")

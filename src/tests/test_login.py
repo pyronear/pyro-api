@@ -1,4 +1,5 @@
 import pytest
+from copy import deepcopy
 
 from app.api import crud, security
 
@@ -22,7 +23,7 @@ ACCESS_TABLE = [
 def test_create_access_token(test_app, monkeypatch, payload, status_code, status_detail):
 
     # Sterilize DB interactions
-    local_db = ACCESS_TABLE.copy()
+    local_db = deepcopy(ACCESS_TABLE)
     async def mock_fetch_one(table, query_filters):
         for entry in local_db:
             if all(entry[k] == v for k, v in query_filters):
