@@ -13,7 +13,7 @@ EVENT_TABLE = [
 ]
 
 
-def _patch_crud(monkeypatch, mock_table):
+def _patch_session(monkeypatch, mock_table):
     # Sterilize all DB interactions
     async def mock_get(entry_id, table):
         for entry in mock_table:
@@ -66,7 +66,7 @@ def test_get_event(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/events/1")
     assert response.status_code == 200
@@ -83,7 +83,7 @@ def test_get_event(test_app, monkeypatch):
 def test_get_event_invalid(test_app, monkeypatch, event_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/events/{event_id}")
     assert response.status_code == status_code, event_id
@@ -94,7 +94,7 @@ def test_get_event_invalid(test_app, monkeypatch, event_id, status_code, status_
 def test_fetch_events(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/events/")
     assert response.status_code == 200
@@ -105,7 +105,7 @@ def test_create_event(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
     test_response = {"id": len(local_db) + 1, **test_payload}
@@ -129,7 +129,7 @@ def test_create_event(test_app, monkeypatch):
 def test_create_event_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/events/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -138,7 +138,7 @@ def test_create_event_invalid(test_app, monkeypatch, payload, status_code):
 def test_update_event(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"lat": 5., "lon": 10., "type": "wildfire"}
     response = test_app.put("/events/1/", data=json.dumps(test_payload))
@@ -161,7 +161,7 @@ def test_update_event(test_app, monkeypatch):
 def test_update_event_invalid(test_app, monkeypatch, event_id, payload, status_code):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/events/{event_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -170,7 +170,7 @@ def test_update_event_invalid(test_app, monkeypatch, event_id, payload, status_c
 def test_delete_event(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/events/1/")
     assert response.status_code == 200
@@ -189,7 +189,7 @@ def test_delete_event(test_app, monkeypatch):
 def test_delete_event_invalid(test_app, monkeypatch, event_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = EVENT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/events/{event_id}/")
     assert response.status_code == status_code, print(payload)

@@ -13,7 +13,7 @@ INSTALLATION_TABLE = [
 ]
 
 
-def _patch_crud(monkeypatch, mock_table):
+def _patch_session(monkeypatch, mock_table):
     # Sterilize all DB interactions
     async def mock_get(entry_id, table):
         for entry in mock_table:
@@ -66,7 +66,7 @@ def test_get_installation(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/installations/1")
     assert response.status_code == 200
@@ -83,7 +83,7 @@ def test_get_installation(test_app, monkeypatch):
 def test_get_installation_invalid(test_app, monkeypatch, installation_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/installations/{installation_id}")
     assert response.status_code == status_code, installation_id
@@ -94,7 +94,7 @@ def test_get_installation_invalid(test_app, monkeypatch, installation_id, status
 def test_fetch_installations(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/installations/")
     assert response.status_code == 200
@@ -105,7 +105,7 @@ def test_create_installation(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}
     test_response = {"id": len(local_db) + 1, **test_payload, "start_ts": None, "end_ts": None}
@@ -129,7 +129,7 @@ def test_create_installation(test_app, monkeypatch):
 def test_create_installation_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/installations/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -138,7 +138,7 @@ def test_create_installation_invalid(test_app, monkeypatch, payload, status_code
 def test_update_installation(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}
     response = test_app.put("/installations/1/", data=json.dumps(test_payload))
@@ -160,7 +160,7 @@ def test_update_installation(test_app, monkeypatch):
 def test_update_installation_invalid(test_app, monkeypatch, installation_id, payload, status_code):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/installations/{installation_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -169,7 +169,7 @@ def test_update_installation_invalid(test_app, monkeypatch, installation_id, pay
 def test_delete_installation(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/installations/1/")
     assert response.status_code == 200
@@ -188,7 +188,7 @@ def test_delete_installation(test_app, monkeypatch):
 def test_delete_installation_invalid(test_app, monkeypatch, installation_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = INSTALLATION_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/installations/{installation_id}/")
     assert response.status_code == status_code, print(payload)

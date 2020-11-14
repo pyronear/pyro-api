@@ -11,7 +11,7 @@ ACCESS_TABLE = [
 ]
 
 
-def _patch_crud(monkeypatch, mock_table):
+def _patch_session(monkeypatch, mock_table):
     # Sterilize all DB interactions
     async def mock_get(entry_id, table):
         for entry in mock_table:
@@ -72,7 +72,7 @@ def test_get_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/accesses/1")
     assert response.status_code == 200
@@ -89,7 +89,7 @@ def test_get_access(test_app, monkeypatch):
 def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/accesses/{access_id}")
     assert response.status_code == status_code, access_id
@@ -100,7 +100,7 @@ def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, statu
 def test_fetch_accesses(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/accesses/")
     assert response.status_code == 200
@@ -111,7 +111,7 @@ def test_create_access(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"login": "third_login", "scopes": "me", "password": "PickARobustOne"}
     test_response = {"id": len(local_db) + 1, **test_payload}
@@ -135,7 +135,7 @@ def test_create_access(test_app, monkeypatch):
 def test_create_access_invalid(test_app, monkeypatch, payload, status_code, status_details):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/accesses/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -146,7 +146,7 @@ def test_create_access_invalid(test_app, monkeypatch, payload, status_code, stat
 def test_update_access(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}
     response = test_app.put("/accesses/1/", data=json.dumps(test_payload))
@@ -168,7 +168,7 @@ def test_update_access(test_app, monkeypatch):
 def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status_code):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/accesses/{access_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -177,7 +177,7 @@ def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status
 def test_delete_access(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/accesses/1/")
     assert response.status_code == 200
@@ -196,7 +196,7 @@ def test_delete_access(test_app, monkeypatch):
 def test_delete_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = ACCESS_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/accesses/{access_id}/")
     assert response.status_code == status_code, print(payload)

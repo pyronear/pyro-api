@@ -11,7 +11,7 @@ MEDIA_TABLE = [
 ]
 
 
-def _patch_crud(monkeypatch, mock_table):
+def _patch_session(monkeypatch, mock_table):
     # Sterilize all DB interactions
     async def mock_get(entry_id, table):
         for entry in mock_table:
@@ -64,7 +64,7 @@ def test_get_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/media/1")
     assert response.status_code == 200
@@ -81,7 +81,7 @@ def test_get_media(test_app, monkeypatch):
 def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/media/{media_id}")
     assert response.status_code == status_code, media_id
@@ -92,7 +92,7 @@ def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_
 def test_fetch_media(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/media/")
     assert response.status_code == 200
@@ -103,7 +103,7 @@ def test_create_media(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1}
     test_response = {"id": len(local_db) + 1, **test_payload, "type": "image"}
@@ -127,7 +127,7 @@ def test_create_media(test_app, monkeypatch):
 def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/media/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -136,7 +136,7 @@ def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
 def test_update_media(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "type": "video"}
     response = test_app.put("/media/1/", data=json.dumps(test_payload))
@@ -159,7 +159,7 @@ def test_update_media(test_app, monkeypatch):
 def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_code):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/media/{media_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -168,7 +168,7 @@ def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_c
 def test_delete_media(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/media/1/")
     assert response.status_code == 200
@@ -187,7 +187,7 @@ def test_delete_media(test_app, monkeypatch):
 def test_delete_media_invalid(test_app, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = MEDIA_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/media/{media_id}/")
     assert response.status_code == status_code, print(payload)

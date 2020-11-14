@@ -15,7 +15,7 @@ ALERT_TABLE = [
 ]
 
 
-def _patch_crud(monkeypatch, mock_table):
+def _patch_session(monkeypatch, mock_table):
     # Sterilize all DB interactions
     async def mock_get(entry_id, table):
         for entry in mock_table:
@@ -68,7 +68,7 @@ def test_get_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/alerts/1")
     assert response.status_code == 200
@@ -85,7 +85,7 @@ def test_get_alert(test_app, monkeypatch):
 def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get(f"/alerts/{alert_id}")
     assert response.status_code == status_code, alert_id
@@ -96,7 +96,7 @@ def test_get_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_
 def test_fetch_alerts(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.get("/alerts/")
     assert response.status_code == 200
@@ -107,7 +107,7 @@ def test_create_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end"}
     test_response = {"id": len(local_db) + 1, **test_payload, "media_id": None, "is_acknowledged": False}
@@ -131,7 +131,7 @@ def test_create_alert(test_app, monkeypatch):
 def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.post("/alerts/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -140,7 +140,7 @@ def test_create_alert_invalid(test_app, monkeypatch, payload, status_code):
 def test_update_alert(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     test_payload = {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "start"}
     response = test_app.put("/alerts/1/", data=json.dumps(test_payload))
@@ -162,7 +162,7 @@ def test_update_alert(test_app, monkeypatch):
 def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_code):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.put(f"/alerts/{alert_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
@@ -171,7 +171,7 @@ def test_update_alert_invalid(test_app, monkeypatch, alert_id, payload, status_c
 def test_delete_alert(test_app, monkeypatch):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete("/alerts/1/")
     assert response.status_code == 200
@@ -190,7 +190,7 @@ def test_delete_alert(test_app, monkeypatch):
 def test_delete_alert_invalid(test_app, monkeypatch, alert_id, status_code, status_details):
     # Sterilize DB interactions
     local_db = ALERT_TABLE.copy()
-    _patch_crud(monkeypatch, local_db)
+    _patch_session(monkeypatch, local_db)
 
     response = test_app.delete(f"/alerts/{alert_id}/")
     assert response.status_code == status_code, print(payload)
