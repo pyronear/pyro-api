@@ -2,6 +2,7 @@ from typing import Optional, Tuple, Any, List, Dict
 from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
+from fastapi import HTTPException, Path
 
 
 async def post(payload: BaseModel, table: Table) -> int:
@@ -43,3 +44,29 @@ async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
 async def delete(entry_id: int, table: Table):
     query = table.delete().where(entry_id == table.c.id)
     return await database.execute(query=query)
+
+
+async def create_entry(table: Table, payload: BaseModel) -> Dict[str, Any]:
+    entry_id = await post(payload, table)
+    return {**payload.dict(), "id": entry_id}
+
+
+async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
+    entry = await get(entry_id, table)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return entry
+
+
+async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
+    await get_entry(table, entry_id)
+    entry_id = await put(entry_id, payload, table)
+
+    return {**payload.dict(), "id": entry_id}
+
+
+async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
+    entry = await get_entry(table, entry_id)
+    await delete(entry_id, table)
+
+    return entry
