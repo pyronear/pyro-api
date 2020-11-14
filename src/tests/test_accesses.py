@@ -156,6 +156,6 @@ def test_delete_access_invalid(test_app, monkeypatch, access_id, status_code, st
     _patch_session(monkeypatch, mock_access_table)
 
     response = test_app.delete(f"/accesses/{access_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(access_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(access_id)

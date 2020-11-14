@@ -156,6 +156,6 @@ def test_delete_installation_invalid(test_app, monkeypatch, installation_id, sta
     _patch_session(monkeypatch, mock_installation_table)
 
     response = test_app.delete(f"/installations/{installation_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(installation_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(installation_id)

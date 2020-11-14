@@ -151,6 +151,6 @@ def test_delete_site_invalid(test_app, monkeypatch, site_id, status_code, status
     _patch_session(monkeypatch, mock_site_table)
 
     response = test_app.delete(f"/sites/{site_id}/")
-    assert response.status_code == status_code
+    assert response.status_code == status_code, print(site_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details
+        assert response.json()["detail"] == status_details, print(site_id)

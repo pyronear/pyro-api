@@ -295,6 +295,6 @@ def test_delete_device_invalid(test_app, monkeypatch, device_id, status_code, st
     _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.delete(f"/devices/{device_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(device_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(device_id)

@@ -154,6 +154,6 @@ def test_delete_media_invalid(test_app, monkeypatch, media_id, status_code, stat
     _patch_session(monkeypatch, mock_media_table)
 
     response = test_app.delete(f"/media/{media_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(media_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(media_id)

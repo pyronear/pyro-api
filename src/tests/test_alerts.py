@@ -157,6 +157,6 @@ def test_delete_alert_invalid(test_app, monkeypatch, alert_id, status_code, stat
     _patch_session(monkeypatch, mock_alert_table)
 
     response = test_app.delete(f"/alerts/{alert_id}/")
-    assert response.status_code == status_code, print(payload)
+    assert response.status_code == status_code, print(alert_id)
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(payload)
+        assert response.json()["detail"] == status_details, print(alert_id)
