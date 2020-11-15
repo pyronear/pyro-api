@@ -36,7 +36,7 @@ async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> D
 
 @router.post("/", response_model=AccessRead, status_code=201)
 async def create_access(payload: AccessAuth):
-    return await post_access(**payload.dict())
+    return await post_access(payload.login, payload.password, payload.scopes)
 
 
 @router.get("/{access_id}/", response_model=AccessRead)
