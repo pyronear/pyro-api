@@ -136,8 +136,7 @@ class DeviceIn(DefaultPosition):
     last_ping: datetime = None
 
 
-class DeviceAuth(DeviceIn):
-    password: str = Field(..., min_length=3, example="PickARobustOne")
+class DeviceAuth(DeviceIn, Cred):
     scopes: str = Field("device", example="device")
 
 
