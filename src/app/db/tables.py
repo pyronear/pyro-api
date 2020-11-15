@@ -1,15 +1,16 @@
 import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
-                        ForeignKey, MetaData, create_engine)
+                        ForeignKey, MetaData)
 from sqlalchemy.sql import func
 from app import config as cfg
-from databases import Database
+
+
+__all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
+           'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
 
 
 # SQLAlchemy
 # databases query builder
-database = Database(cfg.DATABASE_URL)
-engine = create_engine(cfg.DATABASE_URL)
 metadata = MetaData()
 
 # Cores tables
