@@ -1,6 +1,6 @@
 from sqlalchemy import Table
 from pydantic import BaseModel
-from typing import Optional, Tuple, Any, List
+from typing import Optional, Tuple, Any, List, Dict
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
@@ -23,11 +23,11 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)):
     return entry
 
 
-async def fetch_entries(table: Table, query_filter: Optional[List[Tuple[str, Any]]] = None):
+async def fetch_entries(table: Table, query_filter: Optional[Dict[str, Any]] = None):
     return await crud.fetch_all(table, query_filter)
 
 
-async def fetch_entry(table: Table, query_filter: List[Tuple[str, Any]]):
+async def fetch_entry(table: Table, query_filter: Dict[str, Any]):
     return await crud.fetch_one(table, query_filter)
 
 

@@ -23,7 +23,7 @@ def test_fetch_my_devices(test_app, monkeypatch):
     test_data = [{"id": did, **REPLY_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
 
     async def mock_fetch_by_owner(table, query_filter):
-        return [entry for entry in test_data if entry[query_filter[0]] == query_filter[1]]
+        return [entry for entry in test_data if entry["owner_id"] == query_filter["owner_id"]]
 
     monkeypatch.setattr(crud, "fetch_all", mock_fetch_by_owner)
 
