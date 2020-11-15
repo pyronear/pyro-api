@@ -1,4 +1,4 @@
-# Contributing to pyronear-api
+# Contributing to pyro-api
 
 Everything you need to know to contribute efficiently to the project.
 
@@ -6,9 +6,9 @@ Everything you need to know to contribute efficiently to the project.
 
 ## Codebase structure
 
-- [src](https://github.com/pyronear/pyronear-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
-- [src/app](https://github.com/pyronear/pyronear-api/blob/master/src/app) - The source code of the API
-- [src/tests](https://github.com/pyronear/pyronear-api/blob/master/src/tests) - The unittests for the app
+- [src](https://github.com/pyronear/pyro-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
+- [src/app](https://github.com/pyronear/pyro-api/blob/master/src/app) - The source code of the API
+- [src/tests](https://github.com/pyronear/pyro-api/blob/master/src/tests) - The unittests for the app
 
 
 
@@ -27,14 +27,35 @@ As a contributor, you will only have to ensure coverage of your code by adding a
 
 ## Issues
 
-Use Github [issues](https://github.com/pyronear/pyronear-api/issues) for feature requests, or bug reporting. When doing so, use issue templates whenever possible and provide enough information for other contributors to jump in.
+Use Github [issues](https://github.com/pyronear/pyro-api/issues) for feature requests, or bug reporting. When doing so, use issue templates whenever possible and provide enough information for other contributors to jump in.
 
 
 
-## Developing pyronear-api
+## Developing pyro-api
 
 
 ### Commits
 
 - **Code**: ensure to provide docstrings to your Python code. In doing so, please follow [Google-style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) so it can ease the process of documentation later.
 - **Commit message**: please follow [Udacity guide](http://udacity.github.io/git-styleguide/)
+
+### Running CI verifications locally
+
+#### Unit tests
+
+In order to run the same unit tests as the CI workflows, you can run the dockerized version of the server locally and run the tests over there:
+
+```bash
+PORT=8002 docker-compose up -d --build
+PORT=8002 docker-compose exec -T web coverage run -m pytest .
+```
+Please note that you can pick another port number, it only has to be consistent once you have started your containers.
+
+#### Lint verification
+
+To ensure that your incoming PR complies with the lint settings, you need to install [flake8](https://flake8.pycqa.org/en/latest/) and run the following command from the repository's root folder:
+
+```bash
+flake8 ./
+```
+This will read the `.flake8` setting file and let you know whether your commits need some adjustments.
