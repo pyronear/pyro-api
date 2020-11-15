@@ -52,7 +52,7 @@ def _patch_session(monkeypatch, mock_device_table, mock_access_table=None):
             if any(entry['login'] == login for entry in mock_access_table):
                 raise HTTPException(status_code=400, detail=f"An entry with login='{login}' already exists.")
 
-            pwd = await pytest.mock_hash_password(password)
+            pwd = await security.hash_password(password)
             access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
             # Post on access table
             payload_dict = access.dict()
