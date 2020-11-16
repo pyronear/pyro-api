@@ -7,10 +7,10 @@ from app.api.schemas import AccessRead, UserRead
 
 
 @pytest.mark.asyncio
-async def testGetCurrentUser(test_app, monkeypatch): 
+async def testGetCurrentUser(test_app, monkeypatch):
 
     test_user_data = [
-        {"username": "JohnDoe", "id": 1, "access_id":1},
+        {"username": "JohnDoe", "id": 1, "access_id": 1},
     ]
 
     async def mock_fetch_one(table, query_filters):
