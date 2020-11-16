@@ -14,6 +14,7 @@ async def mock_current_user():
 async def mock_current_device():
     return DeviceOut(id=99, owner_id=1, specs="raspberry", name="connected_device", created_at=dt.now())
 
+
 @pytest.fixture(scope="module")
 def test_app():
 
