@@ -10,8 +10,7 @@ router = APIRouter()
 
 @router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
 async def create_site(payload: SiteIn):
-    """
-    Creates a new site based on the given information:
+    """Creates a new site based on the given information:
 
     - **lon**: Longitude of the site
     - **lat**: Latitude of the site
