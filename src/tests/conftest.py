@@ -4,7 +4,7 @@ from datetime import datetime as dt
 
 from app.main import app
 from app.api.schemas import UserRead, DeviceOut
-from app.api.deps import get_current_user, get_current_device
+from app.api.deps import get_current_user, get_current_device, get_current_access
 
 
 async def mock_current_user():
