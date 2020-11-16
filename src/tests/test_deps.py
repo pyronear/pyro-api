@@ -5,14 +5,9 @@ from app.api import crud
 from app.api.deps import get_current_access, get_current_user
 from app.api.schemas import AccessRead, UserRead
 
-<<<<<<< HEAD
 
 @pytest.mark.asyncio
 async def testGetCurrentUser(test_app, monkeypatch): 
-=======
-@pytest.mark.asyncio
-async def testGetCurrentUser(test_app,monkeypatch):
->>>>>>> 3116e7d... Add test for getCurrentUser
 
     test_user_data = [
         {"username": "JohnDoe", "id": 1, "access_id":1},
@@ -29,11 +24,5 @@ async def testGetCurrentUser(test_app,monkeypatch):
 
     monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
 
-<<<<<<< HEAD
     response = await get_current_user(AccessRead(id=1, login="JohnDoe", scopes="me"))
     assert response == UserRead(**test_user_data[0])
-=======
-    response = await get_current_user(AccessRead(id=1, login= "JohnDoe", scopes="me"))
-    assert response == UserRead(**test_user_data[0])
-
->>>>>>> 3116e7d... Add test for getCurrentUser
