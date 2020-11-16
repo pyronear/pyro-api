@@ -1,6 +1,6 @@
 from sqlalchemy import Table
 from pydantic import BaseModel
-from typing import Optional, Tuple, Any, List, Dict
+from typing import Optional, Any, List, Dict
 from fastapi import HTTPException, Path
 from datetime import datetime
 from app.api import crud, security
