@@ -5,14 +5,9 @@ from app.api import crud
 from app.api.deps import get_current_access, get_current_user
 from app.api.schemas import AccessRead, UserRead
 
-<<<<<<< HEAD
 
 @pytest.mark.asyncio
 async def testGetCurrentUser(test_app, monkeypatch): 
-=======
-@pytest.mark.asyncio
-async def testGetCurrentUser(test_app,monkeypatch):
->>>>>>> 3116e7d2a0dabc7482968bf87759026240b739a7
 
     test_user_data = [
         {"username": "JohnDoe", "id": 1, "access_id":1},
