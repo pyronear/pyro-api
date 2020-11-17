@@ -72,7 +72,7 @@ async def update_device_location(
 
 
 @router.put("/my-location", response_model=DeviceOut)
-async def update_device_location(
+async def update_my_location(
     payload: DefaultPosition,
     device: DeviceOut = Security(get_current_device, scopes=["device"])
 ):
