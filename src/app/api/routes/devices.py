@@ -71,6 +71,18 @@ async def update_device_location(
     return device
 
 
+@router.put("/my-location", response_model=DeviceOut)
+async def update_device_location(
+    payload: DefaultPosition,
+    device: DeviceOut = Security(get_current_device, scopes=["device"])
+):
+    # Update only the position
+    for k, v in payload.dict().items():
+        setattr(device, k, v)
+    await crud.update_entry(devices, device, device.id)
+    return device
+
+
 @router.put("/{device_id}/pwd", response_model=DeviceOut)
 async def update_device_password(
     payload: Cred,
