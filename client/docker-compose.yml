@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  client:
+    build: .
+    command: python app/main.py --reload 
+    environment:
+        - ACCESS_TOKEN=${ACCESS_TOKEN}
+        - DEFAULT_API_URL=http://pyronear-api.herokuapp.com/
+        - API_URL=${API_URL}
+    network_mode: "host"
