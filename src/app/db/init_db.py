@@ -1,4 +1,4 @@
-from app import config as cfg
+import os
 from app.api import crud
 from app.db import accesses, users
 from app.api.schemas import AccessCreation, UserCreation
@@ -11,9 +11,9 @@ async def init_db():
     entry = await crud.fetch_one(accesses, [("login", cfg.SUPERUSER_LOGIN)])
     if entry is None:
 
-        hashed_password = await hash_password(cfg.SUPERUSER_PWD)
+        hashed_password = await hash_password(os.getenv("SUPERUSER_PWD"))
 
-        access = AccessCreation(login=cfg.SUPERUSER_LOGIN, hashed_password=hashed_password, scopes="admin")
+        access = AccessCreation(login=os.getenv("SUPERUSER_LOGIN"), hashed_password=hashed_password, scopes="admin")
         access_entry = await crud.create_entry(accesses, access)
 
     return await crud.create_entry(users, UserCreation(login=cfg.SUPERUSER_LOGIN, access_id=access_entry["id"]))

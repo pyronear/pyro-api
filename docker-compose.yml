@@ -20,6 +20,8 @@ services:
       - POSTGRES_USER=pyro_api
       - POSTGRES_PASSWORD=pyro_api
       - POSTGRES_DB=pyro_api_dev
+      - SUPERUSER_LOGIN=superuser
+      - SUPERUSER_PWD=superuser
 
 volumes:
   postgres_data:
