@@ -4,7 +4,8 @@ from copy import deepcopy
 from datetime import datetime
 from fastapi import HTTPException
 
-from app.api import crud, security
+from app.api import security
+from app.api.crud import base
 from app.api.routes import devices
 from app.api.schemas import AccessRead, AccessCreation
 
@@ -30,12 +31,12 @@ def _patch_session(monkeypatch, mock_device_table, mock_access_table=None):
     # DB patching
     monkeypatch.setattr(devices, "devices", mock_device_table)
     # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "get", pytest.mock_get)
-    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
-    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
-    monkeypatch.setattr(crud, "post", pytest.mock_post)
-    monkeypatch.setattr(crud, "put", pytest.mock_put)
-    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
+    monkeypatch.setattr(base, "get", pytest.mock_get)
+    monkeypatch.setattr(base, "fetch_all", pytest.mock_fetch_all)
+    monkeypatch.setattr(base, "fetch_one", pytest.mock_fetch_one)
+    monkeypatch.setattr(base, "post", pytest.mock_post)
+    monkeypatch.setattr(base, "put", pytest.mock_put)
+    monkeypatch.setattr(base, "delete", pytest.mock_delete)
     # Password
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     # Access table specific

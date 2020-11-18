@@ -3,7 +3,7 @@ import pytest
 from copy import deepcopy
 from datetime import datetime
 
-from app.api import crud
+from app.api.crud import base
 from app.api.routes import alerts
 
 
@@ -21,11 +21,11 @@ def _patch_session(monkeypatch, mock_table):
     # DB patching
     monkeypatch.setattr(alerts, "alerts", mock_table)
     # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "get", pytest.mock_get)
-    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
-    monkeypatch.setattr(crud, "post", pytest.mock_post)
-    monkeypatch.setattr(crud, "put", pytest.mock_put)
-    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
+    monkeypatch.setattr(base, "get", pytest.mock_get)
+    monkeypatch.setattr(base, "fetch_all", pytest.mock_fetch_all)
+    monkeypatch.setattr(base, "post", pytest.mock_post)
+    monkeypatch.setattr(base, "put", pytest.mock_put)
+    monkeypatch.setattr(base, "delete", pytest.mock_delete)
 
 
 def test_get_alert(test_app, monkeypatch):

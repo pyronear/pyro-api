@@ -1,7 +1,8 @@
 import pytest
 from copy import deepcopy
 
-from app.api import crud, security
+from app.api import security
+from app.api.crud import base
 from app.api.routes import login
 
 
@@ -15,7 +16,7 @@ def _patch_session(monkeypatch, mock_table):
     # DB patching
     monkeypatch.setattr(login, "accesses", mock_table)
     # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
+    monkeypatch.setattr(base, "fetch_one", pytest.mock_fetch_one)
     # Password
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
 
