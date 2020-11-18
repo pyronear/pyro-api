@@ -62,7 +62,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     return AccessRead(**entry)
 
 
-async def get_current_user(access=Depends(get_current_access)):
+async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, {'access_id': access.id})
     if user is None:
         raise HTTPException(status_code=400, detail="Permission denied")
@@ -70,7 +70,7 @@ async def get_current_user(access=Depends(get_current_access)):
     return UserRead(**user)
 
 
-async def get_current_device(access=Depends(get_current_access)):
+async def get_current_device(access: AccessRead = Depends(get_current_access)) -> DeviceOut:
     device = await crud.fetch_one(devices, {'access_id': access.id})
     if device is None:
         raise HTTPException(status_code=400, detail="Permission denied")
