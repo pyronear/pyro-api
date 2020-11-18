@@ -15,11 +15,6 @@ app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug
 @app.on_event("startup")
 async def startup():
     await database.connect()
-
-
-# Initiate super user
-@app.on_event("startup")
-async def initiate_db():
     await init_db()
 
 
