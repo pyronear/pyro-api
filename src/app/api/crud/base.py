@@ -1,8 +1,9 @@
 from typing import Optional, Tuple, Any, List, Dict
-from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 from fastapi import HTTPException, Path
+
+from app.db import database
 
 
 async def post(payload: BaseModel, table: Table) -> int:
