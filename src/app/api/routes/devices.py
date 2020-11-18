@@ -40,8 +40,8 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 
 @router.get("/my-devices", response_model=List[DeviceOut])
 async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me"])):
-    return await crud.fetch_all(devices, {"owner_id", me.id})
-    
+    return await crud.fetch_all(devices, {"owner_id": me.id})
+
 
 @router.put("/heartbeat", response_model=DeviceOut)
 async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):

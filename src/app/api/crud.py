@@ -18,15 +18,15 @@ async def get(entry_id: int, table: Table) -> Dict[str, Any]:
 async def fetch_all(table: Table, query_filters: Optional[Dict[str, Any]] = None):
     query = table.select()
     if isinstance(query_filters, dict):
-        for queryFilterKey, queryFilterValue in query_filters:
-            query = query.where(getattr(table.c, queryFilterKey) == queryFilterValue)
+        for query_filter_key, query_filter_value in query_filters.items():
+            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
     return await database.fetch_all(query=query)
 
 
 async def fetch_one(table: Table, query_filters: Dict[str, Any]):
     query = table.select()
-    for queryFilterKey, queryFilterValue in query_filters:
-        query = query.where(getattr(table.c, queryFilterKey) == queryFilterValue)
+    for query_filter_key, query_filter_value in query_filters.items():
+        query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
     return await database.fetch_one(query=query)
 
 

@@ -29,12 +29,13 @@ def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPExceptio
 
 
 async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)) -> AccessRead:
-    """Dependency to use as fastapi.security.Security with scopes.
+    """ Dependency to use as fastapi.security.Security with scopes.
 
     >>> @app.get("/users/me")
     >>> async def read_users_me(current_user: User = Security(get_current_access, scopes=["me"])):
     >>>     return current_user
     """
+    
 
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
