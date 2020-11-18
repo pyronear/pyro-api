@@ -46,7 +46,7 @@ async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me
 @router.put("/heartbeat", response_model=DeviceOut)
 async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
     device.last_ping = datetime.utcnow()
-    await crud.update_entry(devices, device, device.id)
+    await crud.put(device.id, device, devices)
     return device
 
 
@@ -57,17 +57,16 @@ async def update_device_location(
     user: UserRead = Security(get_current_user, scopes=["me"])
 ):
     # Check that device is accessible to this user
-    entry = await crud.fetch_one(devices, [("id", device_id), ("owner_id", user.id)])
-    if entry is None:
+    device = await crud.get_entry(devices, device_id)
+    if device['owner_id'] != user.id:
         raise HTTPException(
             status_code=400,
             detail="Permission denied"
         )
     # Update only the location
-    device = await crud.get_entry(devices, device_id)
     device.update(payload.dict())
     device = DeviceOut(**device)
-    await crud.update_entry(devices, device, device.id)
+    await crud.put(device.id, device, devices)
     return device
 
 
@@ -79,7 +78,7 @@ async def update_my_location(
     # Update only the position
     for k, v in payload.dict().items():
         setattr(device, k, v)
-    await crud.update_entry(devices, device, device.id)
+    await crud.put(device.id, device, devices)
     return device
 
 
