@@ -10,8 +10,8 @@ from app.api.schemas import AccessRead, AccessCreation
 
 
 USER_TABLE = [
-    {"id": 1, "username": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 99, "username": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 99, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 ACCESS_TABLE = [
@@ -70,7 +70,7 @@ def test_get_user(test_app, monkeypatch):
     response = test_app.get("/users/me")
     assert response.status_code == 200
     json_response = response.json()
-    for k in ["id", "username"]:
+    for k in ["id", "login"]:
         assert json_response[k] == mock_user_table[1][k]
 
 
@@ -109,8 +109,8 @@ def test_create_user(test_app, monkeypatch):
     mock_access_table = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, mock_user_table, mock_access_table)
 
-    test_payload = {"username": "third_user", "password": "third_pwd"}
-    test_response = {"id": len(mock_user_table) + 1, "username": test_payload["username"]}
+    test_payload = {"login": "third_user", "password": "third_pwd"}
+    test_response = {"id": len(mock_user_table) + 1, "login": test_payload["login"]}
 
     utc_dt = datetime.utcnow()
     response = test_app.post("/users/", data=json.dumps(test_payload))
@@ -125,7 +125,7 @@ def test_create_user(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"username": "first_user", "password": "first_pwd"}, 400],
+        [{"login": "first_user", "password": "first_pwd"}, 400],
     ],
 )
 def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
@@ -143,14 +143,14 @@ def test_update_user(test_app, monkeypatch):
     mock_user_table = deepcopy(USER_TABLE)
     _patch_session(monkeypatch, mock_user_table)
 
-    test_payload = {"username": "renamed_user"}
+    test_payload = {"login": "renamed_user"}
     response = test_app.put("/users/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in mock_user_table[0].items():
         assert v == test_payload.get(k, USER_TABLE[0][k])
 
     # Self version
-    test_payload = {"username": "renamed_me"}
+    test_payload = {"login": "renamed_me"}
     response = test_app.put("/users/update-info", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in mock_user_table[1].items():
@@ -161,10 +161,10 @@ def test_update_user(test_app, monkeypatch):
     "user_id, payload, status_code",
     [
         [1, {}, 422],
-        [999, {"username": "renamed_user"}, 404],
-        [1, {"username": 1}, 422],
-        [1, {"username": "me"}, 422],
-        [0, {"username": "renamed_user"}, 422],
+        [999, {"login": "renamed_user"}, 404],
+        [1, {"login": 1}, 422],
+        [1, {"login": "me"}, 422],
+        [0, {"login": "renamed_user"}, 422],
     ],
 )
 def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
@@ -180,8 +180,8 @@ def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_cod
     "payload, status_code",
     [
         [{}, 422],
-        [{"username": 1}, 422],
-        [{"username": "me"}, 422],
+        [{"login": 1}, 422],
+        [{"login": "me"}, 422],
     ],
 )
 def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
@@ -202,14 +202,14 @@ def test_update_password(test_app, monkeypatch):
     test_payload = {"password": "new_password"}
     response = test_app.put("/users/1/pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"username": mock_user_table[0]["username"]}
+    assert response.json() == {"login": mock_user_table[0]["login"]}
     assert mock_access_table[0]['hashed_password'] == f"{test_payload['password']}_hashed"
 
     # Self version
     test_payload = {"password": "my_new_password"}
     response = test_app.put("/users/update-pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"username": mock_user_table[1]["username"]}
+    assert response.json() == {"login": mock_user_table[1]["login"]}
     assert mock_access_table[1]['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
@@ -258,7 +258,7 @@ def test_delete_user(test_app, monkeypatch):
 
     response = test_app.delete("/users/1/")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'username', 'created_at']}
+    assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'login', 'created_at']}
     for entry in mock_user_table:
         assert entry['id'] != 1
 

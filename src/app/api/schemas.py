@@ -48,7 +48,7 @@ class AccessRead(AccessBase, _Id):
 # Users
 class UserInfo(BaseModel):
     # Abstract information about a user
-    username: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
 
 
 class UserRead(UserInfo, _CreatedAt, _Id):
@@ -130,7 +130,7 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 # Device
 class DeviceIn(DefaultPosition):
-    name: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
+    login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = None

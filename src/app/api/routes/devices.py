@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.post("/", response_model=DeviceOut, status_code=201)
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
-    access_entry = await post_access(payload.name, payload.password, scopes=payload.scopes)
+    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
 
