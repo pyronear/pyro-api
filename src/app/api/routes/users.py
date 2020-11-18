@@ -3,11 +3,11 @@ from typing import List
 from fastapi import APIRouter, Path, Security
 
 from app.api import crud
-from app.db import users
+from app.db import database, users
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd
+from app.api.crud.accesses import post_access, update_access_pwd
 
 
 router = APIRouter()
@@ -31,8 +31,9 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
 
 
 @router.post("/", response_model=UserRead, status_code=201)
+@database.transaction()
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
-    # Create a new access
+    """Use transaction to insert access/user."""
     access_entry = await post_access(payload.username, payload.password, payload.scopes)
     return await crud.create_entry(users, UserCreation(username=payload.username, access_id=access_entry.id))
 

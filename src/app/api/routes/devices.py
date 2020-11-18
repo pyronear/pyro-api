@@ -3,17 +3,19 @@ from datetime import datetime
 from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
-from app.db import devices
+from app.db import database, devices
 from app.api.schemas import DeviceOut, DeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
 from app.api.deps import get_current_device, get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd
+from app.api.crud.accesses import post_access, update_access_pwd
 
 router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201)
+@database.transaction()
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
+    """Use transaction to insert access/device."""
     access_entry = await post_access(payload.name, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
