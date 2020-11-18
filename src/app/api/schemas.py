@@ -21,7 +21,7 @@ class _Id(BaseModel):
 
 # Accesses
 class Cred(BaseModel):
-    password: str = Field(..., example="PickARobustOne")
+    password: str = Field(..., min_length=3, example="PickARobustOne")
 
 
 class CredHash(BaseModel):
@@ -136,8 +136,7 @@ class DeviceIn(DefaultPosition):
     last_ping: datetime = None
 
 
-class DeviceAuth(DeviceIn):
-    password: str = Field(..., example="PickARobustOne")
+class DeviceAuth(DeviceIn, Cred):
     scopes: str = Field("device", example="device")
 
 
@@ -147,10 +146,6 @@ class DeviceCreation(DeviceIn):
 
 class DeviceOut(DeviceIn, _CreatedAt, _Id):
     pass
-
-
-class HeartbeatOut(BaseModel):
-    last_ping: datetime = None
 
 
 # Media
