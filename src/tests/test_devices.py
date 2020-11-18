@@ -242,7 +242,7 @@ def test_update_device_location(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "device_id, payload, status_code",
     [
-        [999, {"lon": 5.}, 400],
+        [999, {"lon": 5.}, 404],
         [1, {"lon": 5.}, 400],
         [2, {"lon": "position"}, 422],
         [0, {"lon": 5.}, 422],
