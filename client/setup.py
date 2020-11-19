@@ -1,8 +1,6 @@
 #!usr/bin/python
 
-"""
-Package installation setup
-"""
+"Package installation setup"
 
 import os
 import subprocess
@@ -21,7 +19,8 @@ try:
         .decode("ascii")
         .strip()
     )
-except Exception:
+except Exception as e:
+    print(e)
     pass
 
 if os.getenv("BUILD_VERSION"):

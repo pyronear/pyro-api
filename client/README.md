@@ -4,7 +4,7 @@ Pyronear Client to query the Pyronear API to interact with wildfire data.
 
 ## Installation
 
-```
+```shell
 $python setup.py install
 ```
 ## Usage
@@ -34,7 +34,5 @@ api_client.send_medias()
 
 # Update your position:
 api_client.update_location(lat, lon)
-
-...
 
 ```
