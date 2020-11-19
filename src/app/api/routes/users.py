@@ -14,17 +14,17 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=UserRead)
-async def get_my_user(me: UserRead = Security(get_current_user, scopes=["me"])):
+async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin me"])):
     return me
 
 
 @router.put("/update-info", response_model=UserRead)
-async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["me"])):
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["admin me"])):
     return await crud.update_entry(users, payload, me.id)
 
 
 @router.put("/update-pwd", response_model=UserInfo)
-async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["me"])):
+async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["admin me"])):
     entry = await crud.get_entry(users, me.id)
     await update_access_pwd(payload, entry["access_id"])
     return entry
