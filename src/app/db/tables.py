@@ -1,15 +1,16 @@
 import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
-                        ForeignKey, MetaData, create_engine)
+                        ForeignKey, MetaData)
 from sqlalchemy.sql import func
 from app import config as cfg
-from databases import Database
+
+
+__all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
+           'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
 
 
 # SQLAlchemy
 # databases query builder
-database = Database(cfg.DATABASE_URL)
-engine = create_engine(cfg.DATABASE_URL)
 metadata = MetaData()
 
 # Cores tables
@@ -18,8 +19,8 @@ users = Table(
     "users",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("username", String(50)),
-    Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
+    Column("login", String(50)),
+    Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )
 
@@ -72,7 +73,7 @@ devices = Table(
     "devices",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("name", String(50)),
+    Column("login", String(50)),
     Column("owner_id", Integer, ForeignKey("users.id")),
     Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
     Column("specs", String(50)),

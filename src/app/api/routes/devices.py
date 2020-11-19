@@ -9,6 +9,7 @@ from app.api.deps import get_current_device, get_current_user
 
 from app.api.crud.accesses import post_access, update_access_pwd
 
+
 router = APIRouter()
 
 
@@ -16,7 +17,7 @@ router = APIRouter()
 @database.transaction()
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
     """Use transaction to insert access/device."""
-    access_entry = await post_access(payload.name, payload.password, scopes=payload.scopes)
+    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
 

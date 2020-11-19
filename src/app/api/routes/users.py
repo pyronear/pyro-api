@@ -7,8 +7,6 @@ from app.db import database, users
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
-from app.api.crud.accesses import post_access, update_access_pwd
-
 
 router = APIRouter()
 
@@ -26,7 +24,7 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 @router.put("/update-pwd", response_model=UserInfo)
 async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["me"])):
     entry = await crud.get_entry(users, me.id)
-    await update_access_pwd(payload, entry["access_id"])
+    await crud.update_access_pwd(payload, entry["access_id"])
     return entry
 
 
@@ -34,8 +32,8 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
 @database.transaction()
 async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
     """Use transaction to insert access/user."""
-    access_entry = await post_access(payload.username, payload.password, payload.scopes)
-    return await crud.create_entry(users, UserCreation(username=payload.username, access_id=access_entry.id))
+    access_entry = await crud.accesses.post_access(payload.login, payload.password, payload.scopes)
+    return await crud.create_entry(users, UserCreation(login=payload.login, access_id=access_entry.id))
 
 
 @router.get("/{user_id}/", response_model=UserRead)

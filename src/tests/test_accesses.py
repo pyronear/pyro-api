@@ -1,4 +1,3 @@
-import json
 import pytest
 from copy import deepcopy
 
@@ -19,9 +18,6 @@ def _patch_session(monkeypatch, mock_table):
     monkeypatch.setattr(base, "get", pytest.mock_get)
     monkeypatch.setattr(base, "fetch_all", pytest.mock_fetch_all)
     monkeypatch.setattr(base, "fetch_one", pytest.mock_fetch_one)
-    monkeypatch.setattr(base, "post", pytest.mock_post)
-    monkeypatch.setattr(base, "put", pytest.mock_put)
-    monkeypatch.setattr(base, "delete", pytest.mock_delete)
 
 
 def test_get_access(test_app, monkeypatch):
