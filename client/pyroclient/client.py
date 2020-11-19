@@ -1,7 +1,6 @@
 import time
 import requests
 import os
-from pyronear.datasets import OpenFire
 
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 API_URL = os.getenv("API_URL") if os.getenv("API_URL") else os.getenv("DEFAULT_API_URL")
