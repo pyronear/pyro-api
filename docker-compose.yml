@@ -10,6 +10,8 @@ services:
       - ${PORT}:8000
     environment:
       - DATABASE_URL=postgresql://pyro_api:pyro_api@db/pyro_api_dev
+      - SUPERUSER_LOGIN=superuser
+      - SUPERUSER_PWD=superuser
   db:
     image: postgres:12.1-alpine
     volumes:
