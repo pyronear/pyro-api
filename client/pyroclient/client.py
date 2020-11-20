@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 logging.basicConfig()
 
 
-class Client():
+class Client:
 
     routes = {"token": "/login/access-token",
               "heartbeat": "/device/heartbeat",
@@ -29,7 +29,7 @@ class Client():
         self.token = self._retrieve_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
-    def _add_api_to_routes(self):
+    def _add_api_url_to_routes(self):
         for k, v in self.routes.items():
             self.routes[k] = urljoin(self.api, v)
 
