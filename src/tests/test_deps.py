@@ -1,8 +1,8 @@
 import pytest
 
-from app.api import crud
-from app.api.deps import get_current_user, get_current_device
+from app.api import crud, deps
 from app.api.schemas import AccessRead, UserRead, DeviceOut
+from copy import deepcopy
 
 USER_TABLE = [
     {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
@@ -20,37 +20,31 @@ DEVICE_TABLE = [
 ]
 
 
-@pytest.mark.asyncio
-async def testGetCurrentUser(test_app, monkeypatch):
-
-    async def mock_fetch_one(table, query_filters):
-        for entry in USER_TABLE:
-            for query_filter_key, query_filter_value in query_filters.items():
-                valid_entry = True
-                if entry[query_filter_key] != query_filter_value:
-                    valid_entry = False
-            if valid_entry:
-                return entry
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    response = await get_current_user(AccessRead(id=1, login="JohnDoe", scopes="me"))
-    assert response == UserRead(**USER_TABLE[0])
+def _patch_session(monkeypatch, mock_user_table=None, mock_device_table=None):
+    # DB patching
+    if mock_user_table is not None:
+        monkeypatch.setattr(deps, "users", mock_user_table)
+    if mock_device_table is not None:
+        monkeypatch.setattr(deps, "devices", mock_device_table)
+    # Sterilize all DB interactions through CRUD override
+    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
 
 
 @pytest.mark.asyncio
-async def testGetCurrentDevice(test_app, monkeypatch):
+async def test_get_current_user(test_app, monkeypatch):
 
-    async def mock_fetch_one(table, query_filters):
-        for entry in DEVICE_TABLE:
-            for query_filter_key, query_filter_value in query_filters.items():
-                valid_entry = True
-                if entry[query_filter_key] != query_filter_value:
-                    valid_entry = False
-            if valid_entry:
-                return entry
+    mock_user_table = deepcopy(USER_TABLE)
+    _patch_session(monkeypatch, mock_user_table, None)
 
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
+    response = await deps.get_current_user(AccessRead(id=1, login="JohnDoe", scopes="me"))
+    assert response == UserRead(**mock_user_table[0])
 
-    response = await get_current_device(AccessRead(id=1, login="JohnDoe", scopes="me"))
-    assert response == DeviceOut(**DEVICE_TABLE[0])
+
+@pytest.mark.asyncio
+async def test_get_current_device(test_app, monkeypatch):
+
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, None, mock_device_table)
+
+    response = await deps.get_current_device(AccessRead(id=1, login="JohnDoe", scopes="me"))
+    assert response == DeviceOut(**mock_device_table[0])

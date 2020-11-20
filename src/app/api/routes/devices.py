@@ -57,7 +57,7 @@ async def update_device_location(
     user: UserRead = Security(get_current_user, scopes=["me"])
 ):
     # Check that device is accessible to this user
-    entry = await crud.fetch_one(devices, [("id", device_id), ("owner_id", user.id)])
+    entry = await crud.fetch_one(devices, {"id": device_id, "owner_id": user.id})
     if entry is None:
         raise HTTPException(
             status_code=400,
