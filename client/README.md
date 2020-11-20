@@ -1,12 +1,13 @@
 # pyroclient
 
-Pyronear Client to query the Pyronear API to interact with wildfire data.
+Client for the [Pyronear API](https://github.com/pyronear/pyro-api)
 
 ## Installation
 
 ```shell
-$python setup.py install
+$pip install -e .
 ```
+
 ## Usage
 
 Import the client
@@ -15,7 +16,7 @@ Import the client
 from pyroclient import client
 ```
 
-Create a client Object by handling him the API keys
+Create a client object by handling him the API keys
 
 ```python
 API_URL = "http://pyronear-api.herokuapp.com"
