@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, validator
 from app.db import SiteType, EventType, MediaType, AlertType
 
 
-# Template class
+# Template classes
 class _CreatedAt(BaseModel):
     created_at: datetime = None
 
@@ -15,55 +15,61 @@ class _CreatedAt(BaseModel):
         return v or datetime.utcnow()
 
 
-# Abstract information about a user
-class UserInfo(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
+class _Id(BaseModel):
+    id: int = Field(..., gt=0)
 
 
-# Sensitive information about the user
+# Accesses
 class Cred(BaseModel):
-    password: str
+    password: str = Field(..., min_length=3, example="PickARobustOne")
 
 
 class CredHash(BaseModel):
     hashed_password: str
 
 
-# Visible info
-class UserRead(UserInfo, _CreatedAt):
-    id: int = Field(..., gt=0)
+class AccessBase(BaseModel):
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    scopes: str = Field(..., example="me")
 
 
-# Authentication request
+class AccessAuth(AccessBase, Cred):
+    pass
+
+
+class AccessCreation(AccessBase, CredHash):
+    pass
+
+
+class AccessRead(AccessBase, _Id):
+    pass
+
+
+# Users
+class UserInfo(BaseModel):
+    # Abstract information about a user
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+
+
+class UserRead(UserInfo, _CreatedAt, _Id):
+    # Visible info
+    pass
+
+
 class UserAuth(UserInfo, Cred):
-    scopes: Optional[str] = "me"
+    # Authentication request
+    scopes: str = Field("me")
 
 
-# Creation payload
 class UserCreation(UserInfo):
+    # Creation payload
     access_id: int = Field(..., gt=0)
 
 
-class AccessBase(BaseModel):
-    login: str = Field(..., min_length=3, max_length=50)
-    scopes: str
-
-
-class AccessAuth(AccessBase):
-    password: str
-
-
-class AccessCreation(AccessBase):
-    hashed_password: str
-
-
-class AccessRead(AccessBase):
-    id: int = Field(..., gt=0)
-
-
+# Token
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E")
+    token_type: str = Field(..., example="bearer")
 
 
 class TokenPayload(BaseModel):
@@ -71,100 +77,107 @@ class TokenPayload(BaseModel):
     scopes: List[str] = []
 
 
-class SiteIn(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
+# Location
+class _FlatLocation(BaseModel):
+    lat: float = Field(..., gt=-90, lt=90, example=44.765181)
+    lon: float = Field(..., gt=-180, lt=180, example=4.514880)
+
+
+class Location(_FlatLocation):
+    elevation: float = Field(..., gt=0., lt=10000, example=1582)
+
+
+class DefaultLocation(BaseModel):
+    lat: float = Field(None, gt=-90, lt=90, example=44.765181)
+    lon: float = Field(None, gt=-180, lt=180, example=4.514880)
+    elevation: float = Field(None, gt=0., lt=10000, example=1582)
+
+
+class _Rotation(BaseModel):
+    yaw: float = Field(..., gt=-180, lt=180, example=110)
+    pitch: float = Field(..., gt=-90, lt=90, example=-5)
+
+
+class _DefaultRotation(BaseModel):
+    yaw: float = Field(None, gt=-180, lt=180, example=110)
+    pitch: float = Field(None, gt=-90, lt=90, example=-5)
+
+
+class DefaultPosition(DefaultLocation, _DefaultRotation):
+    pass
+
+
+# Sites
+class SiteIn(_FlatLocation):
+    name: str = Field(..., min_length=3, max_length=50, example="watchtower12")
     type: SiteType = SiteType.tower
 
 
-class SiteOut(SiteIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class SiteOut(SiteIn, _CreatedAt, _Id):
+    pass
 
 
-class EventIn(BaseModel):
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
+# Events
+class EventIn(_FlatLocation):
     type: EventType = EventType.wildfire
     end_ts: datetime = None
     start_ts: datetime = None
 
 
-class EventOut(EventIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class EventOut(EventIn, _CreatedAt, _Id):
+    pass
 
 
-class DeviceIn(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50)
+# Device
+class DeviceIn(DefaultPosition):
+    login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
-    specs: str = Field(..., min_length=3, max_length=100)
-    elevation: float = Field(None, gt=0., lt=10000)
-    lat: float = Field(None, gt=-90, lt=90)
-    lon: float = Field(None, gt=-180, lt=180)
-    yaw: float = Field(None, gt=-180, lt=180)
-    pitch: float = Field(None, gt=-90, lt=90)
+    specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = None
 
 
-class DeviceAuth(DeviceIn):
-    password: str
-    scopes: Optional[str] = "device"
+class DeviceAuth(DeviceIn, Cred):
+    scopes: str = Field("device", example="device")
 
 
 class DeviceCreation(DeviceIn):
     access_id: int = Field(..., gt=0)
 
 
-class DeviceOut(DeviceIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class DeviceOut(DeviceIn, _CreatedAt, _Id):
+    pass
 
 
-class UpdatedLocation(BaseModel):
-    elevation: float = Field(None, ge=0., lt=10000)
-    lat: float = Field(None, gt=-90, lt=90)
-    lon: float = Field(None, gt=-180, lt=180)
-    yaw: float = Field(None, gt=-180, lt=180)
-    pitch: float = Field(None, gt=-90, lt=90)
-
-
-class HeartbeatOut(BaseModel):
-    last_ping: datetime = None
-
-
+# Media
 class MediaIn(BaseModel):
     device_id: int = Field(..., gt=0)
     type: MediaType = MediaType.image
 
 
-class MediaOut(MediaIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class MediaOut(MediaIn, _CreatedAt, _Id):
+    pass
 
 
-class InstallationIn(BaseModel):
+# Installations
+class InstallationIn(Location, _Rotation):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
-    elevation: float = Field(..., gt=0., lt=10000)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
-    yaw: float = Field(..., gt=-180, lt=180)
-    pitch: float = Field(..., gt=-90, lt=90)
     start_ts: datetime = None
     end_ts: datetime = None
 
 
-class InstallationOut(InstallationIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class InstallationOut(InstallationIn, _CreatedAt, _Id):
+    pass
 
 
-class AlertIn(BaseModel):
+# Alerts
+class AlertIn(_FlatLocation):
     device_id: int = Field(..., gt=0)
     event_id: int = Field(..., gt=0)
     media_id: int = Field(None, gt=0)
-    lat: float = Field(..., gt=-90, lt=90)
-    lon: float = Field(..., gt=-180, lt=180)
     type: AlertType = AlertType.start
-    is_acknowledged: bool = False
+    is_acknowledged: bool = Field(False)
 
 
-class AlertOut(AlertIn, _CreatedAt):
-    id: int = Field(..., gt=0)
+class AlertOut(AlertIn, _CreatedAt, _Id):
+    pass

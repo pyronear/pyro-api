@@ -9,7 +9,9 @@ services:
     ports:
       - ${PORT}:8000
     environment:
-      - DATABASE_URL=postgresql://pyronear_api:pyronear_api@db/pyronear_api_dev
+      - DATABASE_URL=postgresql://pyro_api:pyro_api@db/pyro_api_dev
+      - SUPERUSER_LOGIN=superuser
+      - SUPERUSER_PWD=superuser
   db:
     image: postgres:12.1-alpine
     volumes:
@@ -17,9 +19,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=pyronear_api
-      - POSTGRES_PASSWORD=pyronear_api
-      - POSTGRES_DB=pyronear_api_dev
+      - POSTGRES_USER=pyro_api
+      - POSTGRES_PASSWORD=pyro_api
+      - POSTGRES_DB=pyro_api_dev
 
 volumes:
   postgres_data:

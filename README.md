@@ -1,6 +1,6 @@
 # Pyronear API
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478)](https://www.codacy.com/gh/pyronear/pyronear-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyronear-api&amp;utm_campaign=Badge_Grade)![Build Status](https://github.com/pyronear/pyronear-api/workflows/fastapi-project/badge.svg) [![codecov](https://codecov.io/gh/pyronear/pyronear-api/branch/master/graph/badge.svg)](https://codecov.io/gh/pyronear/pyronear-api) [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear-api.herokuapp.com/redoc)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478)](https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade)![Build Status](https://github.com/pyronear/pyro-api/workflows/fastapi-project/badge.svg) [![codecov](https://codecov.io/gh/pyronear/pyro-api/branch/master/graph/badge.svg)](https://codecov.io/gh/pyronear/pyro-api) [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear-api.herokuapp.com/redoc)
 
 The building blocks of our wildfire detection & monitoring API.
 
@@ -32,8 +32,8 @@ The building blocks of our wildfire detection & monitoring API.
 You can clone and install the project dependencies as follows:
 
 ```bash
-git clone https://github.com/pyronear/pyronear-api.git
-pip install -r pyronear-api/requirements.txt
+git clone https://github.com/pyronear/pyro-api.git
+pip install -r pyro-api/requirements.txt
 ```
 
 
