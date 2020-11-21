@@ -1,6 +1,5 @@
-from app.services.bucket.s3 import S3Service
-from app.services.bucket.baseBucketService import BaseBucketService
+from app.services.bucket.dummyBucketService import DummyBucketService
 
-bucket_service = S3Service()
+bucket_service = DummyBucketService()
 
 __all__ = ['bucket_service']
