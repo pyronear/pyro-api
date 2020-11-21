@@ -49,7 +49,7 @@ class Client:
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
     def update_my_location(self):
-        return requests.put(self.routes["uppdate-my-location"], headers=self.headers)
+        return requests.put(self.routes["update-my-location"], headers=self.headers)
 
     def send_alert(self):
         return requests.post(self.routes["send-alert"], headers=self.headers)
