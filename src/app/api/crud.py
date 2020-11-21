@@ -15,18 +15,18 @@ async def get(entry_id: int, table: Table) -> Dict[str, Any]:
     return await database.fetch_one(query=query)
 
 
-async def fetch_all(table: Table, query_filters: Optional[List[Tuple[str, Any]]] = None) -> List[Dict[str, Any]]:
+async def fetch_all(table: Table, query_filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     query = table.select()
-    if isinstance(query_filters, list):
-        for query_filter in query_filters:
-            query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
+    if isinstance(query_filters, dict):
+        for query_filter_key, query_filter_value in query_filters.items():
+            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
     return await database.fetch_all(query=query)
 
 
-async def fetch_one(table: Table, query_filters: List[Tuple[str, Any]]) -> Dict[str, Any]:
+async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Dict[str, Any]:
     query = table.select()
-    for query_filter in query_filters:
-        query = query.where(getattr(table.c, query_filter[0]) == query_filter[1])
+    for query_filter_key, query_filter_value in query_filters.items():
+        query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
     return await database.fetch_one(query=query)
 
 
