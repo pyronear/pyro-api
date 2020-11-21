@@ -51,15 +51,11 @@ class Client:
     def update_my_location(self):
         return requests.put(self.routes["uppdate-my-location"], headers=self.headers)
 
-    def create_alert(self):
-        return requests.post(self.routes["create_alert"], headers=self.headers)
+    def send_alert(self):
+        return requests.post(self.routes["send-alert"], headers=self.headers)
 
     def create_media(self):
         return requests.post(self.routes["create-media"], headers=self.headers)
 
     def upload_media(self):
         return requests.post(self.routes["upload-media"], headers=self.headers)
-
-
-if __name__ == "__main__":
-    client = Client("http://localhost:8002", "superuser", "superuser")
