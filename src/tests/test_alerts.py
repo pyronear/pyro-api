@@ -84,6 +84,23 @@ def test_create_alert(test_app, monkeypatch):
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
     assert mock_alert_table[-1]['created_at'] > utc_dt and mock_alert_table[-1]['created_at'] < datetime.utcnow()
 
+def test_create_alert_by_device(test_app, monkeypatch):
+
+    # Sterilize DB interactions
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    test_payload = {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}
+    # Device_id is 99 because it is the identified device
+    test_response = {"id": len(mock_alert_table) + 1, "device_id": 99, **test_payload, "media_id": None, "is_acknowledged": False}
+
+    utc_dt = datetime.utcnow()
+    response = test_app.post("/alerts/created-by-device", data=json.dumps(test_payload))
+
+    assert response.status_code == 201
+    json_response = response.json()
+    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+    assert mock_alert_table[-1]['created_at'] > utc_dt and mock_alert_table[-1]['created_at'] < datetime.utcnow()
 
 @pytest.mark.parametrize(
     "payload, status_code",

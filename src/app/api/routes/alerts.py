@@ -1,9 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Security
 from app.api import crud
 from app.db import alerts
-from app.api.schemas import AlertOut, AlertIn
-
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut
+from app.api.deps import get_current_device
 
 router = APIRouter()
 
@@ -12,6 +12,15 @@ router = APIRouter()
 async def create_alert(payload: AlertIn):
     return await crud.create_entry(alerts, payload)
 
+@router.post("/created-by-device", response_model=AlertOut, status_code=201, summary="Create an alert related to the authentified device")
+async def create_device_alert(payload: AlertBase, device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    """
+    Creates an alert related to the authentified device, uses its device_id as argument
+
+    Below, click on "Schema" for more detailed information about arguments
+    or "Example Value" to get a concrete idea of arguments
+    """
+    return await crud.create_entry(alerts, AlertIn(**payload.dict(), device_id=device.id))
 
 @router.get("/{alert_id}/", response_model=AlertOut)
 async def get_alert(alert_id: int = Path(..., gt=0)):
