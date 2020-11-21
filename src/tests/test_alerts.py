@@ -22,6 +22,7 @@ def _patch_session(monkeypatch, mock_table):
     monkeypatch.setattr(alerts, "alerts", mock_table)
     # Sterilize all DB interactions through CRUD override
     monkeypatch.setattr(crud, "get", pytest.mock_get)
+    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
     monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
     monkeypatch.setattr(crud, "post", pytest.mock_post)
     monkeypatch.setattr(crud, "put", pytest.mock_put)
@@ -160,6 +161,37 @@ def test_delete_alert(test_app, monkeypatch):
     for entry in mock_alert_table:
         assert entry['id'] != 1
 
+
+def test_link_media_owner(test_app, monkeypatch):
+    # Create Alert (Identical code to the create_alert above)
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    # Set device_id to 99 because it is the one that is authentified in our testConfig.
+    mock_alert_table[0]["device_id"] = 99
+    _patch_session(monkeypatch, mock_alert_table)
+
+    test_payload = {"media_id": 1}
+    updated_alert = mock_alert_table[0]
+    test_response = updated_alert.copy()
+    test_response.update(test_payload)
+
+    response = test_app.put(f"/alerts/{updated_alert['id']}/link-media", data=json.dumps(test_payload))
+    assert response.status_code == 200
+    for k, v in test_payload.items():
+        assert v == mock_alert_table[0][k]
+   
+
+def test_link_media_owner_not_allowed(test_app, monkeypatch):
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    test_payload = {"media_id": 1}
+    updated_alert = mock_alert_table[0]
+    test_response = updated_alert.copy()
+    test_response.update(test_payload)
+
+    response = test_app.post(f"/alerts/{updated_alert['id']}/link-media", data=json.dumps(test_payload))
+    assert response.status_code == 405
+    
 
 @pytest.mark.parametrize(
     "alert_id, status_code, status_details",

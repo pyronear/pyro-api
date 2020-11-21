@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
 from app.db import alerts
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut
@@ -40,3 +40,16 @@ async def update_alert(payload: AlertIn, alert_id: int = Path(..., gt=0)):
 @router.delete("/{alert_id}/", response_model=AlertOut)
 async def delete_alert(alert_id: int = Path(..., gt=0)):
     return await crud.delete_entry(alerts, alert_id)
+
+
+@router.put("/{alert_id}/link-media", response_model=AlertOut)
+async def link_media(payload: AlertMediaId, alert_id: int = Path(..., gt=0), device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    # Check that alert is linked to this device
+    existing_alert = await crud.fetch_one(alerts, [("id", alert_id), ("device_id", device.id)])
+    if existing_alert is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Permission denied"
+        )
+    existing_alert["media_id"] = payload.media_id
+    return await crud.update_entry(alerts, AlertIn(**existing_alert), alert_id)

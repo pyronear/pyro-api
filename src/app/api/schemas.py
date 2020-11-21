@@ -178,7 +178,7 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 
 
 # Alerts
-class AlertMediaId(BaseMedia):
+class AlertMediaId(BaseModel):
     media_id: int = Field(None, gt=0)
     
 
