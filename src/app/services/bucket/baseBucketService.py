@@ -9,10 +9,6 @@ class BaseBucketService(ABC):
         super().__init__()
 
     @abstractmethod
-    async def create_bucket(self, bucket_name: str):
-        pass
-
-    @abstractmethod
     async def upload_file(self, bucket_name: str, bucket_key: str, file_binary: bin):
         pass
 

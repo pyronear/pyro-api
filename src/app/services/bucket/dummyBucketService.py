@@ -6,9 +6,6 @@ class DummyBucketService(BaseBucketService):
         """Dummy class used for testing purpose.
         """
 
-    async def create_bucket(self, bucket_name):
-        return True
-
     async def upload_file(self, bucket_name: str, bucket_key: str, file_binary: bin):
         return True
 
