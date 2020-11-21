@@ -20,8 +20,7 @@ async def create_media(payload: MediaIn):
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    bucket_key = hash(datetime.utcnow())
-    return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key))
+    return await crud.create_entry(media, payload)
 
 
 @router.post("/from-device", response_model=MediaOut, status_code=201,
@@ -34,8 +33,7 @@ async def create_media_from_device(payload: BaseMedia,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    bucket_key = hash(datetime.utcnow())
-    return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key, device_id=device.id))
+    return await crud.create_entry(media, MediaIn(**payload.dict(), device_id=device.id))
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
@@ -81,7 +79,8 @@ async def upload_media(media_id: int = Path(..., gt=0),
             detail="Permission denied"
         )
 
-    bucket_key = existing_media["bucket_key"]
+    bucket_key = hash(datetime.utcnow())
+
     upload_success = await bucket_service.upload_file(bucket_name=cfg.BUCKET_NAME,
                                                       bucket_key=bucket_key,
                                                       file_binary=file.file)
@@ -90,4 +89,5 @@ async def upload_media(media_id: int = Path(..., gt=0),
             status_code=500,
             detail="The upload did not succeed"
         )
-    return existing_media
+    existing_media["bucket_key"] = bucket_key
+    return await crud.update_entry(media, MediaCreation(**existing_media), media_id)

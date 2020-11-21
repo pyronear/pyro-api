@@ -184,7 +184,7 @@ def test_upload_media(test_app, monkeypatch):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    # 1 - Create a media that will have a custom
+    # 1 - Create a media that will have an upload
     payload_creation_device = {"device_id": 99}  # 99 because it is the authentified device_id specified in the config
     newly_created_media_id = len(mock_media_table) + 1
     response = test_app.post("/media/", data=json.dumps(payload_creation_device))
@@ -199,6 +199,7 @@ def test_upload_media(test_app, monkeypatch):
     response_json.pop("created_at")
     assert response.status_code == 200
     assert {k: v for k, v in test_response.items() if k not in ('created_at', "bucket_key")} == response_json
+    assert test_response["bucket_key"] is not None
 
     # 2b - Upload failing
     async def failing_upload(bucket_name, bucket_key, file_binary):
