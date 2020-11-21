@@ -81,6 +81,25 @@ def test_create_media(test_app, monkeypatch):
     assert mock_media_table[-1]['created_at'] > utc_dt and mock_media_table[-1]['created_at'] < datetime.utcnow()
 
 
+def test_create_media_from_device(test_app, monkeypatch):
+
+    # Sterilize DB interactions
+    mock_media_table = deepcopy(MEDIA_TABLE)
+    _patch_session(monkeypatch, mock_media_table)
+
+    test_payload = {}
+
+    test_response = {"id": len(mock_media_table) + 1, "device_id": 99, "type": "image"}  # Device_id is 99 because it is the id of the authentified sending device.
+
+    utc_dt = datetime.utcnow()
+    response = test_app.post("/media/created-by-device", data=json.dumps(test_payload))
+
+    assert response.status_code == 201
+    json_response = response.json()
+    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+    assert mock_media_table[-1]['created_at'] > utc_dt and mock_media_table[-1]['created_at'] < datetime.utcnow()
+
+
 @pytest.mark.parametrize(
     "payload, status_code",
     [

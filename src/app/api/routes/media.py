@@ -3,10 +3,10 @@ from fastapi import APIRouter, Path, Security, File, UploadFile
 from app.api import crud
 from app.db import media
 from typing import List
-from app.api.schemas import MediaOut, MediaIn, DeviceOut
+from app.api.schemas import MediaOut, MediaIn, MediaCreation, DeviceOut, BaseMedia
 from app.api.deps import get_current_device
 from app.services import bucket_service
-
+from datetime import datetime
 
 router = APIRouter()
 
@@ -29,6 +29,18 @@ async def create_media(payload: MediaIn):
     """
     bucket_key = hash(datetime.utcnow())
     return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key))
+
+
+@router.post("/created-by-device", response_model=MediaOut, status_code=201, summary="Create a media related to the authentified device")
+async def create_device_media(payload: BaseMedia, device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    """
+    Creates a media related to the authentified device, uses its device_id as argument
+
+    Below, click on "Schema" for more detailed information about arguments
+    or "Example Value" to get a concrete idea of arguments
+    """
+    bucket_key = hash(datetime.utcnow())
+    return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key, device_id=device.id))
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
