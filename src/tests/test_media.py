@@ -94,7 +94,7 @@ def test_create_media_from_device(test_app, monkeypatch):
     test_response = {"id": len(mock_media_table) + 1, "device_id": 99, "type": "image"}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/media/created-by-device", data=json.dumps(test_payload))
+    response = test_app.post("/media/from-device", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()
@@ -193,7 +193,7 @@ def test_upload_media(test_app, monkeypatch):
     async def successful_upload(bucket_name, bucket_key, file_binary):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
-    response = test_app.post(f"/media/{newly_created_media_id}/upload_file", files=dict(file='bar'))
+    response = test_app.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
     test_response = mock_media_table[-1]
     response_json = response.json()
     response_json.pop("created_at")
@@ -204,7 +204,5 @@ def test_upload_media(test_app, monkeypatch):
     async def failing_upload(bucket_name, bucket_key, file_binary):
         return False
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
-    response = test_app.post(f"/media/{newly_created_media_id}/upload_file", files=dict(file='bar'))
-    response_json = response.json()
-    response_json.pop("created_at")
+    response = test_app.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
     assert response.status_code == 500

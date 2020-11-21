@@ -99,7 +99,7 @@ def test_create_alert_by_device(test_app, monkeypatch):
                      "media_id": None, "is_acknowledged": False}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/alerts/created-by-device", data=json.dumps(test_payload))
+    response = test_app.post("/alerts/from-device", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()

@@ -1,12 +1,13 @@
-
 from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException
+from typing import List
+from datetime import datetime
+
 from app.api import crud
 from app.db import media
-from typing import List
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, DeviceOut, BaseMedia
 from app.api.deps import get_current_device
 from app.services import bucket_service
-from datetime import datetime
+import app.config as cfg
 
 router = APIRouter()
 
@@ -23,9 +24,10 @@ async def create_media(payload: MediaIn):
     return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key))
 
 
-@router.post("/created-by-device", response_model=MediaOut, status_code=201,
+@router.post("/from-device", response_model=MediaOut, status_code=201,
              summary="Create a media related to the authentified device")
-async def create_device_media(payload: BaseMedia, device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def create_media_from_device(payload: BaseMedia,
+                                   device: DeviceOut = Security(get_current_device, scopes=["device"])):
     """
     Creates a media related to the authentified device, uses its device_id as argument
 
@@ -68,11 +70,11 @@ async def delete_media(media_id: int = Path(..., gt=0)):
     return await crud.delete_entry(media, media_id)
 
 
-@router.post("/{media_id}/upload_file", response_model=MediaOut, status_code=200)
+@router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
 async def upload_media(media_id: int = Path(..., gt=0),
                        file: UploadFile = File(...),
                        current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
-    existing_media = await crud.fetch_one(media, [("id", media_id), ("device_id", current_device.id)])
+    existing_media = await crud.fetch_one(media, {"id": media_id, "device_id": current_device.id})
     if existing_media is None:
         raise HTTPException(
             status_code=400,
@@ -80,7 +82,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
         )
 
     bucket_key = existing_media["bucket_key"]
-    upload_success = await bucket_service.upload_file(bucket_name="mypyroneartest",
+    upload_success = await bucket_service.upload_file(bucket_name=cfg.BUCKET_NAME,
                                                       bucket_key=bucket_key,
                                                       file_binary=file.file)
     if upload_success is False:
