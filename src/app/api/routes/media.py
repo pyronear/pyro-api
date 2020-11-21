@@ -27,7 +27,8 @@ async def create_media(payload: MediaIn):
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    return await crud.create_entry(media, payload)
+    bucket_key = hash(datetime.utcnow())
+    return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key))
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")

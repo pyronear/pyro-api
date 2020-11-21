@@ -149,9 +149,16 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
 
 
 # Media
-class MediaIn(BaseModel):
-    device_id: int = Field(..., gt=0)
+class BaseMedia(BaseModel):
     type: MediaType = MediaType.image
+
+
+class MediaIn(BaseMedia):
+    device_id: int = Field(..., gt=0)
+
+
+class MediaCreation(MediaIn):
+    bucket_key: str = Field(...)
 
 
 class MediaOut(MediaIn, _CreatedAt, _Id):
