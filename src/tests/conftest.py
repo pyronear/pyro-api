@@ -8,11 +8,11 @@ from app.api.deps import get_current_user, get_current_device
 
 
 async def mock_current_user():
-    return UserRead(id=99, username="connected_user", created_at=datetime.now())
+    return UserRead(id=99, login="connected_user", created_at=datetime.now())
 
 
 async def mock_current_device():
-    return DeviceOut(id=99, owner_id=1, specs="raspberry", name="connected_device", created_at=datetime.now())
+    return DeviceOut(id=99, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
 
 
 # Sterilize all DB interactions
@@ -28,14 +28,14 @@ async def mock_fetch_all(table, query_filters=None):
         return table
     response = []
     for entry in table:
-        if all(entry[k] == v for k, v in query_filters):
+        if all(entry[k] == v for k, v in query_filters.items()):
             response.append(entry)
     return response
 
 
 async def mock_fetch_one(table, query_filters=None):
     for entry in table:
-        if all(entry[k] == v for k, v in query_filters):
+        if all(entry[k] == v for k, v in query_filters.items()):
             return entry
     return None
 

@@ -9,8 +9,8 @@ router = APIRouter()
 
 
 async def post_access(login: str, password: str, scopes: str) -> AccessRead:
-    # Check that username does not already exist
-    if await crud.fetch_one(accesses, [('login', login)]) is not None:
+    # Check that the login does not already exist
+    if await crud.fetch_one(accesses, {'login': login}) is not None:
         raise HTTPException(
             status_code=400,
             detail=f"An entry with login='{login}' already exists.",

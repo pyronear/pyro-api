@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.post("/", response_model=DeviceOut, status_code=201)
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
-    access_entry = await post_access(payload.name, payload.password, scopes=payload.scopes)
+    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
 
@@ -39,8 +39,8 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 
 
 @router.get("/my-devices", response_model=List[DeviceOut])
-async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["me"])):
-    return await crud.fetch_all(devices, [("owner_id", me.id)])
+async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+    return await crud.fetch_all(devices, {"owner_id": me.id})
 
 
 @router.put("/heartbeat", response_model=DeviceOut)
@@ -54,7 +54,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
 async def update_device_location(
     payload: DefaultPosition,
     device_id: int = Path(..., gt=0),
-    user: UserRead = Security(get_current_user, scopes=["me"])
+    user: UserRead = Security(get_current_user, scopes=["admin", "me"])
 ):
     # Check that device is accessible to this user
     device = await crud.get_entry(devices, device_id)

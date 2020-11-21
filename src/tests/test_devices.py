@@ -10,11 +10,11 @@ from app.api.schemas import AccessRead, AccessCreation
 
 
 DEVICE_TABLE = [
-    {"id": 1, "name": "first_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "elevation": None, "lat": None,
+    {"id": 1, "login": "first_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "second_device", "owner_id": 99, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None,
+    {"id": 2, "login": "second_device", "owner_id": 99, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 99, "name": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None,
+    {"id": 99, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None,
      "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
@@ -115,8 +115,8 @@ def test_create_device(test_app, monkeypatch):
     mock_access_table = deepcopy(ACCESS_TABLE)
     _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
-    test_payload = {"name": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}
-    test_response = {"id": len(mock_device_table) + 1, "name": "third_device", "owner_id": 1, "specs": "v0.2"}
+    test_payload = {"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}
+    test_response = {"id": len(mock_device_table) + 1, "login": "third_device", "owner_id": 1, "specs": "v0.2"}
 
     utc_dt = datetime.utcnow()
     response = test_app.post("/devices/", data=json.dumps(test_payload))
@@ -135,9 +135,9 @@ def test_create_device(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"name": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
-        [{"name": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
-        [{"name": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
+        [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
     ],
 )
 def test_create_device_invalid(test_app, monkeypatch, payload, status_code):
@@ -155,7 +155,7 @@ def test_update_device(test_app, monkeypatch):
     mock_device_table = deepcopy(DEVICE_TABLE)
     _patch_session(monkeypatch, mock_device_table)
 
-    test_payload = {"name": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}
+    test_payload = {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}
     response = test_app.put("/devices/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in mock_device_table[0].items():
@@ -166,10 +166,10 @@ def test_update_device(test_app, monkeypatch):
     "device_id, payload, status_code",
     [
         [1, {}, 422],
-        [999, {"name": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 404],
-        [1, {"name": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
-        [1, {"name": "renamed_device"}, 422],
-        [0, {"name": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
+        [999, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 404],
+        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
+        [1, {"login": "renamed_device"}, 422],
+        [0, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
     ],
 )
 def test_update_device_invalid(test_app, monkeypatch, device_id, payload, status_code):
