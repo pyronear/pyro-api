@@ -5,7 +5,7 @@ from app.db import media
 from typing import List
 from app.api.schemas import MediaOut, MediaIn, DeviceOut
 from app.api.deps import get_current_device
-from app.services.bucketService import bucket_service
+from app.services import bucket_service
 
 
 router = APIRouter()

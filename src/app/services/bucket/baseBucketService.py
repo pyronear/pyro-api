@@ -6,7 +6,7 @@ class BaseBucketService(ABC):
     """Abstract BucketService class to setup an interface regardless of the actual service."""
 
     def __init__(self):
-        pass
+        super().__init__()
 
     @abstractmethod
     def create_bucket(self, bucket_name: str):
