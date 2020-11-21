@@ -15,7 +15,7 @@ class S3Service(BaseBucketService):
                                       aws_access_key_id=ACCESS_KEY,
                                       aws_secret_access_key=SECRET_KEY)
 
-    def create_bucket(self, bucket_name, region=None):
+    async def create_bucket(self, bucket_name, region=None):
         """Create an S3 bucket in a specified region
 
         If a region is not specified, the bucket is created in the S3 default
@@ -39,7 +39,7 @@ class S3Service(BaseBucketService):
             return False
         return True
 
-    def upload_file(self, bucket_name: str, object_name: str, file_name: bin):
+    async def upload_file(self, bucket_name: str, bucket_key: str, file_binary: bin):
         """Upload a file to an S3 bucket
 
         :param file_name: File to upload
@@ -48,24 +48,20 @@ class S3Service(BaseBucketService):
         :return: True if file was uploaded, else False
         """
 
-        # If S3 object_name was not specified, use file_name
-        if object_name is None:
-            object_name = file_name
-
         # Upload the file
         try:
-            self.s3_client.upload_fileobj(file_name, bucket_name, object_name)
+            self.s3_client.upload_fileobj(file_binary, bucket_name, bucket_key)
 
         except ClientError as e:
             logging.error(e)
             return False
         return True
 
-    def get_uploaded_file(self, bucket_name: str, object_name: str, target_location: str):
+    async def get_uploaded_file(self, bucket_name: str, object_name: str, target_location: str):
         with open(target_location, 'wb') as f:
             self.s3_client.download_fileobj(bucket_name, object_name, f)
 
-    def fetch_buckets(self):
+    async def fetch_buckets(self):
         # Retrieve the list of existing buckets
         response = self.s3_client.list_buckets()
 
@@ -74,5 +70,5 @@ class S3Service(BaseBucketService):
         for bucket in response['Buckets']:
             print(f'  {bucket["Name"]}')
 
-    def fetch_bucket_files(self, bucket_name: str):
+    async def fetch_bucket_files(self, bucket_name: str):
         pass

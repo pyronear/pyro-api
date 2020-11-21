@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Path, Security, File, UploadFile
+from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException
 from app.api import crud
 from app.db import media
 from typing import List
@@ -9,14 +9,6 @@ from app.services import bucket_service
 from datetime import datetime
 
 router = APIRouter()
-
-
-@router.post("/upload_file", response_model=MediaOut, status_code=201)
-async def upload_media(file: UploadFile = File(...),
-                       current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
-    bucket_service.upload_file("mypyroneartest", file.filename, file.file)
-    media_created = MediaIn(device_id=current_device.id)
-    return await crud.create_entry(media, media_created)
 
 
 @router.post("/", response_model=MediaOut, status_code=201, summary="Create a media related to a specific device")
@@ -73,3 +65,26 @@ async def delete_media(media_id: int = Path(..., gt=0)):
     Based on a media_id, deletes the given media
     """
     return await crud.delete_entry(media, media_id)
+
+
+@router.post("/{media_id}/upload_file", response_model=MediaOut, status_code=200)
+async def upload_media(media_id: int = Path(..., gt=0),
+                       file: UploadFile = File(...),
+                       current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
+    existing_media = await crud.fetch_one(media, [("id", media_id), ("device_id", current_device.id)])
+    if existing_media is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Permission denied"
+        )
+
+    bucket_key = existing_media["bucket_key"]
+    upload_success = await bucket_service.upload_file(bucket_name="mypyroneartest", bucket_key=bucket_key, file_binary=file.file)
+    if upload_success == False:
+        raise HTTPException(
+            status_code=500,
+            detail="The upload did not succeed"
+        )
+    return existing_media
+
+
