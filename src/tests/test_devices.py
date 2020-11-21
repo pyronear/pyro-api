@@ -229,11 +229,20 @@ def test_update_device_location(test_app, monkeypatch):
     for k, v in test_payload.items():
         assert mock_device_table[1][k] == v
 
+    # Self version
+    response = test_app.put("/devices/my-location", data=json.dumps(test_payload))
+    assert response.status_code == 200
+    for k, v in response.json().items():
+        if k not in ['access_id', 'created_at']:
+            assert v == mock_device_table[2][k]
+    for k, v in test_payload.items():
+        assert mock_device_table[2][k] == v
+
 
 @pytest.mark.parametrize(
     "device_id, payload, status_code",
     [
-        [999, {"lon": 5.}, 400],
+        [999, {"lon": 5.}, 404],
         [1, {"lon": 5.}, 400],
         [2, {"lon": "position"}, 422],
         [0, {"lon": 5.}, 422],

@@ -28,14 +28,14 @@ async def mock_fetch_all(table, query_filters=None):
         return table
     response = []
     for entry in table:
-        if all(entry[k] == v for k, v in query_filters):
+        if all(entry[k] == v for k, v in query_filters.items()):
             response.append(entry)
     return response
 
 
 async def mock_fetch_one(table, query_filters=None):
     for entry in table:
-        if all(entry[k] == v for k, v in query_filters):
+        if all(entry[k] == v for k, v in query_filters.items()):
             return entry
     return None
 
