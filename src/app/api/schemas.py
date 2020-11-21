@@ -180,7 +180,7 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 # Alerts
 class AlertMediaId(BaseModel):
     media_id: int = Field(None, gt=0)
-    
+
 
 class AlertBase(_FlatLocation, AlertMediaId):
     event_id: int = Field(..., gt=0)

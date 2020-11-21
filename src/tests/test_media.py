@@ -90,7 +90,8 @@ def test_create_media_from_device(test_app, monkeypatch):
 
     test_payload = {}
 
-    test_response = {"id": len(mock_media_table) + 1, "device_id": 99, "type": "image"}  # Device_id is 99 because it is the id of the authentified sending device.
+    # Device_id is 99 because it is the id of the authentified sending device.
+    test_response = {"id": len(mock_media_table) + 1, "device_id": 99, "type": "image"}
 
     utc_dt = datetime.utcnow()
     response = test_app.post("/media/created-by-device", data=json.dumps(test_payload))
@@ -183,12 +184,12 @@ def test_upload_media(test_app, monkeypatch):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    ## 1 - Create a media that will have a custom
-    payload_creation_device = {"device_id": 99} # 99 because it is the authentified device_id specified in the config
+    # 1 - Create a media that will have a custom
+    payload_creation_device = {"device_id": 99}  # 99 because it is the authentified device_id specified in the config
     newly_created_media_id = len(mock_media_table) + 1
     response = test_app.post("/media/", data=json.dumps(payload_creation_device))
 
-    ## 2 - Upload something
+    # 2 - Upload something
     async def successful_upload(bucket_name, bucket_key, file_binary):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
@@ -199,7 +200,7 @@ def test_upload_media(test_app, monkeypatch):
     assert response.status_code == 200
     assert {k: v for k, v in test_response.items() if k not in ('created_at', "bucket_key")} == response_json
 
-    ## 2b - Upload failing
+    # 2b - Upload failing
     async def failing_upload(bucket_name, bucket_key, file_binary):
         return False
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)

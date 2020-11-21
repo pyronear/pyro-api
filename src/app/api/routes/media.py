@@ -23,7 +23,8 @@ async def create_media(payload: MediaIn):
     return await crud.create_entry(media, MediaCreation(**payload.dict(), bucket_key=bucket_key))
 
 
-@router.post("/created-by-device", response_model=MediaOut, status_code=201, summary="Create a media related to the authentified device")
+@router.post("/created-by-device", response_model=MediaOut, status_code=201,
+             summary="Create a media related to the authentified device")
 async def create_device_media(payload: BaseMedia, device: DeviceOut = Security(get_current_device, scopes=["device"])):
     """
     Creates a media related to the authentified device, uses its device_id as argument
@@ -79,12 +80,12 @@ async def upload_media(media_id: int = Path(..., gt=0),
         )
 
     bucket_key = existing_media["bucket_key"]
-    upload_success = await bucket_service.upload_file(bucket_name="mypyroneartest", bucket_key=bucket_key, file_binary=file.file)
-    if upload_success == False:
+    upload_success = await bucket_service.upload_file(bucket_name="mypyroneartest",
+                                                      bucket_key=bucket_key,
+                                                      file_binary=file.file)
+    if upload_success is False:
         raise HTTPException(
             status_code=500,
             detail="The upload did not succeed"
         )
     return existing_media
-
-

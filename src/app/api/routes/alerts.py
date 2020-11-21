@@ -12,7 +12,9 @@ router = APIRouter()
 async def create_alert(payload: AlertIn):
     return await crud.create_entry(alerts, payload)
 
-@router.post("/created-by-device", response_model=AlertOut, status_code=201, summary="Create an alert related to the authentified device")
+
+@router.post("/created-by-device", response_model=AlertOut, status_code=201,
+             summary="Create an alert related to the authentified device")
 async def create_device_alert(payload: AlertBase, device: DeviceOut = Security(get_current_device, scopes=["device"])):
     """
     Creates an alert related to the authentified device, uses its device_id as argument
@@ -21,6 +23,7 @@ async def create_device_alert(payload: AlertBase, device: DeviceOut = Security(g
     or "Example Value" to get a concrete idea of arguments
     """
     return await crud.create_entry(alerts, AlertIn(**payload.dict(), device_id=device.id))
+
 
 @router.get("/{alert_id}/", response_model=AlertOut)
 async def get_alert(alert_id: int = Path(..., gt=0)):
@@ -43,9 +46,11 @@ async def delete_alert(alert_id: int = Path(..., gt=0)):
 
 
 @router.put("/{alert_id}/link-media", response_model=AlertOut)
-async def link_media(payload: AlertMediaId, alert_id: int = Path(..., gt=0), device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def link_media(payload: AlertMediaId,
+                     alert_id: int = Path(..., gt=0),
+                     current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
     # Check that alert is linked to this device
-    existing_alert = await crud.fetch_one(alerts, [("id", alert_id), ("device_id", device.id)])
+    existing_alert = await crud.fetch_one(alerts, [("id", alert_id), ("device_id", current_device.id)])
     if existing_alert is None:
         raise HTTPException(
             status_code=400,

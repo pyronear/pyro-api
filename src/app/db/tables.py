@@ -2,7 +2,6 @@ import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
                         ForeignKey, MetaData)
 from sqlalchemy.sql import func
-from app import config as cfg
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',

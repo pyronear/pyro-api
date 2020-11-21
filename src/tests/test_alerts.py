@@ -85,6 +85,7 @@ def test_create_alert(test_app, monkeypatch):
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
     assert mock_alert_table[-1]['created_at'] > utc_dt and mock_alert_table[-1]['created_at'] < datetime.utcnow()
 
+
 def test_create_alert_by_device(test_app, monkeypatch):
 
     # Sterilize DB interactions
@@ -93,7 +94,9 @@ def test_create_alert_by_device(test_app, monkeypatch):
 
     test_payload = {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}
     # Device_id is 99 because it is the identified device
-    test_response = {"id": len(mock_alert_table) + 1, "device_id": 99, **test_payload, "media_id": None, "is_acknowledged": False}
+    test_response = {"id": len(mock_alert_table) + 1,
+                     "device_id": 99, **test_payload,
+                     "media_id": None, "is_acknowledged": False}
 
     utc_dt = datetime.utcnow()
     response = test_app.post("/alerts/created-by-device", data=json.dumps(test_payload))
@@ -102,6 +105,7 @@ def test_create_alert_by_device(test_app, monkeypatch):
     json_response = response.json()
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
     assert mock_alert_table[-1]['created_at'] > utc_dt and mock_alert_table[-1]['created_at'] < datetime.utcnow()
+
 
 @pytest.mark.parametrize(
     "payload, status_code",
@@ -178,7 +182,7 @@ def test_link_media_owner(test_app, monkeypatch):
     assert response.status_code == 200
     for k, v in test_payload.items():
         assert v == mock_alert_table[0][k]
-   
+
 
 def test_link_media_owner_not_allowed(test_app, monkeypatch):
     mock_alert_table = deepcopy(ALERT_TABLE)
@@ -191,7 +195,7 @@ def test_link_media_owner_not_allowed(test_app, monkeypatch):
 
     response = test_app.post(f"/alerts/{updated_alert['id']}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 405
-    
+
 
 @pytest.mark.parametrize(
     "alert_id, status_code, status_details",
