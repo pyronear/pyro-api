@@ -40,7 +40,7 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 
 @router.get("/my-devices", response_model=List[DeviceOut])
 async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
-    return await crud.fetch_all(devices, [("owner_id", me.id)])
+    return await crud.fetch_all(devices, {"owner_id": me.id})
 
 
 @router.put("/heartbeat", response_model=DeviceOut)
@@ -57,7 +57,7 @@ async def update_device_location(
     user: UserRead = Security(get_current_user, scopes=["admin", "me"])
 ):
     # Check that device is accessible to this user
-    entry = await crud.fetch_one(devices, [("id", device_id), ("owner_id", user.id)])
+    entry = await crud.fetch_one(devices, {"id": device_id, "owner_id": user.id})
     if entry is None:
         raise HTTPException(
             status_code=400,
