@@ -1,7 +1,10 @@
 import requests
 import logging
-from exceptions import HTTPRequestException
+from .exceptions import HTTPRequestException
 from urllib.parse import urljoin
+
+
+__all__ = ['Client']
 
 logging.basicConfig()
 
