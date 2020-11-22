@@ -22,4 +22,9 @@ ACCESS_TOKEN_UNLIMITED_MINUTES = 60 * 24 * 365 * 10
 JWT_ENCODING_ALGORITHM = "HS256"
 
 SUPERUSER_LOGIN: str = os.getenv("SUPERUSER_LOGIN")
+if SUPERUSER_LOGIN is None:
+    raise ValueError("SUPERUSER_LOGIN is missing from environment variables")
+
 SUPERUSER_PWD: str = os.getenv("SUPERUSER_PWD")
+if SUPERUSER_PWD is None:
+    raise ValueError("SUPERUSER_PWD is missing from environment variables")
