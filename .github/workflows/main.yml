@@ -45,7 +45,7 @@ jobs:
         run: |
           pip install flake8
           flake8 --version
-          flake8 ./
+          flake8 src/
 
   docker-ready:
     runs-on: ubuntu-latest
