@@ -2,7 +2,6 @@ import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
                         ForeignKey, MetaData)
 from sqlalchemy.sql import func
-from app import config as cfg
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
@@ -46,6 +45,8 @@ sites = Table(
     Column("name", String(50)),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
+    Column("country", String(5), nullable=False),
+    Column("geocode", String(10), nullable=False),
     Column("type", Enum(SiteType), default=SiteType.tower),
     Column("created_at", DateTime, default=func.now()),
 )
@@ -97,6 +98,7 @@ media = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("device_id", Integer, ForeignKey("devices.id")),
+    Column("bucket_key", String(100), nullable=True),
     Column("type", Enum(MediaType), default=MediaType.image),
     Column("created_at", DateTime, default=func.now()),
 )

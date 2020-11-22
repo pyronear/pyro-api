@@ -27,3 +27,5 @@ SUPERUSER_PWD: str = os.getenv("SUPERUSER_PWD")
 if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
     raise ValueError(
         "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
+
+BUCKET_NAME: str = "mypyroneartest"
