@@ -2,7 +2,6 @@ import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
                         ForeignKey, MetaData)
 from sqlalchemy.sql import func
-from app import config as cfg
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
@@ -97,6 +96,7 @@ media = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("device_id", Integer, ForeignKey("devices.id")),
+    Column("bucket_key", String(100), nullable=True),
     Column("type", Enum(MediaType), default=MediaType.image),
     Column("created_at", DateTime, default=func.now()),
 )

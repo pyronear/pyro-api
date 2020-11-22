@@ -23,3 +23,5 @@ JWT_ENCODING_ALGORITHM = "HS256"
 
 SUPERUSER_LOGIN: str = os.getenv("SUPERUSER_LOGIN")
 SUPERUSER_PWD: str = os.getenv("SUPERUSER_PWD")
+
+BUCKET_NAME: str = "mypyroneartest"

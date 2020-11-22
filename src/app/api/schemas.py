@@ -149,9 +149,16 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
 
 
 # Media
-class MediaIn(BaseModel):
-    device_id: int = Field(..., gt=0)
+class BaseMedia(BaseModel):
     type: MediaType = MediaType.image
+
+
+class MediaIn(BaseMedia):
+    device_id: int = Field(..., gt=0)
+
+
+class MediaCreation(MediaIn):
+    bucket_key: str = Field(...)
 
 
 class MediaOut(MediaIn, _CreatedAt, _Id):
@@ -171,12 +178,18 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 
 
 # Alerts
-class AlertIn(_FlatLocation):
-    device_id: int = Field(..., gt=0)
-    event_id: int = Field(..., gt=0)
+class AlertMediaId(BaseModel):
     media_id: int = Field(None, gt=0)
+
+
+class AlertBase(_FlatLocation, AlertMediaId):
+    event_id: int = Field(..., gt=0)
     type: AlertType = AlertType.start
     is_acknowledged: bool = Field(False)
+
+
+class AlertIn(AlertBase):
+    device_id: int = Field(..., gt=0)
 
 
 class AlertOut(AlertIn, _CreatedAt, _Id):
