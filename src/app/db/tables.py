@@ -45,6 +45,8 @@ sites = Table(
     Column("name", String(50)),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
+    Column("country", String(5), nullable=False),
+    Column("geocode", String(10), nullable=False),
     Column("type", Enum(SiteType), default=SiteType.tower),
     Column("created_at", DateTime, default=func.now()),
 )

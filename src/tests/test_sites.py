@@ -8,9 +8,9 @@ from app.api.routes import sites
 
 
 SITE_TABLE = [
-    {"id": 1, "name": "my_first_tower", "lat": 0., "lon": 0., "type": "tower",
+    {"id": 1, "name": "my_first_tower", "lat": 44.1, "lon": -0.7, "type": "tower", "country": "FR", "geocode": "40",
      "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "my_first_station", "lat": 10., "lon": 5., "type": "station",
+    {"id": 2, "name": "my_first_station", "lat": 44.1, "lon": 3.9, "type": "station", "country": "FR", "geocode": "30",
      "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
@@ -71,7 +71,7 @@ def test_create_site(test_app, monkeypatch):
     mock_site_table = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, mock_site_table)
 
-    test_payload = {"name": "my_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_payload = {"name": "my_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}
     test_response = {"id": len(mock_site_table) + 1, **test_payload}
 
     utc_dt = datetime.utcnow()
@@ -86,8 +86,8 @@ def test_create_site(test_app, monkeypatch):
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"names": "my_site", "lat": 0., "lon": 0., "type": "tower"}, 422],
-        [{"name": "my_site", "lat": 0.}, 422],
+        [{"names": "my_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 422],
+        [{"name": "my_site", "lat": 0., "country": "FR", "geocode": "01"}, 422],
     ],
 )
 def test_create_site_invalid(test_app, payload, status_code):
@@ -100,7 +100,7 @@ def test_update_site(test_app, monkeypatch):
     mock_site_table = deepcopy(SITE_TABLE)
     _patch_session(monkeypatch, mock_site_table)
 
-    test_payload = {"name": "renamed_site", "lat": 0., "lon": 0., "type": "tower"}
+    test_payload = {"name": "renamed_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}
     response = test_app.put("/sites/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in mock_site_table[0].items():
@@ -112,9 +112,9 @@ def test_update_site(test_app, monkeypatch):
     [
         [1, {}, 422],
         [1, {"site_name": "foo"}, 422],
-        [999, {"name": "foo", "lat": 0., "lon": 0., "type": "tower"}, 404],
-        [1, {"name": "1", "lat": 0., "lon": 0., "type": "tower"}, 422],
-        [0, {"name": "foo", "lat": 0., "lon": 0., "type": "tower"}, 422],
+        [999, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 404],
+        [1, {"name": "1", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 422],
+        [0, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 422],
     ],
 )
 def test_update_site_invalid(test_app, monkeypatch, site_id, payload, status_code):
