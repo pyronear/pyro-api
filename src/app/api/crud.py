@@ -43,7 +43,7 @@ async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
 
 async def delete(entry_id: int, table: Table):
     query = table.delete().where(entry_id == table.c.id)
-    return await database.execute(query=query)
+    await database.execute(query=query)
 
 
 async def create_entry(table: Table, payload: BaseModel) -> Dict[str, Any]:
@@ -60,8 +60,10 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
 
 
 async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
-    await get_entry(table, entry_id)
     entry_id = await put(entry_id, payload, table)
+
+    if not isinstance(entry_id, int):
+        raise HTTPException(status_code=404, detail="Entry not found")
 
     return {**payload.dict(), "id": entry_id}
 
