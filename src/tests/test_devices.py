@@ -1,295 +1,309 @@
 import json
 import pytest
-from app.api import crud
+from copy import deepcopy
 from datetime import datetime
+from fastapi import HTTPException
+
+from app.api import crud, security
+from app.api.routes import devices
+from app.api.schemas import AccessRead, AccessCreation
 
 
-MIN_PAYLOAD = {"name": "my_device", "owner_id": 1, "specs": "my_specs", "password": "my_password"}
-FULL_PAYLOAD = {
-    **MIN_PAYLOAD,
-    "lat": None,
-    "lon": None,
-    "elevation": None,
-    "yaw": None,
-    "pitch": None,
-    "last_ping": None,
-}
-REPLY_PAYLOAD = FULL_PAYLOAD.copy()
-REPLY_PAYLOAD.pop("password")
+DEVICE_TABLE = [
+    {"id": 1, "login": "first_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "second_device", "owner_id": 99, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 99, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None,
+     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
+     "created_at": "2020-10-13T08:18:45.447773"},
+]
+
+ACCESS_TABLE = [
+    {"id": 1, "login": "first_device", "hashed_password": "first_pwd_hashed", "scopes": "device"},
+    {"id": 2, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
+    {"id": 3, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
+]
 
 
-def test_fetch_my_devices(test_app, monkeypatch):
-    # device id 1->4 owned by user 99 (connected_user), id 5->6 owned by user 1
-    test_data = [{"id": did, **REPLY_PAYLOAD, "owner_id": 99 if did <= 4 else 1} for did in range(1, 7)]
+def _patch_session(monkeypatch, mock_device_table, mock_access_table=None):
+    # DB patching
+    monkeypatch.setattr(devices, "devices", mock_device_table)
+    # Sterilize all DB interactions through CRUD override
+    monkeypatch.setattr(crud, "get", pytest.mock_get)
+    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
+    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
+    monkeypatch.setattr(crud, "post", pytest.mock_post)
+    monkeypatch.setattr(crud, "put", pytest.mock_put)
+    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
+    # Password
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    # Access table specific
+    if mock_access_table is not None:
+        async def mock_update_pwd(payload, entry_id):
+            for idx, entry in enumerate(mock_access_table):
+                if entry["id"] == entry_id:
+                    mock_access_table[idx]["hashed_password"] = await security.hash_password(payload.password)
+                    return {"login": entry["login"]}
 
-    async def mock_fetch_by_owner(table, query_filter):
-        return [entry for entry in test_data if entry[query_filter[0]] == query_filter[1]]
+        monkeypatch.setattr(devices, "update_access_pwd", mock_update_pwd)
 
-    monkeypatch.setattr(crud, "fetch_all", mock_fetch_by_owner)
+        async def mock_post_access(login, password, scopes):
+            if any(entry['login'] == login for entry in mock_access_table):
+                raise HTTPException(status_code=400, detail=f"An entry with login='{login}' already exists.")
 
-    response = test_app.get("/devices/my-devices")
-    assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != "created_at"} for r in response.json()] == [
-        d for d in test_data if d["id"] <= 4
-    ]
+            pwd = await security.hash_password(password)
+            access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
+            # Post on access table
+            payload_dict = access.dict()
+            payload_dict['id'] = len(mock_access_table) + 1
+            mock_access_table.append(payload_dict)
+            return AccessRead(id=payload_dict['id'], **access.dict())
 
-
-def test_create_device(test_app, monkeypatch):
-    test_request_payload = FULL_PAYLOAD
-    test_response_payload = {"id": 1, **REPLY_PAYLOAD}
-
-    async def mock_fetch_one(table, query_filter):
-        return None
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    async def mock_post(payload, table):
-        return 1
-
-    monkeypatch.setattr(crud, "post", mock_post)
-
-    response = test_app.post("/devices/", data=json.dumps(test_request_payload))
-
-    assert response.status_code == 201
-    assert {k: v for k, v in response.json().items() if k not in ('created_at')} == test_response_payload
-
-
-def test_create_device_if_already_exists(test_app, monkeypatch):
-    test_request_payload = FULL_PAYLOAD
-
-    async def mock_fetch_one(table, query_filter):
-        return test_request_payload
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    async def mock_post(payload, table):
-        return 1
-
-    monkeypatch.setattr(crud, "post", mock_post)
-
-    response = test_app.post("/devices/", data=json.dumps(test_request_payload))
-
-    assert response.status_code == 400
-
-
-def test_create_device_invalid_json(test_app):
-    response = test_app.post("/devices/", data=json.dumps({"username": "my_device", "owner_id": 1, "specs": "s"}))
-    assert response.status_code == 422
-
-    response = test_app.post("/devices/", data=json.dumps({"name": "1", "owner_id": 1, "specs": "2"}))
-    assert response.status_code == 422
+        monkeypatch.setattr(devices, "post_access", mock_post_access)
 
 
 def test_get_device(test_app, monkeypatch):
-    test_data = {"id": 1, **REPLY_PAYLOAD}
 
-    async def mock_get(entry_id, table):
-        return test_data
-
-    monkeypatch.setattr(crud, "get", mock_get)
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.get("/devices/1")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert response.json() == {k: v for k, v in mock_device_table[0].items() if k != "access_id"}
 
 
-def test_get_device_incorrect_id(test_app, monkeypatch):
-    async def mock_get(entry_id, table):
-        return None
+@pytest.mark.parametrize(
+    "device_id, status_code, status_details",
+    [
+        [999, 404, "Entry not found"],
+        [0, 422, None],
+    ],
+)
+def test_get_device_invalid(test_app, monkeypatch, device_id, status_code, status_details):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    response = test_app.get("/devices/999")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Entry not found"
-
-    response = test_app.get("/devices/0")
-    assert response.status_code == 422
+    response = test_app.get(f"/devices/{device_id}")
+    assert response.status_code == status_code, device_id
+    if isinstance(status_details, str):
+        assert response.json()["detail"] == status_details
 
 
 def test_fetch_devices(test_app, monkeypatch):
-    test_data = [
-        {"id": 1, **REPLY_PAYLOAD},
-        {"id": 2, **REPLY_PAYLOAD},
-    ]
-
-    async def mock_get_all(table, query_filter=None):
-        return test_data
-
-    monkeypatch.setattr(crud, "fetch_all", mock_get_all)
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
     response = test_app.get("/devices/")
     assert response.status_code == 200
-    assert [{k: v for k, v in r.items() if k != 'created_at'} for r in response.json()] == test_data
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in mock_device_table]
+
+    # Self version
+    response = test_app.get("/devices/my-devices")
+    assert response.status_code == 200
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"}
+                               for entry in mock_device_table if entry['owner_id'] == 99]
+
+
+def test_create_device(test_app, monkeypatch):
+
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
+
+    test_payload = {"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}
+    test_response = {"id": len(mock_device_table) + 1, "login": "third_device", "owner_id": 1, "specs": "v0.2"}
+
+    utc_dt = datetime.utcnow()
+    response = test_app.post("/devices/", data=json.dumps(test_payload))
+
+    assert response.status_code == 201, print(response.json()['detail'])
+    # Response content
+    json_response = response.json()
+    for k, v in test_response.items():
+        assert v == json_response[k]
+    # Timestamp consistency
+    assert mock_device_table[-1]['created_at'] > utc_dt and mock_device_table[-1]['created_at'] < datetime.utcnow()
+    # Access table updated
+    assert mock_access_table[-1]['hashed_password'] == f"{test_payload['password']}_hashed"
+
+
+@pytest.mark.parametrize(
+    "payload, status_code",
+    [
+        [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
+        [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
+    ],
+)
+def test_create_device_invalid(test_app, monkeypatch, payload, status_code):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
+
+    response = test_app.post("/devices/", data=json.dumps(payload))
+    assert response.status_code == status_code, print(payload)
 
 
 def test_update_device(test_app, monkeypatch):
-    test_update_data = {"id": 1, **FULL_PAYLOAD}
-    test_response_payload = {"id": 1, **REPLY_PAYLOAD}
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    async def mock_get(entry_id, table):
-        return True
-
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    async def mock_put(entry_id, payload, table):
-        return 1
-
-    monkeypatch.setattr(crud, "put", mock_put)
-
-    response = test_app.put("/devices/1/", data=json.dumps(test_update_data))
+    test_payload = {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}
+    response = test_app.put("/devices/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    for k, v in mock_device_table[0].items():
+        assert v == test_payload.get(k, DEVICE_TABLE[0][k])
 
 
 @pytest.mark.parametrize(
     "device_id, payload, status_code",
     [
         [1, {}, 422],
-        [1, {"last_ping": None}, 422],
-        [999, {"name": "foo", "owner_id": 1, "specs": "my_specs", "password": "my_password"}, 404],
-        [1, {"name": "1", "owner_id": 1, "specs": "my_specs", "password": "my_password"}, 422],
-        [0, {"name": "foo", "owner_id": 1, "specs": "my_specs", "password": "my_password"}, 422],
+        [999, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 404],
+        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
+        [1, {"login": "renamed_device"}, 422],
+        [0, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
     ],
 )
 def test_update_device_invalid(test_app, monkeypatch, device_id, payload, status_code):
-    async def mock_get(entry_id, table):
-        return None
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    response = test_app.put(f"/devices/{device_id}/", data=json.dumps(payload),)
+    response = test_app.put(f"/devices/{device_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_remove_device(test_app, monkeypatch):
-    test_data = {"id": 1, **REPLY_PAYLOAD}
+def test_update_device_password(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
-    async def mock_get(entry_id, table):
-        return test_data
-
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    async def mock_delete(entry_id, table):
-        return entry_id
-
-    monkeypatch.setattr(crud, "delete", mock_delete)
-
-    response = test_app.delete("/devices/1/")
+    test_payload = {"password": "new_password"}
+    response = test_app.put("/devices/1/pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_data
+    assert response.json() == {k: v for k, v in mock_device_table[0].items() if k != 'access_id'}
+    assert mock_access_table[0]['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
-def test_remove_device_incorrect_id(test_app, monkeypatch):
-    async def mock_get(entry_id, table):
-        return None
+@pytest.mark.parametrize(
+    "device_id, payload, status_code",
+    [
+        [1, {}, 422],
+        [999, {"password": "renamed_user"}, 404],
+        [1, {"password": 1}, 422],
+        [1, {"password": "me"}, 422],
+        [0, {"password": "renamed_user"}, 422],
+    ],
+)
+def test_update_device_password_invalid(test_app, monkeypatch, device_id, payload, status_code):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
 
-    monkeypatch.setattr(crud, "get", mock_get)
+    response = test_app.put(f"/devices/{device_id}/pwd", data=json.dumps(payload))
+    assert response.status_code == status_code, print(payload)
 
-    response = test_app.delete("/devices/999/")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Entry not found"
 
-    response = test_app.delete("/devices/0/")
-    assert response.status_code == 422
+def test_update_device_location(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
+
+    test_payload = {"lon": 5.}
+    response = test_app.put("/devices/2/location", data=json.dumps(test_payload))
+    assert response.status_code == 200
+    for k, v in response.json().items():
+        if k not in ['access_id', 'created_at']:
+            assert v == mock_device_table[1][k]
+    for k, v in test_payload.items():
+        assert mock_device_table[1][k] == v
+
+    # Self version
+    response = test_app.put("/devices/my-location", data=json.dumps(test_payload))
+    assert response.status_code == 200
+    for k, v in response.json().items():
+        if k not in ['access_id', 'created_at']:
+            assert v == mock_device_table[2][k]
+    for k, v in test_payload.items():
+        assert mock_device_table[2][k] == v
+
+
+@pytest.mark.parametrize(
+    "device_id, payload, status_code",
+    [
+        [999, {"lon": 5.}, 404],
+        [1, {"lon": 5.}, 400],
+        [2, {"lon": "position"}, 422],
+        [0, {"lon": 5.}, 422],
+    ],
+)
+def test_update_device_location_invalid(test_app, monkeypatch, device_id, payload, status_code):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    mock_access_table = deepcopy(ACCESS_TABLE)
+    _patch_session(monkeypatch, mock_device_table, mock_access_table)
+
+    response = test_app.put(f"/devices/{device_id}/location", data=json.dumps(payload))
+    assert response.status_code == status_code, print(device_id, payload)
 
 
 def test_heartbeat(test_app, monkeypatch):
-    async def mock_get(entry_id, table):
-        return True
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    monkeypatch.setattr(crud, "get", mock_get)
+    utc_dt = datetime.utcnow()
 
-    async def mock_put(entry_id, payload, table):
-        return None
-
-    monkeypatch.setattr(crud, "put", mock_put)
-
-    response = test_app.post("/devices/heartbeat")
+    response = test_app.put("/devices/heartbeat")
     assert response.status_code == 200
-    assert "last_ping" in response.json()
-    try:
-        last_ping = response.json()["last_ping"]
-        datetime.fromisoformat(last_ping)
+    json_response = response.json()
+    # Everything should be identical apart from ping
+    assert datetime.utcnow() > datetime.fromisoformat(json_response['last_ping'])
+    assert utc_dt < datetime.fromisoformat(json_response['last_ping'])
 
-    except Exception as e:
-        raise(e)
+    for k, v in mock_device_table[2].items():
+        if k == 'last_ping':
+            assert v != DEVICE_TABLE[2][k]
+        elif k != 'created_at':
+            assert v == DEVICE_TABLE[2][k]
 
 
-def test_update_location(test_app, monkeypatch):
-    test_data = {"id": 1, **REPLY_PAYLOAD}
-    update_location_data = {"lat": 1.0,
-                            "lon": 2.0,
-                            "elevation": 3.0,
-                            "yaw": 4.0,
-                            "pitch": 5.0
-                            }
-    test_response_payload = test_data.copy()
-    for k, v in update_location_data.items():
-        test_response_payload[k] = v
+def test_delete_device(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    async def mock_get(entry_id, table):
-        return test_data
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    async def mock_fetch_one(table, query_filters):
-        return True
-
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    async def mock_put(entry_id, payload, table):
-        return None
-    monkeypatch.setattr(crud, "put", mock_put)
-
-    response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
+    response = test_app.delete("/devices/1/")
     assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response_payload
+    assert response.json() == {k: v for k, v in DEVICE_TABLE[0].items() if k != 'access_id'}
+    for entry in mock_device_table:
+        assert entry['id'] != 1
 
 
-def test_update_location_on_not_owned_device(test_app, monkeypatch):
-    update_location_data = {"lat": 1.0,
-                            "lon": 2.0,
-                            "elevation": 3.0,
-                            "yaw": 4.0,
-                            "pitch": 5.0
-                            }
+@pytest.mark.parametrize(
+    "device_id, status_code, status_details",
+    [
+        [999, 404, "Entry not found"],
+        [0, 422, None],
+    ],
+)
+def test_delete_device_invalid(test_app, monkeypatch, device_id, status_code, status_details):
+    # Sterilize DB interactions
+    mock_device_table = deepcopy(DEVICE_TABLE)
+    _patch_session(monkeypatch, mock_device_table)
 
-    async def mock_fetch_one(table, query_filters):
-        return False
-    monkeypatch.setattr(crud, "fetch_one", mock_fetch_one)
-
-    response = test_app.post("/devices/1/update-location", data=json.dumps(update_location_data))
-    assert response.status_code == 400
-
-
-def test_reset_device_pwd(test_app, monkeypatch):
-
-    test_data = [
-        {"id": 1, "access_id": 1, **REPLY_PAYLOAD},
-        {"id": 99, "access_id": 99, **REPLY_PAYLOAD}
-    ]
-
-    async def mock_get(entry_id, table):
-        if str(table) == "devices":
-            for entry in test_data:
-                if entry['id'] == entry_id:
-                    return entry
-            return None
-        elif str(table) == "accesses":
-            for entry in test_data:
-                if entry['id'] == entry_id:
-                    return {"login": entry["name"]}
-            return None
-
-    monkeypatch.setattr(crud, "get", mock_get)
-
-    async def mock_put(entry_id, payload, table):
-        return entry_id
-
-    monkeypatch.setattr(crud, "put", mock_put)
-
-    test_update_data = {"password": "my_password"}
-    test_response = {"id": 1, **REPLY_PAYLOAD}
-    response = test_app.put("/devices/1/pwd", data=json.dumps(test_update_data))
-    assert response.status_code == 200
-    assert {k: v for k, v in response.json().items() if k != 'created_at'} == test_response
+    response = test_app.delete(f"/devices/{device_id}/")
+    assert response.status_code == status_code, print(device_id)
+    if isinstance(status_details, str):
+        assert response.json()["detail"] == status_details, print(device_id)

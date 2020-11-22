@@ -21,7 +21,7 @@ class _Id(BaseModel):
 
 # Accesses
 class Cred(BaseModel):
-    password: str = Field(..., example="PickARobustOne")
+    password: str = Field(..., min_length=3, example="PickARobustOne")
 
 
 class CredHash(BaseModel):
@@ -48,7 +48,7 @@ class AccessRead(AccessBase, _Id):
 # Users
 class UserInfo(BaseModel):
     # Abstract information about a user
-    username: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
 
 
 class UserRead(UserInfo, _CreatedAt, _Id):
@@ -130,14 +130,13 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 # Device
 class DeviceIn(DefaultPosition):
-    name: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
+    login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = None
 
 
-class DeviceAuth(DeviceIn):
-    password: str = Field(..., example="PickARobustOne")
+class DeviceAuth(DeviceIn, Cred):
     scopes: str = Field("device", example="device")
 
 
@@ -149,14 +148,17 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
     pass
 
 
-class HeartbeatOut(BaseModel):
-    last_ping: datetime = None
-
-
 # Media
-class MediaIn(BaseModel):
-    device_id: int = Field(..., gt=0)
+class BaseMedia(BaseModel):
     type: MediaType = MediaType.image
+
+
+class MediaIn(BaseMedia):
+    device_id: int = Field(..., gt=0)
+
+
+class MediaCreation(MediaIn):
+    bucket_key: str = Field(...)
 
 
 class MediaOut(MediaIn, _CreatedAt, _Id):
@@ -176,12 +178,18 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 
 
 # Alerts
-class AlertIn(_FlatLocation):
-    device_id: int = Field(..., gt=0)
-    event_id: int = Field(..., gt=0)
+class AlertMediaId(BaseModel):
     media_id: int = Field(None, gt=0)
+
+
+class AlertBase(_FlatLocation, AlertMediaId):
+    event_id: int = Field(..., gt=0)
     type: AlertType = AlertType.start
     is_acknowledged: bool = Field(False)
+
+
+class AlertIn(AlertBase):
+    device_id: int = Field(..., gt=0)
 
 
 class AlertOut(AlertIn, _CreatedAt, _Id):
