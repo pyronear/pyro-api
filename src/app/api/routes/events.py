@@ -30,7 +30,7 @@ async def get_event(event_id: int = Path(..., gt=0)):
 async def fetch_events():
     """
     Retrieves the list of all events and their information
-	"""
+    """
     return await crud.fetch_all(events)
 
 
