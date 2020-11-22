@@ -2,9 +2,7 @@ from app.services.bucket.baseBucketService import BaseBucketService
 
 
 class DummyBucketService(BaseBucketService):
-    def __init__(self):
-        """Dummy class used for testing purpose.
-        """
+    """Dummy class used for testing purpose. """
 
     async def upload_file(self, bucket_name: str, bucket_key: str, file_binary: bin):
         return True

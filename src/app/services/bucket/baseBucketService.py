@@ -5,9 +5,6 @@ from abc import abstractmethod
 class BaseBucketService(ABC):
     """Abstract BucketService class to setup an interface regardless of the actual service."""
 
-    def __init__(self):
-        super().__init__()
-
     @abstractmethod
     async def upload_file(self, bucket_name: str, bucket_key: str, file_binary: bin):
         pass
