@@ -22,7 +22,7 @@ async def create_media(payload: MediaIn):
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
 async def get_media(media_id: int = Path(..., gt=0)):
     """
-    Based on a media_id, retrieves information about the given media
+    Based on a media_id, retrieves information about the specified media
     """
     return await crud.get_entry(media, media_id)
 
@@ -30,7 +30,7 @@ async def get_media(media_id: int = Path(..., gt=0)):
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
 async def fetch_media():
     """
-    Retrieves the list of all media with each related information
+    Retrieves the list of all media and their information
     """
     return await crud.fetch_all(media)
 
@@ -38,7 +38,7 @@ async def fetch_media():
 @router.put("/{media_id}/", response_model=MediaOut, summary="Update information about a specific media")
 async def update_media(payload: MediaIn, media_id: int = Path(..., gt=0)):
     """
-    Based on a media_id, updates information about the given media
+    Based on a media_id, updates information about the specified media
     """
     return await crud.update_entry(media, payload, media_id)
 
@@ -46,6 +46,6 @@ async def update_media(payload: MediaIn, media_id: int = Path(..., gt=0)):
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
 async def delete_media(media_id: int = Path(..., gt=0)):
     """
-    Based on a media_id, deletes the given media
+    Based on a media_id, deletes the specified media
     """
     return await crud.delete_entry(media, media_id)

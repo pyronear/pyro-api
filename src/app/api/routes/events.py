@@ -21,7 +21,7 @@ async def create_event(payload: EventIn):
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
 async def get_event(event_id: int = Path(..., gt=0)):
     """
-    Based on a event_id, retrieves information about the given event
+    Based on a event_id, retrieves information about the specified event
     """
     return await crud.get_entry(events, event_id)
 
@@ -29,15 +29,15 @@ async def get_event(event_id: int = Path(..., gt=0)):
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
 async def fetch_events():
     """
-    Retrieves the list of all events with each related information
-    """
+    Retrieves the list of all events and their information
+	"""
     return await crud.fetch_all(events)
 
 
 @router.put("/{event_id}/", response_model=EventOut, summary="Update information about a specific event")
 async def update_event(payload: EventIn, event_id: int = Path(..., gt=0)):
     """
-    Based on a event_id, updates information about the given event
+    Based on a event_id, updates information about the specified event
     """
     return await crud.update_entry(events, payload, event_id)
 
@@ -45,6 +45,6 @@ async def update_event(payload: EventIn, event_id: int = Path(..., gt=0)):
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
 async def delete_event(event_id: int = Path(..., gt=0)):
     """
-    Based on a event_id, deletes the given event
+    Based on a event_id, deletes the specified event
     """
     return await crud.delete_entry(events, event_id)
