@@ -1,5 +1,0 @@
-pytest/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-starlette/testclient /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/main /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/api/schemas /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/api/deps /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi

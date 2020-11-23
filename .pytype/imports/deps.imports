@@ -1,8 +1,0 @@
-fastapi/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-fastapi/security/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-jose/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-jose/jwt /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/api/crud /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/db /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/config /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-app/api/schemas /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi

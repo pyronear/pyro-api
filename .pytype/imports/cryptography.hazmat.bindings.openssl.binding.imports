@@ -1,7 +1,0 @@
-cryptography/__about__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/cryptography/__about__.pyi
-_collections_abc /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
-typing_extensions /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/typing_extensions.pyi
-cryptography/utils /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/cryptography/utils.pyi
-cryptography/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/cryptography/__init__.pyi
-cryptography/exceptions /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/cryptography/exceptions.pyi
-cryptography/hazmat/bindings/openssl/_conditional /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/cryptography/hazmat/bindings/openssl/_conditional.pyi

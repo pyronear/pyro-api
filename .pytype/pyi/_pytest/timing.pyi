@@ -1,9 +1,0 @@
-# (generated with --quick)
-
-from typing import List
-
-__all__: List[str]
-
-def perf_counter() -> float: ...
-def sleep(secs: float) -> None: ...
-def time() -> float: ...
