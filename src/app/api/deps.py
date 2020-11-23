@@ -50,7 +50,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    entry = await crud.get(entry_id=access_id, table=accesses)
+    entry = await crud.get_entry(accesses, access_id)
 
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
