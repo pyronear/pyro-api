@@ -15,6 +15,11 @@ INSTALLATION_TABLE = [
 ]
 
 
+async def mock_get_custom_entry(query):
+
+    return [INSTALLATION_TABLE[0]["device_id"]]
+
+
 def _patch_session(monkeypatch, mock_table):
     # DB patching
     monkeypatch.setattr(installations, "installations", mock_table)
@@ -159,3 +164,11 @@ def test_delete_installation_invalid(test_app, monkeypatch, installation_id, sta
     assert response.status_code == status_code, print(installation_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(installation_id)
+
+
+def test_list_devices(test_app, monkeypatch):
+    monkeypatch.setattr(crud, "get_custom_entry", mock_get_custom_entry)
+
+    response = test_app.get("/installations/list_devices/1?timestamp=2020-11-13T08:18:45.447773")
+    assert response.status_code == 200
+    assert response.json() == [INSTALLATION_TABLE[0]["device_id"]]

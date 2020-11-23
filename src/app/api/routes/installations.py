@@ -33,6 +33,12 @@ async def update_installation(payload: InstallationIn, installation_id: int = Pa
 async def delete_installation(installation_id: int = Path(..., gt=0)):
     return await crud.delete_entry(installations, installation_id)
 
-@router.get("/list-devices", response_model=List[InstallationOut])
-async def get_all_at_given_ts_and_site(site_id: int, ts: datetime):
-	return await crud.fetch_all(installations, {"site_id": site_id, "ts": ts })
+
+@router.get("/list_devices/{site_id}", response_model=List[int])
+async def get_all_at_given_ts_and_site(timestamp: datetime, site_id: int = Path(..., gt=0)):
+    query = installations.select(installations.c.device_id)
+    query = query.where(installations.c.site_id == site_id)
+    query = query.where(installations.c.start_ts <= timestamp)
+    query = query.where(installations.c.end_ts >= timestamp)
+
+    return await crud.get_custom_entry(installations)
