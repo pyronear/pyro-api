@@ -56,7 +56,7 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    return dict(**entry)
+    return dict(entry)
 
 
 async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
