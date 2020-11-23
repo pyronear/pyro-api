@@ -41,7 +41,7 @@ async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
     return await database.execute(query=query)
 
 
-async def delete(entry_id: int, table: Table):
+async def delete(entry_id: int, table: Table) -> None:
     query = table.delete().where(entry_id == table.c.id)
     await database.execute(query=query)
 
