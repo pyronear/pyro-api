@@ -135,7 +135,7 @@ class DeviceIn(DefaultPosition):
     login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
     owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
-    last_ping: datetime = None
+    last_ping: datetime = Field(..., example=datetime.utcnow())
 
 
 class DeviceAuth(DeviceIn, Cred):
