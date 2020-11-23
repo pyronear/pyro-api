@@ -1,0 +1,27 @@
+# (generated with --quick)
+
+from typing import Any, Callable, Generator, Optional, Type, TypeVar, Union
+
+BaseModel: Any
+DataclassTypeError: Any
+Required: Any
+ValidationError: Any
+create_model: Any
+gather_all_validators: Any
+validate_model: Any
+
+DataclassT = TypeVar('DataclassT', bound=DataclassType)
+
+class DataclassType:
+    __initialised__: bool
+    __pydantic_model__: type
+    def __call__(self: DataclassT, *args, **kwargs) -> DataclassT: ...
+    def __init__(self, *args, **kwargs) -> None: ...
+    @classmethod
+    def __validate__(cls: Type[DataclassT], v) -> DataclassT: ...
+
+def _get_validators(cls: Type[DataclassT]) -> Generator[Any, None, None]: ...
+def _process_class(_cls: type, init: bool, repr: bool, eq: bool, order: bool, unsafe_hash: bool, frozen: bool, config: Optional[type]) -> DataclassType: ...
+def _validate_dataclass(cls: Type[DataclassT], v) -> DataclassT: ...
+def dataclass(_cls: Optional[type] = ..., *, init: bool = ..., repr: bool = ..., eq: bool = ..., order: bool = ..., unsafe_hash: bool = ..., frozen: bool = ..., config: type = ...) -> Union[Callable[[type], DataclassType], DataclassType]: ...
+def setattr_validate_assignment(self: DataclassType, name: str, value) -> None: ...

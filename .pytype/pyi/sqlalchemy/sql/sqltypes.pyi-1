@@ -1,0 +1,448 @@
+# (generated with --quick)
+
+import datetime
+from typing import Any, Callable, FrozenSet, Optional, Tuple, Type, TypeVar, Union
+
+INT = INTEGER
+
+BOOLEANTYPE: Boolean
+Binary: Any
+Emulated: Any
+INTEGERTYPE: Integer
+MATCHTYPE: MatchType
+NO_ARG: Any
+NULLTYPE: NullType
+NativeForEmulated: Any
+STRINGTYPE: String
+SchemaEventTarget: Any
+Slice: Any
+TypeDecorator: Any
+TypeEngine: Any
+Variant: Any
+_bind_or_error: Any
+_defer_name: Any
+_literal_as_binds: Any
+_type_map: dict
+array: module
+codecs: module
+compat: module
+decimal: module
+dt: module
+elements: Any
+event: Any
+exc: Any
+inspection: Any
+json: module
+langhelpers: Any
+operators: Any
+pickle: Any
+processors: Any
+quoted_name: Any
+to_instance: Any
+type_api: Any
+type_coerce: Any
+util: module
+
+_T0 = TypeVar('_T0')
+_V = TypeVar('_V')
+_V2 = TypeVar('_V2')
+
+class ARRAY(Any, Indexable, Concatenable, Any):
+    Comparator: type
+    __doc__: str
+    __visit_name__: str
+    as_tuple: Any
+    comparator_factory: type
+    dimensions: Any
+    hashable: Any
+    item_type: Any
+    python_type: Type[list]
+    zero_indexes: Any
+    def __init__(self, item_type, as_tuple = ..., dimensions = ..., zero_indexes = ...) -> None: ...
+    def _set_parent(self, column) -> None: ...
+    def _set_parent_with_dispatch(self, parent) -> None: ...
+    def compare_values(self, x, y) -> Any: ...
+
+class BIGINT(BigInteger):
+    __doc__: str
+    __visit_name__: str
+
+class BINARY(_Binary):
+    __doc__: str
+    __visit_name__: str
+    length: Any
+
+class BLOB(LargeBinary):
+    __doc__: str
+    __visit_name__: str
+    length: Any
+
+class BOOLEAN(Boolean):
+    __doc__: str
+    __visit_name__: str
+    _create_events: Any
+    create_constraint: Any
+    name: Any
+
+class BigInteger(Integer):
+    __doc__: str
+    __visit_name__: str
+
+class Boolean(Any, Any, SchemaType):
+    __doc__: str
+    __visit_name__: str
+    _create_events: Any
+    _set_table: Any
+    _strict_bools: FrozenSet[Optional[bool]]
+    create_constraint: Any
+    name: Any
+    native: bool
+    python_type: Type[bool]
+    def __init__(self, create_constraint = ..., name = ..., _create_events = ...) -> None: ...
+    def _should_create_constraint(self, compiler, **kw) -> Any: ...
+    def _strict_as_bool(self, value: _T0) -> _T0: ...
+    def bind_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Any: ...
+
+class CHAR(String):
+    __doc__: str
+    __visit_name__: str
+
+class CLOB(Text):
+    __doc__: str
+    __visit_name__: str
+
+class Concatenable:
+    Comparator: type
+    __doc__: str
+    comparator_factory: type
+
+class DATE(Date):
+    __doc__: str
+    __visit_name__: str
+
+class DATETIME(DateTime):
+    __doc__: str
+    __visit_name__: str
+    timezone: Any
+
+class DECIMAL(Numeric):
+    __doc__: str
+    __visit_name__: str
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+    scale: Any
+
+class Date(_LookupExpressionAdapter, Any):
+    __doc__: str
+    __visit_name__: str
+    _expression_adaptations: Any
+    python_type: Type[datetime.date]
+    def get_dbapi_type(self, dbapi) -> Any: ...
+
+class DateTime(_LookupExpressionAdapter, Any):
+    __doc__: str
+    __visit_name__: str
+    _expression_adaptations: Any
+    python_type: Type[datetime.datetime]
+    timezone: Any
+    def __init__(self, timezone = ...) -> None: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+
+class Enum(Any, String, SchemaType):
+    Comparator: type
+    __doc__: str
+    __init__: Any
+    __visit_name__: str
+    _create_events: Any
+    _enums_argument: Any
+    _object_lookup: dict
+    _set_table: Any
+    _sort_key_function: Any
+    _valid_lookup: dict
+    comparator_factory: type
+    create_constraint: Any
+    enum_class: Any
+    enums: list
+    inherit_schema: Any
+    metadata: Any
+    name: Any
+    native: Any
+    native_enum: Any
+    python_type: Any
+    schema: Any
+    sort_key_function: Any
+    validate_strings: Any
+    values_callable: Any
+    def __repr__(self) -> Any: ...
+    def _db_value_for_elem(self, elem) -> Any: ...
+    def _enum_init(self, enums, kw) -> None: ...
+    def _object_value_for_elem(self, elem) -> Any: ...
+    def _parse_into_values(self, enums, kw) -> Tuple[Any, Any]: ...
+    def _setup_for_values(self, values, objects, kw) -> None: ...
+    def _should_create_constraint(self, compiler, **kw) -> bool: ...
+    def adapt(self, impltype, **kw) -> Any: ...
+    def adapt_to_emulated(self, impltype, **kw) -> Any: ...
+    def bind_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def copy(self, **kw) -> Any: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Callable[[Any], Any]: ...
+
+class FLOAT(Float):
+    __doc__: str
+    __visit_name__: str
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+
+class Float(Numeric):
+    __doc__: str
+    __visit_name__: str
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+    scale: None
+    def __init__(self, precision = ..., asdecimal = ..., decimal_return_scale = ...) -> None: ...
+    def result_processor(self, dialect, coltype) -> Any: ...
+
+class INTEGER(Integer):
+    __doc__: str
+    __visit_name__: str
+
+class Indexable:
+    Comparator: type
+    __doc__: str
+    comparator_factory: type
+
+class Integer(_LookupExpressionAdapter, Any):
+    __doc__: str
+    __visit_name__: str
+    _expression_adaptations: Any
+    python_type: Type[int]
+    def get_dbapi_type(self, dbapi) -> Any: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+
+class Interval(Any, _AbstractInterval, Any):
+    __doc__: str
+    day_precision: Any
+    epoch: datetime.datetime
+    impl: Type[DateTime]
+    native: Any
+    python_type: Type[datetime.timedelta]
+    second_precision: Any
+    def __init__(self, native = ..., second_precision = ..., day_precision = ...) -> None: ...
+    def adapt_to_emulated(self, impltype, **kw) -> Any: ...
+    def bind_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Callable[[Any], Any]: ...
+
+class JSON(Indexable, Any):
+    Comparator: type
+    JSONElementType: type
+    JSONIndexType: type
+    JSONPathType: type
+    NULL: Any
+    __doc__: str
+    __visit_name__: str
+    _str_impl: Any
+    comparator_factory: type
+    hashable: bool
+    none_as_null: Any
+    python_type: Type[dict]
+    should_evaluate_none: bool
+    def __init__(self, none_as_null = ...) -> None: ...
+    def bind_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Callable[[Any], Any]: ...
+
+class LargeBinary(_Binary):
+    __doc__: str
+    __visit_name__: str
+    length: Any
+    def __init__(self, length = ...) -> None: ...
+
+class MatchType(Boolean):
+    __doc__: str
+    _create_events: Any
+    create_constraint: Any
+    name: Any
+
+class NCHAR(Unicode):
+    __doc__: str
+    __visit_name__: str
+
+class NUMERIC(Numeric):
+    __doc__: str
+    __visit_name__: str
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+    scale: Any
+
+class NVARCHAR(Unicode):
+    __doc__: str
+    __visit_name__: str
+
+class NullType(Any):
+    Comparator: type
+    __doc__: str
+    __visit_name__: str
+    _isnull: bool
+    comparator_factory: type
+    hashable: bool
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+
+class Numeric(_LookupExpressionAdapter, Any):
+    __doc__: str
+    __visit_name__: str
+    _default_decimal_return_scale: int
+    _effective_decimal_return_scale: Any
+    _expression_adaptations: Any
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+    python_type: Type[Union[float, decimal.Decimal]]
+    scale: Any
+    def __init__(self, precision = ..., scale = ..., decimal_return_scale = ..., asdecimal = ...) -> None: ...
+    def bind_processor(self, dialect) -> Any: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Any: ...
+
+class PickleType(Any):
+    __doc__: str
+    impl: Type[LargeBinary]
+    pickler: Any
+    protocol: Any
+    def __init__(self, protocol = ..., pickler = ..., comparator = ...) -> None: ...
+    def __reduce__(self) -> Tuple[Type[PickleType], Tuple[Any, None, Any]]: ...
+    def bind_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def comparator(self, _1, _2) -> Any: ...
+    def compare_values(self, x, y) -> Any: ...
+    def result_processor(self, dialect, coltype) -> Callable[[Any], Any]: ...
+
+class REAL(Float):
+    __doc__: str
+    __visit_name__: str
+    asdecimal: Any
+    decimal_return_scale: Any
+    precision: Any
+
+class SMALLINT(SmallInteger):
+    __doc__: str
+    __visit_name__: str
+
+class SchemaType(Any):
+    __doc__: str
+    _create_events: Any
+    bind: Any
+    inherit_schema: Any
+    metadata: Any
+    name: Any
+    schema: Any
+    def __init__(self, name = ..., schema = ..., metadata = ..., inherit_schema = ..., quote = ..., _create_events = ...) -> None: ...
+    def _is_impl_for_variant(self, dialect, kw) -> Optional[bool]: ...
+    def _on_metadata_create(self, target, bind, **kw) -> None: ...
+    def _on_metadata_drop(self, target, bind, **kw) -> None: ...
+    def _on_table_create(self, target, bind, **kw) -> None: ...
+    def _on_table_drop(self, target, bind, **kw) -> None: ...
+    def _set_parent(self, column) -> None: ...
+    def _set_table(self, column, table) -> None: ...
+    def _translate_schema(self, effective_schema, map_) -> Any: ...
+    def _variant_mapping_for_set_table(self, column) -> Any: ...
+    def adapt(self, impltype, **kw) -> Any: ...
+    def copy(self, **kw) -> Any: ...
+    def create(self, bind = ..., checkfirst = ...) -> None: ...
+    def drop(self, bind = ..., checkfirst = ...) -> None: ...
+
+class SmallInteger(Integer):
+    __doc__: str
+    __visit_name__: str
+
+class String(Concatenable, Any):
+    __doc__: str
+    __init__: Any
+    __visit_name__: str
+    python_type: Any
+    @classmethod
+    def _warn_deprecated_unicode(cls) -> None: ...
+    def bind_processor(self, dialect) -> Optional[Callable[[Any], Any]]: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Any: ...
+
+class TEXT(Text):
+    __doc__: str
+    __visit_name__: str
+
+class TIME(Time):
+    __doc__: str
+    __visit_name__: str
+    timezone: Any
+
+class TIMESTAMP(DateTime):
+    __doc__: str
+    __visit_name__: str
+    timezone: Any
+    def __init__(self, timezone = ...) -> None: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+
+class Text(String):
+    __doc__: str
+    __visit_name__: str
+
+class Time(_LookupExpressionAdapter, Any):
+    __doc__: str
+    __visit_name__: str
+    _expression_adaptations: Any
+    python_type: Type[datetime.time]
+    timezone: Any
+    def __init__(self, timezone = ...) -> None: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+
+class Unicode(String):
+    __doc__: str
+    __visit_name__: str
+    def __init__(self, length = ..., **kwargs) -> None: ...
+
+class UnicodeText(Text):
+    __doc__: str
+    __visit_name__: str
+    def __init__(self, length = ..., **kwargs) -> None: ...
+    def _warn_deprecated_unicode(self) -> None: ...
+
+class VARBINARY(_Binary):
+    __doc__: str
+    __visit_name__: str
+    length: Any
+
+class VARCHAR(String):
+    __doc__: str
+    __visit_name__: str
+
+class _AbstractInterval(_LookupExpressionAdapter, Any):
+    _expression_adaptations: Any
+    _type_affinity: Type[Interval]
+    def coerce_compared_value(self, op, value) -> Any: ...
+
+class _Binary(Any):
+    __doc__: str
+    length: Any
+    python_type: Any
+    def __init__(self, length = ...) -> None: ...
+    def bind_processor(self, dialect) -> Optional[Callable[[Any], Any]]: ...
+    def coerce_compared_value(self, op, value) -> Any: ...
+    def get_dbapi_type(self, dbapi) -> Any: ...
+    def literal_processor(self, dialect) -> Callable[[Any], Any]: ...
+    def result_processor(self, dialect, coltype) -> Callable[[Any], Any]: ...
+
+class _LookupExpressionAdapter:
+    Comparator: type
+    __doc__: str
+    comparator_factory: type
+
+def _resolve_value_to_type(value) -> Any: ...
+@overload
+def _type_map_get(k) -> Optional[_V]: ...
+@overload
+def _type_map_get(k, d: _V2) -> Union[_V, _V2]: ...

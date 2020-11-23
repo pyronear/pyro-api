@@ -1,0 +1,122 @@
+# (generated with --quick)
+
+import collections
+import itertools
+from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
+
+Alias: Any
+BindParameter: Any
+Column: Any
+ColumnClause: Any
+ColumnElement: Any
+ColumnSet: Any
+FromClause: Any
+FromGrouping: Any
+Grouping: Any
+Join: Any
+Label: Any
+Null: Any
+ScalarSelect: Any
+SelectBase: Any
+TableClause: Any
+UnaryExpression: Any
+_deep_annotate: Any
+_deep_deannotate: Any
+_expand_cloned: Any
+_find_columns: Any
+_from_objects: Any
+_label_reference: Any
+_shallow_annotate: Any
+_textual_label_reference: Any
+chain: Type[itertools.chain]
+deque: Type[collections.deque]
+exc: Any
+join_condition: Any
+operators: Any
+sort_tables: Any
+util: module
+visitors: Any
+
+_T0 = TypeVar('_T0')
+_T1 = TypeVar('_T1')
+
+class ClauseAdapter(Any):
+    __doc__: str
+    __traverse_options__: Dict[str, Any]
+    adapt_on_names: Any
+    equivalents: Any
+    exclude_fn: Any
+    include_fn: Any
+    selectable: Any
+    def __init__(self, selectable, equivalents = ..., include_fn = ..., exclude_fn = ..., adapt_on_names = ..., anonymize_labels = ...) -> None: ...
+    def _corresponding_column(self, col, require_embedded, _seen = ...) -> Any: ...
+    def replace(self, col) -> Any: ...
+
+class ColumnAdapter(ClauseAdapter):
+    _IncludeExcludeMapping: type
+    __doc__: str
+    __traverse_options__: Dict[str, Any]
+    _wrap: None
+    adapt_list: Any
+    adapt_on_names: Any
+    adapt_required: Any
+    allow_label_resolve: Any
+    columns: Any
+    equivalents: Any
+    exclude_fn: Any
+    include_fn: Any
+    selectable: Any
+    def __getstate__(self) -> Any: ...
+    def __init__(self, selectable, equivalents = ..., adapt_required = ..., include_fn = ..., exclude_fn = ..., adapt_on_names = ..., allow_label_resolve = ..., anonymize_labels = ...) -> None: ...
+    def __setstate__(self, state) -> None: ...
+    def _locate_col(self, col) -> Any: ...
+    def adapt_clause(self, obj) -> Any: ...
+    def traverse(self, obj) -> Any: ...
+    def wrap(self, adapter) -> Any: ...
+
+class _repr_base:
+    __slots__ = ["max_chars"]
+    _DICT: int
+    _LIST: int
+    _TUPLE: int
+    def trunc(self, value) -> str: ...
+
+class _repr_params(_repr_base):
+    __slots__ = ["batches", "ismulti", "params"]
+    __doc__: str
+    batches: Any
+    ismulti: Any
+    max_chars: Any
+    params: Any
+    def __init__(self, params, batches, max_chars = ..., ismulti = ...) -> None: ...
+    def __repr__(self) -> Any: ...
+    def _repr_multi(self, multi_params, typ) -> str: ...
+    def _repr_params(self, params, typ) -> str: ...
+
+class _repr_row(_repr_base):
+    __slots__ = ["row"]
+    __doc__: str
+    max_chars: Any
+    row: Any
+    def __init__(self, row, max_chars = ...) -> None: ...
+    def __repr__(self) -> str: ...
+
+def _quote_ddl_expr(element) -> str: ...
+def adapt_criterion_to_null(crit, nulls) -> Any: ...
+def bind_values(clause) -> list: ...
+def clause_is_present(clause, search) -> bool: ...
+def criterion_as_pairs(expression, consider_as_foreign_keys = ..., consider_as_referenced_keys = ..., any_operator = ...) -> List[Tuple[Any, Any]]: ...
+def expand_column_list_from_order_by(collist, order_by) -> Any: ...
+def find_join_source(clauses, join_to) -> List[int]: ...
+def find_left_clause_that_matches_given(clauses, join_from) -> List[int]: ...
+def find_left_clause_to_join_from(clauses, join_to, onclause) -> Any: ...
+def find_tables(clause, check_columns = ..., include_aliases = ..., include_joins = ..., include_selects = ..., include_crud = ...) -> list: ...
+def reduce_columns(columns, *clauses, **kw) -> Any: ...
+def selectables_overlap(left, right) -> bool: ...
+def splice_joins(left, right: _T1, stop_on = ...) -> _T1: ...
+def surface_column_elements(clause: _T0, include_scalar_selects = ...) -> Generator[_T0, Any, None]: ...
+def surface_selectables(clause: _T0) -> Generator[_T0, Any, Any]: ...
+def surface_selectables_only(clause: _T0) -> Generator[_T0, Any, Any]: ...
+def unwrap_label_reference(element) -> Any: ...
+def unwrap_order_by(clause) -> list: ...
+def visit_binary_product(fn, expr) -> None: ...

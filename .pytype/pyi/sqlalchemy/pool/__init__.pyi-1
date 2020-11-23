@@ -1,0 +1,20 @@
+# (generated with --quick)
+
+from typing import Any, List
+
+AssertionPool: Any
+NullPool: Any
+Pool: Any
+QueuePool: Any
+SingletonThreadPool: Any
+StaticPool: Any
+_ConnectionFairy: Any
+_ConnectionRecord: Any
+__all__: List[str]
+_finalize_fairy: Any
+_refs: Any
+clear_managers: Any
+manage: Any
+reset_commit: Any
+reset_none: Any
+reset_rollback: Any

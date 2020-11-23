@@ -1,0 +1,9 @@
+{
+  "binary": "/Users/jean/Documents/Perso/PyroNear/pyronear-api/.venv/bin/pyre.bin",
+  "source_directories": [
+    "src/app"
+  ],
+  "search_path": [""]
+  "taint_models_path": "/Users/jean/Documents/Perso/PyroNear/pyronear-api/.venv/lib",
+  "typeshed": "/Users/jean/Documents/Perso/PyroNear/pyronear-api/.venv/lib/pyre_check/typeshed"
+}

@@ -1,0 +1,297 @@
+# (generated with --quick)
+
+import abc
+import decimal
+import enum
+import functools
+import inspect
+import ipaddress
+import pathlib
+import pydantic.env_settings
+import pydantic.errors
+import pydantic.main
+import pydantic.networks
+import pydantic.parse
+import pydantic.types
+import pydantic.utils
+from typing import Any, Callable, Dict, Iterable, List, Optional, Pattern, Set, Tuple, Type, TypeVar, Union
+import uuid
+
+ConfigType = Type[pydantic.main.BaseConfig]
+
+ABCMeta: Type[abc.ABCMeta]
+AbstractSetIntStr: Any
+AnyCallable: Type[Callable]
+AnyHttpUrl: Type[pydantic.networks.AnyHttpUrl]
+AnyStrMaxLengthError: Type[pydantic.errors.AnyStrMaxLengthError]
+AnyStrMinLengthError: Type[pydantic.errors.AnyStrMinLengthError]
+AnyUrl: Type[pydantic.networks.AnyUrl]
+ArbitraryTypeError: Type[pydantic.errors.ArbitraryTypeError]
+BYTE_SIZES: Dict[str, int]
+BaseConfig: Any
+BaseModel: Any
+BaseSettings: Type[pydantic.env_settings.BaseSettings]
+BoolError: Type[pydantic.errors.BoolError]
+ByteSize: Type[pydantic.types.ByteSize]
+BytesError: Type[pydantic.errors.BytesError]
+CallableError: Type[pydantic.errors.CallableError]
+CallableGenerator: Any
+ClassAttribute: Type[pydantic.utils.ClassAttribute]
+ClassError: Type[pydantic.errors.ClassError]
+ColorError: Type[pydantic.errors.ColorError]
+ConfigError: Type[pydantic.errors.ConfigError]
+ConstrainedBytes: Type[pydantic.types.ConstrainedBytes]
+ConstrainedDecimal: Type[pydantic.types.ConstrainedDecimal]
+ConstrainedFloat: Type[pydantic.types.ConstrainedFloat]
+ConstrainedInt: Type[pydantic.types.ConstrainedInt]
+ConstrainedList: Type[pydantic.types.ConstrainedList]
+ConstrainedNumberMeta: Type[pydantic.types.ConstrainedNumberMeta]
+ConstrainedSet: Type[pydantic.types.ConstrainedSet]
+ConstrainedStr: Type[pydantic.types.ConstrainedStr]
+DataclassType: Any
+DataclassTypeError: Type[pydantic.errors.DataclassTypeError]
+DateError: Type[pydantic.errors.DateError]
+DateTimeError: Type[pydantic.errors.DateTimeError]
+Decimal: Type[decimal.Decimal]
+DecimalError: Type[pydantic.errors.DecimalError]
+DecimalIsNotFiniteError: Type[pydantic.errors.DecimalIsNotFiniteError]
+DecimalMaxDigitsError: Type[pydantic.errors.DecimalMaxDigitsError]
+DecimalMaxPlacesError: Type[pydantic.errors.DecimalMaxPlacesError]
+DecimalWholeDigitsError: Type[pydantic.errors.DecimalWholeDigitsError]
+DictAny: Any
+DictError: Type[pydantic.errors.DictError]
+DictStrAny: Any
+DirectoryPath: Type[pydantic.types.DirectoryPath]
+DurationError: Type[pydantic.errors.DurationError]
+EXTRA_LINK: str
+EmailError: Type[pydantic.errors.EmailError]
+EmailStr: Type[pydantic.networks.EmailStr]
+Enum: Type[enum.Enum]
+EnumError: Type[pydantic.errors.EnumError]
+ErrorWrapper: Any
+Extra: Type[pydantic.main.Extra]
+ExtraError: Type[pydantic.errors.ExtraError]
+FilePath: Type[pydantic.types.FilePath]
+FloatError: Type[pydantic.errors.FloatError]
+ForwardRef: Any
+FrozenSetError: Type[pydantic.errors.FrozenSetError]
+FunctionType: Type[Callable]
+GetterDict: Type[pydantic.utils.GetterDict]
+HashableError: Type[pydantic.errors.HashableError]
+HttpUrl: Type[pydantic.networks.HttpUrl]
+IPv4Address: Type[ipaddress.IPv4Address]
+IPv4AddressError: Type[pydantic.errors.IPv4AddressError]
+IPv4Interface: Type[ipaddress.IPv4Interface]
+IPv4InterfaceError: Type[pydantic.errors.IPv4InterfaceError]
+IPv4Network: Type[ipaddress.IPv4Network]
+IPv4NetworkError: Type[pydantic.errors.IPv4NetworkError]
+IPv6Address: Type[ipaddress.IPv6Address]
+IPv6AddressError: Type[pydantic.errors.IPv6AddressError]
+IPv6Interface: Type[ipaddress.IPv6Interface]
+IPv6InterfaceError: Type[pydantic.errors.IPv6InterfaceError]
+IPv6Network: Type[ipaddress.IPv6Network]
+IPv6NetworkError: Type[pydantic.errors.IPv6NetworkError]
+IPvAnyAddress: Type[pydantic.networks.IPvAnyAddress]
+IPvAnyAddressError: Type[pydantic.errors.IPvAnyAddressError]
+IPvAnyInterface: Type[pydantic.networks.IPvAnyInterface]
+IPvAnyInterfaceError: Type[pydantic.errors.IPvAnyInterfaceError]
+IPvAnyNetwork: Type[pydantic.networks.IPvAnyNetwork]
+IPvAnyNetworkError: Type[pydantic.errors.IPvAnyNetworkError]
+IntegerError: Type[pydantic.errors.IntegerError]
+InvalidByteSize: Type[pydantic.errors.InvalidByteSize]
+InvalidByteSizeUnit: Type[pydantic.errors.InvalidByteSizeUnit]
+InvalidLengthForBrand: Type[pydantic.errors.InvalidLengthForBrand]
+IterableError: Type[pydantic.errors.IterableError]
+Json: Type[pydantic.types.Json]
+JsonError: Type[pydantic.errors.JsonError]
+JsonMeta: Type[pydantic.types.JsonMeta]
+JsonTypeError: Type[pydantic.errors.JsonTypeError]
+JsonWrapper: Type[pydantic.types.JsonWrapper]
+ListError: Type[pydantic.errors.ListError]
+ListMaxLengthError: Type[pydantic.errors.ListMaxLengthError]
+ListMinLengthError: Type[pydantic.errors.ListMinLengthError]
+LuhnValidationError: Type[pydantic.errors.LuhnValidationError]
+MappingIntStrAny: Any
+MissingError: Type[pydantic.errors.MissingError]
+ModelField: Any
+ModelMetaclass: Type[pydantic.main.ModelMetaclass]
+ModelOrDc: Type[type]
+NameEmail: Type[pydantic.networks.NameEmail]
+NameFactory: Type[Union[Callable[[type], str], str]]
+NegativeFloat: Type[pydantic.types.NegativeFloat]
+NegativeInt: Type[pydantic.types.NegativeInt]
+NetworkType: Type[Union[bytes, int, str, Tuple[Union[bytes, int, str], Union[int, str]]]]
+NoneBytes: Type[Optional[bytes]]
+NoneIsAllowedError: Type[pydantic.errors.NoneIsAllowedError]
+NoneIsNotAllowedError: Type[pydantic.errors.NoneIsNotAllowedError]
+NoneStr: Type[Optional[str]]
+NoneStrBytes: Type[Optional[Union[bytes, str]]]
+NotDigitError: Type[pydantic.errors.NotDigitError]
+NumberNotGeError: Type[pydantic.errors.NumberNotGeError]
+NumberNotGtError: Type[pydantic.errors.NumberNotGtError]
+NumberNotLeError: Type[pydantic.errors.NumberNotLeError]
+NumberNotLtError: Type[pydantic.errors.NumberNotLtError]
+NumberNotMultipleError: Type[pydantic.errors.NumberNotMultipleError]
+OptionalInt: Type[Optional[int]]
+OptionalIntFloat: Type[Optional[Union[float, int]]]
+OptionalIntFloatDecimal: Type[Optional[Union[float, int, decimal.Decimal]]]
+Path: Type[pathlib.Path]
+PathError: Type[pydantic.errors.PathError]
+PathNotADirectoryError: Type[pydantic.errors.PathNotADirectoryError]
+PathNotAFileError: Type[pydantic.errors.PathNotAFileError]
+PathNotExistsError: Type[pydantic.errors.PathNotExistsError]
+PatternError: Type[pydantic.errors.PatternError]
+PaymentCardBrand: Type[pydantic.types.PaymentCardBrand]
+PaymentCardNumber: Type[pydantic.types.PaymentCardNumber]
+PositiveFloat: Type[pydantic.types.PositiveFloat]
+PositiveInt: Type[pydantic.types.PositiveInt]
+PostgresDsn: Type[pydantic.networks.PostgresDsn]
+Protocol: Type[pydantic.parse.Protocol]
+PyObject: Type[pydantic.types.PyObject]
+PyObjectError: Type[pydantic.errors.PyObjectError]
+PydanticErrorMixin: Type[pydantic.errors.PydanticErrorMixin]
+PydanticTypeError: Type[pydantic.errors.PydanticTypeError]
+PydanticValueError: Type[pydantic.errors.PydanticValueError]
+ROOT_KEY: Any
+RedisDsn: Type[pydantic.networks.RedisDsn]
+ReprArgs: Any
+Representation: Type[pydantic.utils.Representation]
+Required: Any
+SHAPE_MAPPING: Any
+SchemaExtraCallable: Type[pydantic.main.SchemaExtraCallable]
+SecretBytes: Type[pydantic.types.SecretBytes]
+SecretStr: Type[pydantic.types.SecretStr]
+SequenceError: Type[pydantic.errors.SequenceError]
+SetError: Type[pydantic.errors.SetError]
+SetMaxLengthError: Type[pydantic.errors.SetMaxLengthError]
+SetMinLengthError: Type[pydantic.errors.SetMinLengthError]
+SetStr: Any
+Signature: Type[inspect.Signature]
+StrBytes: Type[Union[bytes, str]]
+StrError: Type[pydantic.errors.StrError]
+StrIntFloat: Type[Union[float, int, str]]
+StrRegexError: Type[pydantic.errors.StrRegexError]
+StrictBool: Type[bool]
+StrictBoolError: Type[pydantic.errors.StrictBoolError]
+StrictFloat: Type[pydantic.types.StrictFloat]
+StrictInt: Type[pydantic.types.StrictInt]
+StrictStr: Type[pydantic.types.StrictStr]
+SubclassError: Type[pydantic.errors.SubclassError]
+TimeError: Type[pydantic.errors.TimeError]
+TupleError: Type[pydantic.errors.TupleError]
+TupleGenerator: Any
+TupleLengthError: Type[pydantic.errors.TupleLengthError]
+UNTOUCHED_TYPES: Tuple[Type[Callable], Type[property], Type[type], Type[classmethod], Type[staticmethod]]
+UUID: Type[uuid.UUID]
+UUID1: Type[pydantic.types.UUID1]
+UUID3: Type[pydantic.types.UUID3]
+UUID4: Type[pydantic.types.UUID4]
+UUID5: Type[pydantic.types.UUID5]
+UUIDError: Type[pydantic.errors.UUIDError]
+UUIDVersionError: Type[pydantic.errors.UUIDVersionError]
+Undefined: Any
+UrlError: Type[pydantic.errors.UrlError]
+UrlExtraError: Type[pydantic.errors.UrlExtraError]
+UrlHostError: Type[pydantic.errors.UrlHostError]
+UrlHostTldError: Type[pydantic.errors.UrlHostTldError]
+UrlPortError: Type[pydantic.errors.UrlPortError]
+UrlSchemeError: Type[pydantic.errors.UrlSchemeError]
+UrlSchemePermittedError: Type[pydantic.errors.UrlSchemePermittedError]
+UrlUserInfoError: Type[pydantic.errors.UrlUserInfoError]
+VERSION: str
+ValidationError: Any
+ValidatorGroup: Any
+ValidatorListDict: Any
+ValueItems: Type[pydantic.utils.ValueItems]
+WrongConstantError: Type[pydantic.errors.WrongConstantError]
+__all__: list
+byte_string_re: Pattern[str]
+compiled: bool
+cython: Any
+dataclasses: module
+email_validator: Any
+errors: module
+extract_root_validators: Any
+extract_validators: Any
+inherit_validators: Any
+json: module
+math: module
+partial: Type[functools.partial]
+pretty_email_regex: Pattern[str]
+re: module
+sys: module
+typing_extensions: module
+validate_arguments: Any
+warnings: module
+
+Model = TypeVar('Model', bound=pydantic.main.BaseModel)
+T = TypeVar('T')
+_T = TypeVar('_T')
+
+def Field(default = ..., *, default_factory: Optional[Callable[[], Any]] = ..., alias: str = ..., title: str = ..., description: str = ..., const: bool = ..., gt: float = ..., ge: float = ..., lt: float = ..., le: float = ..., multiple_of: float = ..., min_items: int = ..., max_items: int = ..., min_length: int = ..., max_length: int = ..., regex: str = ..., **extra) -> Any: ...
+def Schema(default, **kwargs) -> Any: ...
+def ascii_domain_regex() -> Pattern[str]: ...
+def bytes_validator(v) -> bytes: ...
+def cls_kwargs(cls: Type[pydantic.errors.PydanticErrorMixin], ctx) -> pydantic.errors.PydanticErrorMixin: ...
+def conbytes(*, strip_whitespace: bool = ..., min_length: int = ..., max_length: int = ...) -> Type[bytes]: ...
+def condecimal(*, gt: decimal.Decimal = ..., ge: decimal.Decimal = ..., lt: decimal.Decimal = ..., le: decimal.Decimal = ..., max_digits: int = ..., decimal_places: int = ..., multiple_of: decimal.Decimal = ...) -> Type[decimal.Decimal]: ...
+def confloat(*, strict: bool = ..., gt: float = ..., ge: float = ..., lt: float = ..., le: float = ..., multiple_of: float = ...) -> Type[float]: ...
+def conint(*, strict: bool = ..., gt: int = ..., ge: int = ..., lt: int = ..., le: int = ..., multiple_of: int = ...) -> Type[int]: ...
+def conlist(item_type: Type[T], *, min_items: int = ..., max_items: int = ...) -> Type[List[T]]: ...
+def conset(item_type: Type[T], *, min_items: int = ..., max_items: int = ...) -> Type[Set[T]]: ...
+def constr(*, strip_whitespace: bool = ..., strict: bool = ..., min_length: int = ..., max_length: int = ..., curtail_length: int = ..., regex: str = ...) -> Type[str]: ...
+def constr_length_validator(v: Union[bytes, str], field, config) -> Union[bytes, str]: ...
+def constr_strip_whitespace(v: Union[bytes, str], field, config) -> Union[bytes, str]: ...
+def create_model(__model_name: str, *, __config__: Type[pydantic.main.BaseConfig] = ..., __base__: Type[pydantic.main.BaseModel] = ..., __module__: Optional[str] = ..., __validators__: Dict[str, classmethod] = ..., **field_definitions) -> Type[pydantic.main.BaseModel]: ...
+def custom_pydantic_encoder(type_encoders: Dict[Any, Callable[[type], Any]], obj) -> Any: ...
+def decimal_validator(v) -> decimal.Decimal: ...
+def deepcopy(x: _T, memo: Optional[Dict[int, _T]] = ..., _nil = ...) -> _T: ...
+def display_as_type(v) -> str: ...
+def float_validator(v) -> float: ...
+def generate_model_signature(init: Callable[..., None], fields: Dict[str, Any], config: type) -> inspect.Signature: ...
+def import_email_validator() -> None: ...
+def import_string(dotted_path: str) -> Any: ...
+def inherit_config(self_config: Type[pydantic.main.BaseConfig], parent_config: Type[pydantic.main.BaseConfig]) -> Type[pydantic.main.BaseConfig]: ...
+def int_domain_regex() -> Pattern[str]: ...
+def int_validator(v) -> int: ...
+def is_classvar(ann_type) -> bool: ...
+def is_valid_field(name: str) -> bool: ...
+def lenient_issubclass(cls, class_or_tuple: Union[type, Tuple[type, ...]]) -> bool: ...
+def list_validator(v) -> list: ...
+def load_file(path: Union[str, pathlib.Path], *, content_type: str = ..., encoding: str = ..., proto: pydantic.parse.Protocol = ..., allow_pickle: bool = ..., json_loads: Callable[[str], Any] = ...) -> Any: ...
+def load_str_bytes(b, *, content_type: str = ..., encoding: str = ..., proto: pydantic.parse.Protocol = ..., allow_pickle: bool = ..., json_loads: Callable[[str], Any] = ...) -> Any: ...
+@overload
+def lru_cache(maxsize: Callable[..., _T], typed: bool = ...) -> functools._lru_cache_wrapper[_T]: ...
+@overload
+def lru_cache(maxsize: Optional[int] = ..., typed: bool = ...) -> Callable[[Callable[..., _T]], functools._lru_cache_wrapper[_T]]: ...
+def model_schema(model: type, by_alias: bool = ..., ref_prefix: Optional[str] = ...) -> Dict[str, Any]: ...
+def new_class(name: str, bases: Iterable[object] = ..., kwds: Dict[str, Any] = ..., exec_body: Callable[[Dict[str, Any]], None] = ...) -> type: ...
+def number_multiple_validator(v: Union[float, decimal.Decimal], field) -> Union[float, int, decimal.Decimal]: ...
+def number_size_validator(v: Union[float, decimal.Decimal], field) -> Union[float, int, decimal.Decimal]: ...
+def parse_file_as(type_: Type[T], path: Union[str, pathlib.Path], *, content_type: str = ..., encoding: str = ..., proto: pydantic.parse.Protocol = ..., allow_pickle: bool = ..., json_loads: Callable[[str], Any] = ..., type_name: Optional[Union[Callable[[type], str], str]] = ...) -> T: ...
+def parse_obj_as(type_: Type[T], obj, *, type_name: Optional[Union[Callable[[type], str], str]] = ...) -> T: ...
+def path_exists_validator(v) -> pathlib.Path: ...
+def path_validator(v) -> pathlib.Path: ...
+def prepare_config(config: Type[pydantic.main.BaseConfig], cls_name: str) -> None: ...
+def pydantic_encoder(obj) -> Any: ...
+def resolve_annotations(raw_annotations, module_name) -> Any: ...
+@overload
+def root_validator(_func: Callable) -> classmethod: ...
+@overload
+def root_validator(*, pre: bool = ..., allow_reuse: bool = ..., skip_on_failure: bool = ...) -> Callable[[Callable], classmethod]: ...
+def sequence_like(v: type) -> bool: ...
+def set_validator(v) -> set: ...
+def str_validator(v) -> str: ...
+def strict_float_validator(v) -> float: ...
+def strict_int_validator(v) -> int: ...
+def strict_str_validator(v) -> str: ...
+def stricturl(*, strip_whitespace: bool = ..., min_length: int = ..., max_length: int = ..., tld_required: bool = ..., allowed_schemes: Optional[Set[str]] = ...) -> Type[pydantic.networks.AnyUrl]: ...
+def unique_list(input_list: Union[List[T], Tuple[T, ...]]) -> List[T]: ...
+def update_field_forward_refs(field, globalns, localns) -> None: ...
+def update_not_none(mapping: dict, **update) -> None: ...
+def url_regex() -> Pattern[str]: ...
+def validate_custom_root_type(fields: Dict[str, Any]) -> None: ...
+def validate_email(value: str) -> Tuple[str, str]: ...
+def validate_field_name(bases: List[type], field_name: str) -> None: ...
+def validate_model(model: Type[pydantic.main.BaseModel], input_data, cls: type = ...) -> Tuple[Any, Any, Any]: ...
+def validator(*fields: str, pre: bool = ..., each_item: bool = ..., always: bool = ..., check_fields: bool = ..., whole: bool = ..., allow_reuse: bool = ...) -> Callable[[Callable], classmethod]: ...

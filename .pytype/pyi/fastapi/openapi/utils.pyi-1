@@ -1,0 +1,50 @@
+# (generated with --quick)
+
+import enum
+import fastapi.dependencies.models
+import fastapi.openapi.models
+import fastapi.params
+import pydantic.fields
+import pydantic.main
+import starlette.responses
+import starlette.routing
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Type, Union
+
+BaseModel: Any
+BaseRoute: Type[starlette.routing.BaseRoute]
+Body: Type[fastapi.params.Body]
+Dependant: Type[fastapi.dependencies.models.Dependant]
+Enum: Type[enum.Enum]
+HTTP_422_UNPROCESSABLE_ENTITY: int
+JSONResponse: Type[starlette.responses.JSONResponse]
+METHODS_WITH_BODY: Set[str]
+ModelField: Type[pydantic.fields.ModelField]
+OpenAPI: Type[fastapi.openapi.models.OpenAPI]
+Param: Type[fastapi.params.Param]
+REF_PREFIX: str
+STATUS_CODES_WITH_NO_BODY: Set[int]
+deep_dict_update: Any
+generate_operation_id_for_path: Any
+get_flat_dependant: Any
+get_flat_params: Any
+get_model_definitions: Any
+http: module
+routing: Any
+status_code_ranges: Dict[str, str]
+validation_error_definition: Dict[str, Union[str, Dict[str, Dict[str, Union[str, Dict[str, str]]]], List[str]]]
+validation_error_response_definition: Dict[str, Union[str, Dict[str, Dict[str, Union[str, Dict[str, str]]]]]]
+
+def field_schema(field: pydantic.fields.ModelField, *, by_alias: bool = ..., model_name_map: Dict[Type[Union[enum.Enum, pydantic.main.BaseModel]], str], ref_prefix: Optional[str] = ..., known_models: Set[Type[Union[enum.Enum, pydantic.main.BaseModel]]] = ...) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def generate_operation_id(*, route, method: str) -> str: ...
+def generate_operation_summary(*, route, method: str) -> str: ...
+def get_flat_models_from_fields(fields: Sequence[pydantic.fields.ModelField], known_models: Set[Type[Union[enum.Enum, pydantic.main.BaseModel]]]) -> Set[Type[Union[enum.Enum, pydantic.main.BaseModel]]]: ...
+def get_flat_models_from_routes(routes: Sequence[starlette.routing.BaseRoute]) -> Set[type]: ...
+def get_model_name_map(unique_models: Set[Type[Union[enum.Enum, pydantic.main.BaseModel]]]) -> Dict[Type[Union[enum.Enum, pydantic.main.BaseModel]], str]: ...
+def get_openapi(*, title: str, version: str, openapi_version: str = ..., description: Optional[str] = ..., routes: Sequence[starlette.routing.BaseRoute], tags: Optional[List[Dict[str, Any]]] = ..., servers: Optional[List[Dict[str, Any]]] = ...) -> dict: ...
+def get_openapi_operation_metadata(*, route, method: str) -> dict: ...
+def get_openapi_operation_parameters(*, all_route_params: Sequence[pydantic.fields.ModelField], model_name_map: Dict[type, str]) -> List[Dict[str, Any]]: ...
+def get_openapi_operation_request_body(*, body_field: Optional[pydantic.fields.ModelField], model_name_map: Dict[type, str]) -> Optional[dict]: ...
+def get_openapi_path(*, route, model_name_map: Dict[type, str]) -> Tuple[dict, dict, dict]: ...
+def get_openapi_security_definitions(flat_dependant: fastapi.dependencies.models.Dependant) -> Tuple[dict, list]: ...
+def jsonable_encoder(obj, include: Optional[Union[Dict[Union[int, str], Any], Set[Union[int, str]]]] = ..., exclude: Optional[Union[Dict[Union[int, str], Any], Set[Union[int, str]]]] = ..., by_alias: bool = ..., exclude_unset: bool = ..., exclude_defaults: bool = ..., exclude_none: bool = ..., custom_encoder: dict = ..., sqlalchemy_safe: bool = ...) -> Any: ...
+def lenient_issubclass(cls, class_or_tuple: Union[type, Tuple[type, ...]]) -> bool: ...

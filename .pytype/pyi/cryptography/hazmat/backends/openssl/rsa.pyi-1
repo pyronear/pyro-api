@@ -1,0 +1,44 @@
+# (generated with --quick)
+
+import __future__
+import cryptography.exceptions
+import cryptography.hazmat.primitives.asymmetric
+import cryptography.hazmat.primitives.asymmetric.padding
+import cryptography.hazmat.primitives.asymmetric.rsa
+from typing import Any, NoReturn, Type
+
+AsymmetricPadding: Type[cryptography.hazmat.primitives.asymmetric.padding.AsymmetricPadding]
+AsymmetricSignatureContext: Type[cryptography.hazmat.primitives.asymmetric.AsymmetricSignatureContext]
+AsymmetricVerificationContext: Type[cryptography.hazmat.primitives.asymmetric.AsymmetricVerificationContext]
+InvalidSignature: Type[cryptography.exceptions.InvalidSignature]
+MGF1: Type[cryptography.hazmat.primitives.asymmetric.padding.MGF1]
+OAEP: Type[cryptography.hazmat.primitives.asymmetric.padding.OAEP]
+PKCS1v15: Type[cryptography.hazmat.primitives.asymmetric.padding.PKCS1v15]
+PSS: Type[cryptography.hazmat.primitives.asymmetric.padding.PSS]
+RSAPrivateKeyWithSerialization: Type[cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKeyWithSerialization]
+RSAPublicKeyWithSerialization: Type[cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey]
+UnsupportedAlgorithm: Type[cryptography.exceptions.UnsupportedAlgorithm]
+_RSAPrivateKey: Any
+_RSAPublicKey: Any
+_RSASignatureContext: Any
+_RSAVerificationContext: Any
+_Reasons: Type[cryptography.exceptions._Reasons]
+_calculate_digest_and_algorithm: Any
+_check_not_prehashed: Any
+_warn_sign_verify_deprecated: Any
+absolute_import: __future__._Feature
+calculate_max_pss_salt_length: Any
+division: __future__._Feature
+hashes: module
+print_function: __future__._Feature
+rsa: module
+utils: module
+
+def _enc_dec_rsa(backend, key, data, padding) -> Any: ...
+def _enc_dec_rsa_pkey_ctx(backend, key, data, padding_enum, padding) -> Any: ...
+def _get_rsa_pss_salt_length(pss, key, hash_algorithm) -> Any: ...
+def _handle_rsa_enc_dec_error(backend, key) -> NoReturn: ...
+def _rsa_sig_determine_padding(backend, key, padding, algorithm) -> Any: ...
+def _rsa_sig_setup(backend, padding, algorithm, key, data, init_func) -> Any: ...
+def _rsa_sig_sign(backend, padding, algorithm, private_key, data) -> Any: ...
+def _rsa_sig_verify(backend, padding, algorithm, public_key, signature, data) -> None: ...

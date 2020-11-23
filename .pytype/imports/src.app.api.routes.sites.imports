@@ -1,0 +1,4 @@
+fastapi/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routing /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/db /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/schemas /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi

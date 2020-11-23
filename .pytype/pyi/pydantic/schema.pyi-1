@@ -1,0 +1,101 @@
+# (generated with --quick)
+
+import decimal
+import enum
+import ipaddress
+import pathlib
+from typing import Any, Callable, Dict, Optional, Sequence, Set, Tuple, Type, Union
+import uuid
+
+TypeModelSet = Set[type]
+
+AnyUrl: Any
+BaseModel: Any
+ConstrainedDecimal: Any
+ConstrainedFloat: Any
+ConstrainedInt: Any
+ConstrainedList: Any
+ConstrainedSet: Any
+ConstrainedStr: Any
+DataclassType: Any
+Decimal: Type[decimal.Decimal]
+EmailStr: Any
+Enum: Type[enum.Enum]
+FieldInfo: Any
+ForwardRef: Any
+IPv4Address: Type[ipaddress.IPv4Address]
+IPv4Interface: Type[ipaddress.IPv4Interface]
+IPv4Network: Type[ipaddress.IPv4Network]
+IPv6Address: Type[ipaddress.IPv6Address]
+IPv6Interface: Type[ipaddress.IPv6Interface]
+IPv6Network: Type[ipaddress.IPv6Network]
+Literal: Any
+ModelField: Any
+Path: Type[pathlib.Path]
+ROOT_KEY: Any
+SHAPE_FROZENSET: Any
+SHAPE_ITERABLE: Any
+SHAPE_LIST: Any
+SHAPE_MAPPING: Any
+SHAPE_SEQUENCE: Any
+SHAPE_SET: Any
+SHAPE_SINGLETON: Any
+SHAPE_TUPLE: Any
+SHAPE_TUPLE_ELLIPSIS: Any
+TypeModelOrEnum: Type[type]
+UUID: Type[uuid.UUID]
+_field_constraints: Set[str]
+_map_types_constraint: Dict[Any, Callable[..., type]]
+_numeric_types_attrs: Tuple[Tuple[str, Union[type, Tuple[type, ...]], str], ...]
+_str_types_attrs: Tuple[Tuple[str, Union[type, Tuple[type, ...]], str], ...]
+conbytes: Any
+condecimal: Any
+confloat: Any
+conint: Any
+conlist: Any
+conset: Any
+constr: Any
+date: Type[datetime.date]
+datetime: Type[datetime.datetime]
+default_prefix: str
+field_class_to_schema: Tuple[Tuple[Any, Dict[str, Any]], ...]
+get_model: Any
+is_callable_type: Any
+is_literal_type: Any
+json_scheme: Dict[str, str]
+lenient_issubclass: Any
+literal_values: Any
+numeric_types: Tuple[Type[int], Type[float], Type[decimal.Decimal]]
+pydantic_encoder: Any
+re: module
+sequence_like: Any
+time: Type[datetime.time]
+timedelta: Type[datetime.timedelta]
+warnings: module
+
+class SkipField(Exception):
+    __doc__: str
+    message: str
+    def __init__(self, message: str) -> None: ...
+
+def add_field_type_to_schema(field_type, schema: Dict[str, Any]) -> None: ...
+def encode_default(dft) -> Any: ...
+def enum_process_schema(enum: Type[enum.Enum]) -> Dict[str, Any]: ...
+def field_schema(field, *, by_alias: bool = ..., model_name_map: Dict[type, str], ref_prefix: Optional[str] = ..., known_models: Set[type] = ...) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def field_singleton_schema(field, *, by_alias: bool, model_name_map: Dict[type, str], schema_overrides: bool = ..., ref_prefix: Optional[str] = ..., known_models: Set[type]) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def field_singleton_sub_fields_schema(sub_fields: Sequence, *, by_alias: bool, model_name_map: Dict[type, str], schema_overrides: bool = ..., ref_prefix: Optional[str] = ..., known_models: Set[type]) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def field_type_schema(field, *, by_alias: bool, model_name_map: Dict[type, str], schema_overrides: bool = ..., ref_prefix: Optional[str] = ..., known_models: Set[type]) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def get_annotation_from_field_info(annotation, field_info, field_name: str) -> type: ...
+def get_field_schema_validations(field) -> Dict[str, Any]: ...
+def get_flat_models_from_field(field, known_models: Set[type]) -> Set[type]: ...
+def get_flat_models_from_fields(fields: Sequence, known_models: Set[type]) -> Set[type]: ...
+def get_flat_models_from_model(model: type, known_models: Set[type] = ...) -> Set[type]: ...
+def get_flat_models_from_models(models: Sequence[type]) -> Set[type]: ...
+def get_long_model_name(model: type) -> str: ...
+def get_model_name_map(unique_models: Set[type]) -> Dict[type, str]: ...
+def model_process_schema(model: type, *, by_alias: bool = ..., model_name_map: Dict[type, str], ref_prefix: Optional[str] = ..., known_models: Set[type] = ...) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def model_schema(model: type, by_alias: bool = ..., ref_prefix: Optional[str] = ...) -> Dict[str, Any]: ...
+def model_type_schema(model: type, *, by_alias: bool, model_name_map: Dict[type, str], ref_prefix: Optional[str] = ..., known_models: Set[type]) -> Tuple[Dict[str, Any], Dict[str, Any], Set[str]]: ...
+def multivalue_literal_field_for_schema(values: tuple, field) -> Any: ...
+def normalize_name(name: str) -> str: ...
+def schema(models: Sequence[type], *, by_alias: bool = ..., title: Optional[str] = ..., description: Optional[str] = ..., ref_prefix: Optional[str] = ...) -> Dict[str, Any]: ...

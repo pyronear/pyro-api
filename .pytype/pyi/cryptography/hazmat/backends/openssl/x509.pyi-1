@@ -1,0 +1,32 @@
+# (generated with --quick)
+
+import __future__
+import cryptography.exceptions
+from typing import Any, Type
+
+UnsupportedAlgorithm: Type[cryptography.exceptions.UnsupportedAlgorithm]
+_ASN1Type: Any
+_Certificate: Any
+_CertificateRevocationList: Any
+_CertificateSigningRequest: Any
+_RevokedCertificate: Any
+_SignedCertificateTimestamp: Any
+_asn1_integer_to_int: Any
+_asn1_string_to_bytes: Any
+_decode_x509_name: Any
+_encode_asn1_int_gc: Any
+_obj2txt: Any
+_parse_asn1_time: Any
+_txt2obj_gc: Any
+absolute_import: __future__._Feature
+datetime: module
+division: __future__._Feature
+dsa: module
+ec: Any
+hashes: module
+operator: module
+print_function: __future__._Feature
+rsa: module
+serialization: module
+utils: module
+x509: module

@@ -1,0 +1,19 @@
+# (generated with --quick)
+
+import attr._make
+import attr.exceptions
+import functools
+from typing import Any, NoReturn, Type
+
+NOTHING: attr._make._Nothing
+UnannotatedAttributeError: Type[attr.exceptions.UnannotatedAttributeError]
+frozen: functools.partial[nothing]
+partial: Type[functools.partial]
+setters: module
+
+def _frozen_setattrs(self, name, value) -> NoReturn: ...
+def attrib(default = ..., validator = ..., repr = ..., cmp = ..., hash = ..., init: bool = ..., metadata = ..., type = ..., converter = ..., factory = ..., kw_only = ..., eq = ..., order = ..., on_setattr = ...) -> attr._make._CountingAttr: ...
+def attrs(maybe_cls = ..., these = ..., repr_ns = ..., repr = ..., cmp = ..., hash = ..., init: bool = ..., slots = ..., frozen = ..., weakref_slot = ..., str = ..., auto_attribs = ..., kw_only = ..., cache_hash = ..., auto_exc = ..., eq = ..., order = ...) -> Any: ...
+def define(maybe_cls = ..., *, these = ..., repr = ..., hash = ..., init = ..., slots = ..., frozen = ..., weakref_slot = ..., str = ..., auto_attribs = ..., kw_only = ..., cache_hash = ..., auto_exc = ..., eq = ..., order = ..., auto_detect = ..., getstate_setstate = ..., on_setattr = ...) -> Any: ...
+def field(*, default = ..., validator = ..., repr = ..., hash = ..., init = ..., metadata = ..., converter = ..., factory = ..., kw_only = ..., eq = ..., order = ..., on_setattr = ...) -> attr._make._CountingAttr: ...
+def mutable(maybe_cls = ..., *, these = ..., repr = ..., hash = ..., init = ..., slots = ..., frozen = ..., weakref_slot = ..., str = ..., auto_attribs = ..., kw_only = ..., cache_hash = ..., auto_exc = ..., eq = ..., order = ..., auto_detect = ..., getstate_setstate = ..., on_setattr = ...) -> Any: ...

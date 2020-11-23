@@ -1,0 +1,14 @@
+# (generated with --quick)
+
+from typing import Any
+
+CANCEL: Any
+Events: Any
+NO_RETVAL: Any
+RefCollection: Any
+_legacy_signature: Any
+contains: Any
+dispatcher: Any
+listen: Any
+listens_for: Any
+remove: Any

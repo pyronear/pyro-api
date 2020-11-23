@@ -1,0 +1,364 @@
+# (generated with --quick)
+
+from typing import Any, Dict, List, Tuple
+
+Alias: Any
+BinaryExpression: Any
+BindParameter: Any
+Cast: Any
+ClauseList: Any
+ColumnCollection: Any
+ColumnElement: Any
+Executable: Any
+Extract: Any
+FromClause: Any
+FunctionFilter: Any
+Grouping: Any
+Over: Any
+Select: Any
+VisitableType: Any
+WithinGroup: Any
+_CASE_SENSITIVE: Any
+_case_sensitive_registry: Any
+_clone: Any
+_literal_as_binds: Any
+_registry: Any
+_type_from_args: Any
+annotation: Any
+func: _FunctionGenerator
+literal_column: Any
+modifier: _FunctionGenerator
+operators: Any
+schema: Any
+sqltypes: Any
+sqlutil: Any
+util: module
+
+class AnsiFunction(GenericFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, *args, **kwargs) -> None: ...
+
+class Function(FunctionElement):
+    __doc__: str
+    __visit_name__: str
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    name: Any
+    packagenames: Any
+    type: Any
+    def __init__(self, name, *clauses, **kw) -> None: ...
+    def _bind_param(self, operator, obj, type_ = ...) -> Any: ...
+
+class FunctionAsBinary(Any):
+    left: Any
+    left_index: Any
+    right: Any
+    right_index: Any
+    sql_function: Any
+    def __init__(self, fn, left_index, right_index) -> None: ...
+    def _copy_internals(self, **kw) -> None: ...
+
+class FunctionElement(Any, Any, Any):
+    __doc__: str
+    _from_objects: Any
+    _has_args: bool
+    clause_expr: Any
+    clauses: Any
+    columns: Any
+    packagenames: Tuple[()]
+    def __init__(self, *clauses, **kwargs) -> None: ...
+    def _bind_param(self, operator, obj, type_ = ...) -> Any: ...
+    def _copy_internals(self, clone = ..., **kw) -> None: ...
+    def _execute_on_connection(self, connection, multiparams, params) -> Any: ...
+    def alias(self, name = ..., flat = ...) -> Any: ...
+    def as_comparison(self, left_index, right_index) -> FunctionAsBinary: ...
+    def execute(self) -> Any: ...
+    def filter(self, *criterion) -> Any: ...
+    def get_children(self, **kwargs) -> Tuple[Any]: ...
+    def over(self, partition_by = ..., order_by = ..., rows = ..., range_ = ...) -> Any: ...
+    def scalar(self) -> Any: ...
+    def select(self) -> Any: ...
+    def self_group(self, against = ...) -> Any: ...
+    def within_group(self, *order_by) -> Any: ...
+    def within_group_type(self, within_group) -> None: ...
+
+class GenericFunction(Any):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    _register: bool
+    clause_expr: Any
+    coerce_arguments: bool
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, *args, **kwargs) -> None: ...
+
+class OrderedSetAgg(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    array_for_multi_clause: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def within_group_type(self, within_group) -> Any: ...
+
+class ReturnTypeFromArgs(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, *args, **kwargs) -> None: ...
+
+class _FunctionGenerator:
+    _FunctionGenerator__names: list
+    __doc__: str
+    opts: Dict[str, Any]
+    def __call__(self, *c, **kwargs) -> Any: ...
+    def __getattr__(self, name) -> Any: ...
+    def __init__(self, **opts) -> None: ...
+
+class _GenericMeta(Any):
+    _register: Any
+    identifier: Any
+    name: Any
+    type: Any
+    def __init__(cls: _GenericMeta, clsname, bases, clsdict) -> None: ...
+
+class array_agg(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, *args, **kwargs) -> None: ...
+
+class char_length(GenericFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, arg, **kwargs) -> None: ...
+
+class coalesce(ReturnTypeFromArgs):
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class concat(GenericFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class count(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+    def __init__(self, expression = ..., **kwargs) -> None: ...
+
+class cube(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class cume_dist(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class current_date(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class current_time(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class current_timestamp(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class current_user(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class dense_rank(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class grouping_sets(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class localtime(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class localtimestamp(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class max(ReturnTypeFromArgs):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class min(ReturnTypeFromArgs):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class mode(OrderedSetAgg):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class next_value(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _from_objects: List[nothing]
+    name: str
+    sequence: Any
+    type: Any
+    def __init__(self, seq, **kw) -> None: ...
+
+class now(GenericFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class percent_rank(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class percentile_cont(OrderedSetAgg):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    array_for_multi_clause: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class percentile_disc(OrderedSetAgg):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    array_for_multi_clause: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class random(GenericFunction):
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class rank(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class rollup(GenericFunction):
+    __doc__: str
+    _bind: Any
+    _has_args: bool
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class session_user(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class sum(ReturnTypeFromArgs):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class sysdate(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+class user(AnsiFunction):
+    _bind: Any
+    _has_args: Any
+    clause_expr: Any
+    packagenames: List[nothing]
+    type: Any
+
+def register_function(identifier, fn, package = ...) -> None: ...

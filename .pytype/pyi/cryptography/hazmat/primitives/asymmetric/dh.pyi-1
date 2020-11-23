@@ -1,0 +1,81 @@
+# (generated with --quick)
+
+import __future__
+from typing import Any
+
+DHParametersWithSerialization = DHParameters
+DHPublicKeyWithSerialization = DHPublicKey
+
+_get_backend: Any
+abc: module
+absolute_import: __future__._Feature
+division: __future__._Feature
+print_function: __future__._Feature
+six: module
+utils: module
+
+class DHParameterNumbers:
+    _g: Any
+    _p: Any
+    _q: Any
+    g: Any
+    p: Any
+    q: Any
+    def __eq__(self, other) -> Any: ...
+    def __init__(self, p, g, q = ...) -> None: ...
+    def __ne__(self, other) -> bool: ...
+    def parameters(self, backend = ...) -> Any: ...
+
+class DHParameters(metaclass=abc.ABCMeta):
+    @abstractmethod
+    def generate_private_key(self) -> Any: ...
+    @abstractmethod
+    def parameter_bytes(self, encoding, format) -> Any: ...
+    @abstractmethod
+    def parameter_numbers(self) -> Any: ...
+
+class DHPrivateKey(metaclass=abc.ABCMeta):
+    key_size: Any
+    @abstractmethod
+    def exchange(self, peer_public_key) -> Any: ...
+    @abstractmethod
+    def parameters(self) -> Any: ...
+    @abstractmethod
+    def public_key(self) -> Any: ...
+
+class DHPrivateKeyWithSerialization(DHPrivateKey):
+    @abstractmethod
+    def private_bytes(self, encoding, format, encryption_algorithm) -> Any: ...
+    @abstractmethod
+    def private_numbers(self) -> Any: ...
+
+class DHPrivateNumbers:
+    _public_numbers: Any
+    _x: Any
+    public_numbers: Any
+    x: Any
+    def __eq__(self, other) -> Any: ...
+    def __init__(self, x, public_numbers) -> None: ...
+    def __ne__(self, other) -> bool: ...
+    def private_key(self, backend = ...) -> Any: ...
+
+class DHPublicKey(metaclass=abc.ABCMeta):
+    key_size: Any
+    @abstractmethod
+    def parameters(self) -> Any: ...
+    @abstractmethod
+    def public_bytes(self, encoding, format) -> Any: ...
+    @abstractmethod
+    def public_numbers(self) -> Any: ...
+
+class DHPublicNumbers:
+    _parameter_numbers: Any
+    _y: Any
+    parameter_numbers: Any
+    y: Any
+    def __eq__(self, other) -> Any: ...
+    def __init__(self, y, parameter_numbers) -> None: ...
+    def __ne__(self, other) -> bool: ...
+    def public_key(self, backend = ...) -> Any: ...
+
+def generate_parameters(generator, key_size, backend = ...) -> Any: ...

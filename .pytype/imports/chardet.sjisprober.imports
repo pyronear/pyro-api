@@ -1,0 +1,12 @@
+chardet/enums /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/enums.pyi
+chardet/charsetprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/charsetprober.pyi
+chardet/mbcharsetprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/mbcharsetprober.pyi
+chardet/codingstatemachine /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/codingstatemachine.pyi
+chardet/euctwfreq /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/euctwfreq.pyi
+chardet/euckrfreq /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/euckrfreq.pyi
+chardet/gb2312freq /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/gb2312freq.pyi
+chardet/big5freq /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/big5freq.pyi
+chardet/jisfreq /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/jisfreq.pyi
+chardet/chardistribution /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/chardistribution.pyi
+chardet/jpcntx /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/jpcntx.pyi
+chardet/mbcssm /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/mbcssm.pyi

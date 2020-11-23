@@ -1,0 +1,126 @@
+# (generated with --quick)
+
+import __future__
+import cryptography.hazmat.primitives.hashes
+from typing import Any, Dict, Optional, Union
+
+ObjectIdentifier: Any
+_OID_NAMES: Dict[Any, str]
+_SIG_OIDS_TO_HASH: Dict[Any, Optional[Union[cryptography.hazmat.primitives.hashes.MD5, cryptography.hazmat.primitives.hashes.SHA1, cryptography.hazmat.primitives.hashes.SHA224, cryptography.hazmat.primitives.hashes.SHA256, cryptography.hazmat.primitives.hashes.SHA384, cryptography.hazmat.primitives.hashes.SHA512]]]
+absolute_import: __future__._Feature
+division: __future__._Feature
+hashes: module
+print_function: __future__._Feature
+
+class AttributeOID:
+    CHALLENGE_PASSWORD: Any
+    UNSTRUCTURED_NAME: Any
+
+class AuthorityInformationAccessOID:
+    CA_ISSUERS: Any
+    OCSP: Any
+
+class CRLEntryExtensionOID:
+    CERTIFICATE_ISSUER: Any
+    CRL_REASON: Any
+    INVALIDITY_DATE: Any
+
+class CertificatePoliciesOID:
+    ANY_POLICY: Any
+    CPS_QUALIFIER: Any
+    CPS_USER_NOTICE: Any
+
+class ExtendedKeyUsageOID:
+    ANY_EXTENDED_KEY_USAGE: Any
+    CLIENT_AUTH: Any
+    CODE_SIGNING: Any
+    EMAIL_PROTECTION: Any
+    OCSP_SIGNING: Any
+    SERVER_AUTH: Any
+    TIME_STAMPING: Any
+
+class ExtensionOID:
+    AUTHORITY_INFORMATION_ACCESS: Any
+    AUTHORITY_KEY_IDENTIFIER: Any
+    BASIC_CONSTRAINTS: Any
+    CERTIFICATE_POLICIES: Any
+    CRL_DISTRIBUTION_POINTS: Any
+    CRL_NUMBER: Any
+    DELTA_CRL_INDICATOR: Any
+    EXTENDED_KEY_USAGE: Any
+    FRESHEST_CRL: Any
+    INHIBIT_ANY_POLICY: Any
+    ISSUER_ALTERNATIVE_NAME: Any
+    ISSUING_DISTRIBUTION_POINT: Any
+    KEY_USAGE: Any
+    NAME_CONSTRAINTS: Any
+    OCSP_NO_CHECK: Any
+    POLICY_CONSTRAINTS: Any
+    POLICY_MAPPINGS: Any
+    PRECERT_POISON: Any
+    PRECERT_SIGNED_CERTIFICATE_TIMESTAMPS: Any
+    SIGNED_CERTIFICATE_TIMESTAMPS: Any
+    SUBJECT_ALTERNATIVE_NAME: Any
+    SUBJECT_DIRECTORY_ATTRIBUTES: Any
+    SUBJECT_INFORMATION_ACCESS: Any
+    SUBJECT_KEY_IDENTIFIER: Any
+    TLS_FEATURE: Any
+
+class NameOID:
+    BUSINESS_CATEGORY: Any
+    COMMON_NAME: Any
+    COUNTRY_NAME: Any
+    DN_QUALIFIER: Any
+    DOMAIN_COMPONENT: Any
+    EMAIL_ADDRESS: Any
+    GENERATION_QUALIFIER: Any
+    GIVEN_NAME: Any
+    INN: Any
+    JURISDICTION_COUNTRY_NAME: Any
+    JURISDICTION_LOCALITY_NAME: Any
+    JURISDICTION_STATE_OR_PROVINCE_NAME: Any
+    LOCALITY_NAME: Any
+    OGRN: Any
+    ORGANIZATIONAL_UNIT_NAME: Any
+    ORGANIZATION_NAME: Any
+    POSTAL_ADDRESS: Any
+    POSTAL_CODE: Any
+    PSEUDONYM: Any
+    SERIAL_NUMBER: Any
+    SNILS: Any
+    STATE_OR_PROVINCE_NAME: Any
+    STREET_ADDRESS: Any
+    SURNAME: Any
+    TITLE: Any
+    UNSTRUCTURED_NAME: Any
+    USER_ID: Any
+    X500_UNIQUE_IDENTIFIER: Any
+
+class OCSPExtensionOID:
+    NONCE: Any
+
+class SignatureAlgorithmOID:
+    DSA_WITH_SHA1: Any
+    DSA_WITH_SHA224: Any
+    DSA_WITH_SHA256: Any
+    ECDSA_WITH_SHA1: Any
+    ECDSA_WITH_SHA224: Any
+    ECDSA_WITH_SHA256: Any
+    ECDSA_WITH_SHA384: Any
+    ECDSA_WITH_SHA512: Any
+    ED25519: Any
+    ED448: Any
+    GOSTR3410_2012_WITH_3411_2012_256: Any
+    GOSTR3410_2012_WITH_3411_2012_512: Any
+    GOSTR3411_94_WITH_3410_2001: Any
+    RSASSA_PSS: Any
+    RSA_WITH_MD5: Any
+    RSA_WITH_SHA1: Any
+    RSA_WITH_SHA224: Any
+    RSA_WITH_SHA256: Any
+    RSA_WITH_SHA384: Any
+    RSA_WITH_SHA512: Any
+    _RSA_WITH_SHA1: Any
+
+class SubjectInformationAccessOID:
+    CA_REPOSITORY: Any

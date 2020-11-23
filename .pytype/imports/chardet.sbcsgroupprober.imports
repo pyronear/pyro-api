@@ -1,0 +1,11 @@
+chardet/enums /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/enums.pyi
+chardet/charsetprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/charsetprober.pyi
+chardet/charsetgroupprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/charsetgroupprober.pyi
+chardet/sbcharsetprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/sbcharsetprober.pyi
+chardet/langcyrillicmodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langcyrillicmodel.pyi
+chardet/langgreekmodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langgreekmodel.pyi
+chardet/langbulgarianmodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langbulgarianmodel.pyi
+chardet/langthaimodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langthaimodel.pyi
+chardet/langhebrewmodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langhebrewmodel.pyi
+chardet/hebrewprober /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/hebrewprober.pyi
+chardet/langturkishmodel /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/pyi/chardet/langturkishmodel.pyi

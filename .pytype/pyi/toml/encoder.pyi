@@ -1,0 +1,63 @@
+# (generated with --quick)
+
+import decimal
+import toml.decoder
+from typing import Any, Callable, Dict, Tuple, Type, Union
+
+Decimal: Type[decimal.Decimal]
+InlineTableDict: Type[toml.decoder.InlineTableDict]
+datetime: module
+re: module
+sys: module
+unicode: Type[str]
+
+class TomlArraySeparatorEncoder(TomlEncoder):
+    _dict: Any
+    dump_funcs: Dict[Type[Union[float, int, list, str, datetime.date, datetime.time, decimal.Decimal]], Callable[[Any], Any]]
+    preserve: Any
+    separator: Any
+    def __init__(self, _dict = ..., preserve = ..., separator = ...) -> None: ...
+    def dump_list(self, v) -> str: ...
+
+class TomlEncoder:
+    _dict: Any
+    dump_funcs: Dict[Type[Union[float, int, list, str, datetime.date, datetime.time, decimal.Decimal]], Callable[[Any], Any]]
+    preserve: Any
+    def __init__(self, _dict = ..., preserve = ...) -> None: ...
+    def dump_inline_table(self, section) -> str: ...
+    def dump_list(self, v) -> str: ...
+    def dump_sections(self, o, sup) -> Tuple[str, Any]: ...
+    def dump_value(self, v) -> Any: ...
+    def get_empty_table(self) -> Any: ...
+
+class TomlNumpyEncoder(TomlEncoder):
+    _dict: Any
+    dump_funcs: Dict[Any, Callable[[Any], Any]]
+    preserve: Any
+    def __init__(self, _dict = ..., preserve = ...) -> None: ...
+    def _dump_int(self, v) -> str: ...
+
+class TomlPathlibEncoder(TomlEncoder):
+    _dict: Any
+    dump_funcs: Dict[Type[Union[float, int, list, str, datetime.date, datetime.time, decimal.Decimal]], Callable[[Any], Any]]
+    preserve: Any
+    def _dump_pathlib_path(self, v) -> Any: ...
+    def dump_value(self, v) -> Any: ...
+
+class TomlPreserveCommentEncoder(TomlEncoder):
+    _dict: Any
+    dump_funcs: Dict[type, Callable[[Any], Any]]
+    preserve: Any
+    def __init__(self, _dict = ..., preserve = ...) -> None: ...
+
+class TomlPreserveInlineDictEncoder(TomlEncoder):
+    _dict: Any
+    dump_funcs: Dict[Type[Union[float, int, list, str, datetime.date, datetime.time, decimal.Decimal]], Callable[[Any], Any]]
+    preserve: bool
+    def __init__(self, _dict = ...) -> None: ...
+
+def _dump_float(v) -> str: ...
+def _dump_str(v) -> str: ...
+def _dump_time(v) -> Any: ...
+def dump(o, f, encoder = ...) -> Any: ...
+def dumps(o, encoder = ...) -> str: ...

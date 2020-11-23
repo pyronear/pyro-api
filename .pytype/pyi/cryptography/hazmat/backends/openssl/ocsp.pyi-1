@@ -1,0 +1,36 @@
+# (generated with --quick)
+
+import __future__
+import cryptography.exceptions
+from typing import Any, Callable, Type
+
+OCSPCertStatus: Any
+OCSPRequest: Any
+OCSPResponse: Any
+OCSPResponseStatus: Any
+UnsupportedAlgorithm: Type[cryptography.exceptions.UnsupportedAlgorithm]
+_CERT_STATUS_TO_ENUM: Any
+_CRL_ENTRY_REASON_CODE_TO_ENUM: Any
+_Certificate: Any
+_OCSPRequest: Any
+_OCSPResponse: Any
+_OIDS_TO_HASH: Any
+_RESPONSE_STATUS_TO_ENUM: Any
+_asn1_integer_to_int: Any
+_asn1_string_to_bytes: Any
+_decode_x509_name: Any
+_obj2txt: Any
+_parse_asn1_generalized_time: Any
+absolute_import: __future__._Feature
+division: __future__._Feature
+functools: module
+print_function: __future__._Feature
+serialization: module
+utils: module
+x509: module
+
+def _hash_algorithm(backend, cert_id) -> Any: ...
+def _issuer_key_hash(backend, cert_id) -> Any: ...
+def _issuer_name_hash(backend, cert_id) -> Any: ...
+def _requires_successful_response(func) -> Callable: ...
+def _serial_number(backend, cert_id) -> Any: ...

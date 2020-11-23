@@ -1,0 +1,27 @@
+# (generated with --quick)
+
+import __future__
+import cryptography.exceptions
+import cryptography.hazmat.primitives.asymmetric
+from typing import Any, Type
+
+AsymmetricSignatureContext: Type[cryptography.hazmat.primitives.asymmetric.AsymmetricSignatureContext]
+AsymmetricVerificationContext: Type[cryptography.hazmat.primitives.asymmetric.AsymmetricVerificationContext]
+InvalidSignature: Type[cryptography.exceptions.InvalidSignature]
+_DSAParameters: Any
+_DSAPrivateKey: Any
+_DSAPublicKey: Any
+_DSASignatureContext: Any
+_DSAVerificationContext: Any
+_calculate_digest_and_algorithm: Any
+_check_not_prehashed: Any
+_warn_sign_verify_deprecated: Any
+absolute_import: __future__._Feature
+division: __future__._Feature
+dsa: module
+hashes: module
+print_function: __future__._Feature
+utils: module
+
+def _dsa_sig_sign(backend, private_key, data) -> Any: ...
+def _dsa_sig_verify(backend, public_key, signature, data) -> None: ...

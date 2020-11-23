@@ -1,0 +1,12 @@
+fastapi/__init__ /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+fastapi/openapi/utils /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/config /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/login /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/users /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/sites /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/events /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/devices /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/media /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/installations /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/api/routes/alerts /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
+app/db /Users/jean/Documents/Perso/PyroNear/pyronear-api/.pytype/imports/default.pyi
