@@ -1,6 +1,6 @@
 import requests
 import logging
-from exceptions import HTTPRequestException
+from .exceptions import HTTPRequestException
 from urllib.parse import urljoin
 
 
