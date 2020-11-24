@@ -136,3 +136,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Client
+client/docs/build
+client/build

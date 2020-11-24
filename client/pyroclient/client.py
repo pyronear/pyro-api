@@ -1,12 +1,22 @@
 import requests
 import logging
-from exceptions import HTTPRequestException
+from .exceptions import HTTPRequestException
 from urllib.parse import urljoin
+
+
+__all__ = ['Client']
 
 logging.basicConfig()
 
 
 class Client:
+    """Client class to interact with the PyroNear API
+
+    Args:
+        api_url (str): url of the pyronear API
+        credentials_login (str): Login (e.g: username)
+        credentials_password (str): Password (e.g: 123456 (don't do this))
+    """
 
     routes = {"token": "/login/access-token",
               "heartbeat": "/device/heartbeat",
@@ -17,13 +27,6 @@ class Client:
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
-        """Client class to interact with the PyroNear API
-
-        Args:
-            api_url (str): url of the pyronear API
-            credentials_login (str): Login (e.g: username)
-            credentials_password (str): Password (e.g: 123456 (don't do this))
-        """
         self.api = api_url
         self._add_api_url_to_routes()
         self.token = self._retrieve_token(credentials_login, credentials_password)
@@ -46,16 +49,21 @@ class Client:
             raise HTTPRequestException(response.status_code, response.text)
 
     def hearbeat(self):
+        """Updates the last ping of the device"""
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
     def update_my_location(self):
+        """Updates the location of the device"""
         return requests.put(self.routes["update-my-location"], headers=self.headers)
 
     def send_alert(self):
+        """Raise an alert to the API"""
         return requests.post(self.routes["send-alert"], headers=self.headers)
 
     def create_media(self):
+        """Create a media entry"""
         return requests.post(self.routes["create-media"], headers=self.headers)
 
     def upload_media(self):
+        """Upload the media content"""
         return requests.post(self.routes["upload-media"], headers=self.headers)
