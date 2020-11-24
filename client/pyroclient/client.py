@@ -1,6 +1,6 @@
 import requests
 import logging
-from .exceptions import HTTPRequestException
+from exceptions import HTTPRequestException
 from urllib.parse import urljoin
 
 
@@ -29,7 +29,9 @@ class Client:
               "get-alerts": "/alerts",
               "get-ongoing-alerts": "/alerts/ongoing",
               "get-unacknowledged-alerts": "/alerts/unacknowledged",
-              "get-site-devices": "/installations/site-devices/{site_id}"
+              "get-site-devices": "/installations/site-devices/{site_id}",
+              "get-media-image": "/media/{media_id}/image",
+              "get-media-streaming": "/media/{media_id}/streaming"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -99,3 +101,12 @@ class Client:
     def get_site_devices(self, site_id, payload):
         """ Get all devices installed in a specific site"""
         return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
+
+    def get_media_image(self, media_id):
+        """ Get the image as a static file"""
+        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)
+
+    def get_media_image_as_streaming(self, media_id):
+        """ Get the image as a streaming file"""
+        return requests.get(self.routes["get-media-streaming"].format(media_id=media_id), headers=self.headers)
+

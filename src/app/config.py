@@ -29,3 +29,4 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
         "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
 
 BUCKET_NAME: str = "mypyroneartest"
+DUMMY_BUCKET_FILE = "app/static/dummy_media.jpg"
