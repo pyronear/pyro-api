@@ -1,6 +1,7 @@
 from app.services.bucket.baseBucketService import BaseBucketService
 from app import config as cfg
 
+
 class DummyBucketService(BaseBucketService):
     """Dummy class used for testing purpose. """
 

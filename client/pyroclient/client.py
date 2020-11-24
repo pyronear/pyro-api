@@ -39,7 +39,7 @@ class Client:
         self._add_api_url_to_routes()
         self.token = self._retrieve_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
-        
+
     def _add_api_url_to_routes(self):
         for k, v in self.routes.items():
             self.routes[k] = urljoin(self.api, v)
@@ -109,4 +109,3 @@ class Client:
     def get_media_image_as_streaming(self, media_id):
         """ Get the image as a streaming file"""
         return requests.get(self.routes["get-media-streaming"].format(media_id=media_id), headers=self.headers)
-
