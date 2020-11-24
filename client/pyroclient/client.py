@@ -28,7 +28,8 @@ class Client:
               "get-sites": "/sites",
               "get-alerts": "/alerts",
               "get-ongoing-alerts": "/alerts/ongoing",
-              "get-unacknowledged-alerts": "/alerts/unacknowledged"
+              "get-unacknowledged-alerts": "/alerts/unacknowledged",
+              "get-site-devices": "/installations/site-devices/{site_id}"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -36,7 +37,7 @@ class Client:
         self._add_api_url_to_routes()
         self.token = self._retrieve_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
-
+        
     def _add_api_url_to_routes(self):
         for k, v in self.routes.items():
             self.routes[k] = urljoin(self.api, v)
@@ -53,6 +54,7 @@ class Client:
             # Anyone has a better suggestion?
             raise HTTPRequestException(response.status_code, response.text)
 
+    # Device functions
     def hearbeat(self):
         """Updates the last ping of the device"""
         return requests.put(self.routes["heartbeat"], headers=self.headers)
@@ -73,6 +75,7 @@ class Client:
         """Upload the media content"""
         return requests.post(self.routes["upload-media"], headers=self.headers)
 
+    # User functions
     def get_my_devices(self):
         """Get the devices who are owned by the logged user"""
         return requests.get(self.routes["get-my-devices"], headers=self.headers)
@@ -92,3 +95,7 @@ class Client:
     def get_unacknowledged_alerts(self):
         """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
         return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
+
+    def get_site_devices(self, site_id, payload):
+        """ Get all devices installed in a specific site"""
+        return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
