@@ -25,6 +25,7 @@ class Client:
               "create-media": "/media",
               "upload-media": "/media/upload",
               "get-my-devices": "/devices/my-devices",
+              "get-sites": "/sites"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -72,4 +73,8 @@ class Client:
     def get_my_devices(self):
         """Get the devices who are owned by the logged user"""
         return requests.get(self.routes["get-my-devices"], headers=self.headers)
+        
+    def get_sites(self):
+        """Get all the existing sites in the DB"""
+        return requests.get(self.routes["get-sites"], headers=self.headers)
         
