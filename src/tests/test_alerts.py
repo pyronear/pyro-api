@@ -68,6 +68,26 @@ def test_fetch_alerts(test_app, monkeypatch):
     assert response.json() == mock_alert_table
 
 
+def test_fetch_ongoing_alerts(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    response = test_app.get("/alerts/ongoing")
+    assert response.status_code == 200
+    assert response.json() == [x for x in mock_alert_table if x["type"] == "start"]
+
+
+def test_fetch_unacknowledged_alerts(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    response = test_app.get("/alerts/unacknowledged")
+    assert response.status_code == 200
+    assert response.json() == [x for x in mock_alert_table if x["is_acknowledged"] is False]
+
+
 def test_create_alert(test_app, monkeypatch):
 
     # Sterilize DB interactions

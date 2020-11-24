@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
-from app.db import alerts
+from app.db import alerts, AlertType
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut
 from app.api.deps import get_current_device
+
 
 router = APIRouter()
 
@@ -59,3 +60,13 @@ async def link_media(payload: AlertMediaId,
         )
     existing_alert["media_id"] = payload.media_id
     return await crud.update_entry(alerts, AlertIn(**existing_alert), alert_id)
+
+
+@router.get("/ongoing", response_model=List[AlertOut])
+async def fetch_ongoing_alerts():
+    return await crud.fetch_all(alerts, {"type": AlertType.start})
+
+
+@router.get("/unacknowledged", response_model=List[AlertOut])
+async def fetch_unacknowledged_alerts():
+    return await crud.fetch_all(alerts, {"is_acknowledged": False})

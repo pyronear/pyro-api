@@ -25,7 +25,10 @@ class Client:
               "create-media": "/media",
               "upload-media": "/media/upload",
               "get-my-devices": "/devices/my-devices",
-              "get-sites": "/sites"
+              "get-sites": "/sites",
+              "get-alerts": "/alerts",
+              "get-ongoing-alerts": "/alerts/ongoing",
+              "get-unacknowledged-alerts": "/alerts/unacknowledged"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -73,8 +76,19 @@ class Client:
     def get_my_devices(self):
         """Get the devices who are owned by the logged user"""
         return requests.get(self.routes["get-my-devices"], headers=self.headers)
-        
+
     def get_sites(self):
         """Get all the existing sites in the DB"""
         return requests.get(self.routes["get-sites"], headers=self.headers)
-        
+
+    def get_all_alerts(self):
+        """Get all the existing alerts in the DB"""
+        return requests.get(self.routes["get-alerts"], headers=self.headers)
+
+    def get_ongoing_alerts(self):
+        """Get all the existing alerts in the DB that have the status 'start'"""
+        return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers)
+
+    def get_unacknowledged_alerts(self):
+        """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
+        return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
