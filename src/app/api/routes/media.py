@@ -90,7 +90,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
-    media = await check_for_media_existence(media_id, current_device.id)
+    entry = await check_for_media_existence(media_id, current_device.id)
     bucket_key = hash(datetime.utcnow())
 
     upload_success = await bucket_service.upload_file(bucket_name=cfg.BUCKET_NAME,
@@ -101,8 +101,8 @@ async def upload_media(media_id: int = Path(..., gt=0),
             status_code=500,
             detail="The upload did not succeed"
         )
-    media["bucket_key"] = bucket_key
-    return await crud.update_entry(media, MediaCreation(**media), media_id)
+    entry["bucket_key"] = bucket_key
+    return await crud.update_entry(media, MediaCreation(**entry), media_id)
 
 
 @router.get("/{media_id}/image", response_model=MediaOut, status_code=200)
