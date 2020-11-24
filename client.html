@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyroclient.client &mdash; pyroclient 0.1.0a0-git documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato" type="text/css" />
+  <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Installation" href="installing.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html">
+          
+
+          
+            
+            <img src="_static/pyronear-logo-dark.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0a0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installing.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installing.html#via-python-package">Via Python Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing.html#via-conda">Via Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installing.html#via-git">Via Git</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Package Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pyroclient.client</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#api-client">API Client</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pyroclient</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>pyroclient.client</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/client.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pyroclient-client">
+<h1>pyroclient.client<a class="headerlink" href="#pyroclient-client" title="Permalink to this headline">¶</a></h1>
+<p>The client subpackage contains the core definition of the API client.</p>
+<div class="section" id="api-client">
+<h2>API Client<a class="headerlink" href="#api-client" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="pyroclient.client.Client">
+<em class="property">class </em><code class="sig-prename descclassname">pyroclient.client.</code><code class="sig-name descname">Client</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">api_url</span></em>, <em class="sig-param"><span class="n">credentials_login</span></em>, <em class="sig-param"><span class="n">credentials_password</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Client class to interact with the PyroNear API</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>api_url</strong> (<em>str</em>) – url of the pyronear API</p></li>
+<li><p><strong>credentials_login</strong> (<em>str</em>) – Login (e.g: username)</p></li>
+<li><p><strong>credentials_password</strong> (<em>str</em>) – Password (e.g: 123456 (don’t do this))</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pyroclient.client.Client.create_media">
+<code class="sig-name descname">create_media</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.create_media" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a media entry</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyroclient.client.Client.hearbeat">
+<code class="sig-name descname">hearbeat</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.hearbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.hearbeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the last ping of the device</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyroclient.client.Client.send_alert">
+<code class="sig-name descname">send_alert</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raise an alert to the API</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyroclient.client.Client.update_my_location">
+<code class="sig-name descname">update_my_location</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_location"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_location" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the location of the device</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyroclient.client.Client.upload_media">
+<code class="sig-name descname">upload_media</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.upload_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.upload_media" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upload the media content</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="installing.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Pyronear Contributors
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
