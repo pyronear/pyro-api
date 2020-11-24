@@ -55,9 +55,8 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    for scope in security_scopes.scopes:
-        if scope not in token_data.scopes:
-            raise unauthorized_exception("Permission denied", authenticate_value)
+    if set(token_data.scopes).isdisjoint(security_scopes.scopes):
+        raise unauthorized_exception("Permission denied", authenticate_value)
 
     return AccessRead(**entry)
 
