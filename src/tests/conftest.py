@@ -49,11 +49,13 @@ async def mock_post(payload, table):
 
 
 async def mock_put(entry_id, payload, table):
+    updated_id = None
     for idx, entry in enumerate(table):
         if entry['id'] == entry_id:
+            updated_id = entry_id
             for k, v in payload.dict().items():
                 table[idx][k] = v
-    return entry_id
+    return updated_id
 
 
 async def mock_delete(entry_id, table):
