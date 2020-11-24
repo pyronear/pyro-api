@@ -23,7 +23,8 @@ class Client:
               "update-my-location": "/device/update-my-location",
               "send-alert": "/alerts",
               "create-media": "/media",
-              "upload-media": "/media/upload"
+              "upload-media": "/media/upload",
+              "get-my-devices": "/devices/my-devices",
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -67,3 +68,8 @@ class Client:
     def upload_media(self):
         """Upload the media content"""
         return requests.post(self.routes["upload-media"], headers=self.headers)
+
+    def get_my_devices(self):
+        """Get the devices who are owned by the logged user"""
+        return requests.get(self.routes["get-my-devices"], headers=self.headers)
+        
