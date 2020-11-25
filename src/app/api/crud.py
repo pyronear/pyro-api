@@ -70,7 +70,3 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[st
     await delete(entry_id, table)
 
     return entry
-
-
-async def get_custom_entry(query):
-    return await database.execute(query=query)
