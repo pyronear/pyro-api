@@ -30,8 +30,8 @@ class Client:
               "get-ongoing-alerts": "/alerts/ongoing",
               "get-unacknowledged-alerts": "/alerts/unacknowledged",
               "get-site-devices": "/installations/site-devices/{site_id}",
-              "get-media-image": "/media/{media_id}/image",
-              "get-media-streaming": "/media/{media_id}/streaming"
+              "get-media-url": "/media/{media_id}/url",
+              "get-media-image": "/media/{media_id}/image"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -102,10 +102,15 @@ class Client:
         """ Get all devices installed in a specific site"""
         return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
 
-    def get_media_image(self, media_id):
-        """ Get the image as a static file"""
-        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)
+    def get_media_url(self, media_id):
+        """ Get the image as a url"""
+        return requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
 
-    def get_media_image_as_streaming(self, media_id):
+    def get_media_url_and_read(self, media_id):
+        """ Get the image as a url and read it"""
+        image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
+        return requests.get(image_url)
+
+    def get_media_image(self, media_id):
         """ Get the image as a streaming file"""
-        return requests.get(self.routes["get-media-streaming"].format(media_id=media_id), headers=self.headers)
+        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)

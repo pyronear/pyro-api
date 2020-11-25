@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from typing import List
 from datetime import datetime
+import requests
+import io
 
 from app.api import crud
 from app.db import media
-from app.api.schemas import MediaOut, MediaIn, MediaCreation, DeviceOut, BaseMedia
+from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
 from app.services import bucket_service
 import app.config as cfg
@@ -105,25 +107,26 @@ async def upload_media(media_id: int = Path(..., gt=0),
     return await crud.update_entry(media, MediaCreation(**entry), media_id)
 
 
-@router.get("/{media_id}/image", response_model=MediaOut, status_code=200)
-async def get_media_image(media_id: int = Path(..., gt=0),
-                          _=Security(get_current_user, scopes=["me"])):
+@router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
+async def get_media_url(media_id: int = Path(..., gt=0),
+                        _=Security(get_current_user, scopes=["admin"])):
     """
-    Retrieve the media image by reading a file
+    Retrieve the media image url
     """
     media = await check_for_media_existence(media_id)
     # For demonstration purpose while we are not connected to a bucket service.
     dummy_static_file = await bucket_service.get_uploaded_file(cfg.BUCKET_NAME, bucket_key=media["bucket_key"])
-    return FileResponse(dummy_static_file, media_type="image/jpg")
+    return {"url": dummy_static_file}
 
 
-@router.get("/{media_id}/streaming", response_model=MediaOut, status_code=200)
-async def get_media_streaming(media_id: int = Path(..., gt=0),
-                              _=Security(get_current_user, scopes=["me"])):
+@router.get("/{media_id}/image", status_code=200)
+async def get_media_image(media_id: int = Path(..., gt=0),
+                          _=Security(get_current_user, scopes=["admin"])):
     """
     Retrieve the media image as encoded in bytes
     """
     media = await check_for_media_existence(media_id)
     # For demonstration purpose while we are not connected to a bucket service.
     dummy_static_file = await bucket_service.get_uploaded_file(cfg.BUCKET_NAME, bucket_key=media["bucket_key"])
-    return StreamingResponse(open(dummy_static_file, 'rb'), media_type="image/jpg")
+    image = requests.get(dummy_static_file)
+    return StreamingResponse(io.BytesIO(image.content), media_type="image/jpeg")
