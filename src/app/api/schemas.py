@@ -20,7 +20,7 @@ class _Id(BaseModel):
 
 
 class Timestamp(BaseModel):
-    timestamp: datetime
+    timestamp: datetime = Field(..., example=datetime.utcnow())
 
 
 # Accesses

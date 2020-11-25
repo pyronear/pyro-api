@@ -5,7 +5,6 @@ from datetime import datetime
 
 from app.api import crud
 from app.api.routes import installations
-from app.db import database
 
 
 INSTALLATION_TABLE = [
@@ -14,11 +13,6 @@ INSTALLATION_TABLE = [
     {"id": 2, "device_id": 2, "site_id": 2, "elevation": 58., "lat": 5., "lon": 8., "yaw": 10., "pitch": 0.,
      "start_ts": None, "end_ts": None, "created_at": "2020-11-13T08:18:45.447773"},
 ]
-
-
-async def mock_get_site_devices(query):
-
-    return [INSTALLATION_TABLE[0]["device_id"]]
 
 
 def _patch_session(monkeypatch, mock_table):
@@ -165,15 +159,3 @@ def test_delete_installation_invalid(test_app, monkeypatch, installation_id, sta
     assert response.status_code == status_code, print(installation_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(installation_id)
-
-
-@pytest.mark.parametrize(
-    "payload",
-    {"timestamp": 2012-04-23T18:25:43.511}
-)
-def test_site_devices(test_app, monkeypatch, payload):
-    monkeypatch.setattr(database, "execute", mock_get_site_devices)
-
-    response = test_app.get("/installations/site-devices/1", data=json.dumps(payload))
-    assert response.status_code == 200
-    assert response.json() == [INSTALLATION_TABLE[0]["device_id"]]

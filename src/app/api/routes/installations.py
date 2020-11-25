@@ -1,9 +1,9 @@
 from typing import List
 from fastapi import APIRouter, Path
-from app.api import crud
-from app.db import installations
-from app.api.schemas import InstallationOut, InstallationIn, Timestamp
 from sqlalchemy import and_
+from app.api import crud
+from app.db import installations, database
+from app.api.schemas import InstallationOut, InstallationIn, Timestamp
 
 
 router = APIRouter()
@@ -34,11 +34,10 @@ async def delete_installation(installation_id: int = Path(..., gt=0)):
     return await crud.delete_entry(installations, installation_id)
 
 
-@router.get("/site-devices/{site_id}", response_model=List[int])
+@router.post("/site-devices/{site_id}", response_model=List[int])
 async def get_all_at_given_ts_and_site(payload: Timestamp, site_id: int = Path(..., gt=0)):
 
     query = installations.select(installations.c.device_id).where(and_(installations.c.site_id == site_id,
-                                                                       installations.c.start_ts <= payload.timestamp,
-                                                                       installations.c.end_ts >= payload.timestamp))
-
+                                                                       installations.c.start_ts <= timestamp,
+                                                                       installations.c.end_ts >= timestamp))
     return await database.fetch_all(query=query)
