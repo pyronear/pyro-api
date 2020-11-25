@@ -64,7 +64,8 @@ async def link_media(payload: AlertMediaId,
 
 @router.get("/ongoing", response_model=List[AlertOut])
 async def fetch_ongoing_alerts():
-    return await crud.fetch_all(alerts, {"type": AlertType.start})
+    return await crud.fetch_ongoing_alerts(alerts, {"type": AlertType.start},
+                                           excluded_events_filter={"type": AlertType.end})
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut])

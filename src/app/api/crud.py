@@ -73,3 +73,21 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[st
     await delete(entry_id, table)
 
     return entry
+
+
+async def fetch_ongoing_alerts(table: Table, query_filters: Dict[str, Any],
+                               excluded_events_filter: Dict[str, Any]) -> List[Mapping[str, Any]]:
+    query = table.select()
+    if isinstance(query_filters, dict):
+        for query_filter_key, query_filter_value in query_filters.items():
+            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
+
+    # Should be performed using a sqlalchemy accessor. E.g: alert_event_end_ts is None
+    # To do in another review
+    all_closed_events = table.select().with_only_columns([table.c.event_id])
+    if isinstance(excluded_events_filter, dict):
+        for query_filter_key, query_filter_value in excluded_events_filter.items():
+            all_closed_events = all_closed_events.where(getattr(table.c, query_filter_key) == query_filter_value)
+    query = query.where(~getattr(table.c, "event_id").in_(all_closed_events))
+
+    return await database.fetch_all(query=query)
