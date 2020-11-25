@@ -20,7 +20,7 @@ class _Id(BaseModel):
 
 
 class Timestamp(BaseModel):
-    timestamp: str
+    timestamp: datetime
 
 
 # Accesses

@@ -36,7 +36,6 @@ async def delete_installation(installation_id: int = Path(..., gt=0)):
 
 @router.get("/site-devices/{site_id}", response_model=List[int])
 async def get_all_at_given_ts_and_site(payload: Timestamp, site_id: int = Path(..., gt=0)):
-    return [1]
 
     query = installations.select(installations.c.device_id).where(and_(installations.c.site_id == site_id,
                                                                        installations.c.start_ts <= payload.timestamp,
