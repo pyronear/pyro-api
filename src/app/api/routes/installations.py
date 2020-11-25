@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path
 from app.api import crud
 from app.db import installations
 from app.api.schemas import InstallationOut, InstallationIn, Timestamp
-from datetime import datetime
+from sqlalchemy import and_
 
 
 router = APIRouter()
