@@ -87,10 +87,9 @@ jobs:
           VERSION: ${{ steps.release_tag.outputs.VERSION }}
         run: |
           VERSION="${VERSION:1}"
-          export BUILD_VERSION=$VERSION
           BUILD_VERSION=$VERSION python client/setup.py sdist
           mkdir client/conda-dist
-          conda-build client/.conda/ --output-folder client/conda-dist
+          BUILD_VERSION=$VERSION conda-build client/.conda/ --output-folder client/conda-dist
           ls -l client/conda-dist/noarch/*tar.bz2
           anaconda upload client/conda-dist/noarch/*tar.bz2 -u pyronear
 
