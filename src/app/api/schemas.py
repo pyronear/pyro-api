@@ -171,6 +171,10 @@ class MediaOut(MediaIn, _CreatedAt, _Id):
     pass
 
 
+class MediaUrl(BaseModel):
+    url: str
+
+
 # Installations
 class InstallationIn(Location, _Rotation):
     device_id: int = Field(..., gt=0)

@@ -5,6 +5,7 @@ SQLAlchemy>=1.3.12
 python-jose>=3.2.0
 passlib[bcrypt]>=1.7.4
 python-multipart==0.0.5
+aiofiles==0.6.0
 
 # dev
 pytest>=5.3.2

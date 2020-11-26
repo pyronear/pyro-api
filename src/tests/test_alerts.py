@@ -17,6 +17,20 @@ ALERT_TABLE = [
 ]
 
 
+async def mock_fetch_ongoing_alerts(table, query_filters=None, excluded_events_filter=None):
+    excluded_events = []
+    for entry in table:
+        if all(entry[k] == v for k, v in excluded_events_filter.items()):
+            excluded_events.append(entry["event_id"])
+
+    response = []
+    for entry in table:
+        if all(entry[k] == v for k, v in query_filters.items()):
+            if entry["event_id"] not in excluded_events:
+                response.append(entry)
+    return response
+
+
 def _patch_session(monkeypatch, mock_table):
     # DB patching
     monkeypatch.setattr(alerts, "alerts", mock_table)
@@ -24,6 +38,7 @@ def _patch_session(monkeypatch, mock_table):
     monkeypatch.setattr(crud, "get", pytest.mock_get)
     monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
     monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
+    monkeypatch.setattr(crud, "fetch_ongoing_alerts", mock_fetch_ongoing_alerts)
     monkeypatch.setattr(crud, "post", pytest.mock_post)
     monkeypatch.setattr(crud, "put", pytest.mock_put)
     monkeypatch.setattr(crud, "delete", pytest.mock_delete)
@@ -66,6 +81,26 @@ def test_fetch_alerts(test_app, monkeypatch):
     response = test_app.get("/alerts/")
     assert response.status_code == 200
     assert response.json() == mock_alert_table
+
+
+def test_fetch_ongoing_alerts(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    response = test_app.get("/alerts/ongoing")
+    assert response.status_code == 200
+    assert response.json() == [x for x in mock_alert_table if x["id"] == 3]
+
+
+def test_fetch_unacknowledged_alerts(test_app, monkeypatch):
+    # Sterilize DB interactions
+    mock_alert_table = deepcopy(ALERT_TABLE)
+    _patch_session(monkeypatch, mock_alert_table)
+
+    response = test_app.get("/alerts/unacknowledged")
+    assert response.status_code == 200
+    assert response.json() == [x for x in mock_alert_table if x["is_acknowledged"] is False]
 
 
 def test_create_alert(test_app, monkeypatch):

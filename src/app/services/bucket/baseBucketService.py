@@ -10,7 +10,7 @@ class BaseBucketService(ABC):
         pass
 
     @abstractmethod
-    async def get_uploaded_file(self, bucket_name: str, object_name: str, target_location: str):
+    async def get_uploaded_file(self, bucket_name: str, bucket_key: str):
         pass
 
     @abstractmethod

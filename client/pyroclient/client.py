@@ -23,7 +23,15 @@ class Client:
               "update-my-location": "/device/update-my-location",
               "send-alert": "/alerts",
               "create-media": "/media",
-              "upload-media": "/media/upload"
+              "upload-media": "/media/upload",
+              "get-my-devices": "/devices/my-devices",
+              "get-sites": "/sites",
+              "get-alerts": "/alerts",
+              "get-ongoing-alerts": "/alerts/ongoing",
+              "get-unacknowledged-alerts": "/alerts/unacknowledged",
+              "get-site-devices": "/installations/site-devices/{site_id}",
+              "get-media-url": "/media/{media_id}/url",
+              "get-media-image": "/media/{media_id}/image"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):
@@ -48,6 +56,7 @@ class Client:
             # Anyone has a better suggestion?
             raise HTTPRequestException(response.status_code, response.text)
 
+    # Device functions
     def hearbeat(self):
         """Updates the last ping of the device"""
         return requests.put(self.routes["heartbeat"], headers=self.headers)
@@ -67,3 +76,41 @@ class Client:
     def upload_media(self):
         """Upload the media content"""
         return requests.post(self.routes["upload-media"], headers=self.headers)
+
+    # User functions
+    def get_my_devices(self):
+        """Get the devices who are owned by the logged user"""
+        return requests.get(self.routes["get-my-devices"], headers=self.headers)
+
+    def get_sites(self):
+        """Get all the existing sites in the DB"""
+        return requests.get(self.routes["get-sites"], headers=self.headers)
+
+    def get_all_alerts(self):
+        """Get all the existing alerts in the DB"""
+        return requests.get(self.routes["get-alerts"], headers=self.headers)
+
+    def get_ongoing_alerts(self):
+        """Get all the existing alerts in the DB that have the status 'start'"""
+        return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers)
+
+    def get_unacknowledged_alerts(self):
+        """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
+        return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
+
+    def get_site_devices(self, site_id, payload):
+        """ Get all devices installed in a specific site"""
+        return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
+
+    def get_media_url(self, media_id):
+        """ Get the image as a url"""
+        return requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
+
+    def get_media_url_and_read(self, media_id):
+        """ Get the image as a url and read it"""
+        image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
+        return requests.get(image_url)
+
+    def get_media_image(self, media_id):
+        """ Get the image as a streaming file"""
+        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)
