@@ -33,8 +33,10 @@ print("Building wheel {}-{}".format(package_name, version))
 with open("README.md") as f:
     readme = f.read()
 
-with open("requirements.txt") as f:
-    requirements = f.read()
+
+requirements = [
+    'requests>=2.24.0',
+]
 
 
 setup(
