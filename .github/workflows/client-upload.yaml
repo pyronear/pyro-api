@@ -63,3 +63,49 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyroclient
           python -c "import pyroclient; print(pyroclient.__version__)"
+
+  conda-publish:
+    if: "!github.event.release.prerelease"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Miniconda setup
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: 3.7
+      - name: Install dependencies
+        run: |
+          conda install -y conda-build conda-verify anaconda-client
+      - name: Get release tag
+        id: release_tag
+        run: |
+          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Build and publish
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          VERSION: ${{ steps.release_tag.outputs.VERSION }}
+        run: |
+          VERSION="${VERSION:1}"
+          export BUILD_VERSION=$VERSION
+          BUILD_VERSION=$VERSION python client/setup.py sdist
+          mkdir client/conda-dist
+          conda-build client/.conda/ --output-folder client/conda-dist
+          ls -l client/conda-dist/noarch/*tar.bz2
+          anaconda upload client/conda-dist/noarch/*tar.bz2 -u pyronear
+
+  conda-check:
+    if: "!github.event.release.prerelease"
+    runs-on: ubuntu-latest
+    needs: conda-publish
+    steps:
+      - uses: actions/checkout@v2
+      - name: Miniconda setup
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: 3.7
+      - name: Install package
+        run: |
+          conda install -c pyronear pyroclient
+          python -c "import pyroclient; print(pyroclient.__version__)"
