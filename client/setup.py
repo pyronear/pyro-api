@@ -44,7 +44,7 @@ setup(
     description="Client of the Pyronear API to help the fight against wildfires",
     long_description=readme,
     long_description_content_type="text/markdown",
-    url="https://github.com/pyronear/pyro-api",
+    url="https://github.com/pyronear/pyro-api/tree/master/client",
     download_url="https://github.com/pyronear/pyro-api/tags",
     license="GPLv3",
     classifiers=[
