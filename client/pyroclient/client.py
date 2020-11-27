@@ -22,16 +22,16 @@ class Client:
               "heartbeat": "/device/heartbeat",
               "update-my-location": "/device/update-my-location",
               "send-alert": "/alerts",
-              "create-media": "/media",
-              "upload-media": "/media/upload",
+              "create-media": "/medias",
+              "upload-media": "/medias/upload",
               "get-my-devices": "/devices/my-devices",
               "get-sites": "/sites",
               "get-alerts": "/alerts",
               "get-ongoing-alerts": "/alerts/ongoing",
               "get-unacknowledged-alerts": "/alerts/unacknowledged",
               "get-site-devices": "/installations/site-devices/{site_id}",
-              "get-media-url": "/media/{media_id}/url",
-              "get-media-image": "/media/{media_id}/image"
+              "get-media-url": "/medias/{media_id}/url",
+              "get-media-image": "/medias/{media_id}/image"
               }
 
     def __init__(self, api_url, credentials_login, credentials_password):

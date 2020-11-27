@@ -6,7 +6,7 @@ import requests
 import io
 
 from app.api import crud
-from app.db import media
+from app.db import medias
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
 from app.services import bucket_service
@@ -20,7 +20,7 @@ async def check_for_media_existence(media_id, device_id=None):
     if device_id is not None:
         filters.update({"device_id": device_id})
 
-    existing_media = await crud.fetch_one(media, filters)
+    existing_media = await crud.fetch_one(medias, filters)
     if existing_media is None:
         raise HTTPException(
             status_code=400,
@@ -37,7 +37,7 @@ async def create_media(payload: MediaIn):
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    return await crud.create_entry(media, payload)
+    return await crud.create_entry(medias, payload)
 
 
 @router.post("/from-device", response_model=MediaOut, status_code=201,
@@ -50,7 +50,7 @@ async def create_media_from_device(payload: BaseMedia,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    return await crud.create_entry(media, MediaIn(**payload.dict(), device_id=device.id))
+    return await crud.create_entry(medias, MediaIn(**payload.dict(), device_id=device.id))
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
@@ -58,7 +58,7 @@ async def get_media(media_id: int = Path(..., gt=0)):
     """
     Based on a media_id, retrieves information about the specified media
     """
-    return await crud.get_entry(media, media_id)
+    return await crud.get_entry(medias, media_id)
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
@@ -66,7 +66,7 @@ async def fetch_media():
     """
     Retrieves the list of all media and their information
     """
-    return await crud.fetch_all(media)
+    return await crud.fetch_all(medias)
 
 
 @router.put("/{media_id}/", response_model=MediaOut, summary="Update information about a specific media")
@@ -74,7 +74,7 @@ async def update_media(payload: MediaIn, media_id: int = Path(..., gt=0)):
     """
     Based on a media_id, updates information about the specified media
     """
-    return await crud.update_entry(media, payload, media_id)
+    return await crud.update_entry(medias, payload, media_id)
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
@@ -82,7 +82,7 @@ async def delete_media(media_id: int = Path(..., gt=0)):
     """
     Based on a media_id, deletes the specified media
     """
-    return await crud.delete_entry(media, media_id)
+    return await crud.delete_entry(medias, media_id)
 
 
 @router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
@@ -104,7 +104,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
             detail="The upload did not succeed"
         )
     entry["bucket_key"] = bucket_key
-    return await crud.update_entry(media, MediaCreation(**entry), media_id)
+    return await crud.update_entry(medias, MediaCreation(**entry), media_id)
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)

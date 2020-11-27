@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 
 from app.api import crud
-from app.api.routes import media
+from app.api.routes import medias
 from app.services import bucket_service
 
 MEDIA_TABLE = [
@@ -15,7 +15,7 @@ MEDIA_TABLE = [
 
 def _patch_session(monkeypatch, mock_table):
     # DB patching
-    monkeypatch.setattr(media, "media", mock_table)
+    monkeypatch.setattr(medias, "medias", mock_table)
     # Sterilize all DB interactions through CRUD override
     monkeypatch.setattr(crud, "get", pytest.mock_get)
     monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
@@ -31,7 +31,7 @@ def test_get_media(test_app, monkeypatch):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.get("/media/1")
+    response = test_app.get("/medias/1")
     assert response.status_code == 200
     assert response.json() == mock_media_table[0]
 
@@ -48,7 +48,7 @@ def test_get_media_invalid(test_app, monkeypatch, media_id, status_code, status_
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.get(f"/media/{media_id}")
+    response = test_app.get(f"/medias/{media_id}")
     assert response.status_code == status_code, media_id
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -59,7 +59,7 @@ def test_fetch_media(test_app, monkeypatch):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.get("/media/")
+    response = test_app.get("/medias/")
     assert response.status_code == 200
     assert response.json() == mock_media_table
 
@@ -74,7 +74,7 @@ def test_create_media(test_app, monkeypatch):
     test_response = {"id": len(mock_media_table) + 1, **test_payload, "type": "image"}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/media/", data=json.dumps(test_payload))
+    response = test_app.post("/medias/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()
@@ -94,7 +94,7 @@ def test_create_media_from_device(test_app, monkeypatch):
     test_response = {"id": len(mock_media_table) + 1, "device_id": 99, "type": "image"}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/media/from-device", data=json.dumps(test_payload))
+    response = test_app.post("/medias/from-device", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()
@@ -114,7 +114,7 @@ def test_create_media_invalid(test_app, monkeypatch, payload, status_code):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.post("/media/", data=json.dumps(payload))
+    response = test_app.post("/medias/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
@@ -124,7 +124,7 @@ def test_update_media(test_app, monkeypatch):
     _patch_session(monkeypatch, mock_media_table)
 
     test_payload = {"device_id": 1, "type": "video"}
-    response = test_app.put("/media/1/", data=json.dumps(test_payload))
+    response = test_app.put("/medias/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     for k, v in mock_media_table[0].items():
         assert v == test_payload.get(k, MEDIA_TABLE[0][k])
@@ -146,7 +146,7 @@ def test_update_media_invalid(test_app, monkeypatch, media_id, payload, status_c
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.put(f"/media/{media_id}/", data=json.dumps(payload))
+    response = test_app.put(f"/medias/{media_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
@@ -155,7 +155,7 @@ def test_delete_media(test_app, monkeypatch):
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.delete("/media/1/")
+    response = test_app.delete("/medias/1/")
     assert response.status_code == 200
     assert response.json() == MEDIA_TABLE[0]
     for entry in mock_media_table:
@@ -174,7 +174,7 @@ def test_delete_media_invalid(test_app, monkeypatch, media_id, status_code, stat
     mock_media_table = deepcopy(MEDIA_TABLE)
     _patch_session(monkeypatch, mock_media_table)
 
-    response = test_app.delete(f"/media/{media_id}/")
+    response = test_app.delete(f"/medias/{media_id}/")
     assert response.status_code == status_code, print(media_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(media_id)
@@ -187,13 +187,13 @@ def test_upload_media(test_app, monkeypatch):
     # 1 - Create a media that will have an upload
     payload_creation_device = {"device_id": 99}  # 99 because it is the authentified device_id specified in the config
     newly_created_media_id = len(mock_media_table) + 1
-    response = test_app.post("/media/", data=json.dumps(payload_creation_device))
+    response = test_app.post("/medias/", data=json.dumps(payload_creation_device))
 
     # 2 - Upload something
     async def successful_upload(bucket_name, bucket_key, file_binary):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
-    response = test_app.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
+    response = test_app.post(f"/medias/{newly_created_media_id}/upload", files=dict(file='bar'))
     test_response = mock_media_table[-1]
     response_json = response.json()
     response_json.pop("created_at")
@@ -205,5 +205,5 @@ def test_upload_media(test_app, monkeypatch):
     async def failing_upload(bucket_name, bucket_key, file_binary):
         return False
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
-    response = test_app.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
+    response = test_app.post(f"/medias/{newly_created_media_id}/upload", files=dict(file='bar'))
     assert response.status_code == 500

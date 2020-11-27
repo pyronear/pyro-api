@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
-           'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
+           'users', 'accesses', 'sites', 'events', 'devices', 'medias', 'installations', 'alerts']
 
 
 # SQLAlchemy
@@ -93,8 +93,8 @@ class MediaType(str, enum.Enum):
     video: str = 'video'
 
 
-media = Table(
-    "media",
+medias = Table(
+    "medias",
     metadata,
     Column("id", Integer, primary_key=True),
     Column("device_id", Integer, ForeignKey("devices.id")),
@@ -132,7 +132,7 @@ alerts = Table(
     Column("id", Integer, primary_key=True),
     Column("device_id", Integer, ForeignKey("devices.id")),
     Column("event_id", Integer, ForeignKey("events.id")),
-    Column("media_id", Integer, ForeignKey("media.id"), default=None),
+    Column("media_id", Integer, ForeignKey("medias.id"), default=None),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("type", Enum(AlertType), default=AlertType.start),
