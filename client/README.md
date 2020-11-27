@@ -67,6 +67,11 @@ api_client.update_location(lat, lon)
 ```
 
 
+## License
+
+Distributed under the GPLv3 License. See `LICENSE` for more information.
+
+
 
 ## Documentation
 

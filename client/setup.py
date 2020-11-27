@@ -33,8 +33,10 @@ print("Building wheel {}-{}".format(package_name, version))
 with open("README.md") as f:
     readme = f.read()
 
-with open("requirements.txt") as f:
-    requirements = f.read()
+
+requirements = [
+    'requests>=2.24.0',
+]
 
 
 setup(
@@ -44,7 +46,7 @@ setup(
     description="Client of the Pyronear API to help the fight against wildfires",
     long_description=readme,
     long_description_content_type="text/markdown",
-    url="https://github.com/pyronear/pyro-api",
+    url="https://github.com/pyronear/pyro-api/tree/master/client",
     download_url="https://github.com/pyronear/pyro-api/tags",
     license="GPLv3",
     classifiers=[
