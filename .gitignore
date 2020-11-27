@@ -140,3 +140,6 @@ dmypy.json
 # Client
 client/docs/build
 client/build
+
+# Test DB
+*.db
