@@ -140,6 +140,7 @@ dmypy.json
 # Client
 client/docs/build
 client/build
+client/conda-dist
 
 # Test DB
 *.db
