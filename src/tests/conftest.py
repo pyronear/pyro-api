@@ -6,7 +6,7 @@ from app.main import app
 from app.api.schemas import UserRead, DeviceOut
 from app.api.deps import get_current_user, get_current_device
 from tests.conf_test_db import database as test_database
-from tests.conf_test_db import flush_test_db
+from tests.conf_test_db import reset_test_db
 from httpx import AsyncClient
 
 
@@ -119,4 +119,4 @@ def test_db():
         yield test_database
     finally:
         print("Clean the DB")
-        flush_test_db()
+        reset_test_db()

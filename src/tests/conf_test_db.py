@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine
+from typing import List, Dict, Any, Mapping
+from sqlalchemy import create_engine, Table
 from databases import Database
 from app.db import metadata
 import contextlib
@@ -11,7 +12,10 @@ metadata.create_all(bind=engine)
 database = Database(SQLALCHEMY_DATABASE_URL)
 
 
-def flush_test_db():
+def reset_test_db():
+    """
+    Delete all rows from the database but keeps the schemas
+    """
 
     with contextlib.closing(engine.connect()) as con:
         trans = con.begin()
@@ -20,12 +24,12 @@ def flush_test_db():
         trans.commit()
 
 
-async def populate_db(test_db, table, data):
+async def populate_db(test_db: Database, table: Table, data: List[Dict[str, Any]]) -> None:
     for entry in data:
         query = table.insert().values(entry)
         await test_db.execute(query=query)
 
 
-async def get_entry_in_db(test_db, table, entry_id):
+async def get_entry_in_db(test_db: Database, table: Table, entry_id: int) -> Mapping[str, Any]:
     query = table.select().where(entry_id == table.c.id)
     return await test_db.fetch_one(query=query)
