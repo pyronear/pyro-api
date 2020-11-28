@@ -114,9 +114,11 @@ async def test_app_asyncio(__app):
 
 
 @pytest.fixture(scope="function")
-def test_db():
+async def test_db():
     try:
+        await test_database.connect()
         yield test_database
     finally:
         print("Clean the DB")
-        reset_test_db()
+        await reset_test_db()
+        await test_database.disconnect()
