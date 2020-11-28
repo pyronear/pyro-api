@@ -57,7 +57,7 @@ async def delete_installation(installation_id: int = Path(..., gt=0)):
              summary="Get all devices related to a specific site")
 async def get_all_at_given_ts_and_site(payload: Timestamp, site_id: int = Path(..., gt=0)):
     """
-    Based on a installation_id, retrieves the list of all the related devices and their information
+    Based on a site_id, retrieves the list of all the related devices and their information
     """
     query = installations.select(installations.c.device_id).where(and_(installations.c.site_id == site_id,
                                                                        installations.c.start_ts <= payload.timestamp,
