@@ -103,6 +103,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
             status_code=500,
             detail="The upload did not succeed"
         )
+    entry = dict(**entry)
     entry["bucket_key"] = bucket_key
     return await crud.update_entry(media, MediaCreation(**entry), media_id)
 
