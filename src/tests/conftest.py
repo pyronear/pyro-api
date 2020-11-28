@@ -11,11 +11,11 @@ from httpx import AsyncClient
 
 
 async def mock_current_user():
-    return UserRead(id=99, login="connected_user", created_at=datetime.now())
+    return UserRead(id=2, login="connected_user", created_at=datetime.now())
 
 
 async def mock_current_device():
-    return DeviceOut(id=99, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
+    return DeviceOut(id=1, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
 
 
 # Sterilize all DB interactions
