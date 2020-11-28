@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
-from app.db import alerts, AlertType
+from app.db import alerts, AlertType, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut
 from app.api.deps import get_current_device
 
@@ -58,6 +58,14 @@ async def link_media(payload: AlertMediaId,
             status_code=400,
             detail="Permission denied"
         )
+    
+    existing_media = await crud.fetch_one(media, {"id": payload.media_id})
+    if existing_media is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Media does not exist"
+        )
+    existing_alert = dict(**existing_alert)
     existing_alert["media_id"] = payload.media_id
     return await crud.update_entry(alerts, AlertIn(**existing_alert), alert_id)
 
