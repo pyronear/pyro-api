@@ -58,7 +58,7 @@ async def link_media(payload: AlertMediaId,
             status_code=400,
             detail="Permission denied"
         )
-    
+
     existing_media = await crud.fetch_one(media, {"id": payload.media_id})
     if existing_media is None:
         raise HTTPException(

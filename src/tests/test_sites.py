@@ -1,11 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
 
 from app import db
 from app.api import crud
-from app.api.routes import sites
 from tests.conf_test_db import get_entry_in_db, populate_db
 
 SITE_TABLE = [
@@ -25,6 +23,7 @@ def compare_entries(ref, test):
             assert abs(v - test[k]) < 1E-5
         else:
             assert v == test[k]
+
 
 def update_only_datetime(entity_as_dict):
     to_return = entity_as_dict.copy()
@@ -157,7 +156,7 @@ async def test_delete_site(test_app_asyncio, test_db, monkeypatch):
     response = await test_app_asyncio.delete("/sites/1/")
     assert response.status_code == 200
     compare_entries(response.json(), SITE_TABLE[0])
-    
+
     remaining_sites = await test_app_asyncio.get("/sites/")
     for entry in remaining_sites.json():
         assert entry['id'] != 1

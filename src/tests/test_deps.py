@@ -2,9 +2,8 @@ import pytest
 from app import db
 from app.api import crud, deps, security
 from app.api.schemas import AccessRead, UserRead, DeviceOut
-from copy import deepcopy
 from datetime import datetime
-from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.conf_test_db import populate_db
 
 
 USER_TABLE = [
@@ -13,7 +12,8 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
+    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3,
+     "specs": "raspberry", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},

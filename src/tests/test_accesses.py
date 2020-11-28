@@ -1,11 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 
 from app import db
 from app.api import crud
-from app.api.routes import accesses
-from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.conf_test_db import populate_db
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "me"},
@@ -18,7 +16,7 @@ async def test_get_access(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     monkeypatch.setattr(crud, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    
+
     response = await test_app_asyncio.get("/accesses/1")
     assert response.status_code == 200
     assert response.json() == {k: v for k, v in ACCESS_TABLE[0].items() if k != "hashed_password"}
@@ -128,7 +126,7 @@ async def test_delete_access(test_app_asyncio, test_db, monkeypatch):
     response = await test_app_asyncio.delete("/accesses/1/")
     assert response.status_code == 200
     assert response.json() == {k: v for k, v in ACCESS_TABLE[0].items() if k != "hashed_password"}
-    
+
     remaining_accesses = await test_app_asyncio.get("/accesses/")
     for entry in remaining_accesses.json():
         assert entry['id'] != 1

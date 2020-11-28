@@ -1,11 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
 
 from app import db
 from app.api import crud
-from app.api.routes import media
 from app.services import bucket_service
 from tests.conf_test_db import get_entry_in_db, populate_db
 
@@ -19,15 +17,19 @@ USER_TABLE = [
     {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
-DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1", "elevation": None,
-     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
-]
+DEVICE_TABLE = [{"id": 1, "login": "connected_device", "owner_id": 1,
+                 "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
+                 "lon": None, "yaw": None, "pitch": None,
+                 "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+                {"id": 2, "login": "second_device", "owner_id": 2,
+                 "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
+                 "lon": None, "yaw": None, "pitch": None,
+                 "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+                {"id": 3, "login": "third_device", "owner_id": 1,
+                 "access_id": 5, "specs": "v0.1", "elevation": None,
+                 "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
+                 "created_at": "2020-10-13T08:18:45.447773"}
+                ]
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
@@ -38,6 +40,7 @@ ACCESS_TABLE = [
 ]
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+
 
 def update_only_datetime(entity_as_dict):
     to_return = entity_as_dict.copy()
@@ -60,9 +63,8 @@ async def init_test_db(monkeypatch, test_db):
     await populate_db(test_db, db.media, MEDIA_TABLE_FOR_DB)
 
 
-
 @pytest.mark.asyncio
-async def test_get_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_get_media(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
@@ -80,7 +82,7 @@ async def test_get_media(test_app_asyncio, test_db,  monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_media_invalid(test_app_asyncio, test_db,  monkeypatch, media_id, status_code, status_details):
+async def test_get_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -91,7 +93,7 @@ async def test_get_media_invalid(test_app_asyncio, test_db,  monkeypatch, media_
 
 
 @pytest.mark.asyncio
-async def test_fetch_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_fetch_media(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -101,7 +103,7 @@ async def test_fetch_media(test_app_asyncio, test_db,  monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_create_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_create_media(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
@@ -115,17 +117,16 @@ async def test_create_media(test_app_asyncio, test_db,  monkeypatch):
     assert response.status_code == 201
     json_response = response.json()
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-    
+
     new_media_in_db = await get_entry_in_db(test_db, db.media, json_response["id"])
     new_media_in_db = dict(**new_media_in_db)
 
     # Timestamp consistency
     assert new_media_in_db['created_at'] > utc_dt and new_media_in_db['created_at'] < datetime.utcnow()
-    
 
 
 @pytest.mark.asyncio
-async def test_create_media_from_device(test_app_asyncio, test_db,  monkeypatch):
+async def test_create_media_from_device(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
@@ -135,7 +136,6 @@ async def test_create_media_from_device(test_app_asyncio, test_db,  monkeypatch)
     # Device_id is 1 because it is the id of the authentified sending device.
     test_response = {"id": len(MEDIA_TABLE) + 1, "device_id": 1, "type": "image"}
 
-    utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/media/from-device", data=json.dumps(test_payload))
 
     assert response.status_code == 201
@@ -154,7 +154,7 @@ async def test_create_media_from_device(test_app_asyncio, test_db,  monkeypatch)
     ],
 )
 @pytest.mark.asyncio
-async def test_create_media_invalid(test_app_asyncio, test_db,  monkeypatch, payload, status_code):
+async def test_create_media_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -163,7 +163,7 @@ async def test_create_media_invalid(test_app_asyncio, test_db,  monkeypatch, pay
 
 
 @pytest.mark.asyncio
-async def test_update_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_update_media(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -190,7 +190,7 @@ async def test_update_media(test_app_asyncio, test_db,  monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_update_media_invalid(test_app_asyncio, test_db,  monkeypatch, media_id, payload, status_code):
+async def test_update_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, payload, status_code):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -199,7 +199,7 @@ async def test_update_media_invalid(test_app_asyncio, test_db,  monkeypatch, med
 
 
 @pytest.mark.asyncio
-async def test_delete_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_delete_media(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -219,7 +219,7 @@ async def test_delete_media(test_app_asyncio, test_db,  monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_delete_media_invalid(test_app_asyncio, test_db,  monkeypatch, media_id, status_code, status_details):
+async def test_delete_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, status_code, status_details):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -230,7 +230,7 @@ async def test_delete_media_invalid(test_app_asyncio, test_db,  monkeypatch, med
 
 
 @pytest.mark.asyncio
-async def test_upload_media(test_app_asyncio, test_db,  monkeypatch):
+async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     await init_test_db(monkeypatch, test_db)
 
     # 1 - Create a media that will have an upload
@@ -243,7 +243,7 @@ async def test_upload_media(test_app_asyncio, test_db,  monkeypatch):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
     response = await test_app_asyncio.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
-    
+
     new_media_in_db = await get_entry_in_db(test_db, db.media, response.json()["id"])
     new_media_in_db = dict(**new_media_in_db)
     response_json = response.json()

@@ -1,11 +1,10 @@
+import contextlib
 from typing import List, Dict, Any, Mapping
 from sqlalchemy import create_engine, Table
 from databases import Database
+
 from app.db import metadata
-import contextlib
-import os
 import app.config as cfg
-from sqlalchemy.orm import sessionmaker
 
 SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
 engine = create_engine(
@@ -29,7 +28,8 @@ async def reset_test_db():
 
 
 async def populate_db(test_db: Database, table: Table, data: List[Dict[str, Any]], remove_ids: bool = True) -> None:
-    """Directly insert data into the DB table. Set remove_ids to True by default as the id sequence pointer 
+    """
+    Directly insert data into the DB table. Set remove_ids to True by default as the id sequence pointer
     are not incremented if the "id" field is included
     """
     if remove_ids:

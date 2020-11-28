@@ -1,13 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
-from fastapi import HTTPException
 
 from app import db
 from app.api import crud, security
-from app.api.routes import devices
-from app.api.schemas import AccessRead, AccessCreation
 from tests.conf_test_db import get_entry_in_db, populate_db
 
 USER_TABLE = [
@@ -16,7 +12,8 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
+    {"id": 1, "login": "connected_device", "owner_id": 1,
+     "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
@@ -46,9 +43,6 @@ def update_only_datetime(entity_as_dict):
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
-# EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
-# ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
-# MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 
 
 async def init_test_db(monkeypatch, test_db):
@@ -57,9 +51,6 @@ async def init_test_db(monkeypatch, test_db):
     await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
     await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
-    # await populate_db(test_db, db.events, EVENT_TABLE_FOR_DB)
-    # await populate_db(test_db, db.alerts, ALERT_TABLE_FOR_DB)
-    # await populate_db(test_db, db.media, MEDIA_TABLE_FOR_DB)
 
 
 @pytest.mark.asyncio
@@ -135,7 +126,6 @@ async def test_create_device(test_app_asyncio, test_db, monkeypatch):
     assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
     # Access table updated
     assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
-
 
 
 @pytest.mark.parametrize(

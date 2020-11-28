@@ -5,7 +5,6 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from app.api.routes import alerts
 from tests.conf_test_db import get_entry_in_db, populate_db
 
 MEDIA_TABLE = [
@@ -21,11 +20,13 @@ USER_TABLE = [{"id": 1, "login": "first_user", "access_id": 1, "created_at": "20
 
 
 DEVICE_TABLE = [{
-    "id": 1, "login": "first_device", "owner_id": 1, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None, 
-    "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"}
-     ]
+                "id": 1, "login": "first_device", "owner_id": 1, "access_id": 2,
+                "specs": "v0.1", "elevation": None, "lat": None,
+                "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+                {"id": 2, "login": "second_device", "owner_id": 1, "access_id": 3,
+                 "specs": "v0.1", "elevation": None, "lat": None,
+                 "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"}
+                ]
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -70,6 +71,7 @@ async def init_test_db(monkeypatch, test_db):
     await populate_db(test_db, db.events, EVENT_TABLE_FOR_DB)
     await populate_db(test_db, db.alerts, ALERT_TABLE_FOR_DB)
     await populate_db(test_db, db.media, MEDIA_TABLE_FOR_DB)
+
 
 @pytest.mark.asyncio
 async def test_get_alert(test_app_asyncio, test_db, monkeypatch):
@@ -250,7 +252,8 @@ async def test_link_media_owner_not_allowed(test_app_asyncio, test_db, monkeypat
     await init_test_db(monkeypatch, test_db)
 
     test_payload = {"media_id": 1}
-    response = await test_app_asyncio.put(f"/alerts/3/link-media", data=json.dumps(test_payload))
+    alert_not_owned = 3
+    response = await test_app_asyncio.put(f"/alerts/{alert_not_owned}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 400
 
 
@@ -260,8 +263,9 @@ async def test_link_non_existing_media(test_app_asyncio, test_db, monkeypatch):
 
     test_payload = {"media_id": 100}
 
+    alert_owned = 1
     # Alert 1 because it is owned by the device 1
-    response = await test_app_asyncio.put(f"/alerts/1/link-media", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put(f"/alerts/{alert_owned}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 404
 
 

@@ -1,15 +1,14 @@
 import pytest
-from copy import deepcopy
 
 from app import db
 from app.api import crud, security
-from app.api.routes import login
-from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.conf_test_db import populate_db
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "first_pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "second_login", "hashed_password": "second_pwd_hashed", "scopes": "me"},
 ]
+
 
 @pytest.mark.parametrize(
     "payload, status_code, status_detail",

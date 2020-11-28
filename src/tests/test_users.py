@@ -1,14 +1,15 @@
 import json
 import pytest
-from copy import deepcopy
-from datetime import datetime, timedelta
-from fastapi import HTTPException
+from datetime import datetime
 
 from app import db
 from app.api import crud, security
-from app.api.routes import users
-from app.api.schemas import AccessRead, AccessCreation
 from tests.conf_test_db import get_entry_in_db, populate_db
+
+ACCESS_TABLE = [
+    {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
+    {"id": 2, "login": "connected_user", "hashed_password": "pwd_hashed", "scopes": "me"},
+]
 
 USER_TABLE = [
     {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
@@ -26,11 +27,6 @@ def update_only_datetime(entity_as_dict):
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 
-ACCESS_TABLE = [
-    {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
-    {"id": 2, "login": "connected_user", "hashed_password": "pwd_hashed", "scopes": "me"},
-]
-
 
 @pytest.mark.asyncio
 async def test_get_user(test_app_asyncio, test_db, monkeypatch):
@@ -45,9 +41,8 @@ async def test_get_user(test_app_asyncio, test_db, monkeypatch):
     user_1_in_db = dict(**user_1_in_db)
     assert response.status_code == 200
     response_json = response.json()
-    
     response_json["created_at"] = datetime.strptime(response_json["created_at"], DATETIME_FORMAT)
-    
+
     assert response_json == {k: v for k, v in user_1_in_db.items() if k != "access_id"}
 
     # personal version
@@ -76,6 +71,7 @@ async def test_get_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id,
     assert response.status_code == status_code, user_id
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
+
 
 @pytest.mark.asyncio
 async def test_fetch_users(test_app_asyncio, test_db, test_app, monkeypatch):
@@ -158,15 +154,14 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
     # Self version
     test_payload = {"login": "renamed_me"}
     response = await test_app_asyncio.put("/users/update-info", data=json.dumps(test_payload))
-    
+
     assert response.status_code == 200
     json_response = response.json()
     my_user_in_db = await get_entry_in_db(test_db, db.users, json_response["id"])
     my_user_in_db = dict(**my_user_in_db)
-    
+
     for k, v in my_user_in_db.items():
         assert v == test_payload.get(k, USER_TABLE_FOR_DB[1][k])
-
 
 
 @pytest.mark.parametrize(
@@ -205,6 +200,7 @@ async def test_update_my_info_invalid(test_app_asyncio, test_db, monkeypatch, pa
 
     response = await test_app_asyncio.put("/users/update-info", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
+
 
 @pytest.mark.asyncio
 async def test_update_password(test_app_asyncio, test_db, monkeypatch):

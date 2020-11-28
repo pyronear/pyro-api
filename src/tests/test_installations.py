@@ -1,11 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
 
 from app import db
 from app.api import crud
-from app.api.routes import installations
 from tests.conf_test_db import get_entry_in_db, populate_db
 
 
@@ -22,11 +20,13 @@ USER_TABLE = [{"id": 1, "login": "first_user", "access_id": 1, "created_at": "20
 
 
 DEVICE_TABLE = [{
-    "id": 1, "login": "first_device", "owner_id": 1, "access_id": 2, "specs": "v0.1", "elevation": None, "lat": None, 
-    "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"}
-     ]
+                "id": 1, "login": "first_device", "owner_id": 1, "access_id": 2,
+                "specs": "v0.1", "elevation": None, "lat": None,
+                "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+                {"id": 2, "login": "second_device", "owner_id": 1,
+                 "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
+                 "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"}
+                ]
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -112,7 +112,8 @@ async def test_get_installation(test_app_asyncio, test_db, monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_installation_invalid(test_app_asyncio, test_db, monkeypatch, installation_id, status_code, status_details):
+async def test_get_installation_invalid(test_app_asyncio, test_db, monkeypatch,
+                                        installation_id, status_code, status_details):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -153,6 +154,7 @@ async def test_create_installation(test_app_asyncio, test_db, monkeypatch):
 
     # Timestamp consistency
     assert new_installation_in_db['created_at'] > utc_dt and new_installation_in_db['created_at'] < datetime.utcnow()
+
 
 @pytest.mark.parametrize(
     "payload, status_code",
@@ -195,7 +197,8 @@ async def test_update_installation(test_app_asyncio, test_db, monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_update_installation_invalid(test_app_asyncio, test_db, monkeypatch, installation_id, payload, status_code):
+async def test_update_installation_invalid(test_app_asyncio, test_db,
+                                           monkeypatch, installation_id, payload, status_code):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
@@ -224,7 +227,8 @@ async def test_delete_installation(test_app_asyncio, test_db, monkeypatch):
     ],
 )
 @pytest.mark.asyncio
-async def test_delete_installation_invalid(test_app_asyncio, test_db, monkeypatch, installation_id, status_code, status_details):
+async def test_delete_installation_invalid(test_app_asyncio, test_db,
+                                           monkeypatch, installation_id, status_code, status_details):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
