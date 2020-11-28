@@ -4,10 +4,10 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 
+from app import db
 from app.api import crud, security
 from app.api.routes import users
 from app.api.schemas import AccessRead, AccessCreation
-from app import db
 from tests.conf_test_db import get_entry_in_db, populate_db
 
 USER_TABLE = [
