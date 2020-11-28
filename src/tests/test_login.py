@@ -1,24 +1,15 @@
 import pytest
 from copy import deepcopy
 
+from app import db
 from app.api import crud, security
 from app.api.routes import login
-
+from tests.conf_test_db import get_entry_in_db, populate_db
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "first_pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "second_login", "hashed_password": "second_pwd_hashed", "scopes": "me"},
 ]
-
-
-def _patch_session(monkeypatch, mock_table):
-    # DB patching
-    monkeypatch.setattr(login, "accesses", mock_table)
-    # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
-    # Password
-    monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
-
 
 @pytest.mark.parametrize(
     "payload, status_code, status_detail",
@@ -27,16 +18,18 @@ def _patch_session(monkeypatch, mock_table):
         [{"password": "foo"}, 422, None],
         [{"username": "unknown", "password": "foo"}, 400, "Invalid credentials"],  # unknown username
         [{"username": "first", "password": "second"}, 400, "Invalid credentials"],  # wrong pwd
-        [{"username": "first_login", "password": "first_pwd"}, 200, None],  # valid
+        [{"username": "first_login", "password": "first_pwd"}, 200, None],  # should throw an error !!valid
     ],
 )
-def test_create_access_token(test_app, monkeypatch, payload, status_code, status_detail):
+@pytest.mark.asyncio
+async def test_create_access_token(test_app_asyncio, test_db, monkeypatch, payload, status_code, status_detail):
 
     # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+    monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.post("/login/access-token", data=payload)
+    response = await test_app_asyncio.post("/login/access-token", data=payload)
 
     assert response.status_code == status_code, print(payload)
     if isinstance(status_detail, str):
