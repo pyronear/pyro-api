@@ -5,6 +5,9 @@ from datetime import datetime
 from app.main import app
 from app.api.schemas import UserRead, DeviceOut
 from app.api.deps import get_current_user, get_current_device
+from tests.conf_test_db import database as test_database
+from tests.conf_test_db import reset_test_db
+from httpx import AsyncClient
 
 
 async def mock_current_user():
@@ -87,13 +90,33 @@ def pytest_configure():
 
 
 @pytest.fixture(scope="module")
-def test_app():
+def __app():
 
     # Access-related patching
     app.dependency_overrides[get_current_user] = mock_current_user
     app.dependency_overrides[get_current_device] = mock_current_device
 
-    client = TestClient(app)
-    yield client  # testing happens here
+    yield app  # testing happens here
 
     app.dependency_overrides = {}
+
+
+@pytest.fixture(scope="module")
+def test_app(__app):
+    client = TestClient(__app)
+    yield client  # testing happens here
+
+
+@pytest.fixture(scope="function")
+async def test_app_asyncio(__app):
+    async with AsyncClient(app=__app, base_url="http://test") as ac:
+        yield ac  # testing happens here
+
+
+@pytest.fixture(scope="function")
+def test_db():
+    try:
+        yield test_database
+    finally:
+        print("Clean the DB")
+        reset_test_db()
