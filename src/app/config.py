@@ -31,3 +31,7 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
 BUCKET_NAME: str = "mypyroneartest"
 DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
                     + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
+
+
+# Sentry
+SENTRY_DNS: str = os.getenv("SENTRY_DNS")

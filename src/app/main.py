@@ -1,4 +1,5 @@
 import time
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
@@ -7,6 +8,13 @@ from app.api.routes import login, users, sites, events, devices, media, installa
 from app.db import engine, metadata, database, init_db
 
 metadata.create_all(engine)
+
+# Sentry
+if isinstance(cfg.SENTRY_DNS, str):
+    sentry_sdk.init(
+        cfg.SENTRY_DNS,
+        traces_sample_rate=1.0
+    )
 
 app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION)
 
@@ -43,6 +51,23 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     return response
+
+
+if isinstance(cfg.SENTRY_DNS, str):
+    @app.middleware("http")
+    async def sentry_exception(request: Request, call_next):
+        try:
+            response = await call_next(request)
+            div_by_zero = 1. / 0.
+            return response
+        except Exception as e:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_context("request", request)
+                scope.user = {
+                    "ip_address": request.client.host,
+                }
+                sentry_sdk.capture_exception(e)
+            raise e
 
 
 # Docs
