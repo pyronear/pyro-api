@@ -34,6 +34,13 @@ async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> D
     return {"login": entry["login"]}
 
 
+async def delete_login_access(login: str) -> AccessRead:
+    # Retrieve the corresponding access
+    access = crud.fetch_one(accesses, {'login': entry['login']})
+    # Delete it
+    return await crud.delete_entry(accesses, access['id'])
+
+
 @router.post("/", response_model=AccessRead, status_code=201)
 async def create_access(payload: AccessAuth):
     return await post_access(payload.login, payload.password, payload.scopes)
