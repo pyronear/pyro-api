@@ -62,6 +62,7 @@ if isinstance(cfg.SENTRY_DSN, str):
     async def sentry_exception(request: Request, call_next):
         try:
             response = await call_next(request)
+            div_by_zero = 1 / 0.
             return response
         except Exception as e:
             with sentry_sdk.push_scope() as scope:
