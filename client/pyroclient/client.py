@@ -1,7 +1,8 @@
 import requests
 import logging
-from .exceptions import HTTPRequestException
 from urllib.parse import urljoin
+
+from .exceptions import HTTPRequestException
 
 
 __all__ = ['Client']
