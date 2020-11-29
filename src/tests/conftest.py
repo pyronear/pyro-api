@@ -11,62 +11,11 @@ from httpx import AsyncClient
 
 
 async def mock_current_user():
-    return UserRead(id=99, login="connected_user", created_at=datetime.now())
+    return UserRead(id=2, login="connected_user", created_at=datetime.now())
 
 
 async def mock_current_device():
-    return DeviceOut(id=99, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
-
-
-# Sterilize all DB interactions
-async def mock_get(entry_id, table):
-    for entry in table:
-        if entry['id'] == entry_id:
-            return entry
-    return None
-
-
-async def mock_fetch_all(table, query_filters=None):
-    if query_filters is None:
-        return table
-    response = []
-    for entry in table:
-        if all(entry[k] == v for k, v in query_filters.items()):
-            response.append(entry)
-    return response
-
-
-async def mock_fetch_one(table, query_filters=None):
-    for entry in table:
-        if all(entry[k] == v for k, v in query_filters.items()):
-            return entry
-    return None
-
-
-async def mock_post(payload, table):
-    payload_dict = payload.dict()
-    payload_dict['created_at'] = datetime.utcnow()
-    payload_dict['id'] = len(table) + 1
-    table.append(payload_dict)
-    return payload_dict['id']
-
-
-async def mock_put(entry_id, payload, table):
-    updated_id = None
-    for idx, entry in enumerate(table):
-        if entry['id'] == entry_id:
-            updated_id = entry_id
-            for k, v in payload.dict().items():
-                table[idx][k] = v
-    return updated_id
-
-
-async def mock_delete(entry_id, table):
-    for idx, entry in enumerate(table):
-        if entry['id'] == entry_id:
-            del table[idx]
-            break
-    return entry_id
+    return DeviceOut(id=1, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
 
 
 async def mock_hash_password(password):
@@ -79,12 +28,6 @@ async def mock_verify_password(plain_password, hashed_password):
 
 def pytest_configure():
     # CRUD patching
-    pytest.mock_get = mock_get
-    pytest.mock_fetch_all = mock_fetch_all
-    pytest.mock_fetch_one = mock_fetch_one
-    pytest.mock_post = mock_post
-    pytest.mock_put = mock_put
-    pytest.mock_delete = mock_delete
     pytest.mock_hash_password = mock_hash_password
     pytest.mock_verify_password = mock_verify_password
 
@@ -114,9 +57,10 @@ async def test_app_asyncio(__app):
 
 
 @pytest.fixture(scope="function")
-def test_db():
+async def test_db():
     try:
+        await test_database.connect()
         yield test_database
     finally:
-        print("Clean the DB")
-        reset_test_db()
+        await reset_test_db()
+        await test_database.disconnect()
