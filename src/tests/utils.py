@@ -1,4 +1,4 @@
-import datetime as datetime
+from datetime import datetime
 from copy import deepcopy
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
