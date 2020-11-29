@@ -36,7 +36,7 @@ async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> D
 
 async def delete_login_access(login: str) -> AccessRead:
     # Retrieve the corresponding access
-    access = crud.fetch_one(accesses, {'login': login})
+    access = await crud.fetch_one(accesses, {'login': login})
     # Delete it
     return await crud.delete_entry(accesses, access['id'])
 
