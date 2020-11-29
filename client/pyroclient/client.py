@@ -35,17 +35,17 @@ class Client:
               "get-media-image": "/media/{media_id}/image"
               }
 
-    def __init__(self, api_url, credentials_login, credentials_password):
+    def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
         self.api = api_url
         self._add_api_url_to_routes()
         self.token = self._retrieve_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
-    def _add_api_url_to_routes(self):
+    def _add_api_url_to_routes(self) -> None:
         for k, v in self.routes.items():
             self.routes[k] = urljoin(self.api, v)
 
-    def _retrieve_token(self, login, password):
+    def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(self.routes["token"],
                                  data=f"username={login}&password={password}",
                                  headers={"Content-Type": "application/x-www-form-urlencoded",
