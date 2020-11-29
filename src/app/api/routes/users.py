@@ -7,7 +7,7 @@ from app.db import users
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd
+from app.api.routes.accesses import post_access, update_access_pwd, delete_login_access
 
 
 router = APIRouter()
@@ -71,4 +71,8 @@ async def update_user_password(
 
 @router.delete("/{user_id}/", response_model=UserRead)
 async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
-    return await crud.delete_entry(users, user_id)
+    # Delete user entry
+    entry = await crud.delete_entry(users, user_id)
+    # Delete access
+    await delete_login_access(entry['login'])
+    return entry
