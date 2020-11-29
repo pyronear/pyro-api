@@ -17,6 +17,7 @@ if isinstance(cfg.SENTRY_DSN, str):
         debug=cfg.DEBUG,
         server_name=cfg.SERVER_NAME,
         environment="production" if isinstance(cfg.SERVER_NAME, str) else None,
+        integrations=[],
         traces_sample_rate=1.0,
     )
 
