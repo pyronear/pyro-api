@@ -4,6 +4,7 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -11,16 +12,6 @@ EVENT_TABLE = [
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
      "created_at": "2020-09-13T08:18:45.447773"},
 ]
-
-
-DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
-
-
-def update_only_datetime(entity_as_dict):
-    to_return = entity_as_dict.copy()
-    if "created_at" in to_return:
-        to_return["created_at"] = datetime.strptime(to_return["created_at"], DATETIME_FORMAT)
-    return to_return
 
 
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))

@@ -5,6 +5,7 @@ from datetime import datetime
 from app import db
 from app.api import crud, security
 from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime
 
 USER_TABLE = [
     {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
@@ -29,15 +30,6 @@ ACCESS_TABLE = [
     {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
     {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
 ]
-
-DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
-
-
-def update_only_datetime(entity_as_dict):
-    to_return = entity_as_dict.copy()
-    if "created_at" in to_return:
-        to_return["created_at"] = datetime.strptime(to_return["created_at"], DATETIME_FORMAT)
-    return to_return
 
 
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))

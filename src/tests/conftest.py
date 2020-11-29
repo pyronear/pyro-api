@@ -62,6 +62,5 @@ async def test_db():
         await test_database.connect()
         yield test_database
     finally:
-        print("Clean the DB")
         await reset_test_db()
         await test_database.disconnect()

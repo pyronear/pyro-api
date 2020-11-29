@@ -6,6 +6,7 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime, parse_time
 
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
@@ -44,16 +45,6 @@ ALERT_TABLE = [
      "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
 ]
 
-DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
-
-
-def update_only_datetime(entity_as_dict):
-    to_return = entity_as_dict.copy()
-    if "created_at" in to_return:
-        to_return["created_at"] = datetime.strptime(to_return["created_at"], DATETIME_FORMAT)
-    return to_return
-
-
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
@@ -80,7 +71,7 @@ async def test_get_alert(test_app_asyncio, test_db, monkeypatch):
     response = await test_app_asyncio.get("/alerts/1")
     assert response.status_code == 200
     response_json = response.json()
-    response_json["created_at"] = datetime.strptime(response_json["created_at"], DATETIME_FORMAT)
+    response_json["created_at"] = parse_time(response_json["created_at"])
     assert response_json == ALERT_TABLE_FOR_DB[0]
 
 

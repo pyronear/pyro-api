@@ -17,7 +17,7 @@ ACCESS_TABLE = [
         [{"password": "foo"}, 422, None],
         [{"username": "unknown", "password": "foo"}, 400, "Invalid credentials"],  # unknown username
         [{"username": "first", "password": "second"}, 400, "Invalid credentials"],  # wrong pwd
-        [{"username": "first_login", "password": "first_pwd"}, 200, None],  # should throw an error !!valid
+        [{"username": "first_login", "password": "first_pwd"}, 200, None],  # valid
     ],
 )
 @pytest.mark.asyncio

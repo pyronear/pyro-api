@@ -5,6 +5,7 @@ from datetime import datetime
 from app import db
 from app.api import crud, security
 from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime, parse_time
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
@@ -15,14 +16,6 @@ USER_TABLE = [
     {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
-
-DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
-
-
-def update_only_datetime(entity_as_dict):
-    to_return = entity_as_dict.copy()
-    to_return["created_at"] = datetime.strptime(to_return["created_at"], DATETIME_FORMAT)
-    return to_return
 
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -41,7 +34,7 @@ async def test_get_user(test_app_asyncio, test_db, monkeypatch):
     user_1_in_db = dict(**user_1_in_db)
     assert response.status_code == 200
     response_json = response.json()
-    response_json["created_at"] = datetime.strptime(response_json["created_at"], DATETIME_FORMAT)
+    response_json["created_at"] = parse_time(response_json["created_at"])
 
     assert response_json == {k: v for k, v in user_1_in_db.items() if k != "access_id"}
 
