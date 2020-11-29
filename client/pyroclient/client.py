@@ -2,7 +2,7 @@ import requests
 from requests.models import Response
 import logging
 from urllib.parse import urljoin
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 from .exceptions import HTTPRequestException
 
@@ -21,21 +21,22 @@ class Client:
         credentials_password (str): Password (e.g: 123456 (don't do this))
     """
 
-    routes = {"token": "/login/access-token",
-              "heartbeat": "/device/heartbeat",
-              "update-my-location": "/device/update-my-location",
-              "send-alert": "/alerts",
-              "create-media": "/media",
-              "upload-media": "/media/upload",
-              "get-my-devices": "/devices/my-devices",
-              "get-sites": "/sites",
-              "get-alerts": "/alerts",
-              "get-ongoing-alerts": "/alerts/ongoing",
-              "get-unacknowledged-alerts": "/alerts/unacknowledged",
-              "get-site-devices": "/installations/site-devices/{site_id}",
-              "get-media-url": "/media/{media_id}/url",
-              "get-media-image": "/media/{media_id}/image"
-              }
+    routes: Dict[str, str] = {
+        "token": "/login/access-token",
+        "heartbeat": "/device/heartbeat",
+        "update-my-location": "/device/update-my-location",
+        "send-alert": "/alerts",
+        "create-media": "/media",
+        "upload-media": "/media/upload",
+        "get-my-devices": "/devices/my-devices",
+        "get-sites": "/sites",
+        "get-alerts": "/alerts",
+        "get-ongoing-alerts": "/alerts/ongoing",
+        "get-unacknowledged-alerts": "/alerts/unacknowledged",
+        "get-site-devices": "/installations/site-devices/{site_id}",
+        "get-media-url": "/media/{media_id}/url",
+        "get-media-image": "/media/{media_id}/image"
+    }
 
     def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
         self.api = api_url
@@ -112,7 +113,7 @@ class Client:
     def get_media_url_and_read(self, media_id: int) -> Response:
         """ Get the image as a url and read it"""
         image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
-        return requests.get(image_url)
+        return requests.get(image_url.json()['url'])
 
     def get_media_image(self, media_id: int) -> Response:
         """ Get the image as a streaming file"""
