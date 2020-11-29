@@ -279,6 +279,11 @@ async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
     for entry in remaining_users.json():
         assert entry['id'] != 1
 
+    # Check that the access was deleted as well
+    remaining_accesses = await test_app_asyncio.get("/accesses/")
+    for access in remaining_accesses.json():
+        assert access['login'] != response.json()['login']
+
 
 @pytest.mark.parametrize(
     "user_id, status_code, status_details",
