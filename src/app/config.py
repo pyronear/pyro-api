@@ -35,4 +35,4 @@ DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-re
 
 
 # Sentry
-SENTRY_DNS: Optional[str] = os.getenv("SENTRY_DNS")
+SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DNS")

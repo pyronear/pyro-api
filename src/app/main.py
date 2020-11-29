@@ -10,9 +10,9 @@ from app.db import engine, metadata, database, init_db
 metadata.create_all(engine)
 
 # Sentry
-if isinstance(cfg.SENTRY_DNS, str):
+if isinstance(cfg.SENTRY_DSN, str):
     sentry_sdk.init(
-        cfg.SENTRY_DNS,
+        cfg.SENTRY_DSN,
         traces_sample_rate=1.0
     )
 
@@ -53,7 +53,7 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-if isinstance(cfg.SENTRY_DNS, str):
+if isinstance(cfg.SENTRY_DSN, str):
     @app.middleware("http")
     async def sentry_exception(request: Request, call_next):
         try:
