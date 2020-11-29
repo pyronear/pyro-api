@@ -1,10 +1,15 @@
 import unittest
+from datetime import datetime
 
 from pyroclient import client
 from pyroclient.exceptions import HTTPRequestException
 
 
 class ClientTester(unittest.TestCase):
+
+    def _test_route_retun(self, response, return_type):
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), return_type)
 
     def test_client(self):
 
@@ -15,12 +20,13 @@ class ClientTester(unittest.TestCase):
         api_client = client.Client("http://localhost:8002", "superuser", "superuser")
 
         # Read routes
-        response = api_client.get_sites()
-        self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json(), list)
-        response = api_client.get_all_alerts()
-        self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json(), list)
+        self._test_route_retun(api_client.get_my_devices(), list)
+        self._test_route_retun(api_client.get_sites(), list)
+        self._test_route_retun(api_client.get_all_alerts(), list)
+        self._test_route_retun(api_client.get_ongoing_alerts(), list)
+        self._test_route_retun(api_client.get_unacknowledged_alerts(), list)
+        self._test_route_retun(api_client.get_site_devices(1, dict(timestamp=datetime.utcnow())), list)
+
 
 
 if __name__ == '__main__':
