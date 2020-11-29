@@ -1,5 +1,4 @@
 import time
-import logging
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
@@ -15,19 +14,11 @@ if isinstance(cfg.SENTRY_DSN, str):
     sentry_sdk.init(
         cfg.SENTRY_DSN,
         release=cfg.VERSION,
-        debug=cfg.DEBUG,
         server_name=cfg.SERVER_NAME,
         environment="production" if isinstance(cfg.SERVER_NAME, str) else None,
         traces_sample_rate=1.0,
     )
 
-    # Remove sentry information from logger to avoid spam
-    class NoParsingFilter(logging.Filter):
-        def filter(self, record):
-            return not record.getMessage().startswith('[sentry]')
-
-    logger = logging.getLogger('uvicorn.access')
-    logger.addFilter(NoParsingFilter())
 
 app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION)
 
