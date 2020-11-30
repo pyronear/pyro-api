@@ -69,7 +69,7 @@ client.send_alert_from_device(lat=10, lon=10, event_id=event_id, media_id=media_
 dummy_image = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
                 + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
 image_data = requests.get(dummy_image)
-client.upload_media(media_id=media_id, image_data=image_data)
+client.upload_media(media_id=media_id, image_data=image_data.content)
 
 ## Update your position:
 api_client.update_my_location(lat=1, lon=2, pitch=3)
