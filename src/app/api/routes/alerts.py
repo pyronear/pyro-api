@@ -9,8 +9,19 @@ from app.api.deps import get_current_device
 router = APIRouter()
 
 
+async def check_media_existence(media_id):
+    existing_media = await crud.fetch_one(media, {"id": media_id})
+    if existing_media is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Media does not exist"
+        )
+
+
 @router.post("/", response_model=AlertOut, status_code=201)
 async def create_alert(payload: AlertIn):
+    if payload.media_id is not None:
+        await check_media_existence(payload.media_id)
     return await crud.create_entry(alerts, payload)
 
 
@@ -24,6 +35,8 @@ async def create_alert_from_device(payload: AlertBase,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    if payload.media_id is not None:
+        await check_media_existence(payload.media_id)
     return await crud.create_entry(alerts, AlertIn(**payload.dict(), device_id=device.id))
 
 
@@ -59,12 +72,7 @@ async def link_media(payload: AlertMediaId,
             detail="Permission denied"
         )
 
-    existing_media = await crud.fetch_one(media, {"id": payload.media_id})
-    if existing_media is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Media does not exist"
-        )
+    await check_media_existence(payload.media_id)
     existing_alert = dict(**existing_alert)
     existing_alert["media_id"] = payload.media_id
     return await crud.update_entry(alerts, AlertIn(**existing_alert), alert_id)
