@@ -28,6 +28,5 @@ class ClientTester(unittest.TestCase):
         self._test_route_retun(api_client.get_site_devices(1, dict(timestamp=datetime.utcnow())), list)
 
 
-
 if __name__ == '__main__':
     unittest.main()
