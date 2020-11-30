@@ -3,11 +3,11 @@ from datetime import datetime
 from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
-from app.db import devices
+from app.db import devices, accesses
 from app.api.schemas import DeviceOut, DeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
 from app.api.deps import get_current_device, get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd, delete_login_access
+from app.api.routes.accesses import post_access, update_access_pwd
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
 async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
     entry = await crud.delete_entry(devices, device_id)
     # Delete access
-    await delete_login_access(entry['login'])
+    await crud.delete_entry(accesses, entry['access_id'])
     return entry
 
 
