@@ -4,7 +4,8 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
+from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn,
+                             UserRead, DefaultPosition, Cred)
 from app.api.deps import get_current_device, get_current_user
 
 from app.api.routes.accesses import post_access, update_access_pwd
