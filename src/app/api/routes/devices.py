@@ -4,7 +4,7 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
 from app.db import devices
-from app.api.schemas import DeviceOut, DeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
+from app.api.schemas import DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred
 from app.api.deps import get_current_device, get_current_user
 
 from app.api.routes.accesses import post_access, update_access_pwd
@@ -16,6 +16,12 @@ router = APIRouter()
 async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
     access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
+
+
+@router.post("/register-device", response_model=DeviceOut, status_code=201)
+async def register_my_device(payload: MyDeviceAuth, me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
+    return await crud.create_entry(devices, DeviceCreation(**payload.dict(), owner_id=me.id, access_id=access_entry.id))
 
 
 @router.get("/{device_id}/", response_model=DeviceOut)
