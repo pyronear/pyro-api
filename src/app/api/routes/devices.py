@@ -19,7 +19,7 @@ async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
 
 
-@router.post("/register-device", response_model=DeviceOut, status_code=201)
+@router.post("/register", response_model=DeviceOut, status_code=201)
 async def register_my_device(payload: MyDeviceAuth, me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
     access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
     return await crud.create_entry(devices, DeviceCreation(**payload.dict(), owner_id=me.id, access_id=access_entry.id))
