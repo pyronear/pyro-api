@@ -18,7 +18,7 @@ users = Table(
     "users",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("login", String(50)),
+    Column("login", String(50), unique=True),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )
@@ -27,7 +27,7 @@ accesses = Table(
     "accesses",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("login", String(50)),
+    Column("login", String(50), unique=True),
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", String(30), default="me", nullable=False),
 )
@@ -74,7 +74,7 @@ devices = Table(
     "devices",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("login", String(50)),
+    Column("login", String(50), unique=True),
     Column("owner_id", Integer, ForeignKey("users.id")),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("specs", String(50)),
