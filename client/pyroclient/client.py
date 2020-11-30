@@ -81,8 +81,8 @@ class Client:
             payload["pitch"] = pitch
 
         if len(payload) == 0:
-            raise MissingArgumentException(
-                    details="At least one location information (lat, lon, elevation, yaw, pitch) must be filled")
+            raise MissingArgumentException(details="At least one location information"
+                                                   + "(lat, lon, elevation, yaw, pitch) must be filled")
 
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
