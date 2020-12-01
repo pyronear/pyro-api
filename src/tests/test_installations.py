@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
+from app.api.routes import installations
 from tests.conf_test_db import get_entry_in_db, populate_db
 from tests.utils import update_only_datetime, parse_time
 
@@ -234,3 +235,15 @@ async def test_delete_installation_invalid(test_app_asyncio, test_db,
     assert response.status_code == status_code, print(installation_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(installation_id)
+
+
+@pytest.mark.asyncio
+async def test_get_active_devices_on_site(test_app_asyncio, test_db, monkeypatch):
+    # Sterilize DB interactions
+    await init_test_db(monkeypatch, test_db)
+    # Custom patching for DB operations done on route
+    monkeypatch.setattr(installations, "database", test_db)
+
+    response = await test_app_asyncio.get("/installations/site-devices/1")
+    assert response.status_code == 200
+    assert response.json() == [DEVICE_TABLE[0]['id']]
