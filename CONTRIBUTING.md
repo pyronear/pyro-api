@@ -47,6 +47,7 @@ In order to run the same unit tests as the CI workflows, you can run the dockeri
 
 ```bash
 PORT=8002 docker-compose up -d --build
+PORT=8002 docker-compose exec -T web pip install -r requirements-dev.txt
 PORT=8002 docker-compose exec -T web coverage run -m pytest .
 ```
 Please note that you can pick another port number, it only has to be consistent once you have started your containers.
