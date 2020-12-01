@@ -93,7 +93,10 @@ async def test_fetch_devices(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.parametrize(
     "payload, route",
     [
-        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, "/devices/"],  # existing device
+        [
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"},
+            "/devices/"
+        ],  # existing device
         [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, "/devices/register"],  # password too short
     ],
 )
