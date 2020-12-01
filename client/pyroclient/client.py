@@ -60,7 +60,7 @@ class Client:
             raise HTTPRequestException(response.status_code, response.text)
 
     # Device functions
-    def hearbeat(self):
+    def heartbeat(self):
         """Updates the last ping of the device"""
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
