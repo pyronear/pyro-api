@@ -42,6 +42,7 @@ async def get_active_devices_on_site(site_id: int = Path(..., gt=0)):
 
     query = installations.select().where(and_(installations.c.site_id == site_id,
                                               installations.c.start_ts <= current_ts,
-                                              or_(installations.c.end_ts >= current_ts, installations.c.end_ts is None)))
+                                              or_(installations.c.end_ts.is_(None),
+                                                  installations.c.end_ts >= current_ts)))
 
     return [entry['device_id'] for entry in await database.fetch_all(query=query)]
