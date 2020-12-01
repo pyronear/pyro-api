@@ -186,7 +186,7 @@ class MediaUrl(BaseModel):
 class InstallationIn(Location, _Rotation):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
-    start_ts: datetime = None
+    start_ts: datetime
     end_ts: datetime = None
 
 
