@@ -186,9 +186,21 @@
 </dd>
 </dl>
 <dl class="py method">
+<dt id="pyroclient.client.Client.create_event">
+<code class="sig-name descname">create_event</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lat</span><span class="p">:</span> <span class="n">float</span></em>, <em class="sig-param"><span class="n">lon</span><span class="p">:</span> <span class="n">float</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.create_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Notify an event (e.g wildfire).</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pyroclient.client.Client.create_media">
-<code class="sig-name descname">create_media</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.create_media" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">create_media</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">device_id</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.create_media" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a media entry</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyroclient.client.Client.create_media_from_device">
+<code class="sig-name descname">create_media_from_device</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media_from_device"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.create_media_from_device" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a media entry from a device (no need to specify device ID).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -246,26 +258,32 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.hearbeat">
-<code class="sig-name descname">hearbeat</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.hearbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.hearbeat" title="Permalink to this definition">¶</a></dt>
+<dt id="pyroclient.client.Client.heartbeat">
+<code class="sig-name descname">heartbeat</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the last ping of the device</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="pyroclient.client.Client.send_alert">
-<code class="sig-name descname">send_alert</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">send_alert</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lat</span><span class="p">:</span> <span class="n">float</span></em>, <em class="sig-param"><span class="n">lon</span><span class="p">:</span> <span class="n">float</span></em>, <em class="sig-param"><span class="n">event_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">device_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">media_id</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Raise an alert to the API</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="pyroclient.client.Client.send_alert_from_device">
+<code class="sig-name descname">send_alert_from_device</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lat</span><span class="p">:</span> <span class="n">float</span></em>, <em class="sig-param"><span class="n">lon</span><span class="p">:</span> <span class="n">float</span></em>, <em class="sig-param"><span class="n">event_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">media_id</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert_from_device"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert_from_device" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raise an alert to the API from a device (no need to specify device ID).</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pyroclient.client.Client.update_my_location">
-<code class="sig-name descname">update_my_location</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_location"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_location" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">update_my_location</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lat</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">lon</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">elevation</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">yaw</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pitch</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_location"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_location" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the location of the device</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="pyroclient.client.Client.upload_media">
-<code class="sig-name descname">upload_media</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.upload_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.upload_media" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">upload_media</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">media_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">image_data</span><span class="p">:</span> <span class="n">bytes</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.upload_media"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyroclient.client.Client.upload_media" title="Permalink to this definition">¶</a></dt>
 <dd><p>Upload the media content</p>
 </dd></dl>
 
