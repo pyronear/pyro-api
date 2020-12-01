@@ -135,11 +135,18 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 
 # Device
-class DeviceIn(DefaultPosition):
+class MyDeviceIn(DefaultPosition):
     login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
-    owner_id: int = Field(..., gt=0)
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = Field(default=None, example=datetime.utcnow())
+
+
+class DeviceIn(MyDeviceIn):
+    owner_id: int = Field(..., gt=0)
+
+
+class MyDeviceAuth(MyDeviceIn, Cred):
+    scopes: str = Field("device", example="device")
 
 
 class DeviceAuth(DeviceIn, Cred):
