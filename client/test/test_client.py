@@ -25,7 +25,6 @@ class ClientTester(unittest.TestCase):
         self._test_route_retun(api_client.get_all_alerts(), list)
         self._test_route_retun(api_client.get_ongoing_alerts(), list)
         self._test_route_retun(api_client.get_unacknowledged_alerts(), list)
-        self._test_route_retun(api_client.get_site_devices(1, dict(timestamp=datetime.utcnow())), list)
 
 
 if __name__ == '__main__':
