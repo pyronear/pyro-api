@@ -1,11 +1,10 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
-
+from app import db
 from app.api import crud
-from app.api.routes import events
-
+from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -15,26 +14,24 @@ EVENT_TABLE = [
 ]
 
 
-def _patch_session(monkeypatch, mock_table):
-    # DB patching
-    monkeypatch.setattr(events, "events", mock_table)
-    # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "get", pytest.mock_get)
-    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
-    monkeypatch.setattr(crud, "post", pytest.mock_post)
-    monkeypatch.setattr(crud, "put", pytest.mock_put)
-    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
+EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 
 
-def test_get_event(test_app, monkeypatch):
+async def init_test_db(monkeypatch, test_db):
+    monkeypatch.setattr(crud, "database", test_db)
+
+    await populate_db(test_db, db.events, EVENT_TABLE_FOR_DB)
+
+
+@pytest.mark.asyncio
+async def test_get_event(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.get("/events/1")
+    response = await test_app_asyncio.get("/events/1")
     assert response.status_code == 200
-    assert response.json() == mock_event_table[0]
+    assert response.json() == EVENT_TABLE[0]
 
 
 @pytest.mark.parametrize(
@@ -44,43 +41,46 @@ def test_get_event(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_get_event_invalid(test_app, monkeypatch, event_id, status_code, status_details):
+@pytest.mark.asyncio
+async def test_get_event_invalid(test_app_asyncio, test_db, monkeypatch, event_id, status_code, status_details):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.get(f"/events/{event_id}")
+    response = await test_app_asyncio.get(f"/events/{event_id}")
     assert response.status_code == status_code, event_id
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
 
 
-def test_fetch_events(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_fetch_events(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.get("/events/")
+    response = await test_app_asyncio.get("/events/")
     assert response.status_code == 200
-    assert response.json() == mock_event_table
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in EVENT_TABLE]
 
 
-def test_create_event(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_create_event(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
     test_payload = {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}
-    test_response = {"id": len(mock_event_table) + 1, **test_payload}
+    test_response = {"id": len(EVENT_TABLE) + 1, **test_payload}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/events/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.post("/events/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()
+
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-    assert mock_event_table[-1]['created_at'] > utc_dt and mock_event_table[-1]['created_at'] < datetime.utcnow()
+    new_event_in_db = await get_entry_in_db(test_db, db.events, json_response["id"])
+    new_event_in_db = dict(**new_event_in_db)
+    assert new_event_in_db['created_at'] > utc_dt and new_event_in_db['created_at'] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
@@ -90,25 +90,27 @@ def test_create_event(test_app, monkeypatch):
         [{"lat": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 422],
     ],
 )
-def test_create_event_invalid(test_app, monkeypatch, payload, status_code):
+@pytest.mark.asyncio
+async def test_create_event_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.post("/events/", data=json.dumps(payload))
+    response = await test_app_asyncio.post("/events/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_update_event(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_update_event(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
     test_payload = {"lat": 5., "lon": 10., "type": "wildfire"}
-    response = test_app.put("/events/1/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/events/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    for k, v in mock_event_table[0].items():
-        assert v == test_payload.get(k, EVENT_TABLE[0][k])
+    updated_event_in_db = await get_entry_in_db(test_db, db.events, 1)
+    updated_event_in_db = dict(**updated_event_in_db)
+    for k, v in updated_event_in_db.items():
+        assert v == test_payload.get(k, EVENT_TABLE_FOR_DB[0][k])
 
 
 @pytest.mark.parametrize(
@@ -122,24 +124,25 @@ def test_update_event(test_app, monkeypatch):
         [0, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 422],
     ],
 )
-def test_update_event_invalid(test_app, monkeypatch, event_id, payload, status_code):
+@pytest.mark.asyncio
+async def test_update_event_invalid(test_app_asyncio, test_db, monkeypatch, event_id, payload, status_code):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.put(f"/events/{event_id}/", data=json.dumps(payload))
+    response = await test_app_asyncio.put(f"/events/{event_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_delete_event(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_delete_event(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.delete("/events/1/")
+    response = await test_app_asyncio.delete("/events/1/")
     assert response.status_code == 200
     assert response.json() == EVENT_TABLE[0]
-    for entry in mock_event_table:
+    remaining_events = await test_app_asyncio.get("/events/")
+    for entry in remaining_events.json():
         assert entry['id'] != 1
 
 
@@ -150,12 +153,12 @@ def test_delete_event(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_delete_event_invalid(test_app, monkeypatch, event_id, status_code, status_details):
+@pytest.mark.asyncio
+async def test_delete_event_invalid(test_app_asyncio, test_db, monkeypatch, event_id, status_code, status_details):
     # Sterilize DB interactions
-    mock_event_table = deepcopy(EVENT_TABLE)
-    _patch_session(monkeypatch, mock_event_table)
+    await init_test_db(monkeypatch, test_db)
 
-    response = test_app.delete(f"/events/{event_id}/")
+    response = await test_app_asyncio.delete(f"/events/{event_id}/")
     assert response.status_code == status_code, print(event_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(event_id)

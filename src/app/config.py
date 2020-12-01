@@ -9,6 +9,7 @@ API_BASE: str = 'api/'
 VERSION: str = "0.1.1a0"
 DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
 DATABASE_URL: str = os.getenv("DATABASE_URL")
+TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
 LOGO_URL: str = "https://github.com/pyronear/PyroNear/raw/master/docs/source/_static/img/pyronear-logo-dark.png"
 
 
