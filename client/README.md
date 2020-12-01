@@ -59,7 +59,7 @@ Use it to query alerts:
 
 #AS A DEVICE:
 ## Create a device
-event_id = clapi_clientient.create_event(lat=10, lon=10).json()["id"]
+event_id = api_client.create_event(lat=10, lon=10).json()["id"]
 ## Create a media
 media_id = api_client.create_media_from_device().json()["id"]
 ## Create an alert linked to the media and the event
