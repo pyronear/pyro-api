@@ -65,7 +65,7 @@ async def delete_alert(alert_id: int = Path(..., gt=0), summary="Delete a specif
     return await crud.delete_entry(alerts, alert_id)
 
 
-@router.put("/{alert_id}/link-media", response_model=AlertOut, summary="Link a alert to a media")
+@router.put("/{alert_id}/link-media", response_model=AlertOut, summary="Link an alert to a media")
 async def link_media(payload: AlertMediaId,
                      alert_id: int = Path(..., gt=0),
                      current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
