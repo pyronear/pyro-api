@@ -53,12 +53,8 @@ async def delete_installation(installation_id: int = Path(..., gt=0)):
     return await crud.delete_entry(installations, installation_id)
 
 
-<<<<<<< HEAD
 @router.post("/site-devices/{site_id}", response_model=List[int],
              summary="Get all devices related to a specific site")
-=======
-@router.get("/site-devices/{site_id}", response_model=List[int])
->>>>>>> master
 async def get_all_at_given_ts_and_site(payload: Timestamp, site_id: int = Path(..., gt=0)):
     """
     Based on a site_id, retrieves the list of all the related devices and their information
