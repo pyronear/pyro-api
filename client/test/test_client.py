@@ -1,5 +1,4 @@
 import unittest
-from datetime import datetime
 
 from pyroclient import client
 from pyroclient.exceptions import HTTPRequestException

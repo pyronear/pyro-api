@@ -2,7 +2,7 @@ import requests
 from requests.models import Response
 import logging
 from urllib.parse import urljoin
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
 from .exceptions import HTTPRequestException
 
