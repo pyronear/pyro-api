@@ -60,8 +60,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e client/
           pip install coverage
-
-      - name: Run unittests
+      - name: Build & run API server
+        run: PORT=8002 docker-compose up -d --build
+      - name: Run client unittests
         run: |
           coverage --version
           cd client && coverage run -m unittest discover test/
