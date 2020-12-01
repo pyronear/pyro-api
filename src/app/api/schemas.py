@@ -19,10 +19,6 @@ class _Id(BaseModel):
     id: int = Field(..., gt=0)
 
 
-class Timestamp(BaseModel):
-    timestamp: datetime = Field(..., example=datetime.utcnow())
-
-
 # Accesses
 class Cred(BaseModel):
     password: str = Field(..., min_length=3, example="PickARobustOne")
