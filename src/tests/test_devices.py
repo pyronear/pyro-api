@@ -90,17 +90,24 @@ async def test_fetch_devices(test_app_asyncio, test_db, monkeypatch):
                                for entry in DEVICE_TABLE if entry['owner_id'] == 2]
 
 
+@pytest.mark.parametrize(
+    "payload, route",
+    [
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, "/devices/"],  # existing device
+        [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, "/devices/register"],  # password too short
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_device(test_app_asyncio, test_db, monkeypatch):
+async def test_create_device(test_app_asyncio, test_db, monkeypatch, payload, route):
 
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}
-    test_response = {"id": len(DEVICE_TABLE) + 1, "login": "third_device", "owner_id": 1, "specs": "v0.2"}
+    test_response = {"id": len(DEVICE_TABLE) + 1, "login": payload['login'],
+                     "owner_id": payload.get('owner_id', 2), "specs": payload['specs']}
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/devices/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.post(route, data=json.dumps(payload))
 
     assert response.status_code == 201, print(response.json()['detail'])
     # Response content
@@ -117,7 +124,7 @@ async def test_create_device(test_app_asyncio, test_db, monkeypatch):
     # Timestamp consistency
     assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
     # Access table updated
-    assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
+    assert new_access_in_db['hashed_password'] == f"{payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -134,6 +141,23 @@ async def test_create_device_invalid(test_app_asyncio, test_db, monkeypatch, pay
     await init_test_db(monkeypatch, test_db)
 
     response = await test_app_asyncio.post("/devices/", data=json.dumps(payload))
+    assert response.status_code == status_code, print(payload)
+
+
+@pytest.mark.parametrize(
+    "payload, status_code",
+    [
+        [{"login": "first_device", "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
+        [{"login": "third_device", "specs": "v0.2", "password": "pw"}, 422],  # password too short
+        [{"login": "third_device", "password": "my_pwd"}, 422],  # missing owner
+    ],
+)
+@pytest.mark.asyncio
+async def test_register_my_device_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
+    # Sterilize DB interactions
+    await init_test_db(monkeypatch, test_db)
+
+    response = await test_app_asyncio.post("/devices/register", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
