@@ -188,6 +188,8 @@ async def test_update_device(test_app_asyncio, test_db, monkeypatch):
         [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
         [1, {"login": "renamed_device"}, 422],
         [0, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
+        # renamed to already existing login
+        [1, {"login": "second_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 400],
     ],
 )
 @pytest.mark.asyncio

@@ -8,7 +8,8 @@ from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation
                              UserRead, DefaultPosition, Cred)
 from app.api.deps import get_current_device, get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd
+from app.api.routes.accesses import (post_access, update_access_pwd,
+                                     update_access_login, check_for_access_login_existence)
 
 router = APIRouter()
 
@@ -56,6 +57,13 @@ async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
     """
     Based on a device_id, updates information about the specified device
     """
+    if payload.login is not None:
+        updated_device = await crud.get(device_id, devices)
+        if updated_device is not None and payload.login != updated_device["login"]:
+            await check_for_access_login_existence(payload.login)
+            updated_acccess = await crud.fetch_one(accesses, {"login": updated_device["login"]})
+            await update_access_login(payload.login, updated_acccess["id"])
+
     return await crud.update_entry(devices, payload, device_id)
 
 

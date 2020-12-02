@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 async def check_media_existence(media_id):
-    existing_media = await crud.fetch_one(media, {"id": media_id})
+    existing_media = await crud.get(media_id, media)
     if existing_media is None:
         raise HTTPException(
             status_code=404,
