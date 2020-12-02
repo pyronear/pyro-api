@@ -70,6 +70,16 @@ async def update_alert(payload: AlertIn, alert_id: int = Path(..., gt=0)):
     return await crud.update_entry(alerts, payload, alert_id)
 
 
+@router.put("/{alert_id}/acknowledge", response_model=AlertOut, summary="Acknowledge an existing alert")
+async def acknowledge_alert(alert_id: int = Path(..., gt=0)):
+    """
+    Based on a alert_id, acknowledge the specified alert
+    """
+    payload = await crud.get(alert_id, alerts)
+    payload.is_acknowledged = True
+    return await crud.update_entry(alerts, payload, alert_id)
+
+
 @router.delete("/{alert_id}/", response_model=AlertOut)
 async def delete_alert(alert_id: int = Path(..., gt=0), summary="Delete a specific alert"):
     """
