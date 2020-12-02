@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
-from app.db import devices
+from app.db import devices, accesses
 from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn,
                              UserRead, DefaultPosition, Cred)
 from app.api.deps import get_current_device, get_current_user
@@ -64,7 +64,10 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
     """
     Based on a device_id, deletes the specified device
     """
-    return await crud.delete_entry(devices, device_id)
+    entry = await crud.delete_entry(devices, device_id)
+    # Delete access
+    await crud.delete_entry(accesses, entry['access_id'])
+    return entry
 
 
 @router.get("/my-devices", response_model=List[DeviceOut],

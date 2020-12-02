@@ -13,19 +13,21 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1,
-     "access_id": 3, "specs": "raspberry", "elevation": None, "lat": None,
+    {"id": 1, "login": "first_device", "owner_id": 1,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1", "elevation": None,
+    {"id": 3, "login": "connected_device", "owner_id": 1, "access_id": 5, "specs": "raspberry", "elevation": None,
      "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
+CONNECTED_DEVICE_ID = 3
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
-    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
+    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
+    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
     {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scopes": "device"},
     {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
     {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
@@ -249,7 +251,7 @@ async def test_update_device_location(test_app_asyncio, test_db, monkeypatch):
 
     # Self version
     response = await test_app_asyncio.put("/devices/my-location", data=json.dumps(test_payload))
-    updated_device_in_db = await get_entry_in_db(test_db, db.devices, 1)
+    updated_device_in_db = await get_entry_in_db(test_db, db.devices, CONNECTED_DEVICE_ID)
     updated_device_in_db = dict(**updated_device_in_db)
     assert response.status_code == 200
     for k, v in response.json().items():
@@ -291,14 +293,14 @@ async def test_heartbeat(test_app_asyncio, test_db, monkeypatch):
     assert datetime.utcnow() > datetime.fromisoformat(json_response['last_ping'])
     assert utc_dt < datetime.fromisoformat(json_response['last_ping'])
 
-    updated_device_in_db = await get_entry_in_db(test_db, db.devices, 1)
+    updated_device_in_db = await get_entry_in_db(test_db, db.devices, CONNECTED_DEVICE_ID)
     updated_device_in_db = dict(**updated_device_in_db)
 
     for k, v in updated_device_in_db.items():
         if k == 'last_ping':
-            assert v != DEVICE_TABLE[0][k]
+            assert v != DEVICE_TABLE[CONNECTED_DEVICE_ID - 1][k]
         elif k != 'created_at':
-            assert v == DEVICE_TABLE[0][k]
+            assert v == DEVICE_TABLE[CONNECTED_DEVICE_ID - 1][k]
 
 
 @pytest.mark.asyncio
@@ -312,6 +314,11 @@ async def test_delete_device(test_app_asyncio, test_db, monkeypatch):
     remaining_devices = await test_app_asyncio.get("/devices/")
     for entry in remaining_devices.json():
         assert entry['id'] != 1
+
+    # Check that the access was deleted as well
+    remaining_accesses = await test_app_asyncio.get("/accesses/")
+    for access in remaining_accesses.json():
+        assert access['login'] != response.json()['login']
 
 
 @pytest.mark.parametrize(

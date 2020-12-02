@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Path, Security
 
 from app.api import crud
-from app.db import users
+from app.db import users, accesses
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
@@ -101,4 +101,8 @@ async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_use
     """
     Based on a user_id, deletes the specified user
     """
-    return await crud.delete_entry(users, user_id)
+    # Delete user entry
+    entry = await crud.delete_entry(users, user_id)
+    # Delete access
+    await crud.delete_entry(accesses, entry['access_id'])
+    return entry
