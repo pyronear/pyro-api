@@ -4,8 +4,9 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
+from app.api.routes import installations
 from tests.conf_test_db import get_entry_in_db, populate_db
-from tests.utils import update_only_datetime
+from tests.utils import update_only_datetime, parse_time
 
 
 MEDIA_TABLE = [
@@ -55,9 +56,9 @@ SITE_TABLE = [
 
 INSTALLATION_TABLE = [
     {"id": 1, "device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-     "start_ts": None, "end_ts": None, "created_at": "2020-10-13T08:18:45.447773"},
+     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 2, "site_id": 2, "elevation": 58., "lat": 5., "lon": 8., "yaw": 10., "pitch": 0.,
-     "start_ts": None, "end_ts": None, "created_at": "2020-11-13T08:18:45.447773"},
+     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
@@ -129,8 +130,9 @@ async def test_create_installation(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}
-    test_response = {"id": len(INSTALLATION_TABLE) + 1, **test_payload, "start_ts": None, "end_ts": None}
+    test_payload = {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+                    "start_ts": "2020-10-13T08:18:45.447773"}
+    test_response = {"id": len(INSTALLATION_TABLE) + 1, **test_payload, "end_ts": None}
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/installations/", data=json.dumps(test_payload))
@@ -167,13 +169,17 @@ async def test_update_installation(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}
+    test_payload = {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+                    "start_ts": "2020-07-13T08:18:45.447773"}
     response = await test_app_asyncio.put("/installations/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
     updated_installation_in_db = await get_entry_in_db(test_db, db.installations, 1)
     updated_installation_in_db = dict(**updated_installation_in_db)
     for k, v in updated_installation_in_db.items():
-        assert v == test_payload.get(k, INSTALLATION_TABLE_FOR_DB[0][k])
+        if k == 'start_ts':
+            assert v == parse_time(test_payload[k])
+        else:
+            assert v == test_payload.get(k, INSTALLATION_TABLE_FOR_DB[0][k])
 
 
 @pytest.mark.parametrize(
@@ -181,9 +187,12 @@ async def test_update_installation(test_app_asyncio, test_db, monkeypatch):
     [
         [1, {}, 422],
         [1, {"device_id": 1}, 422],
-        [999, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}, 404],
-        [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}, 422],
-        [0, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}, 422],
+        [999, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+               "start_ts": "2020-07-13T08:18:45.447773"}, 404],
+        [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+             "start_ts": "2020-07-13T08:18:45.447773"}, 422],
+        [0, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+             "start_ts": "2020-07-13T08:18:45.447773"}, 422],
     ],
 )
 @pytest.mark.asyncio
@@ -226,3 +235,15 @@ async def test_delete_installation_invalid(test_app_asyncio, test_db,
     assert response.status_code == status_code, print(installation_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(installation_id)
+
+
+@pytest.mark.asyncio
+async def test_get_active_devices_on_site(test_app_asyncio, test_db, monkeypatch):
+    # Sterilize DB interactions
+    await init_test_db(monkeypatch, test_db)
+    # Custom patching for DB operations done on route
+    monkeypatch.setattr(installations, "database", test_db)
+
+    response = await test_app_asyncio.get("/installations/site-devices/1")
+    assert response.status_code == 200
+    assert response.json() == [DEVICE_TABLE[0]['id']]

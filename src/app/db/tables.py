@@ -115,7 +115,7 @@ installations = Table(
     Column("lon", Float(4, asdecimal=True)),
     Column("yaw", Float(1, asdecimal=True)),
     Column("pitch", Float(1, asdecimal=True)),
-    Column("start_ts", DateTime, default=None, nullable=True),
+    Column("start_ts", DateTime, nullable=False),
     Column("end_ts", DateTime, default=None, nullable=True),
     Column("created_at", DateTime, default=func.now()),
 )
