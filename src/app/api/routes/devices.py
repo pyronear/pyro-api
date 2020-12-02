@@ -59,10 +59,8 @@ async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
     """
     if payload.login is not None:
         updated_device = await crud.fetch_one(devices, {"id": device_id})
-        if updated_device is not None:
-            if payload.login != updated_device["login"]:
-                await check_for_access_login_existence(payload.login)
-
+        if updated_device is not None and payload.login != updated_device["login"]:
+            await check_for_access_login_existence(payload.login)
             updated_acccess = await crud.fetch_one(accesses, {"login": updated_device["login"]})
             await update_access_login(payload.login, updated_acccess["id"])
 
