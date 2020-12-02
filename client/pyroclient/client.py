@@ -12,6 +12,26 @@ __all__ = ['Client']
 
 logging.basicConfig()
 
+ROUTES: Dict[str, str] = {
+    "token": "/login/access-token",
+    "heartbeat": "/device/heartbeat",
+    "update-my-location": "/device/update-my-location",
+    "create-event": "/events",
+    "send-alert": "/alerts",
+    "send-alert-from-device": "/alerts/from-device",
+    "create-media": "/media",
+    "create-media-from-device": "/media/from-device",
+    "upload-media": "/media/{media_id}/upload",
+    "get-my-devices": "/devices/my-devices",
+    "get-sites": "/sites",
+    "get-alerts": "/alerts",
+    "get-ongoing-alerts": "/alerts/ongoing",
+    "get-unacknowledged-alerts": "/alerts/unacknowledged",
+    "get-site-devices": "/installations/site-devices/{site_id}",
+    "get-media-url": "/media/{media_id}/url",
+    "get-media-image": "/media/{media_id}/image"
+}
+
 
 class Client:
     """Client class to interact with the PyroNear API
@@ -22,35 +42,12 @@ class Client:
         credentials_password (str): Password (e.g: 123456 (don't do this))
     """
 
-    routes: Dict[str, str] = {
-        "token": "/login/access-token",
-        "heartbeat": "/device/heartbeat",
-        "update-my-location": "/device/update-my-location",
-        "create-event": "/events",
-        "send-alert": "/alerts",
-        "send-alert-from-device": "/alerts/from-device",
-        "create-media": "/media",
-        "create-media-from-device": "/media/from-device",
-        "upload-media": "/media/{media_id}/upload",
-        "get-my-devices": "/devices/my-devices",
-        "get-sites": "/sites",
-        "get-alerts": "/alerts",
-        "get-ongoing-alerts": "/alerts/ongoing",
-        "get-unacknowledged-alerts": "/alerts/unacknowledged",
-        "get-site-devices": "/installations/site-devices/{site_id}",
-        "get-media-url": "/media/{media_id}/url",
-        "get-media-image": "/media/{media_id}/image"
-    }
-
     def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
         self.api = api_url
-        self._add_api_url_to_routes()
+        # Prepend API url to each route
+        self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
         self.token = self._retrieve_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
-
-    def _add_api_url_to_routes(self) -> None:
-        for k, v in self.routes.items():
-            self.routes[k] = urljoin(self.api, v)
 
     def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(self.routes["token"],
