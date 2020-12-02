@@ -116,7 +116,6 @@ async def test_update_access_invalid(test_app_asyncio, test_db, monkeypatch, acc
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
     response = await test_app_asyncio.put(f"/accesses/{access_id}/", data=json.dumps(payload))
-    print(response.content)
     assert response.status_code == status_code, print(payload)
 
 
