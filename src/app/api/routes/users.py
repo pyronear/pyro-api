@@ -30,7 +30,6 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
     # Check for access login
     if payload.login is not None:
         updated_acccess = await crud.fetch_one(accesses, {"login": me.login})
-        await check_for_access_login_existence(payload.login)
         if updated_acccess["login"] != payload.login:
             await check_for_access_login_existence(payload.login)
             await update_access_login(payload.login, updated_acccess["id"])
@@ -88,7 +87,7 @@ async def update_user(
     """
     # Check for access login
     if payload.login is not None:
-        updated_user = await crud.fetch_one(users, {"id": user_id})
+        updated_user = await crud.get(user_id, users)
         if updated_user is not None and updated_user["login"] != payload.login:
             await check_for_access_login_existence(payload.login)
             updated_acccess = await crud.fetch_one(accesses, {"login": updated_user["login"]})

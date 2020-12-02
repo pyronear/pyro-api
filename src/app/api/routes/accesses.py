@@ -76,7 +76,7 @@ async def update_access(payload: AccessBase, access_id: int = Path(..., gt=0)):
     Based on a access_id, updates information about the specified access
     """
     if payload.login is not None:
-        updated_acccess = await crud.fetch_one(accesses, {"id": access_id})
+        updated_acccess = await crud.get(access_id, accesses)
         if (updated_acccess is not None) and (updated_acccess["login"] != payload.login):
             await check_for_access_login_existence(payload.login)
     return await crud.update_entry(accesses, payload, access_id)
