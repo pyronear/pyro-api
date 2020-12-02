@@ -1,4 +1,5 @@
 import unittest
+from requests import ConnectionError
 
 from pyroclient import client
 from pyroclient.exceptions import HTTPRequestException
@@ -15,7 +16,9 @@ class ClientTester(unittest.TestCase):
         # Wrong credentials
         self.assertRaises(HTTPRequestException, client.Client, "http://localhost:8002", "invalid_login", "invalid_pwd")
 
-        # Correct creds
+        # Incorrect URL port
+        self.assertRaises(ConnectionError, client.Client, "http://localhost:8003", "superuser", "superuser")
+
         api_client = client.Client("http://localhost:8002", "superuser", "superuser")
 
         # Read routes
