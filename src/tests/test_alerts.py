@@ -195,7 +195,7 @@ async def test_acknowledge_alert(test_app_asyncio, test_db, monkeypatch):
     assert response.status_code == 200
     updated_alert_in_db = await get_entry_in_db(test_db, db.alerts, 3)
     updated_alert_in_db = dict(**updated_alert_in_db)
-    assert updated_alert_in_db.is_acknowledged == True
+    assert updated_alert_in_db.is_acknowledged
 
 
 @pytest.mark.parametrize(
