@@ -211,3 +211,11 @@ class AlertIn(AlertBase):
 
 class AlertOut(AlertIn, _CreatedAt, _Id):
     pass
+
+
+class Ackowledgement(BaseModel):
+    is_acknowledged: bool = Field(False)
+
+
+class AcknowledgementOut(Ackowledgement, _Id):
+    pass
