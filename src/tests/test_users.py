@@ -165,6 +165,7 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
         [1, {"login": 1}, 422],
         [1, {"login": "me"}, 422],
         [0, {"login": "renamed_user"}, 422],
+        [1, {"login": "connected_user"}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
@@ -183,6 +184,7 @@ async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_
         [{}, 422],
         [{"login": 1}, 422],
         [{"login": "me"}, 422],
+        [{"login": "first_user"}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
