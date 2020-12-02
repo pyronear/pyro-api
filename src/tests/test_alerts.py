@@ -197,6 +197,17 @@ async def test_update_alert(test_app_asyncio, test_db, monkeypatch):
         assert v == updated_alert_in_db[k]
 
 
+@pytest.mark.asyncio
+async def test_acknowledge_alert(test_app_asyncio, test_db, monkeypatch):
+    await init_test_db(monkeypatch, test_db)
+
+    response = await test_app_asyncio.put("/alerts/3/acknowledge")
+    assert response.status_code == 200
+    updated_alert_in_db = await get_entry_in_db(test_db, db.alerts, 3)
+    updated_alert_in_db = dict(**updated_alert_in_db)
+    assert updated_alert_in_db['is_acknowledged']
+
+
 @pytest.mark.parametrize(
     "alert_id, payload, status_code",
     [
