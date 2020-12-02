@@ -2,19 +2,28 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, Path, HTTPException
 from app.api import crud, security
 from app.db import accesses
-from app.api.schemas import AccessBase, AccessRead, AccessAuth, AccessCreation, Cred, CredHash
+from app.api.schemas import AccessBase, AccessRead, AccessAuth, AccessCreation, Cred, CredHash, Login
 
 
 router = APIRouter()
 
 
-async def post_access(login: str, password: str, scopes: str) -> AccessRead:
+async def update_access_login(login: str, access_id: int):
+    """ Assume access_id exists and login does not exist elsewhere"""
+    return await crud.update_entry(accesses, Login(login=login), access_id)
+
+
+async def check_for_access_login_existence(login: str):
     # Check that the login does not already exist
     if await crud.fetch_one(accesses, {'login': login}) is not None:
         raise HTTPException(
             status_code=400,
             detail=f"An entry with login='{login}' already exists.",
         )
+
+
+async def post_access(login: str, password: str, scopes: str) -> AccessRead:
+    await check_for_access_login_existence(login)
     # Hash the password
     pwd = await security.hash_password(password)
     access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
@@ -66,6 +75,10 @@ async def update_access(payload: AccessBase, access_id: int = Path(..., gt=0)):
     """
     Based on a access_id, updates information about the specified access
     """
+    if payload.login is not None:
+        updated_acccess = await crud.fetch_one(accesses, {"id": access_id})
+        if (updated_acccess is not None) and (updated_acccess["login"] != payload.login):
+            await check_for_access_login_existence(payload.login)
     return await crud.update_entry(accesses, payload, access_id)
 
 

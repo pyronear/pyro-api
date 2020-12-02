@@ -24,6 +24,10 @@ class Timestamp(BaseModel):
 
 
 # Accesses
+class Login(BaseModel):
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+
+
 class Cred(BaseModel):
     password: str = Field(..., min_length=3, example="PickARobustOne")
 
@@ -32,8 +36,7 @@ class CredHash(BaseModel):
     hashed_password: str
 
 
-class AccessBase(BaseModel):
-    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+class AccessBase(Login):
     scopes: str = Field(..., example="me")
 
 
@@ -50,9 +53,9 @@ class AccessRead(AccessBase, _Id):
 
 
 # Users
-class UserInfo(BaseModel):
+class UserInfo(Login):
     # Abstract information about a user
-    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    pass
 
 
 class UserRead(UserInfo, _CreatedAt, _Id):
@@ -135,8 +138,7 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 
 # Device
-class MyDeviceIn(DefaultPosition):
-    login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
+class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = Field(default=None, example=datetime.utcnow())
 
