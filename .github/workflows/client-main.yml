@@ -61,7 +61,9 @@ jobs:
           pip install -e client/
           pip install coverage
       - name: Build & run API server
-        run: PORT=8002 docker-compose up -d --build
+        run: |
+          PORT=8002 docker-compose up -d --build
+          docker ps
       - name: Run client unittests
         run: |
           coverage --version
