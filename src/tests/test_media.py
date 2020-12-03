@@ -32,6 +32,8 @@ DEVICE_TABLE = [{"id": 1, "login": "connected_device", "owner_id": 1,
                  "created_at": "2020-10-13T08:18:45.447773"}
                 ]
 
+CONNECTED_DEVICE_ID = 3
+
 ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
     {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
@@ -125,8 +127,8 @@ async def test_create_media_from_device(test_app_asyncio, test_db, monkeypatch):
 
     test_payload = {}
 
-    # Device_id is 1 because it is the id of the authentified sending device.
-    test_response = {"id": len(MEDIA_TABLE) + 1, "device_id": 1, "type": "image"}
+    # Device_id is 3 because it is the id of the authentified sending device.
+    test_response = {"id": len(MEDIA_TABLE) + 1, "device_id": CONNECTED_DEVICE_ID, "type": "image"}
 
     response = await test_app_asyncio.post("/media/from-device", data=json.dumps(test_payload))
 
@@ -226,21 +228,22 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     await init_test_db(monkeypatch, test_db)
 
     # 1 - Create a media that will have an upload
-    payload_creation_device = {"device_id": 1}  # 1 because it is the authentified device_id specified in the config
+    payload_creation_device = {"device_id": CONNECTED_DEVICE_ID}
     newly_created_media_id = len(MEDIA_TABLE_FOR_DB) + 1
     response = await test_app_asyncio.post("/media/", data=json.dumps(payload_creation_device))
+    assert response.status_code == 201
 
     # 2 - Upload something
     async def successful_upload(bucket_name, bucket_key, file_binary):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
-    response = await test_app_asyncio.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
+    response = await test_app_asyncio.post(f"/media/{response.json()['id']}/upload", files=dict(file='bar'))
 
+    assert response.status_code == 200
     new_media_in_db = await get_entry_in_db(test_db, db.media, response.json()["id"])
     new_media_in_db = dict(**new_media_in_db)
     response_json = response.json()
     response_json.pop("created_at")
-    assert response.status_code == 200
     assert {k: v for k, v in new_media_in_db.items() if k not in ('created_at', "bucket_key")} == response_json
     assert new_media_in_db["bucket_key"] is not None
 

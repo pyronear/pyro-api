@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Path
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
+from datetime import datetime
 from app.api import crud
 from app.db import installations, database
-from app.api.schemas import InstallationOut, InstallationIn, Timestamp
+from app.api.schemas import InstallationOut, InstallationIn
 
 
 router = APIRouter()
@@ -53,13 +54,17 @@ async def delete_installation(installation_id: int = Path(..., gt=0)):
     return await crud.delete_entry(installations, installation_id)
 
 
-@router.post("/site-devices/{site_id}", response_model=List[int],
-             summary="Get all devices related to a specific site")
-async def get_all_at_given_ts_and_site(payload: Timestamp, site_id: int = Path(..., gt=0)):
+@router.get("/site-devices/{site_id}", response_model=List[int],
+            summary="Get all devices related to a specific site")
+async def get_active_devices_on_site(site_id: int = Path(..., gt=0)):
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
-    query = installations.select(installations.c.device_id).where(and_(installations.c.site_id == site_id,
-                                                                       installations.c.start_ts <= payload.timestamp,
-                                                                       installations.c.end_ts >= payload.timestamp))
-    return await database.fetch_all(query=query)
+    current_ts = datetime.utcnow()
+
+    query = installations.select().where(and_(installations.c.site_id == site_id,
+                                              installations.c.start_ts <= current_ts,
+                                              or_(installations.c.end_ts.is_(None),
+                                                  installations.c.end_ts >= current_ts)))
+
+    return [entry['device_id'] for entry in await database.fetch_all(query=query)]

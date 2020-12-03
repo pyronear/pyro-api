@@ -3,11 +3,12 @@ from typing import List
 from fastapi import APIRouter, Path, Security
 
 from app.api import crud
-from app.db import users
+from app.db import users, accesses
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
-from app.api.routes.accesses import post_access, update_access_pwd
+from app.api.routes.accesses import (post_access, update_access_pwd,
+                                     update_access_login, check_for_access_login_existence)
 
 
 router = APIRouter()
@@ -26,6 +27,13 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
     """
     Updates information of the current user
     """
+    # Check for access login
+    if payload.login is not None:
+        updated_acccess = await crud.fetch_one(accesses, {"login": me.login})
+        if updated_acccess["login"] != payload.login:
+            await check_for_access_login_existence(payload.login)
+            await update_access_login(payload.login, updated_acccess["id"])
+
     return await crud.update_entry(users, payload, me.id)
 
 
@@ -77,6 +85,14 @@ async def update_user(
     """
     Based on a user_id, updates information about the specified user
     """
+    # Check for access login
+    if payload.login is not None:
+        updated_user = await crud.get(user_id, users)
+        if updated_user is not None and updated_user["login"] != payload.login:
+            await check_for_access_login_existence(payload.login)
+            updated_acccess = await crud.fetch_one(accesses, {"login": updated_user["login"]})
+            await update_access_login(payload.login, updated_acccess["id"])
+
     return await crud.update_entry(users, payload, user_id)
 
 
@@ -101,4 +117,8 @@ async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_use
     """
     Based on a user_id, deletes the specified user
     """
-    return await crud.delete_entry(users, user_id)
+    # Delete user entry
+    entry = await crud.delete_entry(users, user_id)
+    # Delete access
+    await crud.delete_entry(accesses, entry['access_id'])
+    return entry

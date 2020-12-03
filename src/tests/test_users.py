@@ -165,6 +165,7 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
         [1, {"login": 1}, 422],
         [1, {"login": "me"}, 422],
         [0, {"login": "renamed_user"}, 422],
+        [1, {"login": "connected_user"}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
@@ -183,6 +184,7 @@ async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_
         [{}, 422],
         [{"login": 1}, 422],
         [{"login": "me"}, 422],
+        [{"login": "first_user"}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
@@ -278,6 +280,11 @@ async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
     remaining_users = await test_app_asyncio.get("/users/")
     for entry in remaining_users.json():
         assert entry['id'] != 1
+
+    # Check that the access was deleted as well
+    remaining_accesses = await test_app_asyncio.get("/accesses/")
+    for access in remaining_accesses.json():
+        assert access['login'] != response.json()['login']
 
 
 @pytest.mark.parametrize(

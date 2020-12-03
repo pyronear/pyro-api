@@ -107,6 +107,7 @@ async def test_update_access(test_app_asyncio, test_db, monkeypatch):
         [999, {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 404],
         [1, {"login": 1, "scopes": "me", "password": "PickAnotherRobustOne"}, 422],
         [0, {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 422],
+        [1, {"login": "second_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 400],
     ],
 )
 @pytest.mark.asyncio
