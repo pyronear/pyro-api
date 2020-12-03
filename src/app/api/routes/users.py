@@ -7,9 +7,6 @@ from app.db import users, accesses
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
 from app.api.deps import get_current_user
 
-from app.api.routes.accesses import (post_access, update_access_pwd,
-                                     update_access_login, check_for_access_login_existence)
-
 
 router = APIRouter()
 
@@ -28,11 +25,11 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
     Updates information of the current user
     """
     # Check for access login
-    if payload.login is not None:
-        updated_acccess = await crud.fetch_one(accesses, {"login": me.login})
-        if updated_acccess["login"] != payload.login:
-            await check_for_access_login_existence(payload.login)
-            await update_access_login(payload.login, updated_acccess["id"])
+    origin_user = await crud.get(me.id, users)
+
+    if origin_user["login"] != payload.login:
+        await crud.accesses.check_login_existence(accesses, payload.login)
+        await crud.accesses.update_login(accesses, payload.login, origin_user["access_id"])
 
     return await crud.update_entry(users, payload, me.id)
 
@@ -43,7 +40,7 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
     Updates the password of the current user
     """
     entry = await crud.get_entry(users, me.id)
-    await update_access_pwd(payload, entry["access_id"])
+    await crud.accesses.update_access_pwd(accesses, payload, entry["access_id"])
     return entry
 
 
@@ -56,8 +53,9 @@ async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["a
     or "Example Value" to get a concrete idea of arguments
     """
     # Create a new access
-    access_entry = await post_access(payload.login, payload.password, payload.scopes)
-    return await crud.create_entry(users, UserCreation(login=payload.login, access_id=access_entry.id))
+    # access_entry = await post_access(payload.login, payload.password, payload.scopes)
+    # return await crud.create_entry(users, UserCreation(login=payload.login, access_id=access_entry.id))
+    return await crud.accesses.create_accessed_entry(users, accesses, payload, UserCreation)
 
 
 @router.get("/{user_id}/", response_model=UserRead, summary="Get information about a specific user")
@@ -85,15 +83,18 @@ async def update_user(
     """
     Based on a user_id, updates information about the specified user
     """
-    # Check for access login
-    if payload.login is not None:
-        updated_user = await crud.get(user_id, users)
-        if updated_user is not None and updated_user["login"] != payload.login:
-            await check_for_access_login_existence(payload.login)
-            updated_acccess = await crud.fetch_one(accesses, {"login": updated_user["login"]})
-            await update_access_login(payload.login, updated_acccess["id"])
+    # origin_user = await crud.get(user_id, users)
+    #
+    # # Check for access login
+    # if payload.login is not None:
+    #     if origin_user is not None and origin_user["login"] != payload.login:
+    #         await check_for_access_login_existence(payload.login)
+    #         updated_acccess = await crud.fetch_one(accesses, {"login": origin_user["login"]})
+    #         await update_access_login(payload.login, updated_acccess["id"])
+    #
+    # return await crud.update_entry(users, payload, user_id)
 
-    return await crud.update_entry(users, payload, user_id)
+    return await crud.accesses.update_accessed_entry(users, accesses, user_id, payload)
 
 
 @router.put("/{user_id}/pwd", response_model=UserInfo, summary="Update the password of a specific user")
@@ -107,8 +108,7 @@ async def update_user_password(
     """
     # Check that user does exist
     entry = await crud.get_entry(users, user_id)
-    # Update the credentials
-    await update_access_pwd(payload, entry["access_id"])
+    await crud.accesses.update_access_pwd(accesses, payload, entry["access_id"])
     return entry
 
 
@@ -118,7 +118,8 @@ async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_use
     Based on a user_id, deletes the specified user
     """
     # Delete user entry
-    entry = await crud.delete_entry(users, user_id)
-    # Delete access
-    await crud.delete_entry(accesses, entry['access_id'])
-    return entry
+    # entry = await crud.delete_entry(users, user_id)
+    # # Delete access
+    # await crud.delete_entry(accesses, entry['access_id'])
+    # return entry
+    return await crud.accesses.delete_accessed_entry(users, accesses, user_id)

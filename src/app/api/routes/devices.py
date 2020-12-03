@@ -4,12 +4,9 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
 from app.db import devices, accesses
-from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn,
-                             UserRead, DefaultPosition, Cred)
+from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred)
 from app.api.deps import get_current_device, get_current_user
 
-from app.api.routes.accesses import (post_access, update_access_pwd,
-                                     update_access_login, check_for_access_login_existence)
 
 router = APIRouter()
 
@@ -21,8 +18,9 @@ async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
-    return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
+    # access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
+    # return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
+    return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
 @router.post("/register", response_model=DeviceOut, status_code=201, summary="Register your device")
@@ -32,8 +30,10 @@ async def register_my_device(payload: MyDeviceAuth, me: UserRead = Security(get_
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
-    return await crud.create_entry(devices, DeviceCreation(**payload.dict(), owner_id=me.id, access_id=access_entry.id))
+    # access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
+    # return await crud.create_entry(devices, DeviceCreation(**payload.dict(), owner_id=me.id, access_id=access_entry.id))
+    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id)
+    return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 
 @router.get("/{device_id}/", response_model=DeviceOut, summary="Get information about a specific device")
@@ -55,16 +55,25 @@ async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
 async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
     """
-    Based on a device_id, updates information about the specified device
+    Based on a device_id, updates information about the specified device  # TODO security scopes ?
     """
-    if payload.login is not None:
-        updated_device = await crud.get(device_id, devices)
-        if updated_device is not None and payload.login != updated_device["login"]:
-            await check_for_access_login_existence(payload.login)
-            updated_acccess = await crud.fetch_one(accesses, {"login": updated_device["login"]})
-            await update_access_login(payload.login, updated_acccess["id"])
+    # if payload.login is not None:
+    #     updated_device = await crud.get(device_id, devices)
+    #     if updated_device is not None and payload.login != updated_device["login"]:
+    #         await check_for_access_login_existence(payload.login)
+    #         updated_acccess = await crud.fetch_one(accesses, {"login": updated_device["login"]})
+    #         await update_access_login(payload.login, updated_acccess["id"])
 
-    return await crud.update_entry(devices, payload, device_id)
+    # origin_device = await crud.get(device_id, devices)
+
+    # # If login changed -> update corresponding access
+    # if origin_device is not None and payload.login != origin_device["login"]:
+    #     await crud.accesses.check_login_existence(accesses, payload.login)
+    #     await crud.accesses.update_login(accesses, payload.login, origin_device["access_id"])
+    #
+    # return await crud.update_entry(devices, payload, device_id)
+
+    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
@@ -72,10 +81,10 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
     """
     Based on a device_id, deletes the specified device
     """
-    entry = await crud.delete_entry(devices, device_id)
-    # Delete access
-    await crud.delete_entry(accesses, entry['access_id'])
-    return entry
+    # entry = await crud.delete_entry(devices, device_id)
+    # await crud.delete_entry(accesses, entry['access_id'])
+    # return entry
+    return await crud.accesses.delete_accessed_entry(devices, accesses, device_id)
 
 
 @router.get("/my-devices", response_model=List[DeviceOut],
@@ -145,5 +154,5 @@ async def update_device_password(
     Based on a device_id, updates the password of the specified device
     """
     entry = await crud.get_entry(devices, device_id)
-    await update_access_pwd(payload, entry["access_id"])
+    await crud.accesses.update_access_pwd(accesses, payload, entry["access_id"])
     return entry
