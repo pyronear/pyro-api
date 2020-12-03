@@ -12,6 +12,14 @@ router = APIRouter()
 
 @router.post("/access-token", response_model=Token)
 async def create_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    This API follows the OAuth 2.0 specification
+
+    If the credentials are valid, creates a new access token
+
+    By default, the token expires after 1 hour
+    """
+
     # Verify credentials
     entry = await crud.fetch_one(accesses, {'login': form_data.username})
     if entry is None or not await security.verify_password(form_data.password, entry['hashed_password']):

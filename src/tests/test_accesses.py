@@ -1,10 +1,9 @@
 import json
 import pytest
-from copy import deepcopy
 
+from app import db
 from app.api import crud
-from app.api.routes import accesses
-
+from tests.conf_test_db import populate_db
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "me"},
@@ -12,27 +11,15 @@ ACCESS_TABLE = [
 ]
 
 
-def _patch_session(monkeypatch, mock_table):
-    # DB patching
-    monkeypatch.setattr(accesses, "accesses", mock_table)
-    # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "get", pytest.mock_get)
-    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
-    monkeypatch.setattr(crud, "fetch_one", pytest.mock_fetch_one)
-    monkeypatch.setattr(crud, "post", pytest.mock_post)
-    monkeypatch.setattr(crud, "put", pytest.mock_put)
-    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
-
-
-def test_get_access(test_app, monkeypatch):
-
+@pytest.mark.asyncio
+async def test_get_access(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.get("/accesses/1")
+    response = await test_app_asyncio.get("/accesses/1")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in mock_access_table[0].items() if k != "hashed_password"}
+    assert response.json() == {k: v for k, v in ACCESS_TABLE[0].items() if k != "hashed_password"}
 
 
 @pytest.mark.parametrize(
@@ -42,38 +29,38 @@ def test_get_access(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_get_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_get_access_invalid(test_app_asyncio, test_db, monkeypatch, access_id, status_code, status_details):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.get(f"/accesses/{access_id}")
+    response = await test_app_asyncio.get(f"/accesses/{access_id}")
     assert response.status_code == status_code, access_id
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
 
 
-def test_fetch_accesses(test_app, monkeypatch):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_fetch_accesses(test_app_asyncio, test_db, monkeypatch):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.get("/accesses/")
+    response = await test_app_asyncio.get("/accesses/")
     assert response.status_code == 200
     assert response.json() == [{k: v for k, v in entry.items() if k != "hashed_password"}
-                               for entry in mock_access_table]
+                               for entry in ACCESS_TABLE]
 
 
-def test_create_access(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_create_access(test_app_asyncio, test_db, monkeypatch):
 
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
     test_payload = {"login": "third_login", "scopes": "me", "password": "PickARobustOne"}
-    test_response = {"id": len(mock_access_table) + 1, **test_payload}
+    test_response = {"id": len(ACCESS_TABLE) + 1, **test_payload}
 
-    response = test_app.post("/accesses/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.post("/accesses/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     assert response.json() == {k: v for k, v in test_response.items() if k != "password"}
@@ -89,26 +76,26 @@ def test_create_access(test_app, monkeypatch):
         [{"login": "third_login", "scopes": "me"}, 422, None],
     ],
 )
-def test_create_access_invalid(test_app, monkeypatch, payload, status_code, status_details):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_create_access_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code, status_details):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.post("/accesses/", data=json.dumps(payload))
+    response = await test_app_asyncio.post("/accesses/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(payload)
 
 
-def test_update_access(test_app, monkeypatch):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_update_access(test_app_asyncio, test_db, monkeypatch):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
     test_payload = {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}
-    response = test_app.put("/accesses/1/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/accesses/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    for k, v in mock_access_table[0].items():
+    for k, v in ACCESS_TABLE[0].items():
         assert v == test_payload.get(k, ACCESS_TABLE[0][k])
 
 
@@ -120,26 +107,29 @@ def test_update_access(test_app, monkeypatch):
         [999, {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 404],
         [1, {"login": 1, "scopes": "me", "password": "PickAnotherRobustOne"}, 422],
         [0, {"login": "first_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 422],
+        [1, {"login": "second_login", "scopes": "me", "password": "PickAnotherRobustOne"}, 400],
     ],
 )
-def test_update_access_invalid(test_app, monkeypatch, access_id, payload, status_code):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_update_access_invalid(test_app_asyncio, test_db, monkeypatch, access_id, payload, status_code):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.put(f"/accesses/{access_id}/", data=json.dumps(payload))
+    response = await test_app_asyncio.put(f"/accesses/{access_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_delete_access(test_app, monkeypatch):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_delete_access(test_app_asyncio, test_db, monkeypatch):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.delete("/accesses/1/")
+    response = await test_app_asyncio.delete("/accesses/1/")
     assert response.status_code == 200
     assert response.json() == {k: v for k, v in ACCESS_TABLE[0].items() if k != "hashed_password"}
-    for entry in mock_access_table:
+
+    remaining_accesses = await test_app_asyncio.get("/accesses/")
+    for entry in remaining_accesses.json():
         assert entry['id'] != 1
 
 
@@ -150,12 +140,12 @@ def test_delete_access(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_delete_access_invalid(test_app, monkeypatch, access_id, status_code, status_details):
-    # Sterilize DB interactions
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_access_table)
+@pytest.mark.asyncio
+async def test_delete_access_invalid(test_app_asyncio, test_db, monkeypatch, access_id, status_code, status_details):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
-    response = test_app.delete(f"/accesses/{access_id}/")
+    response = await test_app_asyncio.delete(f"/accesses/{access_id}/")
     assert response.status_code == status_code, print(access_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(access_id)

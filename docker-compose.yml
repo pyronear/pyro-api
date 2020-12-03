@@ -10,6 +10,7 @@ services:
       - ${PORT}:8000
     environment:
       - DATABASE_URL=postgresql://pyro_api:pyro_api@db/pyro_api_dev
+      - TEST_DATABASE_URL=postgresql://pyro_api_test:pyro_api_test@test_db/pyro_api_dev_test
       - SUPERUSER_LOGIN=superuser
       - SUPERUSER_PWD=superuser
   db:
@@ -22,6 +23,15 @@ services:
       - POSTGRES_USER=pyro_api
       - POSTGRES_PASSWORD=pyro_api
       - POSTGRES_DB=pyro_api_dev
+  test_db:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_test:/var/lib/postgresql/data_test/
+    environment:
+      - POSTGRES_USER=pyro_api_test
+      - POSTGRES_PASSWORD=pyro_api_test
+      - POSTGRES_DB=pyro_api_dev_test
 
 volumes:
   postgres_data:
+  postgres_data_test:

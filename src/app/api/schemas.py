@@ -20,6 +20,10 @@ class _Id(BaseModel):
 
 
 # Accesses
+class Login(BaseModel):
+    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+
+
 class Cred(BaseModel):
     password: str = Field(..., min_length=3, example="PickARobustOne")
 
@@ -28,8 +32,7 @@ class CredHash(BaseModel):
     hashed_password: str
 
 
-class AccessBase(BaseModel):
-    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+class AccessBase(Login):
     scopes: str = Field(..., example="me")
 
 
@@ -46,9 +49,9 @@ class AccessRead(AccessBase, _Id):
 
 
 # Users
-class UserInfo(BaseModel):
+class UserInfo(Login):
     # Abstract information about a user
-    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    pass
 
 
 class UserRead(UserInfo, _CreatedAt, _Id):
@@ -111,6 +114,8 @@ class DefaultPosition(DefaultLocation, _DefaultRotation):
 class SiteIn(_FlatLocation):
     name: str = Field(..., min_length=3, max_length=50, example="watchtower12")
     type: SiteType = SiteType.tower
+    country: str = Field(..., max_length=5, example="FR")
+    geocode: str = Field(..., max_length=10, example="01")
 
 
 class SiteOut(SiteIn, _CreatedAt, _Id):
@@ -129,11 +134,17 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 
 # Device
-class DeviceIn(DefaultPosition):
-    login: str = Field(..., min_length=3, max_length=50, example="pyronearEngine51")
-    owner_id: int = Field(..., gt=0)
+class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
-    last_ping: datetime = None
+    last_ping: datetime = Field(default=None, example=datetime.utcnow())
+
+
+class DeviceIn(MyDeviceIn):
+    owner_id: int = Field(..., gt=0)
+
+
+class MyDeviceAuth(MyDeviceIn, Cred):
+    scopes: str = Field("device", example="device")
 
 
 class DeviceAuth(DeviceIn, Cred):
@@ -165,11 +176,15 @@ class MediaOut(MediaIn, _CreatedAt, _Id):
     pass
 
 
+class MediaUrl(BaseModel):
+    url: str
+
+
 # Installations
 class InstallationIn(Location, _Rotation):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
-    start_ts: datetime = None
+    start_ts: datetime
     end_ts: datetime = None
 
 
@@ -193,4 +208,12 @@ class AlertIn(AlertBase):
 
 
 class AlertOut(AlertIn, _CreatedAt, _Id):
+    pass
+
+
+class Ackowledgement(BaseModel):
+    is_acknowledged: bool = Field(False)
+
+
+class AcknowledgementOut(Ackowledgement, _Id):
     pass

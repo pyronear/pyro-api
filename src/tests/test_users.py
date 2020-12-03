@@ -1,77 +1,49 @@
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
-from fastapi import HTTPException
 
+from app import db
 from app.api import crud, security
-from app.api.routes import users
-from app.api.schemas import AccessRead, AccessCreation
-
-
-USER_TABLE = [
-    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 99, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-]
+from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.utils import update_only_datetime, parse_time
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "connected_user", "hashed_password": "pwd_hashed", "scopes": "me"},
 ]
 
-
-def _patch_session(monkeypatch, mock_user_table, mock_access_table=None):
-    # DB patching
-    monkeypatch.setattr(users, "users", mock_user_table)
-    # Sterilize all DB interactions through CRUD override
-    monkeypatch.setattr(crud, "get", pytest.mock_get)
-    monkeypatch.setattr(crud, "fetch_all", pytest.mock_fetch_all)
-    monkeypatch.setattr(crud, "post", pytest.mock_post)
-    monkeypatch.setattr(crud, "put", pytest.mock_put)
-    monkeypatch.setattr(crud, "delete", pytest.mock_delete)
-    # Password
-    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
-    # Access table specific
-    if mock_access_table is not None:
-        async def mock_update_pwd(payload, entry_id):
-            for idx, entry in enumerate(mock_access_table):
-                if entry["id"] == entry_id:
-                    mock_access_table[idx]["hashed_password"] = await security.hash_password(payload.password)
-                    return {"login": entry["login"]}
-
-        monkeypatch.setattr(users, "update_access_pwd", mock_update_pwd)
-
-        async def mock_post_access(login, password, scopes):
-            if any(entry['login'] == login for entry in mock_access_table):
-                raise HTTPException(status_code=400, detail=f"An entry with login='{login}' already exists.")
-
-            pwd = await security.hash_password(password)
-            access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
-            # Post on access table
-            payload_dict = access.dict()
-            payload_dict['id'] = len(mock_access_table) + 1
-            mock_access_table.append(payload_dict)
-            return AccessRead(id=payload_dict['id'], **access.dict())
-
-        monkeypatch.setattr(users, "post_access", mock_post_access)
+USER_TABLE = [
+    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+]
 
 
-def test_get_user(test_app, monkeypatch):
+USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
+
+
+@pytest.mark.asyncio
+async def test_get_user(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.get("/users/1")
+    response = await test_app_asyncio.get("/users/1")
+    user_1_in_db = await get_entry_in_db(test_db, db.users, 1)
+    user_1_in_db = dict(**user_1_in_db)
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in mock_user_table[0].items() if k != "access_id"}
+    response_json = response.json()
+    response_json["created_at"] = parse_time(response_json["created_at"])
+
+    assert response_json == {k: v for k, v in user_1_in_db.items() if k != "access_id"}
 
     # personal version
-    response = test_app.get("/users/me")
+    response = await test_app_asyncio.get("/users/me")
     assert response.status_code == 200
     json_response = response.json()
     for k in ["id", "login"]:
-        assert json_response[k] == mock_user_table[1][k]
+        assert json_response[k] == USER_TABLE_FOR_DB[1][k]
 
 
 @pytest.mark.parametrize(
@@ -81,45 +53,61 @@ def test_get_user(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_get_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
+@pytest.mark.asyncio
+async def test_get_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.get(f"/users/{user_id}")
+    response = await test_app_asyncio.get(f"/users/{user_id}")
     assert response.status_code == status_code, user_id
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
 
 
-def test_fetch_users(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_fetch_users(test_app_asyncio, test_db, test_app, monkeypatch):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.get("/users/")
+    response = await test_app_asyncio.get("/users/")
     assert response.status_code == 200
-    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in mock_user_table]
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in USER_TABLE]
 
 
-def test_create_user(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_create_user(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_user_table, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     test_payload = {"login": "third_user", "password": "third_pwd"}
-    test_response = {"id": len(mock_user_table) + 1, "login": test_payload["login"]}
+    max_user_id = max(USER_TABLE_FOR_DB, key=lambda x: x["id"])["id"]
+    max_access_id = max(ACCESS_TABLE, key=lambda x: x["id"])["id"]
+    test_response = {"id": max_user_id + 1, "login": test_payload["login"]}
 
     utc_dt = datetime.utcnow()
-    response = test_app.post("/users/", data=json.dumps(test_payload))
+
+    response = await test_app_asyncio.post("/users/", data=json.dumps(test_payload))
 
     assert response.status_code == 201, print(response.json()['detail'])
     json_response = response.json()
     assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-    assert mock_user_table[-1]['created_at'] > utc_dt and mock_user_table[-1]['created_at'] < datetime.utcnow()
-    assert mock_access_table[-1]['hashed_password'] == f"{test_payload['password']}_hashed"
+
+    new_user_in_db = await get_entry_in_db(test_db, db.users, json_response["id"])
+    new_user_in_db = dict(**new_user_in_db)
+
+    new_access_in_db = await get_entry_in_db(test_db, db.accesses, max_access_id + 1)
+    new_access_in_db = dict(**new_access_in_db)
+
+    assert new_user_in_db['created_at'] > utc_dt and new_user_in_db['created_at'] < datetime.utcnow()
+    assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -128,33 +116,45 @@ def test_create_user(test_app, monkeypatch):
         [{"login": "first_user", "password": "first_pwd"}, 400],
     ],
 )
-def test_create_user_invalid(test_app, monkeypatch, payload, status_code):
+@pytest.mark.asyncio
+async def test_create_user_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_user_table, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.post("/users/", data=json.dumps(payload))
+    response = await test_app_asyncio.post("/users/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_update_user(test_app, monkeypatch):
-    # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+@pytest.mark.asyncio
+async def test_update_user(test_app_asyncio, test_db, monkeypatch):
+    # Init Db data
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
+    # Test on another user.
     test_payload = {"login": "renamed_user"}
-    response = test_app.put("/users/1/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/users/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
-    for k, v in mock_user_table[0].items():
-        assert v == test_payload.get(k, USER_TABLE[0][k])
+
+    updated_user_in_db = await get_entry_in_db(test_db, db.users, 1)
+    updated_user_in_db = dict(**updated_user_in_db)
+    for k, v in updated_user_in_db.items():
+        assert v == test_payload.get(k, USER_TABLE_FOR_DB[0][k])
 
     # Self version
     test_payload = {"login": "renamed_me"}
-    response = test_app.put("/users/update-info", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/users/update-info", data=json.dumps(test_payload))
+
     assert response.status_code == 200
-    for k, v in mock_user_table[1].items():
-        assert v == test_payload.get(k, USER_TABLE[1][k])
+    json_response = response.json()
+    my_user_in_db = await get_entry_in_db(test_db, db.users, json_response["id"])
+    my_user_in_db = dict(**my_user_in_db)
+
+    for k, v in my_user_in_db.items():
+        assert v == test_payload.get(k, USER_TABLE_FOR_DB[1][k])
 
 
 @pytest.mark.parametrize(
@@ -165,14 +165,16 @@ def test_update_user(test_app, monkeypatch):
         [1, {"login": 1}, 422],
         [1, {"login": "me"}, 422],
         [0, {"login": "renamed_user"}, 422],
+        [1, {"login": "connected_user"}, 400],  # renamed to already existing login
     ],
 )
-def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_code):
-    # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+@pytest.mark.asyncio
+async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, payload, status_code):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.put(f"/users/{user_id}/", data=json.dumps(payload))
+    response = await test_app_asyncio.put(f"/users/{user_id}/", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
@@ -182,35 +184,43 @@ def test_update_user_invalid(test_app, monkeypatch, user_id, payload, status_cod
         [{}, 422],
         [{"login": 1}, 422],
         [{"login": "me"}, 422],
+        [{"login": "first_user"}, 400],  # renamed to already existing login
     ],
 )
-def test_update_my_info_invalid(test_app, monkeypatch, payload, status_code):
-    # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+@pytest.mark.asyncio
+async def test_update_my_info_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
+    monkeypatch.setattr(crud, "database", test_db)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.put("/users/update-info", data=json.dumps(payload))
+    response = await test_app_asyncio.put("/users/update-info", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_update_password(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_update_password(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_user_table, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     test_payload = {"password": "new_password"}
-    response = test_app.put("/users/1/pwd", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/users/1/pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"login": mock_user_table[0]["login"]}
-    assert mock_access_table[0]['hashed_password'] == f"{test_payload['password']}_hashed"
+    assert response.json() == {"login": USER_TABLE_FOR_DB[0]["login"]}
+    new_access_in_db = await get_entry_in_db(test_db, db.accesses, 1)
+    new_access_in_db = dict(**new_access_in_db)
+    assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
 
     # Self version
     test_payload = {"password": "my_new_password"}
-    response = test_app.put("/users/update-pwd", data=json.dumps(test_payload))
+    response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"login": mock_user_table[1]["login"]}
-    assert mock_access_table[1]['hashed_password'] == f"{test_payload['password']}_hashed"
+    assert response.json() == {"login": USER_TABLE_FOR_DB[1]["login"]}
+    new_access_in_db = await get_entry_in_db(test_db, db.accesses, 2)
+    new_access_in_db = dict(**new_access_in_db)
+    assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
 
 
 @pytest.mark.parametrize(
@@ -223,13 +233,15 @@ def test_update_password(test_app, monkeypatch):
         [0, {"password": "renamed_user"}, 422],
     ],
 )
-def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status_code):
+@pytest.mark.asyncio
+async def test_update_password_invalid(test_app_asyncio, test_db, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_user_table, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
+    response = await test_app_asyncio.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
@@ -241,26 +253,38 @@ def test_update_password_invalid(test_app, monkeypatch, user_id, payload, status
         [{"password": "me"}, 422],
     ],
 )
-def test_update_my_password_invalid(test_app, monkeypatch, payload, status_code):
+@pytest.mark.asyncio
+async def test_update_my_password_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    mock_access_table = deepcopy(ACCESS_TABLE)
-    _patch_session(monkeypatch, mock_user_table, mock_access_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.put("/users/update-pwd", data=json.dumps(payload))
+    response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(payload))
     assert response.status_code == status_code, print(payload)
 
 
-def test_delete_user(test_app, monkeypatch):
+@pytest.mark.asyncio
+async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.delete("/users/1/")
+    response = await test_app_asyncio.delete("/users/1/")
     assert response.status_code == 200
     assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'login', 'created_at']}
-    for entry in mock_user_table:
+
+    remaining_users = await test_app_asyncio.get("/users/")
+    for entry in remaining_users.json():
         assert entry['id'] != 1
+
+    # Check that the access was deleted as well
+    remaining_accesses = await test_app_asyncio.get("/accesses/")
+    for access in remaining_accesses.json():
+        assert access['login'] != response.json()['login']
 
 
 @pytest.mark.parametrize(
@@ -270,12 +294,15 @@ def test_delete_user(test_app, monkeypatch):
         [0, 422, None],
     ],
 )
-def test_delete_user_invalid(test_app, monkeypatch, user_id, status_code, status_details):
+@pytest.mark.asyncio
+async def test_delete_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    mock_user_table = deepcopy(USER_TABLE)
-    _patch_session(monkeypatch, mock_user_table)
+    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    response = test_app.delete(f"/users/{user_id}/")
+    response = await test_app_asyncio.delete(f"/users/{user_id}/")
     assert response.status_code == status_code, print(user_id)
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details, print(user_id)

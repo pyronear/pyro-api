@@ -1,13 +1,15 @@
 import os
 import secrets
+from typing import Optional
 
 
 PROJECT_NAME: str = 'Pyronear API'
 PROJECT_DESCRIPTION: str = 'API for wildfire prevention, detection and monitoring'
 API_BASE: str = 'api/'
-VERSION: str = "0.1.0a0"
+VERSION: str = "0.1.1a0"
 DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
 DATABASE_URL: str = os.getenv("DATABASE_URL")
+TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
 LOGO_URL: str = "https://github.com/pyronear/PyroNear/raw/master/docs/source/_static/img/pyronear-logo-dark.png"
 
 
@@ -24,4 +26,15 @@ JWT_ENCODING_ALGORITHM = "HS256"
 SUPERUSER_LOGIN: str = os.getenv("SUPERUSER_LOGIN")
 SUPERUSER_PWD: str = os.getenv("SUPERUSER_PWD")
 
+if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
+    raise ValueError(
+        "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
+
 BUCKET_NAME: str = "mypyroneartest"
+DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
+                    + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
+
+
+# Sentry
+SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
+SERVER_NAME: Optional[str] = os.getenv("SERVER_NAME")
