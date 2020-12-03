@@ -14,8 +14,8 @@ logging.basicConfig()
 
 ROUTES: Dict[str, str] = {
     "token": "/login/access-token",
-    "heartbeat": "/device/heartbeat",
-    "update-my-location": "/device/update-my-location",
+    "heartbeat": "/devices/heartbeat",
+    "update-my-location": "/devices/update-my-location",
     "create-event": "/events",
     "send-alert": "/alerts",
     "send-alert-from-device": "/alerts/from-device",

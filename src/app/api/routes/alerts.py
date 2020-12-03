@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
 from app.db import alerts, AlertType, media
-from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
 from app.api.deps import get_current_device
 
 
@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 async def check_media_existence(media_id):
-    existing_media = await crud.fetch_one(media, {"id": media_id})
+    existing_media = await crud.get(media_id, media)
     if existing_media is None:
         raise HTTPException(
             status_code=404,
@@ -68,6 +68,14 @@ async def update_alert(payload: AlertIn, alert_id: int = Path(..., gt=0)):
     Based on a alert_id, updates information about the specified alert
     """
     return await crud.update_entry(alerts, payload, alert_id)
+
+
+@router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
+async def acknowledge_alert(alert_id: int = Path(..., gt=0)):
+    """
+    Based on a alert_id, acknowledge the specified alert
+    """
+    return await crud.update_entry(alerts, Ackowledgement(is_acknowledged=True), alert_id)
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut)

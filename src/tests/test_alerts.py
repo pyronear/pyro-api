@@ -13,21 +13,31 @@ MEDIA_TABLE = [
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
-ACCESS_TABLE = [{"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "me"},
-                {"id": 2, "login": "first_device", "hashed_password": "hashed_pwd", "scopes": "device"},
-                {"id": 3, "login": "second_device", "hashed_password": "hashed_pwd", "scopes": "device"}]
+ACCESS_TABLE = [
+    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
+    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
+    {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scopes": "device"},
+    {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
+    {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
+]
 
-USER_TABLE = [{"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"}]
+USER_TABLE = [
+    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+]
 
+DEVICE_TABLE = [
+    {"id": 1, "login": "first_device", "owner_id": 1,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 3, "login": "connected_device", "owner_id": 1, "access_id": 5, "specs": "raspberry", "elevation": None,
+     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
+     "created_at": "2020-10-13T08:18:45.447773"},
+]
 
-DEVICE_TABLE = [{
-                "id": 1, "login": "first_device", "owner_id": 1, "access_id": 2,
-                "specs": "v0.1", "elevation": None, "lat": None,
-                "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-                {"id": 2, "login": "second_device", "owner_id": 1, "access_id": 3,
-                 "specs": "v0.1", "elevation": None, "lat": None,
-                 "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"}
-                ]
+CONNECTED_DEVICE_ID = 3
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -41,7 +51,7 @@ ALERT_TABLE = [
      "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end",
      "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start",
+    {"id": 3, "device_id": 3, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start",
      "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
 ]
 
@@ -145,7 +155,7 @@ async def test_create_alert_by_device(test_app_asyncio, test_db, monkeypatch):
     test_payload = {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}
     # Device_id is 99 because it is the identified device
     test_response = {"id": len(ALERT_TABLE) + 1,
-                     "device_id": 1, **test_payload,
+                     "device_id": CONNECTED_DEVICE_ID, **test_payload,
                      "media_id": None, "is_acknowledged": False}
 
     utc_dt = datetime.utcnow()
@@ -187,6 +197,17 @@ async def test_update_alert(test_app_asyncio, test_db, monkeypatch):
         assert v == updated_alert_in_db[k]
 
 
+@pytest.mark.asyncio
+async def test_acknowledge_alert(test_app_asyncio, test_db, monkeypatch):
+    await init_test_db(monkeypatch, test_db)
+
+    response = await test_app_asyncio.put("/alerts/3/acknowledge")
+    assert response.status_code == 200
+    updated_alert_in_db = await get_entry_in_db(test_db, db.alerts, 3)
+    updated_alert_in_db = dict(**updated_alert_in_db)
+    assert updated_alert_in_db['is_acknowledged']
+
+
 @pytest.mark.parametrize(
     "alert_id, payload, status_code",
     [
@@ -221,18 +242,18 @@ async def test_delete_alert(test_app_asyncio, test_db, monkeypatch):
 async def test_link_media_owner(test_app_asyncio, test_db, monkeypatch):
     # Create Alert (Identical code to the create_alert above)
     mock_alert_table = deepcopy(ALERT_TABLE)
-    # Set device_id to 99 because it is the one that is authentified in our testConfig.
-    mock_alert_table[0]["device_id"] = 99
+    # Set device_id to 3 because it is the one that is authentified in our testConfig.
+    mock_alert_table[2]["device_id"] = CONNECTED_DEVICE_ID
     await init_test_db(monkeypatch, test_db)
 
     test_payload = {"media_id": 1}
-    updated_alert = mock_alert_table[0]
+    updated_alert = mock_alert_table[2]
     test_response = updated_alert.copy()
     test_response.update(test_payload)
 
     response = await test_app_asyncio.put(f"/alerts/{updated_alert['id']}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 200
-    updated_alert_in_db = await get_entry_in_db(test_db, db.alerts, 1)
+    updated_alert_in_db = await get_entry_in_db(test_db, db.alerts, 3)
     updated_alert_in_db = dict(**updated_alert_in_db)
     for k, v in test_payload.items():
         assert v == updated_alert_in_db[k]
@@ -243,7 +264,7 @@ async def test_link_media_owner_not_allowed(test_app_asyncio, test_db, monkeypat
     await init_test_db(monkeypatch, test_db)
 
     test_payload = {"media_id": 1}
-    alert_not_owned = 3
+    alert_not_owned = 2
     response = await test_app_asyncio.put(f"/alerts/{alert_not_owned}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 400
 
@@ -254,7 +275,7 @@ async def test_link_non_existing_media(test_app_asyncio, test_db, monkeypatch):
 
     test_payload = {"media_id": 100}
 
-    alert_owned = 1
+    alert_owned = 3
     # Alert 1 because it is owned by the device 1
     response = await test_app_asyncio.put(f"/alerts/{alert_owned}/link-media", data=json.dumps(test_payload))
     assert response.status_code == 404

@@ -3,8 +3,8 @@ from starlette.testclient import TestClient
 from datetime import datetime
 
 from app.main import app
-from app.api.schemas import UserRead, DeviceOut
-from app.api.deps import get_current_user, get_current_device
+from app.api.schemas import UserRead, DeviceOut, AccessRead
+from app.api.deps import get_current_user, get_current_device, get_current_access
 from tests.conf_test_db import database as test_database
 from tests.conf_test_db import reset_test_db
 from httpx import AsyncClient
@@ -14,8 +14,12 @@ async def mock_current_user():
     return UserRead(id=2, login="connected_user", created_at=datetime.now())
 
 
+async def mock_current_access():
+    return AccessRead(id=2, login="connected_user", scopes="device", created_at=datetime.now())
+
+
 async def mock_current_device():
-    return DeviceOut(id=1, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
+    return DeviceOut(id=3, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
 
 
 async def mock_hash_password(password):
@@ -38,6 +42,7 @@ def __app():
     # Access-related patching
     app.dependency_overrides[get_current_user] = mock_current_user
     app.dependency_overrides[get_current_device] = mock_current_device
+    app.dependency_overrides[get_current_access] = mock_current_access
 
     yield app  # testing happens here
 
