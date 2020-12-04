@@ -14,5 +14,5 @@ class BaseBucketService(ABC):
         pass
 
     @abstractmethod
-    async def fetch_bucket_files(self, bucket_name: str):
+    async def fetch_bucket_filenames(self, bucket_name: str):
         pass
