@@ -2,7 +2,7 @@ import requests
 import warnings
 from getpass import getpass
 from datetime import datetime
-from typin import Dict, Any
+from typing import Dict, Any
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
