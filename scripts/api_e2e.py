@@ -22,13 +22,14 @@ def api_request(method_type: str, route: str, payload: Dict[str, Any], headers=D
     assert response.status_code // 100 == 2, print(response.json()['detail'])
     return response.json()
 
+
 def main(args):
 
     api_url = f"http://localhost:{args.port}"
 
     # Log as superuser
-    superuser_login = getpass('Login: ')
-    superuser_pwd = getpass()
+    superuser_login = getpass('Login: ') if args.creds else "superuser"
+    superuser_pwd = getpass() if args.creds else "superuser"
 
     # Retrieve superuser token
     superuser_auth = {
@@ -86,7 +87,7 @@ def main(args):
     payload = dict(lat=44.1, lon=3.9, event_id=event_id, type='end')
     alert_id2 = api_request('post', f"{api_url}/alerts/from-device", payload, device_auth)['id']
 
-    # Cleaning
+    # Cleaning (order is important because of foreign key protection in existing tables)
     response = requests.delete(f"{api_url}/alerts/{alert_id1}/", headers=superuser_auth)
     assert response.status_code // 100 == 2, print(response.json()['detail'])
     response = requests.delete(f"{api_url}/alerts/{alert_id2}/", headers=superuser_auth)
@@ -101,8 +102,8 @@ def main(args):
     assert response.status_code // 100 == 2, print(response.json()['detail'])
     print("SUCCESS")
 
-
     return
+
 
 def parse_args():
     import argparse
@@ -110,6 +111,8 @@ def parse_args():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('port', type=int, help='Port on localhost where the API is exposed')
+    parser.add_argument('--creds', dest="creds", help="Enter different credentials than the default ones",
+                        action="store_true")
 
     args = parser.parse_args()
 
