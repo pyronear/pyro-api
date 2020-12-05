@@ -44,19 +44,12 @@ async def post_access(accesses: Table, login: str, password: str, scopes: str) -
     return AccessRead(**entry)
 
 
-async def update_access_pwd(accesses: Table, payload: Cred, entry_id: int) -> Dict[str, Any]:
+async def update_access_pwd(accesses: Table, payload: Cred, access_id: int) -> None:
     """Update the access password using provided access_id."""
-    entry = await base.get_entry(accesses, entry_id)
+    # Update the access entry with the hashed password
+    updated_payload = CredHash(hashed_password=await security.hash_password(payload.password))
 
-    # Hash the password
-    pwd = await security.hash_password(payload.password)
-
-    # Update the password
-    updated_payload = CredHash(hashed_password=pwd)
-    await base.update_entry(accesses, updated_payload, entry_id)
-
-    # Return non-sensitive information
-    return {"login": entry["login"]}
+    await base.update_entry(accesses, updated_payload, access_id)  # update & check if access_id exists
 
 
 async def create_accessed_entry(
