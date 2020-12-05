@@ -78,8 +78,8 @@ async def acknowledge_alert(alert_id: int = Path(..., gt=0)):
     return await crud.update_entry(alerts, Ackowledgement(is_acknowledged=True), alert_id)
 
 
-@router.delete("/{alert_id}/", response_model=AlertOut)
-async def delete_alert(alert_id: int = Path(..., gt=0), summary="Delete a specific alert"):
+@router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
+async def delete_alert(alert_id: int = Path(..., gt=0)):
     """
     Based on a alert_id, deletes the specified alert
     """
@@ -112,8 +112,9 @@ async def fetch_ongoing_alerts():
     """
     Retrieves the list of ongoing alerts and their information
     """
-    return await crud.fetch_ongoing_alerts(alerts, {"type": AlertType.start},
-                                           excluded_events_filter={"type": AlertType.end})
+    return await crud.alerts.fetch_ongoing_alerts(
+        alerts, {"type": AlertType.start}, excluded_events_filter={"type": AlertType.end}
+    )
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
