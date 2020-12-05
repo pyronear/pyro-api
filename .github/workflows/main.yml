@@ -74,7 +74,7 @@ jobs:
 
   end-to-end:
     runs-on: ubuntu-latest
-    needs: dokcer-ready
+    needs: docker-ready
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
@@ -85,4 +85,4 @@ jobs:
           python-version: 3.7
           architecture: x64
       - name: End-to-End test
-        run: python scripts/e2e_interactions.py 8002
+        run: python scripts/api_e2e.py 8002
