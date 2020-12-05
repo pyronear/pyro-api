@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
-from app.db import devices, accesses
+from app.db import devices, accesses, users
 from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred)
 from app.api.deps import get_current_device, get_current_user
 
@@ -18,6 +18,8 @@ async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    if await crud.get(payload.owner_id, users) is None:
+        raise HTTPException(status_code=404, detail=f"Unknown user for owner_id={payload.owner_id}")
     return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
