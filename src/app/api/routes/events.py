@@ -3,14 +3,14 @@ from fastapi import APIRouter, Path, Security
 from app.api import crud
 from app.db import events
 from app.api.schemas import EventOut, EventIn
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_access
 
 
 router = APIRouter()
 
 
 @router.post("/", response_model=EventOut, status_code=201, summary="Create a new event")
-async def create_event(payload: EventIn, _=Security(get_current_user, scopes=["admin", "device"])):
+async def create_event(payload: EventIn, _=Security(get_current_access, scopes=["admin", "device"])):
     """Creates a new event based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -39,7 +39,7 @@ async def fetch_events():
 async def update_event(
     payload: EventIn,
     event_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=["admin", "device"])
+    _=Security(get_current_access, scopes=["admin", "device"])
 ):
     """
     Based on a event_id, updates information about the specified event
