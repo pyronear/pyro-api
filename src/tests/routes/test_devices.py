@@ -138,6 +138,7 @@ async def test_create_device(test_app_asyncio, test_db, monkeypatch, payload, ro
         [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
         [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
         [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "third_device", "owner_id": 10, "specs": "v0.2", "password": "pwd"}, 404],  # unknown owner
     ],
 )
 @pytest.mark.asyncio
