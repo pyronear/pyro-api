@@ -27,7 +27,7 @@ async def mock_verify_password(plain_password, hashed_password):
 
 
 def pytest_configure():
-    # CRUD patching
+    # api.security patching
     pytest.mock_hash_password = mock_hash_password
     pytest.mock_verify_password = mock_verify_password
 
