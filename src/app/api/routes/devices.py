@@ -4,7 +4,16 @@ from fastapi import APIRouter, Path, Security, HTTPException
 
 from app.api import crud
 from app.db import devices, accesses, users
-from app.api.schemas import (DeviceOut, DeviceAuth, MyDeviceAuth, DeviceCreation, DeviceIn, UserRead, DefaultPosition, Cred)
+from app.api.schemas import (
+    DeviceOut,
+    DeviceAuth,
+    MyDeviceAuth,
+    DeviceCreation,
+    DeviceIn,
+    UserRead,
+    DefaultPosition,
+    Cred,
+)
 from app.api.deps import get_current_device, get_current_user
 
 
@@ -66,8 +75,9 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
     return await crud.accesses.delete_accessed_entry(devices, accesses, device_id)
 
 
-@router.get("/my-devices", response_model=List[DeviceOut],
-            summary="Get the list of all devices belonging to the current user")
+@router.get(
+    "/my-devices", response_model=List[DeviceOut], summary="Get the list of all devices belonging to the current user"
+)
 async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
     """
     Retrieves the list of all devices and the information which are owned by the current user
@@ -89,18 +99,15 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
 async def update_device_location(
     payload: DefaultPosition,
     device_id: int = Path(..., gt=0),
-    user: UserRead = Security(get_current_user, scopes=["admin", "me"])
+    user: UserRead = Security(get_current_user, scopes=["admin", "me"]),
 ):
     """
     Based on a device_id, updates the location of the specified device
     """
     # Check that device is accessible to this user
     device = await crud.get_entry(devices, device_id)
-    if device['owner_id'] != user.id:
-        raise HTTPException(
-            status_code=400,
-            detail="Permission denied"
-        )
+    if device["owner_id"] != user.id:
+        raise HTTPException(status_code=400, detail="Permission denied")
     # Update only the location
     device.update(payload.dict())
     device = DeviceOut(**device)
@@ -110,8 +117,7 @@ async def update_device_location(
 
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
 async def update_my_location(
-    payload: DefaultPosition,
-    device: DeviceOut = Security(get_current_device, scopes=["device"])
+    payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=["device"])
 ):
     """
     Updates the location of the current device
@@ -125,9 +131,7 @@ async def update_my_location(
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut, summary="Update the password of a specific device")
 async def update_device_password(
-    payload: Cred,
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=["admin"])
+    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
 ):
     """
     Based on a device_id, updates the password of the specified device

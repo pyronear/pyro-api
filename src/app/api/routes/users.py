@@ -66,9 +66,7 @@ async def fetch_users(_=Security(get_current_user, scopes=["admin"])):
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")
 async def update_user(
-    payload: UserInfo,
-    user_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=["admin"])
+    payload: UserInfo, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
 ):
     """
     Based on a user_id, updates information about the specified user
@@ -78,9 +76,7 @@ async def update_user(
 
 @router.put("/{user_id}/pwd", response_model=UserInfo, summary="Update the password of a specific user")
 async def update_user_password(
-    payload: Cred,
-    user_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=["admin"])
+    payload: Cred, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
 ):
     """
     Based on a user_id, updates the password of the specified user
