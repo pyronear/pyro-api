@@ -24,14 +24,7 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
     """
     Updates information of the current user
     """
-    # Check for access login
-    origin_user = await crud.get(me.id, users)
-
-    if origin_user["login"] != payload.login:
-        await crud.accesses.check_login_existence(accesses, payload.login)
-        await crud.accesses.update_login(accesses, payload.login, origin_user["access_id"])
-
-    return await crud.update_entry(users, payload, me.id)
+    return await crud.accesses.update_accessed_entry(users, accesses, me.id, payload)
 
 
 @router.put("/update-pwd", response_model=UserInfo, summary="Update password of the current user")
