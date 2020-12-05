@@ -18,8 +18,6 @@ async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    # access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
-    # return await crud.create_entry(devices, DeviceCreation(**payload.dict(), access_id=access_entry.id))
     return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
@@ -30,8 +28,6 @@ async def register_my_device(payload: MyDeviceAuth, me: UserRead = Security(get_
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    # access_entry = await post_access(payload.login, payload.password, scopes=payload.scopes)
-    # return await crud.create_entry(devices, DeviceCreation(**payload.dict(), owner_id=me.id, access_id=access_entry.id))
     device_payload = DeviceAuth(**payload.dict(), owner_id=me.id)
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
@@ -57,22 +53,6 @@ async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
     """
     Based on a device_id, updates information about the specified device  # TODO security scopes ?
     """
-    # if payload.login is not None:
-    #     updated_device = await crud.get(device_id, devices)
-    #     if updated_device is not None and payload.login != updated_device["login"]:
-    #         await check_for_access_login_existence(payload.login)
-    #         updated_acccess = await crud.fetch_one(accesses, {"login": updated_device["login"]})
-    #         await update_access_login(payload.login, updated_acccess["id"])
-
-    # origin_device = await crud.get(device_id, devices)
-
-    # # If login changed -> update corresponding access
-    # if origin_device is not None and payload.login != origin_device["login"]:
-    #     await crud.accesses.check_login_existence(accesses, payload.login)
-    #     await crud.accesses.update_login(accesses, payload.login, origin_device["access_id"])
-    #
-    # return await crud.update_entry(devices, payload, device_id)
-
     return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload)
 
 
@@ -81,9 +61,6 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
     """
     Based on a device_id, deletes the specified device
     """
-    # entry = await crud.delete_entry(devices, device_id)
-    # await crud.delete_entry(accesses, entry['access_id'])
-    # return entry
     return await crud.accesses.delete_accessed_entry(devices, accesses, device_id)
 
 

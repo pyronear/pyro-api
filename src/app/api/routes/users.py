@@ -45,9 +45,6 @@ async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["a
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    # Create a new access
-    # access_entry = await post_access(payload.login, payload.password, payload.scopes)
-    # return await crud.create_entry(users, UserCreation(login=payload.login, access_id=access_entry.id))
     return await crud.accesses.create_accessed_entry(users, accesses, payload, UserCreation)
 
 
@@ -76,17 +73,6 @@ async def update_user(
     """
     Based on a user_id, updates information about the specified user
     """
-    # origin_user = await crud.get(user_id, users)
-    #
-    # # Check for access login
-    # if payload.login is not None:
-    #     if origin_user is not None and origin_user["login"] != payload.login:
-    #         await check_for_access_login_existence(payload.login)
-    #         updated_acccess = await crud.fetch_one(accesses, {"login": origin_user["login"]})
-    #         await update_access_login(payload.login, updated_acccess["id"])
-    #
-    # return await crud.update_entry(users, payload, user_id)
-
     return await crud.accesses.update_accessed_entry(users, accesses, user_id, payload)
 
 
@@ -99,7 +85,6 @@ async def update_user_password(
     """
     Based on a user_id, updates the password of the specified user
     """
-    # Check that user does exist
     entry = await crud.get_entry(users, user_id)
     await crud.accesses.update_access_pwd(accesses, payload, entry["access_id"])
     return entry
@@ -110,9 +95,4 @@ async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_use
     """
     Based on a user_id, deletes the specified user
     """
-    # Delete user entry
-    # entry = await crud.delete_entry(users, user_id)
-    # # Delete access
-    # await crud.delete_entry(accesses, entry['access_id'])
-    # return entry
     return await crud.accesses.delete_accessed_entry(users, accesses, user_id)
