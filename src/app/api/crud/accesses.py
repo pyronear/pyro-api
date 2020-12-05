@@ -89,8 +89,6 @@ async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, pa
                 await check_login_existence(accesses, payload.login)  # assert new login does not exist in accesses
                 await update_login(accesses, payload.login, origin_entry["access_id"])
 
-        # TODO else login = origin_entry["login"] ?
-
         # Update entry with input payload
         return await base.update_entry(table, payload, entry_id)
 
