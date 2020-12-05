@@ -1,5 +1,6 @@
 import requests
 import argparse
+import time
 from getpass import getpass
 from typing import Dict, Any, Optional
 
@@ -32,6 +33,8 @@ def main(args):
     superuser_login = getpass('Login: ') if args.creds else "superuser"
     superuser_pwd = getpass() if args.creds else "superuser"
 
+
+    start_ts = time.time()
     # Retrieve superuser token
     superuser_auth = {
         "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
@@ -96,7 +99,7 @@ def main(args):
     api_request('delete', f"{api_url}/devices/{device_id}/", superuser_auth)
     api_request('delete', f"{api_url}/users/{user_id}/", superuser_auth)
 
-    assert response.status_code // 100 == 2, print(response.json()['detail'])
+    print(f"SUCCESS in {time.time() - start_ts:.3}s")
 
     return
 
