@@ -27,7 +27,7 @@ accesses = Table(
     "accesses",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("login", String(50), unique=True),
+    Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", String(30), default="me", nullable=False),
 )
