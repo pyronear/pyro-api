@@ -14,12 +14,11 @@ from app.api.schemas import (
     UserCreation,
     DeviceCreation,
     DeviceAuth,
-    MyDeviceAuth,
 )
 
 
 async def check_login_existence(table: Table, login: str):
-    # Check that the login does not already exist
+    """Check that the login does not already exist, raises a 400 exception if do so."""
     if await base.fetch_one(table, {"login": login}) is not None:
         raise HTTPException(
             status_code=400,
@@ -27,32 +26,34 @@ async def check_login_existence(table: Table, login: str):
         )
 
 
-async def update_login(table: Table, login: str, access_id: int):
-    """ Assume access_id exists and login does not exist elsewhere"""
-    return await base.update_entry(table, Login(login=login), access_id)
+async def update_login(accesses: Table, login: str, access_id: int):
+    """Update access login assuming access_id exists and new login does not exist."""
+    return await base.update_entry(accesses, Login(login=login), access_id)
 
 
-async def post_access(table: Table, login: str, password: str, scopes: str) -> AccessRead:
-    await check_login_existence(table, login)
+async def post_access(accesses: Table, login: str, password: str, scopes: str) -> AccessRead:
+    """Insert an access entry in the accesses table, call within a transaction to reuse returned access id."""
+    await check_login_existence(accesses, login)
 
     # Hash the password
     pwd = await security.hash_password(password)
 
     access = AccessCreation(login=login, hashed_password=pwd, scopes=scopes)
-    entry = await base.create_entry(table, access)
+    entry = await base.create_entry(accesses, access)
 
     return AccessRead(**entry)
 
 
-async def update_access_pwd(table: Table, payload: Cred, entry_id: int) -> Dict[str, Any]:
-    entry = await base.get_entry(table, entry_id)
+async def update_access_pwd(accesses: Table, payload: Cred, entry_id: int) -> Dict[str, Any]:
+    """Update the access password using provided access_id."""
+    entry = await base.get_entry(accesses, entry_id)
 
     # Hash the password
     pwd = await security.hash_password(payload.password)
 
     # Update the password
     updated_payload = CredHash(hashed_password=pwd)
-    await base.update_entry(table, updated_payload, entry_id)
+    await base.update_entry(accesses, updated_payload, entry_id)
 
     # Return non-sensitive information
     return {"login": entry["login"]}
@@ -61,7 +62,7 @@ async def update_access_pwd(table: Table, payload: Cred, entry_id: int) -> Dict[
 async def create_accessed_entry(
     table: Table,
     accesses: Table,
-    payload: Union[UserAuth, DeviceAuth, MyDeviceAuth],
+    payload: Union[UserAuth, DeviceAuth],
     schema: Type[Union[UserCreation, DeviceCreation]],
 ) -> Dict:
     """Create an access and refers it to a new entry (User, Device, ...)."""
@@ -74,11 +75,11 @@ async def create_accessed_entry(
 
 
 async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, payload: Any):
-    """Update an entry with a special treatment regarding login: if login is set -> update corresponding access"""
+    """Update an entry with a special treatment regarding login: if login is set -> update corresponding access."""
     # Ensure database consistency between tables with a transaction (login must remain the same in table & accesses)
     async with base.database.transaction():
 
-        # If login is set
+        # Handle access update only if login is set
         if payload.login is not None:
 
             # Need to retrieve access_id from entry
@@ -90,7 +91,9 @@ async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, pa
                 await update_login(accesses, payload.login, origin_entry["access_id"])
 
         # Update entry with input payload
-        return await base.update_entry(table, payload, entry_id)
+        entry = await base.update_entry(table, payload, entry_id)
+
+    return entry
 
 
 async def delete_accessed_entry(table: Table, accesses: Table, entry_id: int):
@@ -100,4 +103,4 @@ async def delete_accessed_entry(table: Table, accesses: Table, entry_id: int):
         entry = await base.delete_entry(table, entry_id)
         await base.delete_entry(accesses, entry["access_id"])
 
-        return entry
+    return entry
