@@ -7,7 +7,7 @@ from app import config as cfg
 class QarnotBucketService(BaseBucketService):
 
     def connect_to_bucket(self, bucket_name: str):
-        if not hasattr(self, conn):
+        if not hasattr(self, 'conn'):
             self.conn = connection.Connection(client_token=cfg.QARNOT_TOKEN)
         return bucket.Bucket(self.conn, bucket_name)
 
