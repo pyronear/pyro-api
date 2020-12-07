@@ -26,7 +26,7 @@ class ClientTester(unittest.TestCase):
         # Read routes
         all_devices = self._test_route_return(api_client.get_my_devices(), list)
         self._test_route_return(api_client.get_sites(), list)
-        all_alerts = self._test_route_return(api_client.get_all_alerts(), list)
+        self._test_route_return(api_client.get_all_alerts(), list)
         self._test_route_return(api_client.get_ongoing_alerts(), list)
         self._test_route_return(api_client.get_unacknowledged_alerts(), list)
 
@@ -34,7 +34,6 @@ class ClientTester(unittest.TestCase):
             # Create event
             event_id = self._test_route_return(api_client.create_event(0., 0.), dict)['id']
             # Create an alert
-            device_id = all_devices[0]['id']
             alert = self._test_route_return(api_client.send_alert(0., 0., event_id, all_devices[0]['id']), dict)
             # Acknowledge it
             updated_alert = self._test_route_return(api_client.acknowledge_alert(alert['id']), dict)
