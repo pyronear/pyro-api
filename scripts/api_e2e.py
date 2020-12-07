@@ -87,6 +87,9 @@ def main(args):
     payload = dict(lat=44.1, lon=3.9, event_id=event_id, media_id=media_id, type='start')
     alert_id1 = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
 
+    # Acknowledge it
+    api_request('put', f"{api_url}/alerts/{alert_id1}/acknowledge", superuser_auth)
+
     # Installation throws the end alert
     payload = dict(lat=44.1, lon=3.9, event_id=event_id, type='end')
     alert_id2 = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
