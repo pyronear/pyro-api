@@ -16,3 +16,7 @@ class BaseBucketService(ABC):
     @abstractmethod
     async def fetch_bucket_filenames(self):
         pass
+
+    @abstractmethod
+    async def flush_after_get_uploaded_file(self, filename):
+        pass
