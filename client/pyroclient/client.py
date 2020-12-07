@@ -27,7 +27,7 @@ ROUTES: Dict[str, str] = {
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
     "get-unacknowledged-alerts": "/alerts/unacknowledged",
-    "acknowledge-alert": "/{alert_id}/acknowledge",
+    "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
     "get-media-image": "/media/{media_id}/image"
