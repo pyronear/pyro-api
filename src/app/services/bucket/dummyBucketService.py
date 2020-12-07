@@ -13,6 +13,6 @@ class DummyBucketService(BaseBucketService):
 
     async def fetch_bucket_filenames(self):
         return []
-    
+
     async def flush_after_get_uploaded_file(self, filename):
         return True
