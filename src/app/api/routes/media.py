@@ -114,9 +114,8 @@ async def get_media_url(media_id: int = Path(..., gt=0),
     Retrieve the media image url
     """
     media = await check_for_media_existence(media_id)
-    # For demonstration purpose while we are not connected to a bucket service.
-    dummy_static_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    return {"url": dummy_static_file}
+    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
+    return {"url": retrieved_file}
 
 
 @router.get("/{media_id}/image", status_code=200)
@@ -126,7 +125,6 @@ async def get_media_image(media_id: int = Path(..., gt=0),
     Retrieve the media image as encoded in bytes
     """
     media = await check_for_media_existence(media_id)
-    # For demonstration purpose while we are not connected to a bucket service.
-    dummy_static_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    image = requests.get(dummy_static_file)
+    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
+    image = requests.get(retrieved_file)
     return StreamingResponse(io.BytesIO(image.content), media_type="image/jpeg")
