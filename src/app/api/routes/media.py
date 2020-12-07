@@ -125,4 +125,4 @@ async def get_media_image(background_tasks: BackgroundTasks,
     media = await check_for_media_existence(media_id)
     retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
     background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
-    return StreamingResponse(open(retrieved_filename, 'rb'), media_type="image/jpeg")
+    return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
