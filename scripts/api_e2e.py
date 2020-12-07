@@ -33,7 +33,6 @@ def main(args):
     superuser_login = getpass('Login: ') if args.creds else "superuser"
     superuser_pwd = getpass() if args.creds else "superuser"
 
-
     start_ts = time.time()
     # Retrieve superuser token
     superuser_auth = {
