@@ -11,6 +11,8 @@ class ClientTester(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), return_type)
 
+        return response.json()
+
     def test_client(self):
 
         # Wrong credentials
@@ -24,9 +26,21 @@ class ClientTester(unittest.TestCase):
         # Read routes
         self._test_route_return(api_client.get_my_devices(), list)
         self._test_route_return(api_client.get_sites(), list)
-        self._test_route_return(api_client.get_all_alerts(), list)
+        all_alerts = self._test_route_return(api_client.get_all_alerts(), list)
         self._test_route_return(api_client.get_ongoing_alerts(), list)
         self._test_route_return(api_client.get_unacknowledged_alerts(), list)
+
+        # Acknowledge an alert
+        alert_id = None
+        # Try to find an unacknowledged alert
+        for alert in all_alerts:
+            if not alert['is_acknowledged']:
+                alert_id = alert['id']
+        # Else it should not change the value
+        if alert_id is None:
+            alert_id = alert['id']
+        updated_alert = self._test_route_return(api_client.acknowledge_alert(alert_id), dict)
+        self.assertTrue(updated_alert['is_acknowledged'])
 
 
 if __name__ == '__main__':
