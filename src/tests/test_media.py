@@ -234,7 +234,7 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     assert response.status_code == 201
 
     # 2 - Upload something
-    async def successful_upload(bucket_name, bucket_key, file_binary):
+    async def successful_upload(bucket_key, file_binary):
         return True
     monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
     response = await test_app_asyncio.post(f"/media/{response.json()['id']}/upload", files=dict(file='bar'))
@@ -248,7 +248,7 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     assert new_media_in_db["bucket_key"] is not None
 
     # 2b - Upload failing
-    async def failing_upload(bucket_name, bucket_key, file_binary):
+    async def failing_upload(bucket_key, file_binary):
         return False
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
     response = await test_app_asyncio.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
