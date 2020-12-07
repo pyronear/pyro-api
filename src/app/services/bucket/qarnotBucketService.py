@@ -34,4 +34,3 @@ class QarnotBucketService(BaseBucketService):
 
     async def flush_after_get_uploaded_file(self, filename):
         os.remove(filename) if os.path.exists(filename) else None
-        
