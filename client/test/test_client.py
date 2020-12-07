@@ -37,10 +37,11 @@ class ClientTester(unittest.TestCase):
             if not alert['is_acknowledged']:
                 alert_id = alert['id']
         # Else it should not change the value
-        if alert_id is None:
-            alert_id = alert['id']
-        updated_alert = self._test_route_return(api_client.acknowledge_alert(alert_id), dict)
-        self.assertTrue(updated_alert['is_acknowledged'])
+        if alert_id is None and len(all_alerts) > 0:
+            alert_id = all_allerts[-1]['id']
+        if isinstance(alert_id, int):
+            updated_alert = self._test_route_return(api_client.acknowledge_alert(alert_id), dict)
+            self.assertTrue(updated_alert['is_acknowledged'])
 
 
 if __name__ == '__main__':
