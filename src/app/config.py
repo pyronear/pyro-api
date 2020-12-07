@@ -31,7 +31,7 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
         "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
 
 QARNOT_TOKEN: str = os.getenv("QARNOT_TOKEN")
-BUCKET_NAME: str = "pyronear-media-from-devices-1"
+BUCKET_NAME: str = os.getenv("BUCKET_NAME")
 DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
                     + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
 

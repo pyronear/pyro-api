@@ -95,8 +95,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     entry = await check_for_media_existence(media_id, current_device.id)
     bucket_key = hash(datetime.utcnow())
 
-    upload_success = await bucket_service.upload_file(bucket_name=cfg.BUCKET_NAME,
-                                                      bucket_key=bucket_key,
+    upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
     if upload_success is False:
         raise HTTPException(
@@ -116,7 +115,7 @@ async def get_media_url(media_id: int = Path(..., gt=0),
     """
     media = await check_for_media_existence(media_id)
     # For demonstration purpose while we are not connected to a bucket service.
-    dummy_static_file = await bucket_service.get_uploaded_file(cfg.BUCKET_NAME, bucket_key=media["bucket_key"])
+    dummy_static_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
     return {"url": dummy_static_file}
 
 
@@ -128,6 +127,6 @@ async def get_media_image(media_id: int = Path(..., gt=0),
     """
     media = await check_for_media_existence(media_id)
     # For demonstration purpose while we are not connected to a bucket service.
-    dummy_static_file = await bucket_service.get_uploaded_file(cfg.BUCKET_NAME, bucket_key=media["bucket_key"])
+    dummy_static_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
     image = requests.get(dummy_static_file)
     return StreamingResponse(io.BytesIO(image.content), media_type="image/jpeg")
