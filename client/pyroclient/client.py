@@ -27,6 +27,7 @@ ROUTES: Dict[str, str] = {
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
     "get-unacknowledged-alerts": "/alerts/unacknowledged",
+    "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
     "get-media-image": "/media/{media_id}/image"
@@ -150,6 +151,10 @@ class Client:
     def get_unacknowledged_alerts(self) -> Response:
         """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
         return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
+
+    def acknowledge_alert(self, alert_id: int) -> Response:
+        """Switch the `is_acknowledged`field value of the alert to `True`"""
+        return requests.put(self.routes["acknowledge-alert"].format(alert_id=alert_id), headers=self.headers)
 
     def get_site_devices(self, site_id: int, payload: Dict[str, Any]) -> Response:
         """ Get all devices installed in a specific site"""
