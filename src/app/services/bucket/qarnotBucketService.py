@@ -1,8 +1,11 @@
 import os
 from qarnot import connection, bucket
+import logging
 
 from app.services.bucket.baseBucketService import BaseBucketService
 from app import config as cfg
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class QarnotBucketService(BaseBucketService):
@@ -17,7 +20,7 @@ class QarnotBucketService(BaseBucketService):
         try:
             self.connect_to_bucket().add_file(file_binary, bucket_key)
         except Exception as e:
-            print(e)
+            logging.error(e)
             return False
         return True
 
@@ -25,7 +28,7 @@ class QarnotBucketService(BaseBucketService):
         try:
             return self.connect_to_bucket().get_file(bucket_key)
         except Exception as e:
-            print(e)
+            logging.error(e)
             return False
         return True
 
