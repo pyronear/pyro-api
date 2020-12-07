@@ -1,3 +1,4 @@
+import os
 from qarnot import connection, bucket
 
 from app.services.bucket.baseBucketService import BaseBucketService
@@ -13,10 +14,24 @@ class QarnotBucketService(BaseBucketService):
         return self.bucket
 
     async def upload_file(self, bucket_key: str, file_binary: bin):
-        return await self.connect_to_bucket().add_file(file_binary, bucket_key)
+        try:
+            self.connect_to_bucket().add_file(file_binary, bucket_key)
+        except Exception as e:
+            print(e)
+            return False
+        return True
 
     async def get_uploaded_file(self, bucket_key: str):
-        return await self.connect_to_bucket().get_file(bucket_key)
+        try:
+            return self.connect_to_bucket().get_file(bucket_key)
+        except Exception as e:
+            print(e)
+            return False
+        return True
 
     async def fetch_bucket_filenames(self):
-        return await self.connect_to_bucket().list_files()
+        return self.connect_to_bucket().list_files()
+
+    async def flush_after_get_uploaded_file(self, filename):
+        os.remove(filename) if os.path.exists(filename) else None
+        

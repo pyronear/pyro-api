@@ -1,16 +1,13 @@
-from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException
+from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import List
 from datetime import datetime
-import requests
-import io
 
 from app.api import crud
 from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
 from app.services import bucket_service
-import app.config as cfg
 
 router = APIRouter()
 
@@ -93,7 +90,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     Upload a media (image or video) linked to an existing media object in the DB
     """
     entry = await check_for_media_existence(media_id, current_device.id)
-    bucket_key = hash(datetime.utcnow())
+    bucket_key = str(hash(datetime.utcnow()))
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
@@ -119,12 +116,13 @@ async def get_media_url(media_id: int = Path(..., gt=0),
 
 
 @router.get("/{media_id}/image", status_code=200)
-async def get_media_image(media_id: int = Path(..., gt=0),
+async def get_media_image(background_tasks: BackgroundTasks,
+                          media_id: int = Path(..., gt=0),
                           _=Security(get_current_user, scopes=["admin"])):
     """
     Retrieve the media image as encoded in bytes
     """
     media = await check_for_media_existence(media_id)
     retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    image = requests.get(retrieved_file)
-    return StreamingResponse(io.BytesIO(image.content), media_type="image/jpeg")
+    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
+    return StreamingResponse(open(retrieved_filename, 'rb'), media_type="image/jpeg")
