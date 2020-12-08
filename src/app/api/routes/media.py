@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from typing import List
 from datetime import datetime
 
+import app.config as cfg
 from app.api import crud
 from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
@@ -95,6 +96,9 @@ async def upload_media(media_id: int = Path(..., gt=0),
 
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
     bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
+    # If files are in a subfolder of the bucket
+    if "/" in cfg.BUCKET_NAME:
+        bucket_key = f"{cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/'):]}/{bucket_key}"
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
