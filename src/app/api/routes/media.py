@@ -2,7 +2,6 @@ from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, 
 from fastapi.responses import StreamingResponse
 from typing import List
 from datetime import datetime
-import hashlib
 
 from app.api import crud
 from app.db import media
