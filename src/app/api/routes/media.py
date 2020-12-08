@@ -6,7 +6,7 @@ from datetime import datetime
 from app.api import crud
 from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
-from app.api.deps import get_current_device, get_current_user
+from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.security import hash_content_file
 from app.services import bucket_service
 
@@ -29,7 +29,7 @@ async def check_for_media_existence(media_id, device_id=None):
 
 
 @router.post("/", response_model=MediaOut, status_code=201, summary="Create a media related to a specific device")
-async def create_media(payload: MediaIn):
+async def create_media(payload: MediaIn, _=Security(get_current_access, scopes=["admin"])):
     """
     Creates a media related to specific device, based on device_id as argument
 
@@ -69,7 +69,11 @@ async def fetch_media():
 
 
 @router.put("/{media_id}/", response_model=MediaOut, summary="Update information about a specific media")
-async def update_media(payload: MediaIn, media_id: int = Path(..., gt=0)):
+async def update_media(
+    payload: MediaIn,
+    media_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=["admin"])
+):
     """
     Based on a media_id, updates information about the specified media
     """
@@ -77,7 +81,7 @@ async def update_media(payload: MediaIn, media_id: int = Path(..., gt=0)):
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
-async def delete_media(media_id: int = Path(..., gt=0)):
+async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a media_id, deletes the specified media
     """
