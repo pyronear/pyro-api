@@ -105,13 +105,20 @@ async def upload_media(media_id: int = Path(..., gt=0),
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
-async def get_media_url(media_id: int = Path(..., gt=0),
+async def get_media_url(background_tasks: BackgroundTasks,
+                        media_id: int = Path(..., gt=0),
                         _=Security(get_current_user, scopes=["admin"])):
     """
     Retrieve the media image url
     """
     media = await check_for_media_existence(media_id)
     retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
+    if retrieved_file is False:
+        raise HTTPException(
+            status_code=500,
+            detail="The download did not succeed"
+        )
+    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
     return {"url": retrieved_file}
 
 
@@ -124,5 +131,10 @@ async def get_media_image(background_tasks: BackgroundTasks,
     """
     media = await check_for_media_existence(media_id)
     retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
+    if retrieved_file is False:
+        raise HTTPException(
+            status_code=500,
+            detail="The upload did not succeed"
+        )
     background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
     return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
