@@ -93,7 +93,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     """
     entry = await check_for_media_existence(media_id, current_device.id)
 
-    # Concatenate the first 32 chars of SHA256 hash with file extension
+    # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
     bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
