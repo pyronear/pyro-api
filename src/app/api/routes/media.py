@@ -95,7 +95,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     entry = await check_for_media_existence(media_id, current_device.id)
 
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    bucket_key = f"{hash_content_file(await file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
+    bucket_key = f"{hash_content_file(await file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
     # If files are in a subfolder of the bucket
     if "/" in cfg.BUCKET_NAME:
         bucket_key = f"{cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]}/{bucket_key}"
