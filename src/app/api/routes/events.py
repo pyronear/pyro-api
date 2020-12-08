@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path, Security
 from app.api import crud
 from app.db import events
 from app.api.schemas import EventOut, EventIn
-from app.api.deps import get_current_user, get_current_access
+from app.api.deps import get_current_access
 
 
 router = APIRouter()
@@ -48,7 +48,7 @@ async def update_event(
 
 
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
-async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a event_id, deletes the specified event
     """
