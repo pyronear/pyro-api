@@ -98,7 +98,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
     # If files are in a subfolder of the bucket
     if "/" in cfg.BUCKET_NAME:
-        bucket_key = f"{cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/'):]}/{bucket_key}"
+        bucket_key = f"{cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]}/{bucket_key}"
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
