@@ -2,12 +2,15 @@ from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, 
 from fastapi.responses import StreamingResponse
 from typing import List
 from datetime import datetime
+import hashlib
 
 from app.api import crud
 from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
+from app.api.security import hash_content_file
 from app.services import bucket_service
+
 
 router = APIRouter()
 
@@ -90,7 +93,9 @@ async def upload_media(media_id: int = Path(..., gt=0),
     Upload a media (image or video) linked to an existing media object in the DB
     """
     entry = await check_for_media_existence(media_id, current_device.id)
-    bucket_key = str(hash(datetime.utcnow()))
+
+    # Concatenate the first 32 chars of SHA256 hash with file extension
+    bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
