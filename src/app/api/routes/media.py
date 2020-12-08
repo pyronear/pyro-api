@@ -97,7 +97,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
     bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
     # Reset byte position of the file as per https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile
-    file.seek(0)
+    await file.seek(0)
     # If files are in a subfolder of the bucket
     if "/" in cfg.BUCKET_NAME:
         bucket_key = f"{cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]}/{bucket_key}"
