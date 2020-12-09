@@ -8,7 +8,7 @@ from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
 from app.api.security import hash_content_file
-from app.services import bucket_service, prepend_bucket_folder
+from app.services import bucket_service, resolve_bucket_key
 
 
 router = APIRouter()
@@ -98,7 +98,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     # If files are in a subfolder of the bucket, prepend the folder path
-    bucket_key = prepend_bucket_folder(file_name)
+    bucket_key = resolve_bucket_key(file_name)
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
