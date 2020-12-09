@@ -67,6 +67,7 @@ jobs:
       - name: Run client unittests
         run: |
           coverage --version
+          sleep 5
           cd client && coverage run -m unittest discover test/
 
   flake8-py3:
