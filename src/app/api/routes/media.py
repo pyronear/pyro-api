@@ -108,7 +108,7 @@ async def upload_media(
     bucket_key = resolve_bucket_key(file_name)
 
     # Upload if bucket_key is different (otherwise the content is the exact same)
-    if isinstance(entry.bucket_key, str) and entry.bucket_key == bucket_key:
+    if isinstance(entry['bucket_key'], str) and entry['bucket_key'] == bucket_key:
         return await crud.get_entry(media, media_id)
     else:
         if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
