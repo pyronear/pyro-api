@@ -25,7 +25,7 @@ class QarnotBucket:
         """Connect to the CSP bucket"""
         conn = Connection(client_token=cfg.QARNOT_TOKEN)
         self._bucket = Bucket(conn, cfg.BUCKET_NAME.rpartition("/")[0])
-        if len(cfg.BUCKET_NAME) > bucket_name.find("/"):
+        if len(cfg.BUCKET_NAME) > cfg.BUCKET_NAME.find("/") + 1:
             self._media_folder = cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]
 
     @property
