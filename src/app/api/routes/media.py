@@ -110,7 +110,7 @@ async def upload_media(
     # Upload if bucket_key is different (otherwise the content is the exact same)
     if isinstance(entry.bucket_key, str) and entry.bucket_key == bucket_key:
         return await crud.get_entry(media, media_id)
-    else entry.bucket_key is None or entry.bucket_key != bucket_key:
+    else:
         if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
             raise HTTPException(
                 status_code=500,
