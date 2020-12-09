@@ -251,6 +251,7 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     async def mock_get_file(bucket_key):
         return local_tmp_path
     monkeypatch.setattr(bucket_service, "get_file", mock_get_file)
+
     async def mock_delete_file(filename):
         return True
     monkeypatch.setattr(bucket_service, "delete_file", mock_delete_file)
