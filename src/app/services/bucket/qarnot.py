@@ -78,6 +78,6 @@ class QarnotBucket:
         """Remove temporary file"""
         os.remove(filename) if os.path.exists(filename) else None
 
-    async def delete_file(self, filename: str) -> None:
+    async def delete_file(self, bucket_key: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
-        self.bucket.delete_file(filename)
+        self.bucket.delete_file(bucket_key)
