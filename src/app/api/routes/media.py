@@ -14,7 +14,8 @@ from app.services import bucket_service, resolve_bucket_key
 router = APIRouter()
 
 
-async def check_for_media_existence(media_id, device_id=None):
+async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
+    """Checks whether the media is registered in the DB"""
     filters = {"id": media_id}
     if device_id is not None:
         filters.update({"device_id": device_id})
@@ -91,7 +92,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
-    entry = await check_for_media_existence(media_id, current_device.id)
+    entry = await check_media_registration(media_id, current_device.id)
 
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
     file_name = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
@@ -102,7 +103,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
-    if upload_success is False:
+    if not upload_success:
         raise HTTPException(
             status_code=500,
             detail="The upload did not succeed"
@@ -119,15 +120,16 @@ async def get_media_url(background_tasks: BackgroundTasks,
     """
     Retrieve the media image url
     """
-    media = await check_for_media_existence(media_id)
-    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    if retrieved_file is False:
+    # Check in DB
+    media = await check_media_registration(media_id)
+    # Check in bucket
+    exist_on_bucket = await bucket_service.is_file(media['bucket_key'])
+    if not exist_on_bucket:
         raise HTTPException(
             status_code=500,
-            detail="The download did not succeed"
+            detail="File cannot be found on the bucket storage"
         )
-    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
-    return {"url": retrieved_file}
+    return {"url": media['bucket_key']}
 
 
 @router.get("/{media_id}/image", status_code=200)
@@ -137,12 +139,14 @@ async def get_media_image(background_tasks: BackgroundTasks,
     """
     Retrieve the media image as encoded in bytes
     """
-    media = await check_for_media_existence(media_id)
-    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    if retrieved_file is False:
+    # Check in DB
+    media = await check_media_registration(media_id)
+    # Download the file temporarily and get its local path
+    retrieved_file = await bucket_service.get_file(bucket_key=media["bucket_key"])
+    if retrieved_file is None:
         raise HTTPException(
             status_code=500,
             detail="The download did not succeed"
         )
-    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
+    background_tasks.add_task(bucket_service.flush_tmp_file, retrieved_file)
     return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
