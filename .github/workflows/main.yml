@@ -53,6 +53,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
+        env:
+          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
         run: PORT=8002 docker-compose up -d --build
       - name: Install dependencies in docker
         run: |
@@ -78,6 +81,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
+        env:
+          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
         run: |
           PORT=8002 docker-compose up -d --build
           docker ps
