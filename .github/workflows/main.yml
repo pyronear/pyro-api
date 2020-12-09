@@ -78,7 +78,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
-        run: PORT=8002 docker-compose up -d --build
+        run: |
+          PORT=8002 docker-compose up -d --build
+          docker ps
       - name: Set up Python 3.7
         uses: actions/setup-python@v1
         with:
