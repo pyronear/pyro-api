@@ -13,7 +13,7 @@ class QarnotBucketService(BaseBucketService):
     def connect_to_bucket(self):
         if not hasattr(self, 'bucket'):
             conn = connection.Connection(client_token=cfg.QARNOT_TOKEN)
-            self.bucket = bucket.Bucket(conn, cfg.BUCKET_NAME)
+            self.bucket = bucket.Bucket(conn, cfg.BUCKET_NAME.rpartition("/")[0])
         return self.bucket
 
     async def upload_file(self, bucket_key: str, file_binary: bin):

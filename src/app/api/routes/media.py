@@ -8,7 +8,7 @@ from app.db import media
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia
 from app.api.deps import get_current_device, get_current_user
 from app.api.security import hash_content_file
-from app.services import bucket_service
+from app.services import bucket_service, resolve_bucket_key
 
 
 router = APIRouter()
@@ -94,7 +94,11 @@ async def upload_media(media_id: int = Path(..., gt=0),
     entry = await check_for_media_existence(media_id, current_device.id)
 
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    bucket_key = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
+    file_name = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
+    # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
+    await file.seek(0)
+    # If files are in a subfolder of the bucket, prepend the folder path
+    bucket_key = resolve_bucket_key(file_name)
 
     upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
                                                       file_binary=file.file)
@@ -138,7 +142,7 @@ async def get_media_image(background_tasks: BackgroundTasks,
     if retrieved_file is False:
         raise HTTPException(
             status_code=500,
-            detail="The upload did not succeed"
+            detail="The download did not succeed"
         )
     background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
     return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")

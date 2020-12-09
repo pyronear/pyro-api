@@ -78,7 +78,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
-        run: PORT=8002 docker-compose up -d --build
+        run: |
+          PORT=8002 docker-compose up -d --build
+          docker ps
       - name: Set up Python 3.7
         uses: actions/setup-python@v1
         with:
@@ -89,4 +91,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scripts/requirements.txt
       - name: End-to-End test
-        run: python scripts/api_e2e.py 8002
+        run: |
+          sleep 5
+          python scripts/api_e2e.py 8002
