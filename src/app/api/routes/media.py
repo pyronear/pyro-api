@@ -142,7 +142,7 @@ async def get_media_image(background_tasks: BackgroundTasks,
     if retrieved_file is False:
         raise HTTPException(
             status_code=500,
-            detail="The upload did not succeed"
+            detail="The download did not succeed"
         )
     background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
     return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
