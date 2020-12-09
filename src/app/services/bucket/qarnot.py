@@ -76,3 +76,7 @@ class QarnotBucket:
     async def flush_tmp_file(self, filename: str) -> None:
         """Remove temporary file"""
         os.remove(filename) if os.path.exists(filename) else None
+
+    async def delete_file(self, filename: str) -> None:
+        """Remove bucket file and return whether the deletion succeeded"""
+        self.bucket.delete_file(filename)
