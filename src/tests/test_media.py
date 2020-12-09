@@ -4,7 +4,6 @@ import pytest
 import os
 import tempfile
 from datetime import datetime
-from io import BytesIO
 
 from app import db
 from app.api import crud
