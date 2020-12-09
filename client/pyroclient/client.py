@@ -30,7 +30,7 @@ ROUTES: Dict[str, str] = {
     "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
-    "get-media-image": "/media/{media_id}/image"
+    "get-media-content": "/media/{media_id}/content"
 }
 
 
@@ -171,4 +171,4 @@ class Client:
 
     def get_media_image(self, media_id: int) -> Response:
         """ Get the image as a streaming file"""
-        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)
+        return requests.get(self.routes["get-media-content"].format(media_id=media_id), headers=self.headers)

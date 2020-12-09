@@ -86,9 +86,11 @@ async def delete_media(media_id: int = Path(..., gt=0)):
 
 
 @router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
-async def upload_media(media_id: int = Path(..., gt=0),
-                       file: UploadFile = File(...),
-                       current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def upload_media(
+    media_id: int = Path(..., gt=0),
+    file: UploadFile = File(...),
+    current_device: DeviceOut = Security(get_current_device, scopes=["device"])
+):
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
@@ -112,9 +114,11 @@ async def upload_media(media_id: int = Path(..., gt=0),
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
-async def get_media_url(background_tasks: BackgroundTasks,
-                        media_id: int = Path(..., gt=0),
-                        _=Security(get_current_user, scopes=["admin"])):
+async def get_media_url(
+    background_tasks: BackgroundTasks,
+    media_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
     """
     Retrieve the media image url
     """
@@ -129,10 +133,12 @@ async def get_media_url(background_tasks: BackgroundTasks,
     return {"url": media['bucket_key']}
 
 
-@router.get("/{media_id}/image", status_code=200)
-async def get_media_image(background_tasks: BackgroundTasks,
-                          media_id: int = Path(..., gt=0),
-                          _=Security(get_current_user, scopes=["admin"])):
+@router.get("/{media_id}/content", status_code=200)
+async def get_media_content(
+    background_tasks: BackgroundTasks,
+    media_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
     """
     Retrieve the media image as encoded in bytes
     """
