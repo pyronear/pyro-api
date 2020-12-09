@@ -1,6 +1,6 @@
 from app.services import bucket_service, resolve_bucket_key
 from app.services.bucket import QarnotBucket
-from app import config as cfg
+from app.services.bucket.qarnot import cfg
 
 
 def test_resolve_bucket_key(monkeypatch):
