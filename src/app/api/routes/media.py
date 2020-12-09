@@ -101,9 +101,7 @@ async def upload_media(media_id: int = Path(..., gt=0),
     # If files are in a subfolder of the bucket, prepend the folder path
     bucket_key = resolve_bucket_key(file_name)
 
-    upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
-                                                      file_binary=file.file)
-    if not upload_success:
+    if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
         raise HTTPException(
             status_code=500,
             detail="The upload did not succeed"
@@ -123,8 +121,7 @@ async def get_media_url(background_tasks: BackgroundTasks,
     # Check in DB
     media = await check_media_registration(media_id)
     # Check in bucket
-    exist_on_bucket = await bucket_service.is_file(media['bucket_key'])
-    if not exist_on_bucket:
+    if not await bucket_service.is_file(media['bucket_key']):
         raise HTTPException(
             status_code=500,
             detail="File cannot be found on the bucket storage"
