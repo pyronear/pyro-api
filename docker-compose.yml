@@ -13,6 +13,8 @@ services:
       - TEST_DATABASE_URL=postgresql://pyro_api_test:pyro_api_test@test_db/pyro_api_dev_test
       - SUPERUSER_LOGIN=superuser
       - SUPERUSER_PWD=superuser
+      - QARNOT_TOKEN=${QARNOT_TOKEN}
+      - BUCKET_NAME=${BUCKET_NAME}
   db:
     image: postgres:12.1-alpine
     volumes:
