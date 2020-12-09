@@ -145,5 +145,6 @@ async def get_media_image(background_tasks: BackgroundTasks,
             status_code=500,
             detail="The download did not succeed"
         )
+    # Remove temp local file
     background_tasks.add_task(bucket_service.flush_tmp_file, retrieved_file)
     return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
