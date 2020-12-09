@@ -6,7 +6,6 @@ from typing import List, Optional
 from app import config as cfg
 
 
-
 __all__ = ['QarnotBucket']
 
 
@@ -44,7 +43,6 @@ class QarnotBucket:
 
     async def is_file(self, bucket_key: str) -> bool:
         """Check whether a file exists on the bucket"""
-        files = []
         try:
             # Filter the bucket summary if this is in a subfolder
             if isinstance(self._media_folder, str):
