@@ -1,10 +1,5 @@
-from app.services.bucket.baseBucketService import BaseBucketService
 from app.services import bucket_service, resolve_bucket_key
 from app import config as cfg
-
-
-def test_bucket_service_is_BaseBucketService():
-    assert isinstance(bucket_service, BaseBucketService), "selected service is not an instance of BaseBucketService"
 
 
 def test_resolve_bucket_key(monkeypatch):
