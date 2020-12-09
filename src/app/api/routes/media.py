@@ -127,7 +127,7 @@ async def upload_media(
         background_tasks.add_task(bucket_service.flush_tmp_file, uploaded_file)
         # Check the hash
         with open(uploaded_file, 'rb') as f:
-            upload_hash = hash_content_file(file.file.read())
+            upload_hash = hash_content_file(f.read())
         if upload_hash != file_hash:
             # Delete corrupted file
             await bucket_service.delete_file(bucket_key)
