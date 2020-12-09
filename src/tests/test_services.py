@@ -1,4 +1,5 @@
 from app.services import bucket_service, resolve_bucket_key
+from app.services.bucket import QarnotBucket
 from app import config as cfg
 
 
@@ -16,3 +17,7 @@ def test_resolve_bucket_key(monkeypatch):
     # Same if the bucket folder is specified
     monkeypatch.setattr(cfg, "BUCKET_NAME", origin_value)
     assert resolve_bucket_key(file_name, bucket_subfolder) == f"{bucket_subfolder}/{file_name}"
+
+
+def test_bucket_service():
+    assert isinstance(bucket_service, QarnotBucket)
