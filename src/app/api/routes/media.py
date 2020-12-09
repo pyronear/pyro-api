@@ -111,13 +111,15 @@ async def upload_media(
     if isinstance(entry['bucket_key'], str) and entry['bucket_key'] == bucket_key:
         return await crud.get_entry(media, media_id)
     else:
+        # Failed upload
         if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
             raise HTTPException(
                 status_code=500,
-                detail="The upload did not succeed"
+                detail="Failed upload"
             )
         # Data integrity check
         uploaded_file = await bucket_service.get_file(bucket_key=bucket_key)
+        # Failed download
         if uploaded_file is None:
             raise HTTPException(
                 status_code=500,
