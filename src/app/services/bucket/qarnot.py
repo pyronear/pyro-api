@@ -1,7 +1,8 @@
 import os
-from qarnot import connection, bucket
 import logging
 from typing import List, Optional
+from qarnot.connection import Connection
+from qarnot.bucket import Bucket
 
 from app import config as cfg
 
@@ -14,7 +15,7 @@ logger = logging.getLogger("uvicorn.warning")
 
 class QarnotBucket:
 
-    _bucket: Optional[qarnot.bucket.Bucket] = None
+    _bucket: Optional[Bucket] = None
     _media_folder: Optional[str] = None
 
     def __init__(self) -> None:
@@ -22,13 +23,13 @@ class QarnotBucket:
 
     def _connect_to_bucket(self) -> None:
         """Connect to the CSP bucket"""
-        conn = connection.Connection(client_token=cfg.QARNOT_TOKEN)
+        conn = Connection(client_token=cfg.QARNOT_TOKEN)
         self._bucket = bucket.Bucket(conn, cfg.BUCKET_NAME.rpartition("/")[0])
         if len(cfg.BUCKET_NAME) > bucket_name.find("/"):
             self._media_folder = cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]
 
     @property
-    def bucket(self) -> qarnot.bucket.Bucket:
+    def bucket(self) -> Bucket:
         if self._bucket is None:
             self._connect_to_bucket()
         return self._bucket
