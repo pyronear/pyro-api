@@ -40,7 +40,17 @@ pip install -r pyro-api/requirements.txt
 
 ## Usage
 
-If you wish to deploy this project on a server hosted remotely, you might want to be using [Docker](https://www.docker.com/) containers. You can perform the same using this command:
+If you wish to deploy this project on a server hosted remotely, you might want to be using [Docker](https://www.docker.com/) containers. Beforehand, you will need to set a few environment variables either manually or by writing an `.env` file in the root directory of this project, like in the example below:
+
+```
+QARNOT_TOKEN=my_very_secret_token
+BUCKET_NAME=my_storage_bucket_name
+BUCKET_MEDIA_FOLDER=my/media/subfolder
+
+```
+
+Those values will allow your API server to connect to our cloud service provider [Qarnot Computing](https://qarnot.com/), which is mandatory for your local server to be fully operational.
+Then you can run the API containers using this command:
 
 ```bash
 PORT=8002 docker-compose up -d --build
