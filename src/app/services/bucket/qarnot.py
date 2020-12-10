@@ -14,6 +14,7 @@ logger = logging.getLogger("uvicorn.warning")
 
 
 class QarnotBucket:
+    """Storage bucket manipulation object on Qarnot computing"""
 
     _bucket: Optional[Bucket] = None
     _media_folder: Optional[str] = None
@@ -23,8 +24,8 @@ class QarnotBucket:
 
     def _connect_to_bucket(self) -> None:
         """Connect to the CSP bucket"""
-        conn = Connection(client_token=cfg.QARNOT_TOKEN)
-        self._bucket = Bucket(conn, cfg.BUCKET_NAME)
+        self._conn = Connection(client_token=cfg.QARNOT_TOKEN)
+        self._bucket = Bucket(self._conn, cfg.BUCKET_NAME)
         if isinstance(cfg.BUCKET_MEDIA_FOLDER, str):
             self._media_folder = cfg.BUCKET_MEDIA_FOLDER
 
@@ -45,12 +46,10 @@ class QarnotBucket:
     async def check_file_existence(self, bucket_key: str) -> bool:
         """Check whether a file exists on the bucket"""
         try:
-            # Filter the bucket summary if this is in a subfolder
-            if isinstance(self._media_folder, str):
-                obj_summary = self.bucket.directory(self._media_folder)
-            else:
-                obj_summary = self.bucket.list_files()
-            return len(list(obj_summary.filter(Prefix=bucket_key))) > 0
+            # Use boto3 head_object method using the Qarnot private connection attribute
+            # cf. https://github.com/qarnot/qarnot-sdk-python/blob/master/qarnot/connection.py#L188
+            head_object = self._conn._s3client.head_object(Bucket=cfg.BUCKET_NAME, Key=bucket_key)
+            return head_object['ResponseMetadata']['HTTPStatusCode'] == 200
         except Exception as e:
             logger.warning(e)
             return False
