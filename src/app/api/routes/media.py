@@ -149,38 +149,9 @@ async def get_media_url(
     media_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
-    """
-    Retrieve the media image url
-    """
+    """Resolve the temporary media image URL"""
     # Check in DB
     media = await check_media_registration(media_id)
     # Check in bucket
-    if not await bucket_service.check_file_existence(media['bucket_key']):
-        raise HTTPException(
-            status_code=500,
-            detail="File cannot be found on the bucket storage"
-        )
-    return {"url": media['bucket_key']}
-
-
-@router.get("/{media_id}/content", status_code=200)
-async def get_media_content(
-    background_tasks: BackgroundTasks,
-    media_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=["admin"])
-):
-    """
-    Retrieve the media image as encoded in bytes
-    """
-    # Check in DB
-    media = await check_media_registration(media_id)
-    # Download the file temporarily and get its local path
-    retrieved_file = await bucket_service.get_file(bucket_key=media["bucket_key"])
-    if retrieved_file is None:
-        raise HTTPException(
-            status_code=500,
-            detail="The download did not succeed"
-        )
-    # Remove temp local file
-    background_tasks.add_task(bucket_service.flush_tmp_file, retrieved_file)
-    return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
+    temp_public_url = await bucket_service.get_public_url(media['bucket_key'])
+    return MediaUrl(url=temp_public_url)
