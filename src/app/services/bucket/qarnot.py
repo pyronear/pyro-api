@@ -42,7 +42,7 @@ class QarnotBucket:
             logger.warning(e)
             return None
 
-    async def is_file(self, bucket_key: str) -> bool:
+    async def check_file_existence(self, bucket_key: str) -> bool:
         """Check whether a file exists on the bucket"""
         try:
             # Filter the bucket summary if this is in a subfolder

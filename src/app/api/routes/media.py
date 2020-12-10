@@ -155,7 +155,7 @@ async def get_media_url(
     # Check in DB
     media = await check_media_registration(media_id)
     # Check in bucket
-    if not await bucket_service.is_file(media['bucket_key']):
+    if not await bucket_service.check_file_existence(media['bucket_key']):
         raise HTTPException(
             status_code=500,
             detail="File cannot be found on the bucket storage"
