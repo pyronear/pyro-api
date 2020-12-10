@@ -145,7 +145,6 @@ async def upload_media(
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
 async def get_media_url(
-    background_tasks: BackgroundTasks,
     media_id: int = Path(..., gt=0),
     _=Security(get_current_user, scopes=["admin"])
 ):
