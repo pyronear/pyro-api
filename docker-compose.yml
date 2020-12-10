@@ -15,6 +15,7 @@ services:
       - SUPERUSER_PWD=superuser
       - QARNOT_TOKEN=${QARNOT_TOKEN}
       - BUCKET_NAME=${BUCKET_NAME}
+      - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
   db:
     image: postgres:12.1-alpine
     volumes:
