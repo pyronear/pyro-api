@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import List, Optional
+from fastapi import HTTPException
 from qarnot.connection import Connection
 from qarnot.bucket import Bucket
 
@@ -53,6 +54,16 @@ class QarnotBucket:
         except Exception as e:
             logger.warning(e)
             return False
+
+    async def get_public_url(self, bucket_key: str, url_expiration: int = 3600) -> str:
+        """Generate a temporary public URL for a bucket file"""
+        if not await self.check_file_existence(bucket_key):
+            raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
+
+        # Point to the bucket file
+        file_params = {'Bucket': cfg.BUCKET_NAME, 'Key': bucket_key}
+        # Generate a public URL for it using boto3 presign URL generation
+        return self._conn._s3client.generate_presigned_url('get_object', Params=file_params, ExpiresIn=url_expiration)
 
     async def upload_file(self, bucket_key: str, file_binary: bin) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
