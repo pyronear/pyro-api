@@ -24,9 +24,9 @@ class QarnotBucket:
     def _connect_to_bucket(self) -> None:
         """Connect to the CSP bucket"""
         conn = Connection(client_token=cfg.QARNOT_TOKEN)
-        self._bucket = Bucket(conn, cfg.BUCKET_NAME.rpartition("/")[0])
-        if len(cfg.BUCKET_NAME) > cfg.BUCKET_NAME.find("/") + 1:
-            self._media_folder = cfg.BUCKET_NAME[cfg.BUCKET_NAME.find('/') + 1:]
+        self._bucket = Bucket(conn, cfg.BUCKET_NAME)
+        if isinstance(cfg.BUCKET_MEDIA_FOLDER, str):
+            self._media_folder = cfg.BUCKET_MEDIA_FOLDER
 
     @property
     def bucket(self) -> Bucket:
