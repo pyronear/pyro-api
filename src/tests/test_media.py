@@ -1,5 +1,8 @@
 import json
+import requests
 import pytest
+import os
+import tempfile
 from datetime import datetime
 
 from app import db
@@ -234,15 +237,30 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
     assert response.status_code == 201
 
     # 2 - Upload something
-    async def successful_upload(bucket_key, file_binary):
+    async def mock_upload_file(bucket_key, file_binary):
         return True
-    monkeypatch.setattr(bucket_service, "upload_file", successful_upload)
-    response = await test_app_asyncio.post(f"/media/{response.json()['id']}/upload", files=dict(file='bar'))
+    monkeypatch.setattr(bucket_service, "upload_file", mock_upload_file)
 
-    assert response.status_code == 200
-    new_media_in_db = await get_entry_in_db(test_db, db.media, response.json()["id"])
-    new_media_in_db = dict(**new_media_in_db)
+    # Download and save a temporary file
+    local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    with open(local_tmp_path, 'wb') as f:
+        f.write(img_content)
+
+    async def mock_get_file(bucket_key):
+        return local_tmp_path
+    monkeypatch.setattr(bucket_service, "get_file", mock_get_file)
+
+    async def mock_delete_file(filename):
+        return True
+    monkeypatch.setattr(bucket_service, "delete_file", mock_delete_file)
+
+    response = await test_app_asyncio.post(f"/media/{response.json()['id']}/upload", files=dict(file=img_content))
+
+    assert response.status_code == 200, print(response.json()['detail'])
     response_json = response.json()
+    new_media_in_db = await get_entry_in_db(test_db, db.media, response_json["id"])
+    new_media_in_db = dict(**new_media_in_db)
     response_json.pop("created_at")
     assert {k: v for k, v in new_media_in_db.items() if k not in ('created_at', "bucket_key")} == response_json
     assert new_media_in_db["bucket_key"] is not None

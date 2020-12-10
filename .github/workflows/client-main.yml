@@ -38,6 +38,14 @@ jobs:
     needs: pkg-install
     steps:
       - uses: actions/checkout@v2
+      - name: Build & run API server
+        env:
+          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+        run: |
+          PORT=8002 docker-compose up -d --build
+          docker ps
       - name: Set up Python 3.7
         uses: actions/setup-python@v1
         with:
@@ -55,10 +63,6 @@ jobs:
             ${{ runner.os }}-deps-${{ env.cache-name }}-
             ${{ runner.os }}-deps-
             ${{ runner.os }}-
-      - name: Build & run API server
-        run: |
-          PORT=8002 docker-compose up -d --build
-          docker ps
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

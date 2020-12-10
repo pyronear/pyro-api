@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from app.api import crud
@@ -14,7 +13,8 @@ from app.services import bucket_service, resolve_bucket_key
 router = APIRouter()
 
 
-async def check_for_media_existence(media_id, device_id=None):
+async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
+    """Checks whether the media is registered in the DB"""
     filters = {"id": media_id}
     if device_id is not None:
         filters.update({"device_id": device_id})
@@ -89,64 +89,71 @@ async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_a
 
 
 @router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
-async def upload_media(media_id: int = Path(..., gt=0),
-                       file: UploadFile = File(...),
-                       current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def upload_media(
+    background_tasks: BackgroundTasks,
+    media_id: int = Path(..., gt=0),
+    file: UploadFile = File(...),
+    current_device: DeviceOut = Security(get_current_device, scopes=["device"])
+):
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
-    entry = await check_for_media_existence(media_id, current_device.id)
+
+    # Check in DB
+    entry = await check_media_registration(media_id, current_device.id)
 
     # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    file_name = f"{hash_content_file(file.file.read())[:32]}.{file.filename.rpartition('.')[-1]}"
+    file_hash = hash_content_file(file.file.read())
+    file_name = f"{file_hash[:32]}.{file.filename.rpartition('.')[-1]}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     # If files are in a subfolder of the bucket, prepend the folder path
     bucket_key = resolve_bucket_key(file_name)
 
-    upload_success = await bucket_service.upload_file(bucket_key=bucket_key,
-                                                      file_binary=file.file)
-    if upload_success is False:
-        raise HTTPException(
-            status_code=500,
-            detail="The upload did not succeed"
-        )
-    entry = dict(**entry)
-    entry["bucket_key"] = bucket_key
-    return await crud.update_entry(media, MediaCreation(**entry), media_id)
+    # Upload if bucket_key is different (otherwise the content is the exact same)
+    if isinstance(entry['bucket_key'], str) and entry['bucket_key'] == bucket_key:
+        return await crud.get_entry(media, media_id)
+    else:
+        # Failed upload
+        if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed upload"
+            )
+        # Data integrity check
+        uploaded_file = await bucket_service.get_file(bucket_key=bucket_key)
+        # Failed download
+        if uploaded_file is None:
+            raise HTTPException(
+                status_code=500,
+                detail="The data integrity check failed (unable to download media form bucket)"
+            )
+        # Remove temp local file
+        background_tasks.add_task(bucket_service.flush_tmp_file, uploaded_file)
+        # Check the hash
+        with open(uploaded_file, 'rb') as f:
+            upload_hash = hash_content_file(f.read())
+        if upload_hash != file_hash:
+            # Delete corrupted file
+            await bucket_service.delete_file(bucket_key)
+            raise HTTPException(
+                status_code=500,
+                detail="Data was corrupted during upload"
+            )
+
+        entry = dict(**entry)
+        entry["bucket_key"] = bucket_key
+        return await crud.update_entry(media, MediaCreation(**entry), media_id)
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
-async def get_media_url(background_tasks: BackgroundTasks,
-                        media_id: int = Path(..., gt=0),
-                        _=Security(get_current_user, scopes=["admin"])):
-    """
-    Retrieve the media image url
-    """
-    media = await check_for_media_existence(media_id)
-    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    if retrieved_file is False:
-        raise HTTPException(
-            status_code=500,
-            detail="The download did not succeed"
-        )
-    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
-    return {"url": retrieved_file}
-
-
-@router.get("/{media_id}/image", status_code=200)
-async def get_media_image(background_tasks: BackgroundTasks,
-                          media_id: int = Path(..., gt=0),
-                          _=Security(get_current_user, scopes=["admin"])):
-    """
-    Retrieve the media image as encoded in bytes
-    """
-    media = await check_for_media_existence(media_id)
-    retrieved_file = await bucket_service.get_uploaded_file(bucket_key=media["bucket_key"])
-    if retrieved_file is False:
-        raise HTTPException(
-            status_code=500,
-            detail="The download did not succeed"
-        )
-    background_tasks.add_task(bucket_service.flush_after_get_uploaded_file, retrieved_file)
-    return StreamingResponse(open(retrieved_file, 'rb'), media_type="image/jpeg")
+async def get_media_url(
+    media_id: int = Path(..., gt=0),
+    _=Security(get_current_user, scopes=["admin"])
+):
+    """Resolve the temporary media image URL"""
+    # Check in DB
+    media = await check_media_registration(media_id)
+    # Check in bucket
+    temp_public_url = await bucket_service.get_public_url(media['bucket_key'])
+    return MediaUrl(url=temp_public_url)

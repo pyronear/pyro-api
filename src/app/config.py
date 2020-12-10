@@ -32,6 +32,7 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
 
 QARNOT_TOKEN: str = os.getenv("QARNOT_TOKEN")
 BUCKET_NAME: str = os.getenv("BUCKET_NAME")
+BUCKET_MEDIA_FOLDER: Optional[str] = os.getenv("BUCKET_MEDIA_FOLDER")
 DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
                     + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
 
