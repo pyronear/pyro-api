@@ -1,28 +1,31 @@
 from typing import List, Dict, Any
-from fastapi import APIRouter, Path, HTTPException
+from fastapi import APIRouter, Path, HTTPException, Security
 from app.api import crud, security
 from app.db import accesses
 from app.api.schemas import AccessBase, AccessRead, AccessAuth, AccessCreation, Cred, CredHash, Login
+from app.api.deps import get_current_access
 
 
 router = APIRouter()
 
 
-async def update_access_login(login: str, access_id: int):
+async def update_access_login(login: str, access_id: int, _=Security(get_current_access, scopes=["admin"])):
     """ Assume access_id exists and login does not exist elsewhere"""
     return await crud.update_entry(accesses, Login(login=login), access_id)
 
 
 async def check_for_access_login_existence(login: str):
     # Check that the login does not already exist
-    if await crud.fetch_one(accesses, {'login': login}) is not None:
+    if await crud.fetch_one(accesses, {"login": login}) is not None:
         raise HTTPException(
             status_code=400,
             detail=f"An entry with login='{login}' already exists.",
         )
 
 
-async def post_access(login: str, password: str, scopes: str) -> AccessRead:
+async def post_access(
+    login: str, password: str, scopes: str, _=Security(get_current_access, scopes=["admin"])
+) -> AccessRead:
     await check_for_access_login_existence(login)
     # Hash the password
     pwd = await security.hash_password(password)
@@ -32,7 +35,9 @@ async def post_access(login: str, password: str, scopes: str) -> AccessRead:
     return AccessRead(**entry)
 
 
-async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
+async def update_access_pwd(
+    payload: Cred, entry_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])
+) -> Dict[str, Any]:
     entry = await crud.get_entry(accesses, entry_id)
     # Hash the password
     pwd = await security.hash_password(payload.password)
@@ -44,7 +49,7 @@ async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> D
 
 
 @router.post("/", response_model=AccessRead, status_code=201, summary="Create a new access")
-async def create_access(payload: AccessAuth):
+async def create_access(payload: AccessAuth, _=Security(get_current_access, scopes=["admin"])):
     """
     If the provided login does not exist, creates a new access based on the given information
 
@@ -55,7 +60,7 @@ async def create_access(payload: AccessAuth):
 
 
 @router.get("/{access_id}/", response_model=AccessRead, summary="Get information about a specific access")
-async def get_access(access_id: int = Path(..., gt=0)):
+async def get_access(access_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a access_id, retrieves information about the specified access
     """
@@ -63,7 +68,7 @@ async def get_access(access_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[AccessRead], summary="Get the list of all accesses")
-async def fetch_accesses():
+async def fetch_accesses(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of all accesses and their information
     """
@@ -71,7 +76,9 @@ async def fetch_accesses():
 
 
 @router.put("/{access_id}/", response_model=AccessRead, summary="Update information about a specific access")
-async def update_access(payload: AccessBase, access_id: int = Path(..., gt=0)):
+async def update_access(
+    payload: AccessBase, access_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])
+):
     """
     Based on a access_id, updates information about the specified access
     """
@@ -83,7 +90,7 @@ async def update_access(payload: AccessBase, access_id: int = Path(..., gt=0)):
 
 
 @router.delete("/{access_id}/", response_model=AccessRead, summary="Delete a specific access")
-async def delete_access(access_id: int = Path(..., gt=0)):
+async def delete_access(access_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a access_id, deletes the specified access
     """
