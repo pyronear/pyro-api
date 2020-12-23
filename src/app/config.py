@@ -6,7 +6,7 @@ from typing import Optional
 PROJECT_NAME: str = 'Pyronear API'
 PROJECT_DESCRIPTION: str = 'API for wildfire prevention, detection and monitoring'
 API_BASE: str = 'api/'
-VERSION: str = "0.1.1a0"
+VERSION: str = "0.1.2a0"
 DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
 DATABASE_URL: str = os.getenv("DATABASE_URL")
 TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
