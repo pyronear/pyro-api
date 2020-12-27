@@ -43,7 +43,7 @@ jobs:
           VERSION: ${{ steps.release_tag.outputs.VERSION }}
         run: |
           VERSION="${VERSION:1}"
-          BUILD_VERSION=$VERSION python client/setup.py sdist bdist_wheel
+          cd client && BUILD_VERSION=$VERSION python setup.py sdist bdist_wheel && cd ..
           twine check client/dist/*
           twine upload client/dist/*
 
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Miniconda setup
-        uses: goanpeca/setup-miniconda@v1
+        uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
           python-version: 3.7
@@ -87,9 +87,9 @@ jobs:
           VERSION: ${{ steps.release_tag.outputs.VERSION }}
         run: |
           VERSION="${VERSION:1}"
-          BUILD_VERSION=$VERSION python client/setup.py sdist
+          cd client && BUILD_VERSION=$VERSION python setup.py sdist && cd ..
           mkdir client/conda-dist
-          BUILD_VERSION=$VERSION conda-build client/.conda/ --output-folder client/conda-dist
+          cd client && BUILD_VERSION=$VERSION conda-build .conda/ --output-folder conda-dist && cd ..
           ls -l client/conda-dist/noarch/*tar.bz2
           anaconda upload client/conda-dist/noarch/*tar.bz2 -u pyronear
 
@@ -100,7 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Miniconda setup
-        uses: goanpeca/setup-miniconda@v1
+        uses: conda-incubator/setup-miniconda@v1
         with:
           auto-update-conda: true
           python-version: 3.7
