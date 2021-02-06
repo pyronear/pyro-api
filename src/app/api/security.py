@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
+import hashlib
 from jose import jwt
 from passlib.context import CryptContext
 
@@ -29,3 +30,7 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 async def hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def hash_content_file(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()

@@ -38,6 +38,14 @@ jobs:
     needs: pkg-install
     steps:
       - uses: actions/checkout@v2
+      - name: Build & run API server
+        env:
+          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+        run: |
+          PORT=8002 docker-compose up -d --build
+          docker ps
       - name: Set up Python 3.7
         uses: actions/setup-python@v1
         with:
@@ -60,13 +68,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e client/
           pip install coverage
-      - name: Build & run API server
-        run: |
-          PORT=8002 docker-compose up -d --build
-          docker ps
       - name: Run client unittests
         run: |
           coverage --version
+          sleep 5
           cd client && coverage run -m unittest discover test/
 
   flake8-py3:

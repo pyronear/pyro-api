@@ -1,5 +1,7 @@
-from app.services.bucket.dummyBucketService import DummyBucketService
+from app.services.bucket import QarnotBucket
 
-bucket_service = DummyBucketService()
 
 __all__ = ['bucket_service']
+
+
+bucket_service = QarnotBucket()

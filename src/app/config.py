@@ -6,11 +6,11 @@ from typing import Optional
 PROJECT_NAME: str = 'Pyronear API'
 PROJECT_DESCRIPTION: str = 'API for wildfire prevention, detection and monitoring'
 API_BASE: str = 'api/'
-VERSION: str = "0.1.1a0"
+VERSION: str = "0.1.2a0"
 DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
 DATABASE_URL: str = os.getenv("DATABASE_URL")
 TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
-LOGO_URL: str = "https://github.com/pyronear/PyroNear/raw/master/docs/source/_static/img/pyronear-logo-dark.png"
+LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
 
 SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -30,7 +30,9 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
     raise ValueError(
         "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
 
-BUCKET_NAME: str = "mypyroneartest"
+QARNOT_TOKEN: str = os.getenv("QARNOT_TOKEN")
+BUCKET_NAME: str = os.getenv("BUCKET_NAME")
+BUCKET_MEDIA_FOLDER: Optional[str] = os.getenv("BUCKET_MEDIA_FOLDER")
 DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
                     + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
 

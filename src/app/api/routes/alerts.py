@@ -3,7 +3,7 @@ from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
 from app.db import alerts, AlertType, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
-from app.api.deps import get_current_device
+from app.api.deps import get_current_device, get_current_access
 
 
 router = APIRouter()
@@ -19,7 +19,7 @@ async def check_media_existence(media_id):
 
 
 @router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert")
-async def create_alert(payload: AlertIn):
+async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=["admin"])):
     """
     Creates a new alert based on the given information
 
@@ -63,7 +63,11 @@ async def fetch_alerts():
 
 
 @router.put("/{alert_id}/", response_model=AlertOut, summary="Update information about a specific alert")
-async def update_alert(payload: AlertIn, alert_id: int = Path(..., gt=0)):
+async def update_alert(
+    payload: AlertIn,
+    alert_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=["admin"])
+):
     """
     Based on a alert_id, updates information about the specified alert
     """
@@ -79,7 +83,7 @@ async def acknowledge_alert(alert_id: int = Path(..., gt=0)):
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0)):
+async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a alert_id, deletes the specified alert
     """

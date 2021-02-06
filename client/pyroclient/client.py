@@ -27,9 +27,9 @@ ROUTES: Dict[str, str] = {
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
     "get-unacknowledged-alerts": "/alerts/unacknowledged",
+    "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
-    "get-media-image": "/media/{media_id}/image"
 }
 
 
@@ -151,6 +151,10 @@ class Client:
         """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
         return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
 
+    def acknowledge_alert(self, alert_id: int) -> Response:
+        """Switch the `is_acknowledged`field value of the alert to `True`"""
+        return requests.put(self.routes["acknowledge-alert"].format(alert_id=alert_id), headers=self.headers)
+
     def get_site_devices(self, site_id: int, payload: Dict[str, Any]) -> Response:
         """ Get all devices installed in a specific site"""
         return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
@@ -163,7 +167,3 @@ class Client:
         """ Get the image as a url and read it"""
         image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
         return requests.get(image_url.json()['url'])
-
-    def get_media_image(self, media_id: int) -> Response:
-        """ Get the image as a streaming file"""
-        return requests.get(self.routes["get-media-image"].format(media_id=media_id), headers=self.headers)

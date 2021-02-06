@@ -1,17 +1,18 @@
 from typing import List
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Security
 from sqlalchemy import and_, or_
 from datetime import datetime
 from app.api import crud
 from app.db import installations, database
 from app.api.schemas import InstallationOut, InstallationIn
+from app.api.deps import get_current_access
 
 
 router = APIRouter()
 
 
 @router.post("/", response_model=InstallationOut, status_code=201, summary="Create a new installation")
-async def create_installation(payload: InstallationIn):
+async def create_installation(payload: InstallationIn, _=Security(get_current_access, scopes=["admin"])):
     """Creates a new installation based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -39,7 +40,11 @@ async def fetch_installations():
 
 @router.put("/{installation_id}/", response_model=InstallationOut,
             summary="Update information about a specific installation")
-async def update_installation(payload: InstallationIn, installation_id: int = Path(..., gt=0)):
+async def update_installation(
+    payload: InstallationIn,
+    installation_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=["admin"])
+):
     """
     Based on a installation_id, updates information about the specified installation
     """
@@ -47,7 +52,7 @@ async def update_installation(payload: InstallationIn, installation_id: int = Pa
 
 
 @router.delete("/{installation_id}/", response_model=InstallationOut, summary="Delete a specific installation")
-async def delete_installation(installation_id: int = Path(..., gt=0)):
+async def delete_installation(installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a installation_id, deletes the specified installation
     """
