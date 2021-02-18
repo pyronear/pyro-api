@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
+import pytest
 from pathlib import Path
 
 
@@ -42,5 +43,5 @@ def test_headers(header_options, excluded_files):
                         break
 
             # Compare it
-            self.assertTrue(any("".join(current_header[:min(len(option), len(current_header))]) == "".join(option)
-                                for option in header_options), msg=f"Invalid header in {source_path}")
+            assert any("".join(current_header[:min(len(option), len(current_header))]) == "".join(option)
+                       for option in header_options)
