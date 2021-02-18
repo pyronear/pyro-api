@@ -5,6 +5,7 @@
 
 from pathlib import Path
 
+
 @pytest.fixture(scope="module")
 def header_options():
     shebang = ["#!usr/bin/python\n"]
@@ -20,6 +21,7 @@ def header_options():
         shebang + [blank_line] + copyright_notice + [blank_line] + license_notice,
         copyright_notice + [blank_line] + license_notice
     ]
+
 
 @pytest.fixture(scope="module")
 def excluded_files():
