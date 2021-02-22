@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import enum
 from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
                         ForeignKey, MetaData)
@@ -27,7 +32,7 @@ accesses = Table(
     "accesses",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("login", String(50), unique=True),
+    Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", String(30), default="me", nullable=False),
 )

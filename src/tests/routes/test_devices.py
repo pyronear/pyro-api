@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import json
 import pytest
 from datetime import datetime
@@ -41,7 +46,7 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
     await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
@@ -138,6 +143,7 @@ async def test_create_device(test_app_asyncio, test_db, monkeypatch, payload, ro
         [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
         [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
         [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "third_device", "owner_id": 10, "specs": "v0.2", "password": "pwd"}, 404],  # unknown owner
     ],
 )
 @pytest.mark.asyncio

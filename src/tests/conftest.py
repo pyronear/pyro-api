@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import pytest
 from starlette.testclient import TestClient
 from datetime import datetime
@@ -31,7 +36,7 @@ async def mock_verify_password(plain_password, hashed_password):
 
 
 def pytest_configure():
-    # CRUD patching
+    # api.security patching
     pytest.mock_hash_password = mock_hash_password
     pytest.mock_verify_password = mock_verify_password
 
