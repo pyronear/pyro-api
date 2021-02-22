@@ -50,8 +50,8 @@ async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Mapping[str,
     return await database.fetch_one(query=query)
 
 
-async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
-    query = table.update().where(entry_id == table.c.id).values(**payload.dict()).returning(table.c.id)
+async def put(entry_id: int, payload: Dict, table: Table) -> int:
+    query = table.update().where(entry_id == table.c.id).values(**payload).returning(table.c.id)
     return await database.execute(query=query)
 
 
@@ -73,13 +73,25 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
     return dict(entry)
 
 
-async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
-    entry_id = await put(entry_id, payload, table)
+async def update_entry(
+    table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0), only_provided: bool = False
+) -> Dict[str, Any]:
+    payload_dict = payload.dict()
+
+    if only_provided:
+        # Dont update columns for null fields
+        payload_dict = {k: v for k, v in payload_dict.items() if v is not None}
+
+    entry_id = await put(entry_id, payload_dict, table)
 
     if not isinstance(entry_id, int):
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    return {**payload.dict(), "id": entry_id}
+    if only_provided:
+        # Retrieve complete record values
+        return dict(await get(entry_id, table))
+    else:
+        return {**payload.dict(), "id": entry_id}
 
 
 async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
