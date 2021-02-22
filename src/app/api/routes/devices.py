@@ -96,7 +96,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
     Updates the last ping of the current device with the current datetime
     """
     device.last_ping = datetime.utcnow()
-    await crud.put(device.id, device, devices)
+    await crud.update_entry(devices, device, device.id)
     return device
 
 
@@ -116,7 +116,7 @@ async def update_device_location(
     # Update only the location
     device.update(payload.dict())
     device = DeviceOut(**device)
-    await crud.put(device.id, device, devices)
+    await crud.update_entry(devices, device, device.id)
     return device
 
 
@@ -130,7 +130,7 @@ async def update_my_location(
     # Update only the position
     for k, v in payload.dict().items():
         setattr(device, k, v)
-    await crud.put(device.id, device, devices)
+    await crud.update_entry(devices, device, device.id)
     return device
 
 
