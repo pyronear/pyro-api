@@ -72,7 +72,7 @@ async def create_accessed_entry(
     return entry
 
 
-async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, payload: Any):
+async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, payload: Any, only_provided=False):
     """Update an entry with a special treatment regarding login: if login is set -> update corresponding access."""
     # Ensure database consistency between tables with a transaction (login must remain the same in table & accesses)
     async with base.database.transaction():
@@ -89,7 +89,7 @@ async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, pa
                 await update_login(accesses, payload.login, origin_entry["access_id"])
 
         # Update entry with input payload
-        entry = await base.update_entry(table, payload, entry_id)
+        entry = await base.update_entry(table, payload, entry_id, only_provided)
 
     return entry
 

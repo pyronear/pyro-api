@@ -65,11 +65,13 @@ async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
 
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
-async def update_device(payload: DeviceIn, device_id: int = Path(..., gt=0)):
+async def update_device(
+    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
+):
     """
     Based on a device_id, updates information about the specified device
     """
-    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload)
+    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload, only_provided=True)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
