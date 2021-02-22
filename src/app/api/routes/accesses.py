@@ -9,7 +9,7 @@ from app.api.deps import get_current_access
 router = APIRouter()
 
 
-async def update_access_login(login: str, access_id: int, _=Security(get_current_access, scopes=["admin"])):
+async def update_access_login(login: str, access_id: int):
     """ Assume access_id exists and login does not exist elsewhere"""
     return await crud.update_entry(accesses, Login(login=login), access_id)
 
@@ -23,9 +23,7 @@ async def check_for_access_login_existence(login: str):
         )
 
 
-async def post_access(
-    login: str, password: str, scopes: str, _=Security(get_current_access, scopes=["admin"])
-) -> AccessRead:
+async def post_access(login: str, password: str, scopes: str) -> AccessRead:
     await check_for_access_login_existence(login)
     # Hash the password
     pwd = await security.hash_password(password)
@@ -35,9 +33,7 @@ async def post_access(
     return AccessRead(**entry)
 
 
-async def update_access_pwd(
-    payload: Cred, entry_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])
-) -> Dict[str, Any]:
+async def update_access_pwd(payload: Cred, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await crud.get_entry(accesses, entry_id)
     # Hash the password
     pwd = await security.hash_password(payload.password)
