@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException
 from app.api import crud
@@ -116,8 +121,9 @@ async def fetch_ongoing_alerts():
     """
     Retrieves the list of ongoing alerts and their information
     """
-    return await crud.fetch_ongoing_alerts(alerts, {"type": AlertType.start},
-                                           excluded_events_filter={"type": AlertType.end})
+    return await crud.alerts.fetch_ongoing_alerts(
+        alerts, {"type": AlertType.start}, excluded_events_filter={"type": AlertType.end}
+    )
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")

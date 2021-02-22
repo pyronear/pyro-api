@@ -1,8 +1,28 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 from typing import Optional, Any, List, Dict, Mapping
-from app.db import database
 from sqlalchemy import Table
 from pydantic import BaseModel
 from fastapi import HTTPException, Path
+
+from app.db import database
+
+
+__all__ = [
+    "post",
+    "get",
+    "fetch_all",
+    "fetch_one",
+    "put",
+    "delete",
+    "create_entry",
+    "get_entry",
+    "update_entry",
+    "delete_entry",
+]
 
 
 async def post(payload: BaseModel, table: Table) -> int:
@@ -31,13 +51,7 @@ async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Mapping[str,
 
 
 async def put(entry_id: int, payload: BaseModel, table: Table) -> int:
-    query = (
-        table
-        .update()
-        .where(entry_id == table.c.id)
-        .values(**payload.dict())
-        .returning(table.c.id)
-    )
+    query = table.update().where(entry_id == table.c.id).values(**payload.dict()).returning(table.c.id)
     return await database.execute(query=query)
 
 
@@ -73,21 +87,3 @@ async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[st
     await delete(entry_id, table)
 
     return entry
-
-
-async def fetch_ongoing_alerts(table: Table, query_filters: Dict[str, Any],
-                               excluded_events_filter: Dict[str, Any]) -> List[Mapping[str, Any]]:
-    query = table.select()
-    if isinstance(query_filters, dict):
-        for query_filter_key, query_filter_value in query_filters.items():
-            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
-
-    # Should be performed using a sqlalchemy accessor. E.g: alert_event_end_ts is None
-    # To do in another review
-    all_closed_events = table.select().with_only_columns([table.c.event_id])
-    if isinstance(excluded_events_filter, dict):
-        for query_filter_key, query_filter_value in excluded_events_filter.items():
-            all_closed_events = all_closed_events.where(getattr(table.c, query_filter_key) == query_filter_value)
-    query = query.where(~getattr(table.c, "event_id").in_(all_closed_events))
-
-    return await database.fetch_all(query=query)

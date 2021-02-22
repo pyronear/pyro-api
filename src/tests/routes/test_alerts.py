@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import json
 import pytest
 from copy import deepcopy
@@ -64,7 +69,7 @@ MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 
 
 async def init_test_db(monkeypatch, test_db):
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 

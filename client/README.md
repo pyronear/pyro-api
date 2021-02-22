@@ -81,7 +81,7 @@ api_client.update_my_location(lat=1, lon=2, pitch=3)
 
 ## License
 
-Distributed under the GPLv3 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 
 

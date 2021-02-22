@@ -1,6 +1,6 @@
 # Pyronear API
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478)](https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade)![Build Status](https://github.com/pyronear/pyro-api/workflows/fastapi-project/badge.svg) [![codecov](https://codecov.io/gh/pyronear/pyro-api/branch/master/graph/badge.svg)](https://codecov.io/gh/pyronear/pyro-api) [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear-api.herokuapp.com/redoc)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478)](https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade)![Build Status](https://github.com/pyronear/pyro-api/workflows/fastapi-project/badge.svg) [![codecov](https://codecov.io/gh/pyronear/pyro-api/branch/master/graph/badge.svg)](https://codecov.io/gh/pyronear/pyro-api) [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear-api.herokuapp.com/redoc)
 
 The building blocks of our wildfire detection & monitoring API.
 
@@ -74,4 +74,4 @@ Please refer to `CONTRIBUTING` if you wish to contribute to this project.
 
 ## License
 
-Distributed under the GPLv3 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See `LICENSE` for more information.

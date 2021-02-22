@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import pytest
 
 from app import db
@@ -25,7 +30,7 @@ async def test_create_access_token(test_app_asyncio, test_db, monkeypatch, paylo
 
     # Sterilize DB interactions
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
 
     response = await test_app_asyncio.post("/login/access-token", data=payload)

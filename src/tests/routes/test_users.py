@@ -1,3 +1,8 @@
+# Copyright (C) 2021, Pyronear contributors.
+
+# This program is licensed under the Apache License version 2.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+
 import json
 import pytest
 from datetime import datetime
@@ -25,7 +30,7 @@ USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 async def test_get_user(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -56,7 +61,7 @@ async def test_get_user(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -69,7 +74,7 @@ async def test_get_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id,
 @pytest.mark.asyncio
 async def test_fetch_users(test_app_asyncio, test_db, test_app, monkeypatch):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -82,7 +87,7 @@ async def test_fetch_users(test_app_asyncio, test_db, test_app, monkeypatch):
 async def test_create_user(test_app_asyncio, test_db, monkeypatch):
 
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
@@ -119,7 +124,7 @@ async def test_create_user(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.asyncio
 async def test_create_user_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -130,7 +135,7 @@ async def test_create_user_invalid(test_app_asyncio, test_db, monkeypatch, paylo
 @pytest.mark.asyncio
 async def test_update_user(test_app_asyncio, test_db, monkeypatch):
     # Init Db data
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -170,7 +175,7 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
 )
 @pytest.mark.asyncio
 async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, payload, status_code):
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -189,7 +194,7 @@ async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_
 )
 @pytest.mark.asyncio
 async def test_update_my_info_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
@@ -200,7 +205,7 @@ async def test_update_my_info_invalid(test_app_asyncio, test_db, monkeypatch, pa
 @pytest.mark.asyncio
 async def test_update_password(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
@@ -236,7 +241,7 @@ async def test_update_password(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.asyncio
 async def test_update_password_invalid(test_app_asyncio, test_db, monkeypatch, user_id, payload, status_code):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
@@ -256,7 +261,7 @@ async def test_update_password_invalid(test_app_asyncio, test_db, monkeypatch, u
 @pytest.mark.asyncio
 async def test_update_my_password_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
@@ -268,7 +273,7 @@ async def test_update_my_password_invalid(test_app_asyncio, test_db, monkeypatch
 @pytest.mark.asyncio
 async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
@@ -297,7 +302,7 @@ async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.asyncio
 async def test_delete_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, status_code, status_details):
     # Sterilize DB interactions
-    monkeypatch.setattr(crud, "database", test_db)
+    monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
