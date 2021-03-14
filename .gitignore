@@ -144,3 +144,4 @@ client/conda-dist
 
 # Test DB
 *.db
+_build/
