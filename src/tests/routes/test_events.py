@@ -16,6 +16,8 @@ EVENT_TABLE = [
      "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
      "created_at": "2020-09-13T08:18:45.447773"},
+    {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
+     "end_ts": "2021-03-13T10:18:45.447773", "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 
@@ -65,6 +67,17 @@ async def test_fetch_events(test_app_asyncio, test_db, monkeypatch):
     response = await test_app_asyncio.get("/events/")
     assert response.status_code == 200
     assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in EVENT_TABLE]
+
+
+@pytest.mark.asyncio
+async def test_fetch_past_events(test_app_asyncio, test_db, monkeypatch):
+    # Sterilize DB interactions
+    await init_test_db(monkeypatch, test_db)
+
+    response = await test_app_asyncio.get("/events/past")
+    assert response.status_code == 200
+    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"}
+                               for entry in EVENT_TABLE if entry['end_ts'] is not None]
 
 
 @pytest.mark.asyncio
