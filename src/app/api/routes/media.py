@@ -66,7 +66,7 @@ async def get_media(media_id: int = Path(..., gt=0), _=Security(get_current_acce
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
-async def fetch_media( _=Security(get_current_access, scopes=["admin"])):
+async def fetch_media(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of all media and their information
     """
