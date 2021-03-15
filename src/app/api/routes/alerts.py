@@ -52,7 +52,7 @@ async def create_alert_from_device(payload: AlertBase,
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
-async def get_alert(alert_id: int = Path(..., gt=0)):
+async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a alert_id, retrieves information about the specified alert
     """
@@ -60,7 +60,7 @@ async def get_alert(alert_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts():
+async def fetch_alerts(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of all alerts and their information
     """
@@ -80,7 +80,7 @@ async def update_alert(
 
 
 @router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
-async def acknowledge_alert(alert_id: int = Path(..., gt=0)):
+async def acknowledge_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a alert_id, acknowledge the specified alert
     """
@@ -117,7 +117,7 @@ async def link_media(payload: AlertMediaId,
 
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
-async def fetch_ongoing_alerts():
+async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of ongoing alerts and their information
     """
@@ -127,7 +127,7 @@ async def fetch_ongoing_alerts():
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
-async def fetch_unacknowledged_alerts():
+async def fetch_unacknowledged_alerts(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of non confirmed alerts and their information
     """
