@@ -40,6 +40,14 @@ async def fetch_events():
     return await crud.fetch_all(events)
 
 
+@router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
+async def fetch_past_events():
+    """
+    Retrieves the list of all events and their information
+    """
+    return await crud.fetch_all(events, exclusions={"end_ts": None})
+
+
 @router.put("/{event_id}/", response_model=EventOut, summary="Update information about a specific event")
 async def update_event(
     payload: EventIn,

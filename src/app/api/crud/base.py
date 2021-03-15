@@ -35,11 +35,19 @@ async def get(entry_id: int, table: Table) -> Mapping[str, Any]:
     return await database.fetch_one(query=query)
 
 
-async def fetch_all(table: Table, query_filters: Optional[Dict[str, Any]] = None) -> List[Mapping[str, Any]]:
+async def fetch_all(
+    table: Table,
+    query_filters: Optional[Dict[str, Any]] = None,
+    exclusions: Optional[Dict[str, Any]] = None,
+) -> List[Mapping[str, Any]]:
     query = table.select()
     if isinstance(query_filters, dict):
-        for query_filter_key, query_filter_value in query_filters.items():
-            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
+        for key, value in query_filters.items():
+            query = query.where(getattr(table.c, key) == value)
+
+    if isinstance(exclusions, dict):
+        for key, value in exclusions.items():
+            query = query.where(getattr(table.c, key) != value)
     return await database.fetch_all(query=query)
 
 
