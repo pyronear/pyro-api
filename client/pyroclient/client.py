@@ -72,7 +72,7 @@ class Client:
 
         Example::
             >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
             >>> response = api_client.heartbeat()
 
         Returns:
@@ -86,7 +86,7 @@ class Client:
 
         Example::
             >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
             >>> response = api_client.update_my_location(lat=10., lon=-5.45)
 
         Returns:
@@ -164,7 +164,7 @@ class Client:
 
         Example::
             >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
             >>> event = api_client.create_event(lat=10., lon=-5.45).json()
             >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'])
 
@@ -208,7 +208,7 @@ class Client:
 
         Example::
             >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
             >>> response = api_client.create_media_from_device()
 
         Returns:
