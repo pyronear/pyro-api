@@ -94,7 +94,7 @@ async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_a
 
 
 @router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
-async def upload_media(
+async def upload_media_from_device(
     background_tasks: BackgroundTasks,
     media_id: int = Path(..., gt=0),
     file: UploadFile = File(...),
