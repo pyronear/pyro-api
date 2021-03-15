@@ -58,7 +58,7 @@ async def create_media_from_device(payload: BaseMedia,
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
-async def get_media(media_id: int = Path(..., gt=0)):
+async def get_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a media_id, retrieves information about the specified media
     """
@@ -66,7 +66,7 @@ async def get_media(media_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
-async def fetch_media():
+async def fetch_media( _=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of all media and their information
     """
