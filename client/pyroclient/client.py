@@ -112,7 +112,7 @@ class Client:
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
     def create_event(self, lat: float, lon: float) -> Response:
-        """Notify an event (e.g wildfire).
+        """Register an event (e.g wildfire).
 
         Example::
             >>> from pyroclient import client
@@ -305,7 +305,7 @@ class Client:
         return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
 
     def acknowledge_alert(self, alert_id: int) -> Response:
-        """Switch the `is_acknowledged`field value of the alert to `True`
+        """Switch the `is_acknowledged` field value of the alert to `True`
 
         Example::
             >>> from pyroclient import client
