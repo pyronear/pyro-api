@@ -374,6 +374,25 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pyroclient.client.Client.get_past_events">
+<code class="sig-name descname"><span class="pre">get_past_events</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_past_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_past_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all past events</p>
+<dl>
+<dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://pyronear-api.herokuapp.com&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_LOGIN&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_PWD&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">get_past_events</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>HTTP response containing the list of past events</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pyroclient.client.Client.get_site_devices">
 <code class="sig-name descname"><span class="pre">get_site_devices</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_site_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_site_devices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fetch the devices that are installed on a specific site</p>
