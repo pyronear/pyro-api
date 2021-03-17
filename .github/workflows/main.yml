@@ -102,15 +102,3 @@ jobs:
         run: |
           sleep 5
           python scripts/api_e2e.py 8002
-
-# TODO add a step to run db migration, needs DATABASE_URL through secrets ?
-
-#  db-migration:
-#    runs-on: ubuntu-latest
-#    needs: end-to-end
-#    steps:
-#      - name: Run database migration
-#        env:
-#          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-#        run: |
-#          alembic upgrade head
