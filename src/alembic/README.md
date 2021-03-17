@@ -1,6 +1,6 @@
-[comment]: <> (TODO write migration guide/contributing with docker-compose commands)
-
 # Alembic main commands
+
+Following main guidelines, following commands should be run within a running container using docker-compose: `$ PORT=8002 docker-compose exec -T web alembic ...` 
 
 ## Manually created revision
 
