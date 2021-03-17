@@ -74,11 +74,11 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
 
 
 async def update_entry(
-    table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0), only_provided: bool = False
+    table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0), only_specified: bool = True
 ) -> Dict[str, Any]:
     payload_dict = payload.dict()
 
-    if only_provided:
+    if only_specified:
         # Dont update columns for null fields
         payload_dict = {k: v for k, v in payload_dict.items() if v is not None}
 
@@ -87,7 +87,7 @@ async def update_entry(
     if not isinstance(entry_id, int):
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    if only_provided:
+    if only_specified:
         # Retrieve complete record values
         return dict(await get(entry_id, table))
     else:

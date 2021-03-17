@@ -71,7 +71,7 @@ async def update_device(
     """
     Based on a device_id, updates information about the specified device
     """
-    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload, only_provided=True)
+    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload, only_specified=True)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
