@@ -133,7 +133,7 @@ class Client:
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
 
     def create_no_alert_site(self, lat: float, lon: float, name: str, country: str, geocode: str) -> Response:
-        """Create a site that is not supposed to generate alert.
+        """Create a site that is not supposed to generate alerts.
 
         Example::
             >>> from pyroclient import client
