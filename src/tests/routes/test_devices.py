@@ -172,18 +172,26 @@ async def test_register_my_device_invalid(test_app_asyncio, test_db, monkeypatch
     assert response.status_code == status_code, print(payload)
 
 
+@pytest.mark.parametrize(
+    "device_id, payload, status_code",
+    [
+        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1"}, 200],
+        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "yaw": 8}, 200],
+    ]
+)
 @pytest.mark.asyncio
-async def test_update_device(test_app_asyncio, test_db, monkeypatch):
+async def test_update_device(test_app_asyncio, test_db, monkeypatch, device_id, payload, status_code):
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1"}
-    response = await test_app_asyncio.put("/devices/1/", data=json.dumps(test_payload))
-    assert response.status_code == 200
-    updated_device_in_db = await get_entry_in_db(test_db, db.devices, 1)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/", data=json.dumps(payload))
+    assert response.status_code == status_code
+
+    updated_device_in_db = await get_entry_in_db(test_db, db.devices, device_id)
     updated_device_in_db = dict(**updated_device_in_db)
+
     for k, v in updated_device_in_db.items():
-        assert v == test_payload.get(k, DEVICE_TABLE_FOR_DB[0][k])
+        assert v == payload.get(k, DEVICE_TABLE_FOR_DB[0][k])
 
 
 @pytest.mark.parametrize(
