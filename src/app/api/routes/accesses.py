@@ -4,17 +4,18 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Security
 from app.api import crud
 from app.db import accesses
 from app.api.schemas import AccessRead
+from app.api.deps import get_current_access
 
 
 router = APIRouter()
 
 
 @router.get("/{access_id}/", response_model=AccessRead, summary="Get information about a specific access")
-async def get_access(access_id: int = Path(..., gt=0)):
+async def get_access(access_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
     """
     Based on a access_id, retrieves information about the specified access
     """
@@ -22,7 +23,7 @@ async def get_access(access_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[AccessRead], summary="Get the list of all accesses")
-async def fetch_accesses():
+async def fetch_accesses(_=Security(get_current_access, scopes=["admin"])):
     """
     Retrieves the list of all accesses and their information
     """
