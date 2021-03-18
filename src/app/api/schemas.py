@@ -116,11 +116,14 @@ class DefaultPosition(DefaultLocation, _DefaultRotation):
 
 
 # Sites
-class SiteIn(_FlatLocation):
+class SiteBase(_FlatLocation):
     name: str = Field(..., min_length=3, max_length=50, example="watchtower12")
-    type: SiteType = SiteType.tower
     country: str = Field(..., max_length=5, example="FR")
     geocode: str = Field(..., max_length=10, example="01")
+
+
+class SiteIn(SiteBase):
+    type: SiteType = SiteType.tower
 
 
 class SiteOut(SiteIn, _CreatedAt, _Id):
