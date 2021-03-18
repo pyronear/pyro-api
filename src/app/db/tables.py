@@ -41,6 +41,7 @@ accesses = Table(
 class SiteType(str, enum.Enum):
     tower: str = 'tower'
     station: str = 'station'
+    no_alert: str = 'no_alert'
 
 
 sites = Table(
