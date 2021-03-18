@@ -22,6 +22,7 @@ ROUTES: Dict[str, str] = {
     "heartbeat": "/devices/heartbeat",
     "update-my-location": "/devices/update-my-location",
     "create-event": "/events",
+    "no-alert-site": "/sites/no-alert",
     "send-alert": "/alerts",
     "send-alert-from-device": "/alerts/from-device",
     "create-media": "/media",
@@ -130,6 +131,31 @@ class Client:
         payload = {"lat": lat,
                    "lon": lon}
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
+
+    def create_no_alert_site(self, lat: float, lon: float, name: str, country: str, geocode: str) -> Response:
+        """Create a site that is not supposed to generate alerts.
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.create_no_alert_site(lat=10., lon=-5.45, name="farm", country="FR", geocode="01")
+
+        Args:
+            lat: the latitude of the site
+            lon: the longitude of the site
+            name: the name of the site
+            country: the country where the site is located
+            geocode: the geocode of the site
+
+        Returns:
+            HTTP response containing the created site
+        """
+        payload = {"lat": lat,
+                   "lon": lon,
+                   "name": name,
+                   "country": country,
+                   "geocode": geocode}
+        return requests.post(self.routes["no-alert-site"], headers=self.headers, json=payload)
 
     def send_alert(self, lat: float, lon: float, event_id: int, device_id: int, media_id: int = None) -> Response:
         """Raise an alert to the API.
