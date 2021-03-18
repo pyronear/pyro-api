@@ -24,7 +24,8 @@ async def mock_current_access():
 
 
 async def mock_current_device():
-    return DeviceOut(id=3, owner_id=1, specs="raspberry", login="connected_device", created_at=datetime.now())
+    return DeviceOut(id=3, owner_id=1, specs="raspberry", login="connected_device", angle_of_view=68.,
+                     created_at=datetime.now())
 
 
 async def mock_hash_password(password):

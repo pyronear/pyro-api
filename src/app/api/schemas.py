@@ -145,6 +145,7 @@ class EventOut(EventIn, _CreatedAt, _Id):
 class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = Field(default=None, example=datetime.utcnow())
+    angle_of_view: float = Field(..., gt=0, lt=360)
 
 
 class DeviceIn(MyDeviceIn):

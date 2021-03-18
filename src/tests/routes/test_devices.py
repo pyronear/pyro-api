@@ -19,12 +19,13 @@ USER_TABLE = [
 
 DEVICE_TABLE = [
     {"id": 1, "login": "first_device", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
+     "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 3, "login": "connected_device", "owner_id": 1, "access_id": 5, "specs": "raspberry", "elevation": None,
-     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
+     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
@@ -101,10 +102,10 @@ async def test_fetch_devices(test_app_asyncio, test_db, monkeypatch):
     "payload, route",
     [
         [
-            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"},
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
             "/devices/"
-        ],  # existing device
-        [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, "/devices/register"],  # password too short
+        ],
+        [{"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"}, "/devices/register"],
     ],
 )
 @pytest.mark.asyncio
@@ -140,10 +141,17 @@ async def test_create_device(test_app_asyncio, test_db, monkeypatch, payload, ro
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
-        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "password": "pw"}, 422],  # password too short
-        [{"login": "third_device", "specs": "v0.2", "password": "my_pwd"}, 422],  # missing owner
-        [{"login": "third_device", "owner_id": 10, "specs": "v0.2", "password": "pwd"}, 404],  # unknown owner
+        [{"login": "first_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
+         400],  # existing device
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
+         422],  # password too short
+        [{"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68., "password": "pwd"},
+         404],  # unknown owner
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
+         422],  # invalid angle_of_view
+        [{"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
+         422],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
@@ -158,9 +166,13 @@ async def test_create_device_invalid(test_app_asyncio, test_db, monkeypatch, pay
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"login": "first_device", "specs": "v0.2", "password": "my_pwd"}, 400],  # existing device
-        [{"login": "third_device", "specs": "v0.2", "password": "pw"}, 422],  # password too short
-        [{"login": "third_device", "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "first_device", "specs": "v0.2", "angle_of_view": 60, "password": "my_pwd"}, 400],  # existing device
+        [{"login": "third_device", "specs": "v0.2", "angle_of_view": 68, "password": "pw"}, 422],  # password too short
+        [{"login": "third_device", "angle_of_view": 68., "password": "my_pwd"}, 422],  # missing owner
+        [{"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
+         422],  # invalid angle_of_view
+        [{"login": "third_device", "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
+         422],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
@@ -175,8 +187,9 @@ async def test_register_my_device_invalid(test_app_asyncio, test_db, monkeypatch
 @pytest.mark.parametrize(
     "device_id, payload, status_code",
     [
-        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1"}, 200],
-        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "yaw": 8}, 200],
+        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "angle_of_view": 68}, 200],
+        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 3, "specs": "v0.1", "angle_of_view": 68, "yaw": 8},
+         200],
     ]
 )
 @pytest.mark.asyncio
@@ -198,12 +211,16 @@ async def test_update_device(test_app_asyncio, test_db, monkeypatch, device_id, 
     "device_id, payload, status_code",
     [
         [1, {}, 422],
-        [999, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 404],
-        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
-        [1, {"login": "renamed_device"}, 422],
-        [0, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 422],
+        [999, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 404],
+        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 422],
+        [1, {"login": "renamed_device", "angle_of_view": 68.}, 422],
+        [0, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 422],
         # renamed to already existing login
-        [1, {"login": "second_device", "owner_id": 1, "access_id": 1, "specs": "v0.1"}, 400],
+        [1, {"login": "second_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 400],
+        [0, {"login": "second_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"}, 422],
+        # invalid angle_of_view
+        [0, {"login": "second_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.}, 422],
+        # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
