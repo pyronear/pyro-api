@@ -191,6 +191,7 @@ class InstallationIn(Location, _Rotation):
     site_id: int = Field(..., gt=0)
     start_ts: datetime
     end_ts: datetime = None
+    is_trustworthy: bool = Field(True)
 
 
 class InstallationOut(InstallationIn, _CreatedAt, _Id):

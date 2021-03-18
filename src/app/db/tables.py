@@ -122,6 +122,7 @@ installations = Table(
     Column("pitch", Float(1, asdecimal=True)),
     Column("start_ts", DateTime, nullable=False),
     Column("end_ts", DateTime, default=None, nullable=True),
+    Column("is_trustworthy", Boolean, default=True),
     Column("created_at", DateTime, default=func.now()),
 )
 

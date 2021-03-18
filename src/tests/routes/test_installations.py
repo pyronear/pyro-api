@@ -61,9 +61,11 @@ SITE_TABLE = [
 
 INSTALLATION_TABLE = [
     {"id": 1, "device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "created_at": "2020-10-13T08:18:45.447773"},
+     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "is_trustworthy": True,
+     "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 2, "site_id": 2, "elevation": 58., "lat": 5., "lon": 8., "yaw": 10., "pitch": 0.,
-     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "created_at": "2020-11-13T08:18:45.447773"},
+     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "is_trustworthy": False,
+     "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
@@ -137,7 +139,7 @@ async def test_create_installation(test_app_asyncio, test_db, monkeypatch):
 
     test_payload = {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
                     "start_ts": "2020-10-13T08:18:45.447773"}
-    test_response = {"id": len(INSTALLATION_TABLE) + 1, **test_payload, "end_ts": None}
+    test_response = {"id": len(INSTALLATION_TABLE) + 1, **test_payload, "end_ts": None, "is_trustworthy": True}
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/installations/", data=json.dumps(test_payload))
@@ -151,6 +153,8 @@ async def test_create_installation(test_app_asyncio, test_db, monkeypatch):
 
     # Timestamp consistency
     assert new_installation_in_db['created_at'] > utc_dt and new_installation_in_db['created_at'] < datetime.utcnow()
+    # Check default value of is_trustworthy
+    assert new_installation_in_db['is_trustworthy']
 
 
 @pytest.mark.parametrize(
@@ -158,6 +162,8 @@ async def test_create_installation(test_app_asyncio, test_db, monkeypatch):
     [
         [{"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.}, 422],
         [{"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0.}, 422],
+        [{"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+          "is_trustworthy": 5}, 422],
     ],
 )
 @pytest.mark.asyncio
@@ -196,6 +202,8 @@ async def test_update_installation(test_app_asyncio, test_db, monkeypatch):
                "start_ts": "2020-07-13T08:18:45.447773"}, 404],
         [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
              "start_ts": "2020-07-13T08:18:45.447773"}, 422],
+        [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
+             "start_ts": "2020-07-13T08:18:45.447773", "is_trustworthy": 5.}, 422],
         [0, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
              "start_ts": "2020-07-13T08:18:45.447773"}, 422],
     ],
