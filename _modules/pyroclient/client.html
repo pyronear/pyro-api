@@ -188,6 +188,7 @@
     <span class="s2">&quot;heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/heartbeat&quot;</span><span class="p">,</span>
     <span class="s2">&quot;update-my-location&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/update-my-location&quot;</span><span class="p">,</span>
     <span class="s2">&quot;create-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;no-alert-site&quot;</span><span class="p">:</span> <span class="s2">&quot;/sites/no-alert&quot;</span><span class="p">,</span>
     <span class="s2">&quot;send-alert&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts&quot;</span><span class="p">,</span>
     <span class="s2">&quot;send-alert-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/from-device&quot;</span><span class="p">,</span>
     <span class="s2">&quot;create-media&quot;</span><span class="p">:</span> <span class="s2">&quot;/media&quot;</span><span class="p">,</span>
@@ -296,6 +297,31 @@
         <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
                    <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;create-event&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.create_no_alert_site"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_no_alert_site">[docs]</a>    <span class="k">def</span> <span class="nf">create_no_alert_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">geocode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Create a site that is not supposed to generate alerts.</span>
+
+<span class="sd">        Example::</span>
+<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; response = api_client.create_no_alert_site(lat=10., lon=-5.45, name=&quot;farm&quot;, country=&quot;FR&quot;, geocode=&quot;01&quot;)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            lat: the latitude of the site</span>
+<span class="sd">            lon: the longitude of the site</span>
+<span class="sd">            name: the name of the site</span>
+<span class="sd">            country: the country where the site is located</span>
+<span class="sd">            geocode: the geocode of the site</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the created site</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                   <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                   <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                   <span class="s2">&quot;country&quot;</span><span class="p">:</span> <span class="n">country</span><span class="p">,</span>
+                   <span class="s2">&quot;geocode&quot;</span><span class="p">:</span> <span class="n">geocode</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;no-alert-site&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.send_alert"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.send_alert">[docs]</a>    <span class="k">def</span> <span class="nf">send_alert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">event_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">device_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Raise an alert to the API.</span>

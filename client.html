@@ -273,6 +273,34 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pyroclient.client.Client.create_no_alert_site">
+<code class="sig-name descname"><span class="pre">create_no_alert_site</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geocode</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_no_alert_site"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_no_alert_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a site that is not supposed to generate alerts.</p>
+<dl>
+<dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://pyronear-api.herokuapp.com&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_LOGIN&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_PWD&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">create_no_alert_site</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">lon</span><span class="o">=-</span><span class="mf">5.45</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;farm&quot;</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s2">&quot;FR&quot;</span><span class="p">,</span> <span class="n">geocode</span><span class="o">=</span><span class="s2">&quot;01&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat</strong> – the latitude of the site</p></li>
+<li><p><strong>lon</strong> – the longitude of the site</p></li>
+<li><p><strong>name</strong> – the name of the site</p></li>
+<li><p><strong>country</strong> – the country where the site is located</p></li>
+<li><p><strong>geocode</strong> – the geocode of the site</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>HTTP response containing the created site</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pyroclient.client.Client.get_all_alerts">
 <code class="sig-name descname"><span class="pre">get_all_alerts</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_all_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_all_alerts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all the existing alerts in the DB</p>
