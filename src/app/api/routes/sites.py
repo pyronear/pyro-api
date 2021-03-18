@@ -32,7 +32,7 @@ async def create_noalert_site(payload: SiteBase, _=Security(get_current_access, 
     or "Example Value" to get a concrete idea of arguments
     """
 
-    return await crud.create_entry(sites, SiteIn(**payload, type=SiteType.no_alert))
+    return await crud.create_entry(sites, SiteIn(**payload.dict(), type=SiteType.no_alert))
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
