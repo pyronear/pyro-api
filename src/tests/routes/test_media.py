@@ -27,13 +27,13 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry",
+    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "angle_of_view": 68.,
      "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
      "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1",
+    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "angle_of_view": 68.,
      "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
      "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1",
+    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1", "angle_of_view": 68.,
      "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
