@@ -132,7 +132,6 @@ async def test_create_site_invalid(test_app_asyncio, test_db, payload, status_co
     assert response.status_code == status_code
 
 
-
 @pytest.mark.asyncio
 async def test_update_site(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
