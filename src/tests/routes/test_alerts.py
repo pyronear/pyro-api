@@ -53,11 +53,11 @@ EVENT_TABLE = [
 
 ALERT_TABLE = [
     {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "start",
-     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+     "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end",
-     "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+     "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
     {"id": 3, "device_id": 3, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start",
-     "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
+     "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
 ]
 
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
@@ -138,8 +138,9 @@ async def test_fetch_unacknowledged_alerts(test_app_asyncio, test_db, monkeypatc
 async def test_create_alert(test_app_asyncio, test_db, monkeypatch):
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end"}
-    test_response = {"id": len(ALERT_TABLE) + 1, **test_payload, "media_id": None, "is_acknowledged": False}
+    test_payload = {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": 47.5}
+    test_response = {"id": len(ALERT_TABLE) + 1, **test_payload,
+                     "media_id": None, "is_acknowledged": False}
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/", data=json.dumps(test_payload))
@@ -161,7 +162,7 @@ async def test_create_alert_by_device(test_app_asyncio, test_db, monkeypatch):
     # Device_id is 99 because it is the identified device
     test_response = {"id": len(ALERT_TABLE) + 1,
                      "device_id": CONNECTED_DEVICE_ID, **test_payload,
-                     "media_id": None, "is_acknowledged": False}
+                     "media_id": None, "is_acknowledged": False, "azimuth": None}
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/from-device", data=json.dumps(test_payload))
@@ -179,6 +180,8 @@ async def test_create_alert_by_device(test_app_asyncio, test_db, monkeypatch):
     [
         [{"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "restart"}, 422],
         [{"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 422],
+        [{"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": "hello"}, 422],
+        [{"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": -5.}, 422],
     ],
 )
 @pytest.mark.asyncio
@@ -221,6 +224,10 @@ async def test_acknowledge_alert(test_app_asyncio, test_db, monkeypatch):
         [999, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 404],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "restart", "is_acknowledged": True}, 422],
         [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 422],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True,
+             "azimuth": "north"}, 422],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True,
+             "azimuth": -5.}, 422],
     ],
 )
 @pytest.mark.asyncio
