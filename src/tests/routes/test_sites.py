@@ -79,17 +79,27 @@ async def test_fetch_sites(test_app_asyncio, test_db, monkeypatch):
         compare_entries(entry, SITE_TABLE[i])
 
 
+@pytest.mark.parametrize(
+    "test_payload, no_alert",
+    [
+        [{"name": "my_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, False],
+        [{"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, True],
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_site(test_app_asyncio, test_db, monkeypatch):
+async def test_create_site(test_app_asyncio, test_db, monkeypatch, test_payload, no_alert):
 
     # Sterilize DB interactions
     await init_test_db(monkeypatch, test_db)
 
-    test_payload = {"name": "my_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}
     test_response = {"id": len(SITE_TABLE) + 1, **test_payload}
+    subroute = ""
+    if no_alert:
+        test_response['type'] = 'no_alert'
+        subroute = "/no-alert"
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/sites/", data=json.dumps(test_payload))
+    response = await test_app_asyncio.post(f"/sites{subroute}/", data=json.dumps(test_payload))
 
     assert response.status_code == 201
     json_response = response.json()
