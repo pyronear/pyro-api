@@ -139,6 +139,7 @@ alerts = Table(
     Column("device_id", Integer, ForeignKey("devices.id")),
     Column("event_id", Integer, ForeignKey("events.id")),
     Column("media_id", Integer, ForeignKey("media.id"), default=None),
+    Column("azimuth", Float(4, asdecimal=True), default=None),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("type", Enum(AlertType), default=AlertType.start),
