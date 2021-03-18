@@ -35,6 +35,7 @@ ROUTES: Dict[str, str] = {
     "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
+    "get-past-events": "/events/past",
 }
 
 
@@ -68,12 +69,30 @@ class Client:
 
     # Device functions
     def heartbeat(self) -> Response:
-        """Updates the last ping of the device"""
+        """Updates the last ping of the device
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+            >>> response = api_client.heartbeat()
+
+        Returns:
+            HTTP response containing the update device info
+        """
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
     def update_my_location(self, lat: float = None, lon: float = None,
                            elevation: float = None, yaw: float = None, pitch: float = None) -> Response:
-        """Updates the location of the device"""
+        """Updates the location of the device
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+            >>> response = api_client.update_my_location(lat=10., lon=-5.45)
+
+        Returns:
+            HTTP response containing the update device info
+        """
         payload = {}
 
         if lat is not None:
@@ -94,13 +113,43 @@ class Client:
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
     def create_event(self, lat: float, lon: float) -> Response:
-        """Notify an event (e.g wildfire)."""
+        """Register an event (e.g wildfire).
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.create_event(lat=10., lon=-5.45)
+
+        Args:
+            lat: the latitude of the event
+            lon: the longitude of the event
+
+        Returns:
+            HTTP response containing the created event
+        """
         payload = {"lat": lat,
                    "lon": lon}
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
 
     def send_alert(self, lat: float, lon: float, event_id: int, device_id: int, media_id: int = None) -> Response:
-        """Raise an alert to the API"""
+        """Raise an alert to the API.
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> event = api_client.create_event(lat=10., lon=-5.45).json()
+            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'], device_id=3)
+
+        Args:
+            lat: the latitude of the alert
+            lon: the longitude of the alert
+            event_id: the ID of the event this alerts relates to
+            device_id: the ID of the device that raised this alert
+            media_id: optional media ID linked to this alert
+
+        Returns:
+            HTTP response containing the created alert
+        """
         payload = {"lat": lat,
                    "lon": lon,
                    "event_id": event_id,
@@ -112,7 +161,23 @@ class Client:
         return requests.post(self.routes["send-alert"], headers=self.headers, json=payload)
 
     def send_alert_from_device(self, lat: float, lon: float, event_id: int, media_id: int = None) -> Response:
-        """Raise an alert to the API from a device (no need to specify device ID)."""
+        """Raise an alert to the API from a device (no need to specify device ID).
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+            >>> event = api_client.create_event(lat=10., lon=-5.45).json()
+            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'])
+
+        Args:
+            lat: the latitude of the alert
+            lon: the longitude of the alert
+            event_id: the ID of the event this alerts relates to
+            media_id: optional media ID linked to this alert
+
+        Returns:
+            HTTP response containing the created alert
+        """
         payload = {"lat": lat,
                    "lon": lon,
                    "event_id": event_id
@@ -123,52 +188,199 @@ class Client:
         return requests.post(self.routes["send-alert-from-device"], headers=self.headers, json=payload)
 
     def create_media(self, device_id: int) -> Response:
-        """Create a media entry"""
+        """Create a media entry
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.create_media(device_id=3)
+
+        Args:
+            device_id: ID of the device that created that media
+
+        Returns:
+            HTTP response containing the created media
+        """
+
         return requests.post(self.routes["create-media"], headers=self.headers, json={"device_id": device_id})
 
     def create_media_from_device(self):
-        """Create a media entry from a device (no need to specify device ID)."""
+        """Create a media entry from a device (no need to specify device ID).
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+            >>> response = api_client.create_media_from_device()
+
+        Returns:
+            HTTP response containing the created media
+        """
+
         return requests.post(self.routes["create-media-from-device"], headers=self.headers, json={})
 
-    def upload_media(self, media_id: int, image_data: bytes) -> Response:
-        """Upload the media content"""
+    def upload_media(self, media_id: int, media_data: bytes) -> Response:
+        """Upload the media content
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
+            >>> response = api_client.upload_media(media_id=1, media_data=data)
+
+        Args:
+            media_id: ID of the associated media entry
+            media_data: byte data
+
+        Returns:
+            HTTP response containing the updated media
+        """
+
         return requests.post(self.routes["upload-media"].format(media_id=media_id), headers=self.headers,
-                             files={'file': io.BytesIO(image_data)})
+                             files={'file': io.BytesIO(media_data)})
 
     # User functions
     def get_my_devices(self) -> Response:
-        """Get the devices who are owned by the logged user"""
+        """Get the devices who are owned by the logged user
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_my_devices()
+
+        Returns:
+            HTTP response containing the list of owned devices
+        """
         return requests.get(self.routes["get-my-devices"], headers=self.headers)
 
     def get_sites(self) -> Response:
-        """Get all the existing sites in the DB"""
+        """Get all the existing sites in the DB
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_sites()
+
+        Returns:
+            HTTP response containing the list of sites
+        """
         return requests.get(self.routes["get-sites"], headers=self.headers)
 
     def get_all_alerts(self) -> Response:
-        """Get all the existing alerts in the DB"""
+        """Get all the existing alerts in the DB
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_all_alerts()
+
+        Returns:
+            HTTP response containing the list of all alerts
+        """
         return requests.get(self.routes["get-alerts"], headers=self.headers)
 
     def get_ongoing_alerts(self) -> Response:
-        """Get all the existing alerts in the DB that have the status 'start'"""
+        """Get all the existing alerts in the DB that have the status 'start'
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_ongoing_alerts()
+
+        Returns:
+            HTTP response containing the list of all ongoing alerts
+        """
+
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers)
 
     def get_unacknowledged_alerts(self) -> Response:
-        """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`"""
+        """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_unacknowledged_alerts()
+
+        Returns:
+            HTTP response containing the list of all alerts that haven't been acknowledged
+        """
         return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
 
     def acknowledge_alert(self, alert_id: int) -> Response:
-        """Switch the `is_acknowledged`field value of the alert to `True`"""
+        """Switch the `is_acknowledged` field value of the alert to `True`
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.acknowledge_alert(alert_id=1)
+
+        Args:
+            alert_id: ID of the associated alert entry
+
+        Returns:
+            HTTP response containing the updated alert
+        """
+
         return requests.put(self.routes["acknowledge-alert"].format(alert_id=alert_id), headers=self.headers)
 
-    def get_site_devices(self, site_id: int, payload: Dict[str, Any]) -> Response:
-        """ Get all devices installed in a specific site"""
-        return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, data=payload)
+    def get_site_devices(self, site_id: int) -> Response:
+        """Fetch the devices that are installed on a specific site
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_site_devices(1)
+
+        Args:
+            site_id: the identifier of the site
+
+        Returns:
+            HTTP response containing the list of corresponding devices
+        """
+        return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers)
 
     def get_media_url(self, media_id: int) -> Response:
-        """ Get the image as a url"""
+        """Get the image as a URL
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_media_url(1)
+
+        Args:
+            media_id: the identifier of the media entry
+
+        Returns:
+            HTTP response containing the URL to the media content
+        """
+
         return requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
 
     def get_media_url_and_read(self, media_id: int) -> Response:
-        """ Get the image as a url and read it"""
+        """Get the image as a url and read it
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_media_url_and_read(1)
+
+        Args:
+            media_id: the identifier of the media entry
+
+        Returns:
+            HTTP response containing the media content
+        """
         image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
         return requests.get(image_url.json()['url'])
+
+    def get_past_events(self) -> Response:
+        """Get all past events
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_past_events()
+
+        Returns:
+            HTTP response containing the list of past events
+        """
+        return requests.get(self.routes["get-past-events"], headers=self.headers)

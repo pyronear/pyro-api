@@ -34,6 +34,7 @@ class ClientTester(unittest.TestCase):
         self._test_route_return(api_client.get_all_alerts(), list)
         self._test_route_return(api_client.get_ongoing_alerts(), list)
         self._test_route_return(api_client.get_unacknowledged_alerts(), list)
+        self._test_route_return(api_client.get_past_events(), list)
 
         if len(all_devices) > 0:
             # Create event
