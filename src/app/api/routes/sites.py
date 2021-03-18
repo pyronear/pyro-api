@@ -6,8 +6,8 @@
 from typing import List
 from fastapi import APIRouter, Path, Security
 from app.api import crud
-from app.db import sites
-from app.api.schemas import SiteOut, SiteIn
+from app.db import sites, SiteType
+from app.api.schemas import SiteOut, SiteIn, SiteBase
 from app.api.deps import get_current_access
 
 
@@ -21,6 +21,17 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=["a
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    return await crud.create_entry(sites, payload)
+
+
+@router.post("/create-no-alert-site", response_model=SiteOut, status_code=201, summary="Create a new site")
+async def create_no_alert_site(payload: SiteBase, _=Security(get_current_access, scopes=["user"])):
+    """Creates a new site based on the given information that cannot generate alerts
+
+    Below, click on "Schema" for more detailed information about arguments
+    or "Example Value" to get a concrete idea of arguments
+    """
+    payload['type'] = SiteType.no_alert
     return await crud.create_entry(sites, payload)
 
 

@@ -99,6 +99,26 @@ async def test_create_site(test_app_asyncio, test_db, monkeypatch):
     assert new_site_in_db['created_at'] > utc_dt and new_site_in_db['created_at'] < datetime.utcnow()
 
 
+@pytest.mark.asyncio
+async def test_create_no_alert_site(test_app_asyncio, test_db, monkeypatch):
+
+    # Sterilize DB interactions
+    await init_test_db(monkeypatch, test_db)
+
+    test_payload = {"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}
+    test_response = {"id": len(SITE_TABLE) + 1, "type": "no_alert", **test_payload}
+
+    utc_dt = datetime.utcnow()
+    response = await test_app_asyncio.post("/sites/create-no-alert-site/", data=json.dumps(test_payload))
+
+    assert response.status_code == 201
+    json_response = response.json()
+    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+    new_site_in_db = await get_entry_in_db(test_db, db.sites, json_response["id"])
+    new_site_in_db = dict(**new_site_in_db)
+    assert new_site_in_db['created_at'] > utc_dt and new_site_in_db['created_at'] < datetime.utcnow()
+
+
 @pytest.mark.parametrize(
     "payload, status_code",
     [
@@ -110,6 +130,7 @@ async def test_create_site(test_app_asyncio, test_db, monkeypatch):
 async def test_create_site_invalid(test_app_asyncio, test_db, payload, status_code):
     response = await test_app_asyncio.post("/sites/", data=json.dumps(payload))
     assert response.status_code == status_code
+
 
 
 @pytest.mark.asyncio
