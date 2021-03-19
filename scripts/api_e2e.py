@@ -67,7 +67,7 @@ def main(args):
     # Create a device (as admin until #79 is closed)
     device_login = 'my_device'
     device_pwd = 'my_third_password'
-    payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi")
+    payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi", angle_of_view=0.68)
     device_id = api_request('post', f"{api_url}/devices/register", user_auth, payload)['id']
 
     device_auth = {
