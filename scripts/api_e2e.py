@@ -101,9 +101,11 @@ def main(args):
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request('delete', f"{api_url}/alerts/{alert_id1}/", superuser_auth)
     api_request('delete', f"{api_url}/alerts/{alert_id2}/", superuser_auth)
+    api_request('delete', f"{api_url}/events/{event_id}/", superuser_auth)
     api_request('delete', f"{api_url}/media/{media_id}/", superuser_auth)
     api_request('delete', f"{api_url}/installations/{installation_id}/", superuser_auth)
     api_request('delete', f"{api_url}/devices/{device_id}/", superuser_auth)
+    api_request('delete', f"{api_url}/sites/{site_id}/", superuser_auth)
     api_request('delete', f"{api_url}/users/{user_id}/", superuser_auth)
 
     print(f"SUCCESS in {time.time() - start_ts:.3}s")
