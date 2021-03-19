@@ -67,7 +67,7 @@ def main(args):
     # Create a device (as admin until #79 is closed)
     device_login = 'my_device'
     device_pwd = 'my_third_password'
-    payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi")
+    payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi", angle_of_view=0.68)
     device_id = api_request('post', f"{api_url}/devices/register", user_auth, payload)['id']
 
     device_auth = {
@@ -101,9 +101,11 @@ def main(args):
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request('delete', f"{api_url}/alerts/{alert_id1}/", superuser_auth)
     api_request('delete', f"{api_url}/alerts/{alert_id2}/", superuser_auth)
+    api_request('delete', f"{api_url}/events/{event_id}/", superuser_auth)
     api_request('delete', f"{api_url}/media/{media_id}/", superuser_auth)
     api_request('delete', f"{api_url}/installations/{installation_id}/", superuser_auth)
     api_request('delete', f"{api_url}/devices/{device_id}/", superuser_auth)
+    api_request('delete', f"{api_url}/sites/{site_id}/", superuser_auth)
     api_request('delete', f"{api_url}/users/{user_id}/", superuser_auth)
 
     print(f"SUCCESS in {time.time() - start_ts:.3}s")
