@@ -12,14 +12,18 @@ from app.api import crud, security
 from tests.conf_test_db import get_entry_in_db, populate_db
 from tests.utils import update_only_datetime, parse_time
 
+GROUP_TABLE = [
+    {"id": 1, "name": "test_group"},
+]
+
 ACCESS_TABLE = [
     {"id": 1, "login": "first_user", "hashed_password": "pwd_hashed", "scopes": "me"},
     {"id": 2, "login": "connected_user", "hashed_password": "pwd_hashed", "scopes": "me"},
 ]
 
 USER_TABLE = [
-    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 1, "login": "first_user", "access_id": 1, "group_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "connected_user", "access_id": 2, "group_id": 1, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 
@@ -32,6 +36,7 @@ async def test_get_user(test_app_asyncio, test_db, monkeypatch):
     # Sterilize DB interactions
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.get("/users/1")
@@ -47,7 +52,7 @@ async def test_get_user(test_app_asyncio, test_db, monkeypatch):
     response = await test_app_asyncio.get("/users/me")
     assert response.status_code == 200
     json_response = response.json()
-    for k in ["id", "login"]:
+    for k in ["id", "login", "group_id"]:
         assert json_response[k] == USER_TABLE_FOR_DB[1][k]
 
 
@@ -63,6 +68,7 @@ async def test_get_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id,
     # Sterilize DB interactions
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.get(f"/users/{user_id}")
@@ -76,6 +82,7 @@ async def test_fetch_users(test_app_asyncio, test_db, test_app, monkeypatch):
     # Sterilize DB interactions
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.get("/users/")
@@ -90,12 +97,13 @@ async def test_create_user(test_app_asyncio, test_db, monkeypatch):
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
-    test_payload = {"login": "third_user", "password": "third_pwd"}
+    test_payload = {"login": "third_user", "password": "third_pwd", "group_id": 1}
     max_user_id = max(USER_TABLE_FOR_DB, key=lambda x: x["id"])["id"]
     max_access_id = max(ACCESS_TABLE, key=lambda x: x["id"])["id"]
-    test_response = {"id": max_user_id + 1, "login": test_payload["login"]}
+    test_response = {"id": max_user_id + 1, "login": test_payload["login"], "group_id": 1}
 
     utc_dt = datetime.utcnow()
 
@@ -118,7 +126,7 @@ async def test_create_user(test_app_asyncio, test_db, monkeypatch):
 @pytest.mark.parametrize(
     "payload, status_code",
     [
-        [{"login": "first_user", "password": "first_pwd"}, 400],
+        [{"login": "first_user", "password": "first_pwd", "group_id": 1}, 400],
     ],
 )
 @pytest.mark.asyncio
@@ -126,6 +134,7 @@ async def test_create_user_invalid(test_app_asyncio, test_db, monkeypatch, paylo
     # Sterilize DB interactions
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.post("/users/", data=json.dumps(payload))
@@ -137,10 +146,11 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
     # Init Db data
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     # Test on another user.
-    test_payload = {"login": "renamed_user"}
+    test_payload = {"login": "renamed_user", "group_id": 1}
     response = await test_app_asyncio.put("/users/1/", data=json.dumps(test_payload))
     assert response.status_code == 200
 
@@ -150,7 +160,7 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
         assert v == test_payload.get(k, USER_TABLE_FOR_DB[0][k])
 
     # Self version
-    test_payload = {"login": "renamed_me"}
+    test_payload = {"login": "renamed_me", "group_id": 1}
     response = await test_app_asyncio.put("/users/update-info", data=json.dumps(test_payload))
 
     assert response.status_code == 200
@@ -166,17 +176,18 @@ async def test_update_user(test_app_asyncio, test_db, monkeypatch):
     "user_id, payload, status_code",
     [
         [1, {}, 422],
-        [999, {"login": "renamed_user"}, 404],
-        [1, {"login": 1}, 422],
-        [1, {"login": "me"}, 422],
-        [0, {"login": "renamed_user"}, 422],
-        [1, {"login": "connected_user"}, 400],  # renamed to already existing login
+        [999, {"login": "renamed_user", "group_id": 1}, 404],
+        [1, {"login": 1, "group_id": 1}, 422],
+        [1, {"login": "me", "group_id": 1}, 422],
+        [0, {"login": "renamed_user", "group_id": 1}, 422],
+        [1, {"login": "connected_user", "group_id": 1}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
 async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_id, payload, status_code):
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.put(f"/users/{user_id}/", data=json.dumps(payload))
@@ -187,15 +198,16 @@ async def test_update_user_invalid(test_app_asyncio, test_db, monkeypatch, user_
     "payload, status_code",
     [
         [{}, 422],
-        [{"login": 1}, 422],
-        [{"login": "me"}, 422],
-        [{"login": "first_user"}, 400],  # renamed to already existing login
+        [{"login": 1, "group_id": 1}, 422],
+        [{"login": "me", "group_id": 1}, 422],
+        [{"login": "first_user", "group_id": 1}, 400],  # renamed to already existing login
     ],
 )
 @pytest.mark.asyncio
 async def test_update_my_info_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.put("/users/update-info", data=json.dumps(payload))
@@ -208,12 +220,13 @@ async def test_update_password(test_app_asyncio, test_db, monkeypatch):
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     test_payload = {"password": "new_password"}
     response = await test_app_asyncio.put("/users/1/pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"login": USER_TABLE_FOR_DB[0]["login"]}
+    assert response.json() == {"login": USER_TABLE_FOR_DB[0]["login"], "group_id": 1}
     new_access_in_db = await get_entry_in_db(test_db, db.accesses, 1)
     new_access_in_db = dict(**new_access_in_db)
     assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
@@ -222,7 +235,7 @@ async def test_update_password(test_app_asyncio, test_db, monkeypatch):
     test_payload = {"password": "my_new_password"}
     response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(test_payload))
     assert response.status_code == 200
-    assert response.json() == {"login": USER_TABLE_FOR_DB[1]["login"]}
+    assert response.json() == {"login": USER_TABLE_FOR_DB[1]["login"], "group_id": 1}
     new_access_in_db = await get_entry_in_db(test_db, db.accesses, 2)
     new_access_in_db = dict(**new_access_in_db)
     assert new_access_in_db['hashed_password'] == f"{test_payload['password']}_hashed"
@@ -244,6 +257,7 @@ async def test_update_password_invalid(test_app_asyncio, test_db, monkeypatch, u
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.put(f"/users/{user_id}/pwd", data=json.dumps(payload))
@@ -264,6 +278,7 @@ async def test_update_my_password_invalid(test_app_asyncio, test_db, monkeypatch
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(payload))
@@ -276,11 +291,12 @@ async def test_delete_user(test_app_asyncio, test_db, monkeypatch):
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.delete("/users/1/")
     assert response.status_code == 200
-    assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'login', 'created_at']}
+    assert response.json() == {k: v for k, v in USER_TABLE[0].items() if k in ['id', 'login', 'created_at', "group_id"]}
 
     remaining_users = await test_app_asyncio.get("/users/")
     for entry in remaining_users.json():
@@ -305,6 +321,7 @@ async def test_delete_user_invalid(test_app_asyncio, test_db, monkeypatch, user_
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await populate_db(test_db, db.groups, GROUP_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
 
     response = await test_app_asyncio.delete(f"/users/{user_id}/")

@@ -10,7 +10,7 @@ from sqlalchemy.sql import func
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
-           'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
+           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
 
 
 # SQLAlchemy
@@ -19,11 +19,13 @@ metadata = MetaData()
 
 # Cores tables
 
+
 users = Table(
     "users",
     metadata,
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
+    Column("group_id", Integer, ForeignKey("groups.id")),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )
@@ -35,6 +37,14 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", String(30), default="me", nullable=False),
+)
+
+groups = Table(
+    "groups",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("name", String(50), unique=True),
+    Column("created_at", DateTime, default=func.now())
 )
 
 

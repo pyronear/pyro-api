@@ -13,8 +13,12 @@ from tests.conf_test_db import get_entry_in_db, populate_db
 from tests.utils import update_only_datetime
 
 USER_TABLE = [
-    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 1, "login": "first_user", "access_id": 1, "group_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "connected_user", "access_id": 2, "group_id": 1, "created_at": "2020-11-13T08:18:45.447773"},
+]
+
+GROUP_TABLE = [
+    {"id": 1, "name": "test_group"},
 ]
 
 DEVICE_TABLE = [
@@ -43,12 +47,14 @@ ACCESS_TABLE = [
 ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
+GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 
 
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     monkeypatch.setattr(crud.base, "database", test_db)
     await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
+    await populate_db(test_db, db.groups, GROUP_TABLE_FOR_DB)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
     await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
 

@@ -16,7 +16,7 @@ from httpx import AsyncClient
 
 
 async def mock_current_user():
-    return UserRead(id=2, login="connected_user", created_at=datetime.now())
+    return UserRead(id=2, login="connected_user", group_id=1, created_at=datetime.now())
 
 
 async def mock_current_access():

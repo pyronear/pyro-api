@@ -56,7 +56,7 @@ class AccessRead(AccessBase, _Id):
 # Users
 class UserInfo(Login):
     # Abstract information about a user
-    pass
+    group_id: int = Field(..., gt=0)
 
 
 class UserRead(UserInfo, _CreatedAt, _Id):
@@ -72,6 +72,19 @@ class UserAuth(UserInfo, Cred):
 class UserCreation(UserInfo):
     # Creation payload
     access_id: int = Field(..., gt=0)
+
+
+# Groups
+class GroupBase(BaseModel):
+    name: str = Field(..., min_length=3, max_length=50, example="Fireman85")
+
+
+class GroupIn(GroupBase):
+    pass
+
+
+class GroupOut(GroupBase, _Id):
+    pass
 
 
 # Token
