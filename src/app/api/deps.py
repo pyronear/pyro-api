@@ -15,7 +15,7 @@ from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
 
 
 # Scope definition
-reusable_oauth2 = OAuth2PasswordBearer(
+oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="login/access-token",
     scopes={
         "me": "Read information about the current user.",
@@ -33,7 +33,7 @@ def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPExceptio
     )
 
 
-async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(reusable_oauth2)) -> AccessRead:
+async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)) -> AccessRead:
     """ Dependency to use as fastapi.security.Security with scopes.
 
     >>> @app.get("/users/me")
@@ -48,14 +48,16 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.JWT_ENCODING_ALGORITHM])
-        access_id = int(payload["sub"])
+        access_id = payload.get("sub")
+        if access_id is None:
+            raise unauthorized_exception("Invalid credentials", authenticate_value)
         token_scopes = payload.get("scopes", [])
-        token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
+        token_data = TokenPayload(access_id=int(access_id), scopes=token_scopes)
 
     except (JWTError, ValidationError, KeyError):
         raise unauthorized_exception("Invalid credentials", authenticate_value)
 
-    entry = await crud.get(entry_id=access_id, table=accesses)
+    entry = await crud.get(table=accesses, entry_id=int(access_id))
 
     if entry is None:
         raise unauthorized_exception("Invalid credentials", authenticate_value)
