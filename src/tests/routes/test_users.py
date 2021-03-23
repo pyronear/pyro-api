@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud, security
-from tests.db_utils import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime, parse_time
 
 
@@ -33,8 +33,8 @@ USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
 
 
@@ -61,7 +61,7 @@ async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, use
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
-        user_in_db = await get_entry_in_db(test_db, db.users, user_id)
+        user_in_db = await get_entry(test_db, db.users, user_id)
         user_in_db = dict(**user_in_db)
         response_json = response.json()
         response_json["created_at"] = parse_time(response_json["created_at"])
@@ -155,12 +155,12 @@ async def test_create_user(test_app_asyncio, init_test_db, test_db, monkeypatch,
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
 
         # Timestamp consistency
-        new_user_in_db = await get_entry_in_db(test_db, db.users, json_response["id"])
+        new_user_in_db = await get_entry(test_db, db.users, json_response["id"])
         new_user_in_db = dict(**new_user_in_db)
         assert new_user_in_db['created_at'] > utc_dt and new_user_in_db['created_at'] < datetime.utcnow()
 
         # Access update
-        new_access_in_db = await get_entry_in_db(test_db, db.accesses, max_access_id + 1)
+        new_access_in_db = await get_entry(test_db, db.accesses, max_access_id + 1)
         new_access_in_db = dict(**new_access_in_db)
         assert new_access_in_db['login'] == payload['login']
         assert new_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
@@ -195,14 +195,14 @@ async def test_update_user(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_user_in_db = await get_entry_in_db(test_db, db.users, user_id)
+        updated_user_in_db = await get_entry(test_db, db.users, user_id)
         updated_user_in_db = dict(**updated_user_in_db)
         for k, v in updated_user_in_db.items():
             assert v == payload.get(k, USER_TABLE_FOR_DB[user_id - 1][k])
 
         # Access update
         access_id = USER_TABLE[user_id - 1]["access_id"]
-        updated_access = await get_entry_in_db(test_db, db.accesses, access_id)
+        updated_access = await get_entry(test_db, db.accesses, access_id)
         updated_access = dict(**updated_access)
         assert updated_access['login'] == payload['login']
 
@@ -235,11 +235,11 @@ async def test_update_my_info(test_app_asyncio, init_test_db, test_db,
 
     if response.status_code // 100 == 2:
         json_response = response.json()
-        my_user_in_db = await get_entry_in_db(test_db, db.users, json_response["id"])
+        my_user_in_db = await get_entry(test_db, db.users, json_response["id"])
         for k, v in dict(**my_user_in_db).items():
             assert v == payload.get(k, USER_TABLE_FOR_DB[json_response["id"] - 1][k])
         # Check that the corresponding access has also been updated
-        updated_access = await get_entry_in_db(test_db, db.accesses, ACCESS_TABLE[access_idx]['id'])
+        updated_access = await get_entry(test_db, db.accesses, ACCESS_TABLE[access_idx]['id'])
         updated_access = dict(**updated_access)
         assert updated_access['login'] == payload['login']
 
@@ -275,7 +275,7 @@ async def test_update_user_password(test_app_asyncio, init_test_db, test_db, mon
         assert response.json() == {"login": USER_TABLE_FOR_DB[user_id - 1]["login"]}
         # Access update
         access_id = USER_TABLE[user_id - 1]["access_id"]
-        updated_access = await get_entry_in_db(test_db, db.accesses, access_id)
+        updated_access = await get_entry(test_db, db.accesses, access_id)
         updated_access = dict(**updated_access)
         assert updated_access['hashed_password'] == f"hashed_{payload['password']}"
 
@@ -306,7 +306,7 @@ async def test_update_my_password(test_app_asyncio, init_test_db, test_db, monke
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        my_access_in_db = await get_entry_in_db(test_db, db.accesses, ACCESS_TABLE[access_idx]['id'])
+        my_access_in_db = await get_entry(test_db, db.accesses, ACCESS_TABLE[access_idx]['id'])
         my_access_in_db = dict(**my_access_in_db)
         assert my_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
 

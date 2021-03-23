@@ -10,7 +10,7 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from app.api.routes import installations
-from tests.db_utils import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime, parse_time
 
 USER_TABLE = [
@@ -61,11 +61,11 @@ INSTALLATION_TABLE_FOR_DB = list(map(update_only_datetime, INSTALLATION_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
-    await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
-    await populate_db(test_db, db.sites, SITE_TABLE_FOR_DB)
-    await populate_db(test_db, db.installations, INSTALLATION_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
+    await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)
+    await fill_table(test_db, db.installations, INSTALLATION_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -160,7 +160,7 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
         test_response = {"id": len(INSTALLATION_TABLE) + 1, **payload, "end_ts": None, "is_trustworthy": True}
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
 
-        new_installation = await get_entry_in_db(test_db, db.installations, json_response["id"])
+        new_installation = await get_entry(test_db, db.installations, json_response["id"])
         new_installation = dict(**new_installation)
 
         # Timestamp consistency
@@ -213,7 +213,7 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_installation = await get_entry_in_db(test_db, db.installations, installation_id)
+        updated_installation = await get_entry(test_db, db.installations, installation_id)
         updated_installation = dict(**updated_installation)
         for k, v in updated_installation.items():
             if k == 'start_ts':

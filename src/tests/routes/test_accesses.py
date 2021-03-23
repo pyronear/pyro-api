@@ -8,7 +8,7 @@ import pytest
 from app import db
 from app.api import crud
 from app.api.security import create_unlimited_access_token
-from tests.db_utils import populate_db
+from tests.db_utils import fill_table
 
 
 ACCESS_TABLE = [
@@ -21,7 +21,7 @@ ACCESS_TABLE = [
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 
 @pytest.mark.parametrize(

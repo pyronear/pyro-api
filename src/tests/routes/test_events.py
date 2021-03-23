@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime
 
 
@@ -35,8 +35,8 @@ EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.events, EVENT_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -105,7 +105,7 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
     if response.status_code // 100 == 2:
         json_response = response.json()
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-        new_event_in_db = await get_entry_in_db(test_db, db.events, json_response["id"])
+        new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
         assert new_event_in_db['created_at'] > utc_dt and new_event_in_db['created_at'] < datetime.utcnow()
 
@@ -138,7 +138,7 @@ async def test_update_event(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_event_in_db = await get_entry_in_db(test_db, db.events, event_id)
+        updated_event_in_db = await get_entry(test_db, db.events, event_id)
         updated_event_in_db = dict(**updated_event_in_db)
         for k, v in updated_event_in_db.items():
             assert v == payload.get(k, EVENT_TABLE_FOR_DB[event_id - 1][k])

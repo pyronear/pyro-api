@@ -10,7 +10,7 @@ from fastapi import HTTPException, Security
 from app import db
 from app.api import crud, deps, security
 from app.api.schemas import AccessRead, UserRead, DeviceOut
-from tests.db_utils import populate_db
+from tests.db_utils import fill_table
 from tests.utils import update_only_datetime
 
 
@@ -47,9 +47,9 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
-    await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(

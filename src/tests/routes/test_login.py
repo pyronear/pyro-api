@@ -7,7 +7,7 @@ import pytest
 
 from app import db
 from app.api import crud, security
-from tests.db_utils import populate_db
+from tests.db_utils import fill_table
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scopes": "me"},
@@ -19,7 +19,7 @@ ACCESS_TABLE = [
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 
 @pytest.mark.parametrize(

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime
 
 SITE_TABLE = [
@@ -41,8 +41,8 @@ SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.sites, SITE_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -117,7 +117,7 @@ async def test_create_site(test_app_asyncio, init_test_db, test_db,
     if response.status_code // 100 == 2:
         json_response = response.json()
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-        new_site_in_db = await get_entry_in_db(test_db, db.sites, json_response["id"])
+        new_site_in_db = await get_entry(test_db, db.sites, json_response["id"])
         new_site_in_db = dict(**new_site_in_db)
         assert new_site_in_db['created_at'] > utc_dt and new_site_in_db['created_at'] < datetime.utcnow()
 
@@ -149,7 +149,7 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_site_in_db = await get_entry_in_db(test_db, db.sites, site_id)
+        updated_site_in_db = await get_entry(test_db, db.sites, site_id)
         updated_site_in_db = dict(**updated_site_in_db)
         for k, v in updated_site_in_db.items():
             assert v == payload.get(k, SITE_TABLE_FOR_DB[site_id - 1][k])

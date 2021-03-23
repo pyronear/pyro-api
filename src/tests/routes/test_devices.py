@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud, security
-from tests.db_utils import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime, parse_time
 
 USER_TABLE = [
@@ -43,9 +43,9 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
-    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
-    await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -174,12 +174,12 @@ async def test_register_device(test_app_asyncio, init_test_db, test_db,
         assert all(v == json_response[k] for k, v in test_response.items())
 
         # Timestamp consistency
-        new_device_in_db = await get_entry_in_db(test_db, db.devices, json_response["id"])
+        new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
         assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
 
         # Access table updated
-        new_access_in_db = await get_entry_in_db(test_db, db.accesses, len(ACCESS_TABLE) + 1)
+        new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
         new_access_in_db = dict(**new_access_in_db)
         assert new_access_in_db['login'] == payload['login']
         assert new_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
@@ -234,12 +234,12 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
         assert all(v == json_response[k] for k, v in test_response.items())
 
         # Timestamp consistency
-        new_device_in_db = await get_entry_in_db(test_db, db.devices, json_response["id"])
+        new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
         assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
 
         # Access table updated
-        new_access_in_db = await get_entry_in_db(test_db, db.accesses, len(ACCESS_TABLE) + 1)
+        new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
         new_access_in_db = dict(**new_access_in_db)
         assert new_access_in_db['login'] == payload['login']
         assert new_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
@@ -286,7 +286,7 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_device_in_db = await get_entry_in_db(test_db, db.devices, device_id)
+        updated_device_in_db = await get_entry(test_db, db.devices, device_id)
         updated_device_in_db = dict(**updated_device_in_db)
 
         assert all(v == payload.get(k, DEVICE_TABLE_FOR_DB[device_id - 1][k])
@@ -294,7 +294,7 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
 
         # Access table updated
         access_id = DEVICE_TABLE[response.json()['id'] - 1]["access_id"]
-        updated_access = await get_entry_in_db(test_db, db.accesses, access_id)
+        updated_access = await get_entry(test_db, db.accesses, access_id)
         updated_access = dict(**updated_access)
         assert updated_access['login'] == payload['login']
 
@@ -328,7 +328,7 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        updated_device = await get_entry_in_db(test_db, db.devices, device_id)
+        updated_device = await get_entry(test_db, db.devices, device_id)
         updated_device = dict(**updated_device)
 
         assert all(updated_device[k] == v for k, v in payload.items())
@@ -364,7 +364,7 @@ async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
                 device_id = entry['id']
                 break
 
-        updated_device = await get_entry_in_db(test_db, db.devices, device_id)
+        updated_device = await get_entry(test_db, db.devices, device_id)
         updated_device = dict(**updated_device)
 
         assert all(updated_device[k] == v for k, v in payload.items())
@@ -399,7 +399,7 @@ async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
 
     if response.status_code // 100 == 2:
         assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != 'access_id'}
-        updated_access = await get_entry_in_db(test_db, db.accesses, DEVICE_TABLE[device_id - 1]["access_id"])
+        updated_access = await get_entry(test_db, db.accesses, DEVICE_TABLE[device_id - 1]["access_id"])
         updated_access = dict(**updated_access)
         assert updated_access['hashed_password'] == f"hashed_{payload['password']}"
 
@@ -432,7 +432,7 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
         assert datetime.utcnow() > datetime.fromisoformat(json_response['last_ping'])
         assert utc_dt < datetime.fromisoformat(json_response['last_ping'])
 
-        updated_device = await get_entry_in_db(test_db, db.devices, json_response["id"])
+        updated_device = await get_entry(test_db, db.devices, json_response["id"])
         updated_device = dict(**updated_device)
 
         assert updated_device['last_ping'] > utc_dt
