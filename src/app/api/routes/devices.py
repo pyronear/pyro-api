@@ -5,7 +5,7 @@
 
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Path, Security, HTTPException
+from fastapi import APIRouter, Path, Security, HTTPException, status
 
 from app.api import crud
 from app.db import devices, accesses, users
@@ -26,7 +26,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201, summary="Create a new device")
-async def create_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
+async def register_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
     """Creates a new device based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -114,7 +114,7 @@ async def update_device_location(
     # Check that device is accessible to this user
     device = await crud.get_entry(devices, device_id)
     if device["owner_id"] != user.id:
-        raise HTTPException(status_code=400, detail="Permission denied")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
     # Update only the location
     device.update(payload.dict())
     device = DeviceOut(**device)
