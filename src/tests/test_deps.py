@@ -40,7 +40,6 @@ ACCESS_TABLE = [
 ]
 
 
-ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 
@@ -48,7 +47,7 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
+    await populate_db(test_db, db.accesses, ACCESS_TABLE)
     await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
     await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
 
@@ -56,10 +55,10 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "token_data, scope, expected_access, exception",
     [
-        [ACCESS_TABLE_FOR_DB[3], 'admin', None, True],  # Unsufficient scope
+        [ACCESS_TABLE[3], 'admin', None, True],  # Unsufficient scope
         ['my_false_token', 'admin', None, True],  # Decoding failure
         [{"id": 100, "scopes": "admin"}, 'admin', None, True],  # Unable to find access in table
-        [ACCESS_TABLE_FOR_DB[3], 'device', 3, False],  # Correct
+        [ACCESS_TABLE[3], 'device', 3, False],  # Correct
     ],
 )
 @pytest.mark.asyncio
@@ -78,7 +77,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     else:
         access = await deps.get_current_access(SecurityScopes([scope]), token=token)
         if isinstance(expected_access, int):
-            assert access.dict() == AccessRead(**ACCESS_TABLE_FOR_DB[expected_access]).dict()
+            assert access.dict() == AccessRead(**ACCESS_TABLE[expected_access]).dict()
 
 
 @pytest.mark.parametrize(
