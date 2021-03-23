@@ -25,7 +25,7 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=["a
 
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
-async def create_noalert_site(payload: SiteBase, _=Security(get_current_access, scopes=["user"])):
+async def create_noalert_site(payload: SiteBase, _=Security(get_current_access, scopes=["user", "admin"])):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
