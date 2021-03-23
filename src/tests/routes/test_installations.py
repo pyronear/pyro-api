@@ -254,12 +254,12 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, installation_id, device_ids, status_code, status_details",
     [
-        [0, 1, [1], 401, "Permission denied"],
+        [0, 1, [], 401, "Permission denied"],
         [1, 1, [1], 200, None],
-        [2, 1, [1], 401, "Permission denied"],
-        [3, 1, [1], 401, "Permission denied"],
-        [1, 999, [1], 200, None],  # TODO: this should fail since the site doesn't exist
-        [1, 0, [1], 422, None],
+        [2, 1, [], 401, "Permission denied"],
+        [3, 1, [], 401, "Permission denied"],
+        [1, 999, [], 200, None],  # TODO: this should fail since the site doesn't exist
+        [1, 0, [], 422, None],
     ],
 )
 @pytest.mark.asyncio
