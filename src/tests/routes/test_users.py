@@ -84,7 +84,7 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
 
-    response = await test_app_asyncio.get(f"/users/me", headers=auth)
+    response = await test_app_asyncio.get("/users/me", headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -227,7 +227,7 @@ async def test_update_my_info(test_app_asyncio, init_test_db, test_db,
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
 
-    response = await test_app_asyncio.put(f"/users/update-info", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/users/update-info", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -299,7 +299,7 @@ async def test_update_my_password(test_app_asyncio, init_test_db, test_db, monke
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
 
-    response = await test_app_asyncio.put(f"/users/update-pwd", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):

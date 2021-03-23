@@ -17,6 +17,7 @@ ACCESS_TABLE = [
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
 ]
 
+
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)

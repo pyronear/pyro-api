@@ -139,21 +139,22 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
         [3, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          401, "Permission denied"],
         [1, {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         400, "An entry with login='third_login' already exists."], # existing device
+         400, "An entry with login='third_login' already exists."],  # existing device
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
-         422, None], # password too short
+         422, None],  # password too short
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         422, None], # missing owner
+         422, None],  # missing owner
         [1, {"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         404, "Unknown user for owner_id=10"], # unknown owner
+         404, "Unknown user for owner_id=10"],  # unknown owner
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
-async def test_register_device(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
+async def test_register_device(test_app_asyncio, init_test_db, test_db,
+                               access_idx, payload, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
@@ -198,15 +199,16 @@ async def test_register_device(test_app_asyncio, init_test_db, test_db, access_i
         [3, {"login": "third_login", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          400, "An entry with login='third_login' already exists."],  # existing device
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
-         422, None], # password too short
+         422, None],  # password too short
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
-async def test_register_my_device(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
+async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
+                                  access_idx, payload, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
@@ -266,9 +268,9 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db, acces
         [1, {"login": "fifth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
          400, "An entry with login='fifth_login' already exists."],  # renamed to already existing login
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"}, 1,
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.}, 1,
-         422, None], # invalid angle_of_view
+         422, None],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
@@ -302,8 +304,8 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
     [
         [0, {"lon": 5.}, 1, 401, "Permission denied"],
         [0, {"lon": 5.}, 2, 401, "Permission denied"],
-        [1, {"lon": 5.}, 1, 401, "Permission denied"], # TODO: admin should have permission without being owner
-        [1, {"lon": 5.}, 2, 401, "Permission denied"], # TODO: admin should have permission without being owner
+        [1, {"lon": 5.}, 1, 401, "Permission denied"],  # TODO: admin should have permission without being owner
+        [1, {"lon": 5.}, 2, 401, "Permission denied"],  # TODO: admin should have permission without being owner
         [2, {"lon": 5.}, 1, 401, "Permission denied"],
         [2, {"lon": 5.}, 2, 401, "Permission denied"],
         [3, {"lon": 5.}, 1, 401, "Permission denied"],

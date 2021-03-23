@@ -61,7 +61,6 @@ def test_hash_content_file():
 @pytest.mark.asyncio
 async def test_create_access_token(content, expiration, expected_delta):
 
-    before = datetime.utcnow()
     delta = timedelta(minutes=expiration) if isinstance(expiration, int) else None
     payload = await security.create_access_token(content, expires_delta=delta)
     after = datetime.utcnow()

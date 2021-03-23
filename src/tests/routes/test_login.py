@@ -14,6 +14,7 @@ ACCESS_TABLE = [
     {"id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scopes": "me"},
 ]
 
+
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
