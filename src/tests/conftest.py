@@ -4,66 +4,40 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import pytest
-from starlette.testclient import TestClient
-from datetime import datetime
-
-from app.main import app
-from app.api.schemas import UserRead, DeviceOut, AccessRead
-from app.api.deps import get_current_user, get_current_device, get_current_access
-from tests.conf_test_db import database as test_database
-from tests.conf_test_db import reset_test_db
 from httpx import AsyncClient
 
-
-async def mock_current_user():
-    return UserRead(id=2, login="connected_user", created_at=datetime.now())
-
-
-async def mock_current_access():
-    return AccessRead(id=2, login="connected_user", scopes="device", created_at=datetime.now())
-
-
-async def mock_current_device():
-    return DeviceOut(id=3, owner_id=1, specs="raspberry", login="connected_device", angle_of_view=68.,
-                     created_at=datetime.now())
+from app.main import app
+from app.api.security import create_unlimited_access_token
+from tests.db_utils import database as test_database
+from tests.db_utils import reset_test_db
 
 
 async def mock_hash_password(password):
-    return f"{password}_hashed"
+    return f"hashed_{password}"
 
 
 async def mock_verify_password(plain_password, hashed_password):
-    return hashed_password == f"{plain_password}_hashed"
+    return hashed_password == f"hashed_{plain_password}"
+
+
+async def get_token(access_id, scopes):
+
+    token_data = {"sub": str(access_id), "scopes": scopes}
+    token = await create_unlimited_access_token(token_data)
+
+    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
 def pytest_configure():
     # api.security patching
     pytest.mock_hash_password = mock_hash_password
     pytest.mock_verify_password = mock_verify_password
-
-
-@pytest.fixture(scope="module")
-def __app():
-
-    # Access-related patching
-    app.dependency_overrides[get_current_user] = mock_current_user
-    app.dependency_overrides[get_current_device] = mock_current_device
-    app.dependency_overrides[get_current_access] = mock_current_access
-
-    yield app  # testing happens here
-
-    app.dependency_overrides = {}
-
-
-@pytest.fixture(scope="module")
-def test_app(__app):
-    client = TestClient(__app)
-    yield client  # testing happens here
+    pytest.get_token = get_token
 
 
 @pytest.fixture(scope="function")
-async def test_app_asyncio(__app):
-    async with AsyncClient(app=__app, base_url="http://test") as ac:
+async def test_app_asyncio():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac  # testing happens here
 
 
