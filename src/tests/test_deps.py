@@ -5,7 +5,7 @@
 
 import pytest
 from fastapi.security import SecurityScopes
-from fastapi import HTTPException, Security
+from fastapi import HTTPException
 
 from app import db
 from app.api import crud, deps, security

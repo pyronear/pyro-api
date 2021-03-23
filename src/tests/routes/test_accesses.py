@@ -7,7 +7,6 @@ import pytest
 
 from app import db
 from app.api import crud
-from app.api.security import create_unlimited_access_token
 from tests.db_utils import fill_table
 
 

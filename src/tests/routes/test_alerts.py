@@ -5,7 +5,6 @@
 
 import json
 import pytest
-from copy import deepcopy
 from datetime import datetime
 
 from app import db
