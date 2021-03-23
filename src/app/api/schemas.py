@@ -56,8 +56,7 @@ class AccessRead(AccessBase, _Id):
 # Users
 class UserInfo(Login):
     # Abstract information about a user
-    group_id: int = Field(..., gt=0)
-
+    pass
 
 class UserRead(UserInfo, _CreatedAt, _Id):
     # Visible info

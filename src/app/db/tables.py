@@ -25,7 +25,6 @@ users = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
-    Column("group_id", Integer, ForeignKey("groups.id")),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )

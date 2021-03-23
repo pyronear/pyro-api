@@ -12,8 +12,8 @@ from tests.utils import update_only_datetime
 
 
 USER_TABLE = [
-    {"id": 1, "login": "first_user", "access_id": 1, "group_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "connected_user", "access_id": 2, "group_id": 1, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 GROUP_TABLE = [

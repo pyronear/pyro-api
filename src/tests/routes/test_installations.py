@@ -23,7 +23,7 @@ ACCESS_TABLE = [{"id": 1, "login": "first_login", "hashed_password": "hashed_pwd
                 {"id": 2, "login": "first_device", "hashed_password": "hashed_pwd", "scopes": "device"},
                 {"id": 3, "login": "second_device", "hashed_password": "hashed_pwd", "scopes": "device"}]
 
-USER_TABLE = [{"id": 1, "login": "first_user", "access_id": 1,  "group_id": 1, "created_at": "2020-10-13T08:18:45.447773"}]
+USER_TABLE = [{"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"}]
 
 GROUP_TABLE = [
     {"id": 1, "name": "test_group"},
