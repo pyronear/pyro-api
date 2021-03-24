@@ -11,7 +11,7 @@ from tests.db_utils import fill_table
 
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "me"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
 ]

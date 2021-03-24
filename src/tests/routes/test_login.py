@@ -10,8 +10,8 @@ from app.api import crud, security
 from tests.db_utils import fill_table
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scopes": "me"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scopes": "me"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scopes": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scopes": "user"},
 ]
 
 
