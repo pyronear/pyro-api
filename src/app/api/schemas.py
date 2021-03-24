@@ -7,7 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
 
-from app.db import SiteType, EventType, MediaType, AlertType
+from app.db.tables import SiteType, EventType, MediaType
 
 
 # Template classes
@@ -209,7 +209,6 @@ class AlertMediaId(BaseModel):
 
 class AlertBase(_FlatLocation, AlertMediaId):
     event_id: int = Field(..., gt=0)
-    type: AlertType = AlertType.start
     is_acknowledged: bool = Field(False)
     azimuth: float = Field(default=None, gt=0, lt=360)
 
