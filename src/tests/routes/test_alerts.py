@@ -43,7 +43,7 @@ MEDIA_TABLE = [
 
 
 EVENT_TABLE = [
-    {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
+    {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": "2021-03-13T10:18:45.447773",
      "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
      "created_at": "2020-09-13T08:18:45.447773"},
@@ -52,11 +52,11 @@ EVENT_TABLE = [
 ]
 
 ALERT_TABLE = [
-    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "start",
+    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
      "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0., "type": "end",
+    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
      "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8., "type": "start",
+    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
      "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
 ]
 
@@ -151,7 +151,7 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == [ALERT_TABLE[2]]
+        assert response.json() == ALERT_TABLE[:2]
 
 
 @pytest.mark.parametrize(
@@ -181,17 +181,16 @@ async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, acces
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": 47.5},
+        [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": 47.5}, 201, None],
-        [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": 47.5},
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 201, None],
+        [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
-        [3, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": 47.5},
+        [3, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "restart"}, 422, None],
-        [1, {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": "hello"}, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "end", "azimuth": -5.}, 422, None],
+        [1, {"event_id": 2, "lat": 10., "lon": 8.}, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "hello"}, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -221,10 +220,10 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 401, "Permission denied"],
-        [1, {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 401, "Permission denied"],
-        [2, {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 201, None],
-        [3, {"event_id": 2, "lat": 10., "lon": 8., "type": "end"}, 401, "Permission denied"],
+        [0, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
+        [1, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
+        [2, {"event_id": 2, "lat": 10., "lon": 8.}, 201, None],
+        [3, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -260,22 +259,21 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, alert_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "end"}, 1, 401, "Permission denied"],
-        [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "end"}, 1, 200, None],
-        [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "end"}, 1, 401, "Permission denied"],
-        [3, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8., "type": "end"}, 1, 401, "Permission denied"],
+        [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
+        [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
+        [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
+        [3, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
-        [1, {"type": "start"}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 999,
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 999,
          404, "Entry not found"],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "restart", "is_acknowledged": True}, 1,
+        [1, {"device_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 1,
          422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True}, 0,
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 0,
          422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True,
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True,
              "azimuth": "north"}, 1,
          422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "type": "start", "is_acknowledged": True,
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True,
              "azimuth": -5.}, 1,
          422, None],
     ],
