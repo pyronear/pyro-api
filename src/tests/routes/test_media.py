@@ -13,230 +13,257 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from app.services import bucket_service
-from tests.conf_test_db import get_entry_in_db, populate_db
+from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime
+
+
+USER_TABLE = [
+    {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "fourth_login", "access_id": 4, "created_at": "2020-11-13T08:18:45.447773"},
+]
+
+DEVICE_TABLE = [
+    {"id": 1, "login": "third_login", "owner_id": 1,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "fifth_login", "owner_id": 3, "access_id": 5, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
+     "created_at": "2020-10-13T08:18:45.447773"},
+]
+
+ACCESS_TABLE = [
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "me"},
+    {"id": 5, "login": "fifth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+]
 
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
-USER_TABLE = [
-    {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-]
 
-DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3, "specs": "raspberry", "angle_of_view": 68.,
-     "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "angle_of_view": 68.,
-     "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1", "angle_of_view": 68.,
-     "elevation": None, "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
-]
-
-CONNECTED_DEVICE_ID = 3
-
-ACCESS_TABLE = [
-    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
-    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "device"},
-    {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scopes": "device"},
-    {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
-    {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
-]
-
-
-ACCESS_TABLE_FOR_DB = list(map(update_only_datetime, ACCESS_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 
 
+@pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE_FOR_DB)
-    await populate_db(test_db, db.users, USER_TABLE_FOR_DB)
-    await populate_db(test_db, db.devices, DEVICE_TABLE_FOR_DB)
-    await populate_db(test_db, db.media, MEDIA_TABLE_FOR_DB)
-
-
-@pytest.mark.asyncio
-async def test_get_media(test_app_asyncio, test_db, monkeypatch):
-
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    response = await test_app_asyncio.get("/media/1")
-    assert response.status_code == 200
-    assert response.json() == MEDIA_TABLE[0]
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
+    await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
-    "media_id, status_code, status_details",
+    "access_idx, media_id, status_code, status_details",
     [
-        [999, 404, "Entry not found"],
-        [0, 422, None],
+        [0, 1, 401, "Permission denied"],
+        [1, 1, 200, None],
+        [2, 1, 401, "Permission denied"],
+        [3, 1, 401, "Permission denied"],
+        [1, 999, 404, "Entry not found"],
+        [1, 0, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_get_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, status_code, status_details):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
+async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
 
-    response = await test_app_asyncio.get(f"/media/{media_id}")
-    assert response.status_code == status_code, media_id
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+
+    response = await test_app_asyncio.get(f"/media/{media_id}", headers=auth)
+    assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        assert response.json() == MEDIA_TABLE[media_id - 1]
 
 
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details",
+    [
+        [0, 401, "Permission denied"],
+        [1, 200, None],
+        [2, 401, "Permission denied"],
+        [3, 401, "Permission denied"],
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_media(test_app_asyncio, test_db, monkeypatch):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
+async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
-    response = await test_app_asyncio.get("/media/")
-    assert response.status_code == 200
-    assert response.json() == MEDIA_TABLE
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+
+    response = await test_app_asyncio.get("/media/", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        assert response.json() == MEDIA_TABLE
 
 
+@pytest.mark.parametrize(
+    "access_idx, payload, status_code, status_details",
+    [
+        [0, {"device_id": 1}, 401, "Permission denied"],
+        [1, {"device_id": 1}, 201, None],
+        [2, {"device_id": 1}, 401, "Permission denied"],
+        [3, {"device_id": 1}, 401, "Permission denied"],
+        [1, {"device_id": "device"}, 422, None],
+        [1, {}, 422, None],
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_media(test_app_asyncio, test_db, monkeypatch):
+async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
 
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    test_payload = {"device_id": 1}
-    test_response = {"id": len(MEDIA_TABLE) + 1, **test_payload, "type": "image"}
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/media/", data=json.dumps(test_payload))
-
-    assert response.status_code == 201
-    json_response = response.json()
-    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-
-    new_media_in_db = await get_entry_in_db(test_db, db.media, json_response["id"])
-    new_media_in_db = dict(**new_media_in_db)
-
-    # Timestamp consistency
-    assert new_media_in_db['created_at'] > utc_dt and new_media_in_db['created_at'] < datetime.utcnow()
-
-
-@pytest.mark.asyncio
-async def test_create_media_from_device(test_app_asyncio, test_db, monkeypatch):
-
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    test_payload = {}
-
-    # Device_id is 3 because it is the id of the authentified sending device.
-    test_response = {"id": len(MEDIA_TABLE) + 1, "device_id": CONNECTED_DEVICE_ID, "type": "image"}
-
-    response = await test_app_asyncio.post("/media/from-device", data=json.dumps(test_payload))
-
-    assert response.status_code == 201
-    json_response = response.json()
-    assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-
-    new_media_in_db = await get_entry_in_db(test_db, db.media, json_response["id"])
-    new_media_in_db = dict(**new_media_in_db)
-
-
-@pytest.mark.parametrize(
-    "payload, status_code",
-    [
-        [{"device_id": "my_device"}, 422],
-        [{}, 422],
-    ],
-)
-@pytest.mark.asyncio
-async def test_create_media_invalid(test_app_asyncio, test_db, monkeypatch, payload, status_code):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload))
-    assert response.status_code == status_code, print(payload)
-
-
-@pytest.mark.asyncio
-async def test_update_media(test_app_asyncio, test_db, monkeypatch):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    test_payload = {"device_id": 1, "type": "video"}
-    response = await test_app_asyncio.put("/media/1/", data=json.dumps(test_payload))
-    assert response.status_code == 200
-
-    updated_media_in_db = await get_entry_in_db(test_db, db.media, 1)
-    updated_media_in_db = dict(**updated_media_in_db)
-    for k, v in updated_media_in_db.items():
-        if k != "bucket_key":
-            assert v == test_payload.get(k, MEDIA_TABLE_FOR_DB[0][k])
-
-
-@pytest.mark.parametrize(
-    "media_id, payload, status_code",
-    [
-        [1, {}, 422],
-        [1, {"type": "audio"}, 422],
-        [999, {"device_id": 1, "type": "image"}, 404],
-        [1, {"device_id": 1, "type": "audio"}, 422],
-        [1, {"device_id": "my_device", "type": "image"}, 422],
-        [0, {"device_id": 1, "type": "image"}, 422],
-    ],
-)
-@pytest.mark.asyncio
-async def test_update_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, payload, status_code):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    response = await test_app_asyncio.put(f"/media/{media_id}/", data=json.dumps(payload))
-    assert response.status_code == status_code, print(payload)
-
-
-@pytest.mark.asyncio
-async def test_delete_media(test_app_asyncio, test_db, monkeypatch):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    response = await test_app_asyncio.delete("/media/1/")
-    assert response.status_code == 200
-    assert response.json() == MEDIA_TABLE[0]
-    remaining_media = await test_app_asyncio.get("/media/")
-    for entry in remaining_media.json():
-        assert entry['id'] != 1
-
-
-@pytest.mark.parametrize(
-    "media_id, status_code, status_details",
-    [
-        [999, 404, "Entry not found"],
-        [0, 422, None],
-    ],
-)
-@pytest.mark.asyncio
-async def test_delete_media_invalid(test_app_asyncio, test_db, monkeypatch, media_id, status_code, status_details):
-    # Sterilize DB interactions
-    await init_test_db(monkeypatch, test_db)
-
-    response = await test_app_asyncio.delete(f"/media/{media_id}/")
-    assert response.status_code == status_code, print(media_id)
+    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=auth)
+    assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details, print(media_id)
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        json_response = response.json()
+        test_response = {"id": len(MEDIA_TABLE) + 1, **payload, "type": "image"}
+        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+
+        new_media = await get_entry(test_db, db.media, json_response["id"])
+        new_media = dict(**new_media)
+
+        # Timestamp consistency
+        assert new_media['created_at'] > utc_dt and new_media['created_at'] < datetime.utcnow()
+
+
+@pytest.mark.parametrize(
+    "access_idx, payload, status_code, status_details",
+    [
+        [0, {}, 401, "Permission denied"],
+        [1, {}, 401, "Permission denied"],
+        [2, {}, 201, None],
+        [3, {}, 401, "Permission denied"],
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_media_from_device(test_app_asyncio, init_test_db, test_db,
+                                        access_idx, payload, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+
+    utc_dt = datetime.utcnow()
+    response = await test_app_asyncio.post("/media/from-device", data=json.dumps(payload), headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        json_response = response.json()
+        device_id = None
+        for entry in DEVICE_TABLE:
+            if entry['access_id'] == ACCESS_TABLE[access_idx]['id']:
+                device_id = entry['id']
+                break
+        test_response = {"id": len(MEDIA_TABLE) + 1, "device_id": device_id, "type": "image"}
+        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+
+        new_media = await get_entry(test_db, db.media, json_response["id"])
+        new_media = dict(**new_media)
+        # Timestamp consistency
+        assert new_media['created_at'] > utc_dt and new_media['created_at'] < datetime.utcnow()
+
+
+@pytest.mark.parametrize(
+    "access_idx, payload, media_id, status_code, status_details",
+    [
+        [0, {"device_id": 1, "type": "video"}, 1, 401, "Permission denied"],
+        [1, {"device_id": 1, "type": "video"}, 1, 200, None],
+        [2, {"device_id": 1, "type": "video"}, 1, 401, "Permission denied"],
+        [3, {"device_id": 1, "type": "video"}, 1, 401, "Permission denied"],
+        [1, {}, 1, 422, None],
+        [1, {"type": "audio"}, 1, 422, None],
+        [1, {"device_id": 1, "type": "image"}, 999, 404, "Entry not found"],
+        [1, {"device_id": 1, "type": "audio"}, 1, 422, None],
+        [1, {"device_id": "my_device", "type": "image"}, 1, 422, None],
+        [1, {"device_id": 1, "type": "image"}, 0, 422, None],
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_media(test_app_asyncio, init_test_db, test_db,
+                            access_idx, payload, media_id, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+
+    response = await test_app_asyncio.put(f"/media/{media_id}/", data=json.dumps(payload), headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        updated_media = await get_entry(test_db, db.media, media_id)
+        updated_media = dict(**updated_media)
+        for k, v in updated_media.items():
+            if k != "bucket_key":
+                assert v == payload.get(k, MEDIA_TABLE_FOR_DB[media_id - 1][k])
+
+
+@pytest.mark.parametrize(
+    "access_idx, media_id, status_code, status_details",
+    [
+        [0, 1, 401, "Permission denied"],
+        [1, 1, 200, None],
+        [2, 1, 401, "Permission denied"],
+        [3, 1, 401, "Permission denied"],
+        [1, 999, 404, "Entry not found"],
+        [1, 0, 422, None],
+    ],
+)
+@pytest.mark.asyncio
+async def test_delete_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+
+    response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        assert response.json() == MEDIA_TABLE[media_id - 1]
+        remaining_media = await test_app_asyncio.get("/media/", headers=auth)
+        assert all(entry['id'] != media_id for entry in remaining_media.json())
 
 
 @pytest.mark.asyncio
-async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
-    await init_test_db(monkeypatch, test_db)
+async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
+
+    device_idx = 2
+    admin_idx = 1
+    device_id = None
+    for entry in DEVICE_TABLE:
+        if entry['access_id'] == ACCESS_TABLE[device_idx]['id']:
+            device_id = entry['id']
+            break
+    # Create a custom access token
+    device_auth = await pytest.get_token(ACCESS_TABLE[device_idx]['id'], ACCESS_TABLE[device_idx]['scopes'].split())
+    admin_auth = await pytest.get_token(ACCESS_TABLE[admin_idx]['id'], ACCESS_TABLE[admin_idx]['scopes'].split())
 
     # 1 - Create a media that will have an upload
-    payload_creation_device = {"device_id": CONNECTED_DEVICE_ID}
-    newly_created_media_id = len(MEDIA_TABLE_FOR_DB) + 1
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload_creation_device))
+    payload = {"device_id": device_id}
+    new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
+    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
     assert response.status_code == 201
 
     # 2 - Upload something
@@ -258,19 +285,23 @@ async def test_upload_media(test_app_asyncio, test_db, monkeypatch):
         return True
     monkeypatch.setattr(bucket_service, "delete_file", mock_delete_file)
 
-    response = await test_app_asyncio.post(f"/media/{response.json()['id']}/upload", files=dict(file=img_content))
+    # Switch content-type from JSON to multipart
+    del device_auth["Content-Type"]
+
+    response = await test_app_asyncio.post(f"/media/{new_media_id}/upload",
+                                           files=dict(file=img_content), headers=device_auth)
 
     assert response.status_code == 200, print(response.json()['detail'])
     response_json = response.json()
-    new_media_in_db = await get_entry_in_db(test_db, db.media, response_json["id"])
-    new_media_in_db = dict(**new_media_in_db)
+    updated_media = await get_entry(test_db, db.media, response_json["id"])
+    updated_media = dict(**updated_media)
     response_json.pop("created_at")
-    assert {k: v for k, v in new_media_in_db.items() if k not in ('created_at', "bucket_key")} == response_json
-    assert new_media_in_db["bucket_key"] is not None
+    assert {k: v for k, v in updated_media.items() if k not in ('created_at', "bucket_key")} == response_json
+    assert updated_media["bucket_key"] is not None
 
     # 2b - Upload failing
     async def failing_upload(bucket_key, file_binary):
         return False
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
-    response = await test_app_asyncio.post(f"/media/{newly_created_media_id}/upload", files=dict(file='bar'))
+    response = await test_app_asyncio.post(f"/media/{new_media_id}/upload", files=dict(file='bar'), headers=device_auth)
     assert response.status_code == 500

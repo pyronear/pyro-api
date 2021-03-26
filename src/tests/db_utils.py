@@ -32,19 +32,18 @@ async def reset_test_db():
         trans.commit()
 
 
-async def populate_db(test_db: Database, table: Table, data: List[Dict[str, Any]], remove_ids: bool = True) -> None:
+async def fill_table(test_db: Database, table: Table, entries: List[Dict[str, Any]], remove_ids: bool = True) -> None:
     """
     Directly insert data into the DB table. Set remove_ids to True by default as the id sequence pointer
     are not incremented if the "id" field is included
     """
     if remove_ids:
-        data = [{k: v for k, v in x.items() if k != "id"} for x in data]
+        entries = [{k: v for k, v in x.items() if k != "id"} for x in entries]
 
-    for entry in data:
-        query = table.insert().values(entry)
-        await test_db.execute(query=query)
+    query = table.insert().values(entries)
+    await test_db.execute(query=query)
 
 
-async def get_entry_in_db(test_db: Database, table: Table, entry_id: int) -> Mapping[str, Any]:
+async def get_entry(test_db: Database, table: Table, entry_id: int) -> Mapping[str, Any]:
     query = table.select().where(entry_id == table.c.id)
     return await test_db.fetch_one(query=query)

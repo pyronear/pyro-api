@@ -7,12 +7,19 @@ import pytest
 
 from app import db
 from app.api import crud, security
-from tests.conf_test_db import populate_db
+from tests.db_utils import fill_table
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "first_pwd_hashed", "scopes": "me"},
-    {"id": 2, "login": "second_login", "hashed_password": "second_pwd_hashed", "scopes": "me"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scopes": "me"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scopes": "me"},
 ]
+
+
+@pytest.fixture(scope="function")
+async def init_test_db(monkeypatch, test_db):
+    monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
+    monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 
 @pytest.mark.parametrize(
@@ -26,12 +33,7 @@ ACCESS_TABLE = [
     ],
 )
 @pytest.mark.asyncio
-async def test_create_access_token(test_app_asyncio, test_db, monkeypatch, payload, status_code, status_detail):
-
-    # Sterilize DB interactions
-    monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
-    monkeypatch.setattr(crud.base, "database", test_db)
-    await populate_db(test_db, db.accesses, ACCESS_TABLE)
+async def test_create_access_token(test_app_asyncio, init_test_db, payload, status_code, status_detail):
 
     response = await test_app_asyncio.post("/login/access-token", data=payload)
 

@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, HTTPException
+from fastapi import APIRouter, Path, Security, HTTPException, status
 from app.api import crud
 from app.db import alerts, AlertType, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
@@ -106,7 +106,7 @@ async def link_media(payload: AlertMediaId,
     existing_alert = await crud.fetch_one(alerts, {"id": alert_id, "device_id": current_device.id})
     if existing_alert is None:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Permission denied"
         )
 
