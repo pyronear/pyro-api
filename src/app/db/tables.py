@@ -28,6 +28,7 @@ users = Table(
     Column("created_at", DateTime, default=func.now()),
 )
 
+
 class AccessType(str, enum.Enum):
     user: str = 'user'
     admin: str = 'admin'
