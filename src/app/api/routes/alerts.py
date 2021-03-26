@@ -7,7 +7,6 @@ from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status
 from sqlalchemy import select
 
-
 from app.api import crud
 from app.db import alerts, events, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
