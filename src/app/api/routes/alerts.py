@@ -5,8 +5,11 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status
+from sqlalchemy import select
+
+
 from app.api import crud
-from app.db import alerts, AlertType, media
+from app.db import alerts, events, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
 from app.api.deps import get_current_device, get_current_access
 
@@ -121,9 +124,17 @@ async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=["admin"]))
     """
     Retrieves the list of ongoing alerts and their information
     """
-    return await crud.alerts.fetch_ongoing_alerts(
-        alerts, {"type": AlertType.start}, excluded_events_filter={"type": AlertType.end}
+    query = (
+        alerts.select()
+        .where(
+            alerts.c.event_id.in_(
+                select([events.c.id])
+                .where(events.c.end_ts != None)
+            )
+        )
     )
+
+    return await crud.base.database.fetch_all(query=query)
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
