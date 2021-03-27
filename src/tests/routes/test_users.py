@@ -16,14 +16,12 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-    {"id": 3, "login": "fourth_login", "access_id": 4, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "me"},
 ]
 
 
@@ -44,7 +42,6 @@ async def init_test_db(monkeypatch, test_db):
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -72,10 +69,9 @@ async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, use
 @pytest.mark.parametrize(
     "access_idx, user_idx, status_code, status_details",
     [
-        [0, None, 401, "Permission denied"],
+        [0, 0, 200, None],
         [1, 1, 200, None],
         [2, None, 401, "Permission denied"],
-        [3, 2, 200, None],
     ],
 )
 @pytest.mark.asyncio
@@ -101,7 +97,6 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -125,7 +120,6 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
         [0, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
         [1, {"login": "fourth_user", "password": "third_pwd"}, 201, None],
         [2, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
-        [3, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
         [1, {"login": "first_login", "password": "pwd"}, 400, "An entry with login='first_login' already exists."],
         [1, {"login": "fourth_user"}, 422, None],
         [1, {"logins": "fourth_user", "password": "third_pwd"}, 422, None],
@@ -172,7 +166,6 @@ async def test_create_user(test_app_asyncio, init_test_db, test_db, monkeypatch,
         [0, {"login": "renamed_user"}, 1, 401, "Permission denied"],
         [1, {"login": "renamed_user"}, 1, 200, None],
         [2, {"login": "renamed_user"}, 1, 401, "Permission denied"],
-        [3, {"login": "renamed_user"}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"login": "renamed_user"}, 999, 404, "Entry not found"],
         [1, {"login": 1}, 1, 422, None],
@@ -210,14 +203,13 @@ async def test_update_user(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"login": "renamed_user"}, 401, "Permission denied"],
+        [0, {"login": "renamed_user"}, 200, None],
         [1, {"login": "renamed_user"}, 200, None],
         [2, {"login": "renamed_user"}, 401, "Permission denied"],
-        [3, {"login": "renamed_user"}, 200, None],
-        [3, {}, 422, None],
-        [3, {"login": 1}, 422, None],
-        [3, {"login": "me"}, 422, None],
-        [3, {"login": "first_login"}, 400, "An entry with login='first_login' already exists."],
+        [0, {}, 422, None],
+        [0, {"login": 1}, 422, None],
+        [0, {"login": "me"}, 422, None],
+        [0, {"login": "second_login"}, 400, "An entry with login='second_login' already exists."],
     ],
 )
 @pytest.mark.asyncio
@@ -250,7 +242,6 @@ async def test_update_my_info(test_app_asyncio, init_test_db, test_db,
         [0, {"password": "new_password"}, 1, 401, "Permission denied"],
         [1, {"password": "new_password"}, 1, 200, None],
         [2, {"password": "new_password"}, 1, 401, "Permission denied"],
-        [3, {"password": "new_password"}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"password": "new_password"}, 999, 404, "Entry not found"],
         [1, {"password": 1}, 1, 422, None],
@@ -283,13 +274,12 @@ async def test_update_user_password(test_app_asyncio, init_test_db, test_db, mon
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"password": "new_password"}, 401, "Permission denied"],
+        [0, {"password": "new_password"}, 200, None],
         [1, {"password": "new_password"}, 200, None],
         [2, {"password": "new_password"}, 401, "Permission denied"],
-        [3, {"password": "new_password"}, 200, None],
-        [3, {}, 422, None],
-        [3, {"password": 1}, 422, None],
-        [3, {"password": "me"}, 422, None],
+        [0, {}, 422, None],
+        [0, {"password": 1}, 422, None],
+        [0, {"password": "me"}, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -317,7 +307,6 @@ async def test_update_my_password(test_app_asyncio, init_test_db, test_db, monke
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],

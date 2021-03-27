@@ -49,7 +49,7 @@ def main(args):
     user_pwd = 'my_pwd'
 
     # create a user
-    payload = dict(login=user_login, password=user_pwd, scopes="me")
+    payload = dict(login=user_login, password=user_pwd, scopes="user")
     user_id = api_request('post', f"{api_url}/users/", superuser_auth, payload)['id']
     user_auth = {
         "Authorization": f"Bearer {get_token(api_url, user_login, user_pwd)}",

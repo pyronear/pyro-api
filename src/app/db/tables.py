@@ -28,13 +28,20 @@ users = Table(
     Column("created_at", DateTime, default=func.now()),
 )
 
+
+class AccessType(str, enum.Enum):
+    user: str = 'user'
+    admin: str = 'admin'
+    device: str = 'device'
+
+
 accesses = Table(
     "accesses",
     metadata,
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
-    Column("scopes", String(30), default="me", nullable=False),
+    Column("scopes", Enum(AccessType), default=AccessType.user, nullable=False),
 )
 
 

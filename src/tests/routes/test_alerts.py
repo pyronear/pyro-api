@@ -16,14 +16,13 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-    {"id": 3, "login": "fourth_login", "access_id": 4, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
      "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fifth_login", "owner_id": 3, "access_id": 5, "specs": "v0.1", "elevation": None, "lat": None,
+    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
@@ -32,8 +31,7 @@ ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "me"},
-    {"id": 5, "login": "fifth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
 ]
 
 MEDIA_TABLE = [
@@ -84,7 +82,6 @@ async def init_test_db(monkeypatch, test_db):
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -112,7 +109,6 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -136,7 +132,6 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -160,7 +155,6 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -185,8 +179,6 @@ async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, acces
          401, "Permission denied"],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 201, None],
         [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
-         401, "Permission denied"],
-        [3, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
         [1, {"event_id": 2, "lat": 10., "lon": 8.}, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "hello"}, 422, None],
@@ -223,7 +215,6 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
         [0, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
         [1, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
         [2, {"event_id": 2, "lat": 10., "lon": 8.}, 201, None],
-        [3, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -262,7 +253,6 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
         [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
         [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
         [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
-        [3, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 999,
          404, "Entry not found"],
@@ -302,7 +292,6 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -329,7 +318,6 @@ async def test_acknowledge_alert(test_app_asyncio, init_test_db, test_db,
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -357,7 +345,6 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         [0, {"media_id": 1}, 1, 401, "Permission denied"],
         [1, {"media_id": 1}, 1, 401, "Permission denied"],
         [2, {"media_id": 1}, 1, 200, None],
-        [3, {"media_id": 1}, 1, 401, "Permission denied"],
         [2, {"media_id": 1}, 3, 401, "Permission denied"],
         [2, {"media_id": 100}, 1, 404, "Media does not exist"],
     ],

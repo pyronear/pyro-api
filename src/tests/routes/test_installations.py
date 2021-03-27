@@ -16,14 +16,13 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-    {"id": 3, "login": "fourth_login", "access_id": 4, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
      "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fifth_login", "owner_id": 3, "access_id": 5, "specs": "v0.1", "elevation": None, "lat": None,
+    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
@@ -32,8 +31,7 @@ ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "me"},
-    {"id": 5, "login": "fifth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
 ]
 
 SITE_TABLE = [
@@ -74,7 +72,6 @@ async def init_test_db(monkeypatch, test_db):
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -100,7 +97,6 @@ async def test_get_installation(test_app_asyncio, init_test_db,
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -127,9 +123,6 @@ async def test_fetch_installations(test_app_asyncio, init_test_db, access_idx, s
              "start_ts": "2020-10-13T08:18:45.447773"},
          201, None],
         [2, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-10-13T08:18:45.447773"},
-         401, "Permission denied"],
-        [3, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
              "start_ts": "2020-10-13T08:18:45.447773"},
          401, "Permission denied"],
         [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.},
@@ -181,9 +174,6 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
         [2, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
              "start_ts": "2020-07-13T08:18:45.447773"}, 1,
          401, "Permission denied"],
-        [3, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"device_id": 1}, 1, 422, None],
         [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
@@ -228,7 +218,6 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -257,7 +246,6 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
         [0, 1, [], 401, "Permission denied"],
         [1, 1, [1], 200, None],
         [2, 1, [], 401, "Permission denied"],
-        [3, 1, [], 401, "Permission denied"],
         [1, 999, [], 200, None],  # TODO: this should fail since the site doesn't exist
         [1, 0, [], 422, None],
     ],
