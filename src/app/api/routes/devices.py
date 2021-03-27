@@ -38,7 +38,10 @@ async def register_device(payload: DeviceAuth, _=Security(get_current_user, scop
 
 
 @router.post("/register", response_model=DeviceOut, status_code=201, summary="Register your device")
-async def register_my_device(payload: MyDeviceAuth, me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+async def register_my_device(
+    payload: MyDeviceAuth,
+    me: UserRead = Security(get_current_user, scopes=["admin", "user"])
+):
     """Creates a new device with the current user being the owner based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -85,7 +88,7 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 @router.get(
     "/my-devices", response_model=List[DeviceOut], summary="Get the list of all devices belonging to the current user"
 )
-async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
     """
     Retrieves the list of all devices and the information which are owned by the current user
     """
@@ -106,7 +109,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
 async def update_device_location(
     payload: DefaultPosition,
     device_id: int = Path(..., gt=0),
-    user: UserRead = Security(get_current_user, scopes=["admin", "me"]),
+    user: UserRead = Security(get_current_user, scopes=["admin", "user"]),
 ):
     """
     Based on a device_id, updates the location of the specified device

@@ -18,7 +18,7 @@ from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="login/access-token",
     scopes={
-        "me": "Read information about the current user.",
+        "user": "Read information about the current user.",
         "admin": "Admin rights on all routes.",
         "device": "Send heartbeat signal and media to the API for only one device"
     }

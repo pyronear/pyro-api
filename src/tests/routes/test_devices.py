@@ -15,14 +15,13 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
-    {"id": 3, "login": "fourth_login", "access_id": 4, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
      "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fifth_login", "owner_id": 3, "access_id": 5, "specs": "v0.1", "elevation": None, "lat": None,
+    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
@@ -31,8 +30,7 @@ ACCESS_TABLE = [
     {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
     {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
     {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "me"},
-    {"id": 5, "login": "fifth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -54,7 +52,6 @@ async def init_test_db(monkeypatch, test_db):
         [0, 1, 401, "Permission denied"],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
     ],
@@ -79,7 +76,6 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
         [0, 401, "Permission denied"],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
@@ -100,10 +96,9 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
+        [0, 200, None],
         [1, 200, None],
         [2, 401, "Permission denied"],
-        [3, 200, None],
     ],
 )
 @pytest.mark.asyncio
@@ -135,8 +130,6 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          201, None],
         [2, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         401, "Permission denied"],
-        [3, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          401, "Permission denied"],
         [1, {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          400, "An entry with login='third_login' already exists."],  # existing device
@@ -189,14 +182,12 @@ async def test_register_device(test_app_asyncio, init_test_db, test_db,
     "access_idx, payload, status_code, status_details",
     [
         [0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         401, "Permission denied"],
+         201, None],
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          201, None],
         [2, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          401, "Permission denied"],
-        [3, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         201, None],
-        [3, {"login": "third_login", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
+        [0, {"login": "third_login", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          400, "An entry with login='third_login' already exists."],  # existing device
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
          422, None],  # password too short
@@ -254,8 +245,6 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
          200, None],
         [2, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
          401, "Permission denied"],
-        [3, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"login": "new_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 999,
          404, "Entry not found"],
@@ -265,8 +254,8 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
          422, None],
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 0,
          422, None],
-        [1, {"login": "fifth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
-         400, "An entry with login='fifth_login' already exists."],  # renamed to already existing login
+        [1, {"login": "fourth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
+         400, "An entry with login='fourth_login' already exists."],  # renamed to already existing login
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"}, 1,
          422, None],  # invalid angle_of_view
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.}, 1,
@@ -302,14 +291,12 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
-        [0, {"lon": 5.}, 1, 401, "Permission denied"],
+        [0, {"lon": 5.}, 1, 200, None],
         [0, {"lon": 5.}, 2, 401, "Permission denied"],
         [1, {"lon": 5.}, 1, 401, "Permission denied"],  # TODO: admin should have permission without being owner
-        [1, {"lon": 5.}, 2, 401, "Permission denied"],  # TODO: admin should have permission without being owner
+        [1, {"lon": 5.}, 2, 200, None],
         [2, {"lon": 5.}, 1, 401, "Permission denied"],
         [2, {"lon": 5.}, 2, 401, "Permission denied"],
-        [3, {"lon": 5.}, 1, 401, "Permission denied"],
-        [3, {"lon": 5.}, 2, 200, None],
         [1, {"lon": 5.}, 999, 404, "Entry not found"],
         [1, {"lon": "position"}, 1, 422, None],
         [1, {"lon": 5.}, 0, 422, None],
@@ -341,7 +328,6 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
         [0, {"lon": 5.}, 401, "Permission denied"],
         [1, {"lon": 5.}, 401, "Permission denied"],
         [2, {"lon": 5.}, 200, None],
-        [3, {"lon": 5.}, 401, "Permission denied"],
         [2, {"lon": "position"}, 422, None],
     ],
 )
@@ -377,7 +363,6 @@ async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
         [0, {"password": "new_password"}, 1, 401, "Permission denied"],
         [1, {"password": "new_password"}, 1, 200, None],
         [2, {"password": "new_password"}, 1, 401, "Permission denied"],
-        [3, {"password": "new_password"}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"password": "new_password"}, 999, 404, "Entry not found"],
         [1, {"password": 1}, 1, 422, None],
@@ -410,7 +395,6 @@ async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
         [0, 401, "Permission denied"],
         [1, 401, "Permission denied"],
         [2, 200, None],
-        [3, 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
