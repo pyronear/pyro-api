@@ -60,3 +60,8 @@ To ensure that your incoming PR complies with the lint settings, you need to ins
 flake8 ./
 ```
 This will read the `.flake8` setting file and let you know whether your commits need some adjustments.
+
+
+### Database schema migration
+
+- See [Alembic](src/alembic) guide to create revision and run it locally. 

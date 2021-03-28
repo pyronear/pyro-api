@@ -5,8 +5,11 @@
 
 import pytest
 import requests
+from datetime import datetime, timedelta
+from jose import jwt
 
 from app.api import security
+from app import config as cfg
 
 
 @pytest.mark.asyncio
@@ -46,3 +49,24 @@ def test_hash_content_file():
     # Check data integrity
     assert security.hash_content_file(requests.get(file_url1).content) == hash1
     assert hash1 != hash2
+
+
+@pytest.mark.parametrize(
+    "content, expiration, expected_delta",
+    [
+        [{"data": "my_data"}, 60, 60],
+        [{"data": "my_data"}, None, cfg.ACCESS_TOKEN_EXPIRE_MINUTES],
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_access_token(content, expiration, expected_delta):
+
+    delta = timedelta(minutes=expiration) if isinstance(expiration, int) else None
+    payload = await security.create_access_token(content, expires_delta=delta)
+    after = datetime.utcnow()
+    assert isinstance(payload, str)
+    decoded_data = jwt.decode(payload, cfg.SECRET_KEY)
+    # Verify data integrity
+    assert all(v == decoded_data[k] for k, v in content.items())
+    # Check expiration
+    assert datetime.utcfromtimestamp(decoded_data['exp']) - timedelta(minutes=expected_delta) < after

@@ -6,6 +6,8 @@ WORKDIR /usr/src/app
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH "${PYTHONPATH}:/app"
+
 
 # copy requirements file
 COPY ./requirements.txt /usr/src/app/requirements.txt

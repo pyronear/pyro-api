@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=UserRead, summary="Get information about the current user")
-async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
     """
     Retrieves information about the current user
     """
@@ -25,7 +25,7 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin",
 
 
 @router.put("/update-info", response_model=UserRead, summary="Update information of the current user")
-async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
     """
     Updates information of the current user
     """
@@ -33,7 +33,7 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 
 
 @router.put("/update-pwd", response_model=UserInfo, summary="Update password of the current user")
-async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["admin", "me"])):
+async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
     """
     Updates the password of the current user
     """

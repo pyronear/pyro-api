@@ -7,7 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
 
-from app.db import SiteType, EventType, MediaType, AlertType
+from app.db.tables import SiteType, EventType, MediaType, AlertType, AccessType
 
 
 # Template classes
@@ -38,7 +38,7 @@ class CredHash(BaseModel):
 
 
 class AccessBase(Login):
-    scopes: str = Field(..., example="me")
+    scopes: AccessType = AccessType.user
 
 
 class AccessAuth(AccessBase, Cred):
@@ -65,7 +65,7 @@ class UserRead(UserInfo, _CreatedAt, _Id):
 
 class UserAuth(UserInfo, Cred):
     # Authentication request
-    scopes: str = Field("me")
+    scopes: AccessType = AccessType.user
 
 
 class UserCreation(UserInfo):
@@ -94,7 +94,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     user_id: Optional[str] = None  # token sub
-    scopes: List[str] = []
+    scopes: List[AccessType] = []
 
 
 # Location
@@ -165,11 +165,11 @@ class DeviceIn(MyDeviceIn):
 
 
 class MyDeviceAuth(MyDeviceIn, Cred):
-    scopes: str = Field("device", example="device")
+    scopes: AccessType = AccessType.device
 
 
 class DeviceAuth(DeviceIn, Cred):
-    scopes: str = Field("device", example="device")
+    scopes: AccessType = AccessType.device
 
 
 class DeviceCreation(DeviceIn):

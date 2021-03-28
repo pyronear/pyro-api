@@ -70,6 +70,7 @@ async def get_active_devices_on_site(site_id: int = Path(..., gt=0), _=Security(
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
+
     current_ts = datetime.utcnow()
 
     query = installations.select().where(and_(installations.c.site_id == site_id,
