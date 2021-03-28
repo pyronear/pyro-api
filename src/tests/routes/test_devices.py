@@ -17,10 +17,6 @@ USER_TABLE = [
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "test_group"},
-]
-
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
      "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
@@ -39,7 +35,6 @@ ACCESS_TABLE = [
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
-GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 
 
 @pytest.fixture(scope="function")

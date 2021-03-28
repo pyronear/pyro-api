@@ -58,6 +58,7 @@ class UserInfo(Login):
     # Abstract information about a user
     pass
 
+
 class UserRead(UserInfo, _CreatedAt, _Id):
     # Visible info
     pass
@@ -74,15 +75,11 @@ class UserCreation(UserInfo):
 
 
 # Groups
-class GroupBase(BaseModel):
+class GroupIn(BaseModel):
     name: str = Field(..., min_length=3, max_length=50, example="Fireman85")
 
 
-class GroupIn(GroupBase):
-    pass
-
-
-class GroupOut(GroupBase, _Id):
+class GroupOut(GroupIn, _Id):
     pass
 
 

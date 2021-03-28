@@ -19,10 +19,6 @@ USER_TABLE = [
     {"id": 2, "login": "connected_user", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "test_group"},
-]
-
 DEVICE_TABLE = [
     {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3,
      "specs": "raspberry", "elevation": None, "lat": None, "angle_of_view": 68,
