@@ -19,7 +19,6 @@ metadata = MetaData()
 
 # Cores tables
 
-
 users = Table(
     "users",
     metadata,

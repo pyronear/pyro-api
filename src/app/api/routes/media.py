@@ -20,7 +20,7 @@ router = APIRouter()
 async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
     """Checks whether the media is registered in the DB"""
     filters = {"id": media_id}
-    if device_id is not None:   
+    if device_id is not None:
         filters.update({"device_id": device_id})
 
     existing_media = await crud.fetch_one(media, filters)

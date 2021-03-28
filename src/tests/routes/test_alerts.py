@@ -18,9 +18,6 @@ USER_TABLE = [
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "test_group"},
-]
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
