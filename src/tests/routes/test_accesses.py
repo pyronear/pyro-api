@@ -10,16 +10,21 @@ from app.api import crud
 from tests.db_utils import fill_table
 
 
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+]
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user", "group_id": 1},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin", "group_id": None},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device", "group_id": 1},
 ]
 
 
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 

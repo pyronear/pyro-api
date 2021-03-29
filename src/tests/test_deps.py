@@ -68,7 +68,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     if isinstance(token_data, str):
         token = token_data
     else:
-        _data = {"sub": str(token_data['id']), "scopes": token_data['scope'].split()}
+        _data = {"sub": str(token_data['id']), "scopes": token_data['scopes'].split()}
         token = await security.create_access_token(_data)
     # Check that we retrieve the correct access
     if exception:
