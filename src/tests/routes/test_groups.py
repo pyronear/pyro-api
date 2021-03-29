@@ -25,15 +25,6 @@ ACCESS_TABLE = [
 ]
 
 
-def compare_entries(ref, test):
-    for k, v in ref.items():
-        if isinstance(v, float):
-            # For float issues
-            assert abs(v - test[k]) < 1E-5
-        else:
-            assert v == test[k]
-
-
 GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 
 
@@ -62,7 +53,7 @@ async def test_get_group(test_app_asyncio, init_test_db, group_id, status_code, 
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
     if response.status_code == 200:
-        compare_entries(response_json, GROUP_TABLE[group_id - 1])
+        assert response_json == GROUP_TABLE[group_id - 1]
 
 
 @pytest.mark.asyncio
@@ -71,8 +62,7 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
     response = await test_app_asyncio.get("/groups/")
     assert response.status_code == 200
     response_json = response.json()
-    for (i, entry) in enumerate(response_json):
-        compare_entries(entry, GROUP_TABLE[i])
+    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE))
 
 
 @pytest.mark.parametrize(
@@ -164,6 +154,6 @@ async def test_delete_group(test_app_asyncio, init_test_db, access_idx, group_id
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        compare_entries(response.json(), GROUP_TABLE[group_id - 1])
+        assert response.json() == GROUP_TABLE[group_id - 1]
         remaining_groups = await test_app_asyncio.get("/groups/")
         assert all(entry['id'] != group_id for entry in remaining_groups.json())
