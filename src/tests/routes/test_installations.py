@@ -28,10 +28,10 @@ DEVICE_TABLE = [
 ]
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 SITE_TABLE = [
@@ -79,7 +79,7 @@ async def test_get_installation(test_app_asyncio, init_test_db,
                                 access_idx, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/installations/{installation_id}", headers=auth)
     assert response.status_code == status_code
@@ -101,7 +101,7 @@ async def test_get_installation(test_app_asyncio, init_test_db,
 async def test_fetch_installations(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/installations/", headers=auth)
     assert response.status_code == status_code
@@ -126,7 +126,7 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
                                    access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/installations/", data=json.dumps(payload), headers=auth)
@@ -168,7 +168,7 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
                                    access_idx, payload, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/installations/{installation_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -200,7 +200,7 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
                                    access_idx, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/installations/{installation_id}/", headers=auth)
     assert response.status_code == status_code
@@ -231,7 +231,7 @@ async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_d
     monkeypatch.setattr(installations, "database", test_db)
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/installations/site-devices/{installation_id}", headers=auth)
     assert response.status_code == status_code

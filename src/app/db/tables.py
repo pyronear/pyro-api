@@ -41,7 +41,8 @@ accesses = Table(
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
-    Column("scopes", Enum(AccessType), default=AccessType.user, nullable=False),
+    Column("scope", Enum(AccessType), default=AccessType.user, nullable=False),
+    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
 )
 
 groups = Table(
@@ -49,7 +50,6 @@ groups = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("name", String(50), unique=True),
-    Column("created_at", DateTime, default=func.now())
 )
 
 

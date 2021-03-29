@@ -32,10 +32,10 @@ DEVICE_TABLE = [
 ]
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 MEDIA_TABLE = [
@@ -72,7 +72,7 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/media/{media_id}", headers=auth)
     assert response.status_code == status_code
@@ -95,7 +95,7 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/media/", headers=auth)
     assert response.status_code == status_code
@@ -120,7 +120,7 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=auth)
@@ -153,7 +153,7 @@ async def test_create_media_from_device(test_app_asyncio, init_test_db, test_db,
                                         access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/media/from-device", data=json.dumps(payload), headers=auth)
@@ -196,7 +196,7 @@ async def test_update_media(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/media/{media_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -225,7 +225,7 @@ async def test_update_media(test_app_asyncio, init_test_db, test_db,
 async def test_delete_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
     assert response.status_code == status_code
@@ -249,8 +249,8 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
             device_id = entry['id']
             break
     # Create a custom access token
-    device_auth = await pytest.get_token(ACCESS_TABLE[device_idx]['id'], ACCESS_TABLE[device_idx]['scopes'].split())
-    admin_auth = await pytest.get_token(ACCESS_TABLE[admin_idx]['id'], ACCESS_TABLE[admin_idx]['scopes'].split())
+    device_auth = await pytest.get_token(ACCESS_TABLE[device_idx]['id'], ACCESS_TABLE[device_idx]['scope'].split())
+    admin_auth = await pytest.get_token(ACCESS_TABLE[admin_idx]['id'], ACCESS_TABLE[admin_idx]['scope'].split())
 
     # 1 - Create a media that will have an upload
     payload = {"device_id": device_id}

@@ -10,16 +10,21 @@ from app.api import crud
 from tests.db_utils import fill_table
 
 
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+]
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user", "group_id": 1},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin", "group_id": None},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device", "group_id": 1},
 ]
 
 
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 
@@ -38,7 +43,7 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/accesses/{access_id}", headers=auth)
     assert response.status_code == status_code
@@ -66,7 +71,7 @@ async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id,
 async def test_fetch_accesses(init_test_db, test_app_asyncio, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/accesses/", headers=auth)
     assert response.status_code == status_code

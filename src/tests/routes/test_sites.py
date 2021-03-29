@@ -20,9 +20,9 @@ SITE_TABLE = [
 ]
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 
@@ -98,7 +98,7 @@ async def test_create_site(test_app_asyncio, init_test_db, test_db,
                            access_idx, payload, no_alert, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     test_response = {"id": len(SITE_TABLE) + 1, **payload}
     subroute = ""
@@ -140,7 +140,7 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
                            access_idx, payload, site_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/sites/{site_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -168,7 +168,7 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
 async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/sites/{site_id}/", headers=auth)
     assert response.status_code == status_code
