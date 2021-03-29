@@ -10,7 +10,7 @@ from sqlalchemy.sql import func
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType',
-           'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
+           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
 
 
 # SQLAlchemy
@@ -42,6 +42,14 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scopes", Enum(AccessType), default=AccessType.user, nullable=False),
+)
+
+groups = Table(
+    "groups",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("name", String(50), unique=True),
+    Column("created_at", DateTime, default=func.now())
 )
 
 

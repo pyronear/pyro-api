@@ -74,6 +74,15 @@ class UserCreation(UserInfo):
     access_id: int = Field(..., gt=0)
 
 
+# Groups
+class GroupIn(BaseModel):
+    name: str = Field(..., min_length=3, max_length=50, example="Fireman85")
+
+
+class GroupOut(GroupIn, _Id):
+    pass
+
+
 # Token
 class Token(BaseModel):
     access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E")
