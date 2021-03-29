@@ -36,6 +36,7 @@ def compare_entries(ref, test):
 
 GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 
+
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
@@ -85,7 +86,7 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
 )
 @pytest.mark.asyncio
 async def test_create_group(test_app_asyncio, init_test_db, test_db,
-                           access_idx, payload, status_code, status_details):
+                            access_idx, payload, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
@@ -107,6 +108,7 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
         new_group_in_db = dict(**new_group_in_db)
         assert new_group_in_db['created_at'] > utc_dt and new_group_in_db['created_at'] < datetime.utcnow()
 
+
 @pytest.mark.parametrize(
     "access_idx, payload, group_id, status_code, status_details",
     [
@@ -122,7 +124,7 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
 )
 @pytest.mark.asyncio
 async def test_update_group(test_app_asyncio, init_test_db, test_db,
-                           access_idx, payload, group_id, status_code, status_details):
+                            access_idx, payload, group_id, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
@@ -138,6 +140,7 @@ async def test_update_group(test_app_asyncio, init_test_db, test_db,
         updated_group_in_db = dict(**updated_group_in_db)
         for k, v in updated_group_in_db.items():
             assert v == payload.get(k, GROUP_TABLE_FOR_DB[group_id - 1][k])
+
 
 @pytest.mark.parametrize(
     "access_idx, group_id, status_code, status_details",
