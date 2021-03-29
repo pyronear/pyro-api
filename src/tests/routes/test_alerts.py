@@ -29,10 +29,10 @@ DEVICE_TABLE = [
 ]
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scopes": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scopes": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scopes": "device"},
-    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scopes": "device"},
+    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 MEDIA_TABLE = [
@@ -91,7 +91,7 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/alerts/{alert_id}", headers=auth)
     assert response.status_code == status_code
@@ -116,7 +116,7 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/alerts/", headers=auth)
     assert response.status_code == status_code
@@ -139,7 +139,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/alerts/ongoing", headers=auth)
     assert response.status_code == status_code
@@ -162,7 +162,7 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/alerts/unacknowledged", headers=auth)
     assert response.status_code == status_code
@@ -191,7 +191,7 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
@@ -223,7 +223,7 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
                                       access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/from-device", data=json.dumps(payload), headers=auth)
@@ -274,7 +274,7 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -300,7 +300,7 @@ async def test_acknowledge_alert(test_app_asyncio, init_test_db, test_db,
                                  access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/acknowledge", headers=auth)
     assert response.status_code == status_code
@@ -327,7 +327,7 @@ async def test_acknowledge_alert(test_app_asyncio, init_test_db, test_db,
 async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/alerts/{alert_id}/", headers=auth)
     assert response.status_code == status_code
@@ -355,7 +355,7 @@ async def test_link_media(test_app_asyncio, init_test_db, test_db,
                           access_idx, payload, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scopes'].split())
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/link-media", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):

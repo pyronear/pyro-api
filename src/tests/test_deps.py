@@ -32,11 +32,11 @@ DEVICE_TABLE = [
 ]
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
-    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scopes": "user"},
-    {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scopes": "device"},
-    {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scopes": "device"},
-    {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scopes": "device"},
+    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
+    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
+    {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scope": "device"},
+    {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scope": "device"},
+    {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scope": "device"},
 ]
 
 
@@ -68,7 +68,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     if isinstance(token_data, str):
         token = token_data
     else:
-        _data = {"sub": str(token_data['id']), "scopes": token_data['scopes'].split()}
+        _data = {"sub": str(token_data['id']), "scopes": token_data['scope'].split()}
         token = await security.create_access_token(_data)
     # Check that we retrieve the correct access
     if exception:
