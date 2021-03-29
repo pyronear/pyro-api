@@ -83,7 +83,6 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
 
     test_response = {"id": len(GROUP_TABLE) + 1, **payload}
 
-    utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/groups/", data=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
@@ -94,9 +93,6 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
     if response.status_code // 100 == 2:
         json_response = response.json()
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
-        new_group_in_db = await get_entry(test_db, db.groups, json_response["id"])
-        new_group_in_db = dict(**new_group_in_db)
-        assert new_group_in_db['created_at'] > utc_dt and new_group_in_db['created_at'] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
