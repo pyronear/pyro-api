@@ -57,7 +57,7 @@ async def init_test_db(monkeypatch, test_db):
     [
         [ACCESS_TABLE[3], 'admin', None, True],  # Unsufficient scope
         ['my_false_token', 'admin', None, True],  # Decoding failure
-        [{"id": 100, "scopes": "admin"}, 'admin', None, True],  # Unable to find access in table
+        [{"id": 100, "scope": "admin"}, 'admin', None, True],  # Unable to find access in table
         [ACCESS_TABLE[3], 'device', 3, False],  # Correct
     ],
 )
@@ -68,7 +68,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     if isinstance(token_data, str):
         token = token_data
     else:
-        _data = {"sub": str(token_data['id']), "scopes": token_data['scopes'].split()}
+        _data = {"sub": str(token_data['id']), "scopes": token_data['scope'].split()}
         token = await security.create_access_token(_data)
     # Check that we retrieve the correct access
     if exception:
