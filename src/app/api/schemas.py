@@ -163,11 +163,11 @@ class DeviceIn(MyDeviceIn):
 
 
 class MyDeviceAuth(MyDeviceIn, Cred):
-    scopes: AccessType = AccessType.device
+    scope: AccessType = AccessType.device
 
 
 class DeviceAuth(DeviceIn, Cred):
-    scopes: AccessType = AccessType.device
+    scope: AccessType = AccessType.device
 
 
 class DeviceCreation(DeviceIn):
