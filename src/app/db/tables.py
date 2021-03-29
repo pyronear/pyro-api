@@ -9,7 +9,7 @@ from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, B
 from sqlalchemy.sql import func
 
 
-__all__ = ['metadata', 'SiteType', 'EventType', 'MediaType', 'AlertType',
+__all__ = ['metadata', 'SiteType', 'EventType', 'MediaType',
            'users', 'accesses', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
 
 
@@ -136,11 +136,6 @@ installations = Table(
 )
 
 
-class AlertType(str, enum.Enum):
-    start: str = 'start'
-    end: str = 'end'
-
-
 alerts = Table(
     "alerts",
     metadata,
@@ -151,7 +146,6 @@ alerts = Table(
     Column("azimuth", Float(4, asdecimal=True), default=None),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
-    Column("type", Enum(AlertType), default=AlertType.start),
     Column("is_acknowledged", Boolean, default=False),
     Column("created_at", DateTime, default=func.now()),
 )

@@ -88,19 +88,14 @@ def main(args):
     payload = dict(lat=44.1, lon=3.9, type='wildfire')
     event_id = api_request('post', f"{api_url}/events/", superuser_auth, payload)['id']
 
-    payload = dict(lat=44.1, lon=3.9, event_id=event_id, media_id=media_id, type='start')
-    alert_id1 = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
+    payload = dict(lat=44.1, lon=3.9, event_id=event_id, media_id=media_id)
+    alert_id = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
 
     # Acknowledge it
-    api_request('put', f"{api_url}/alerts/{alert_id1}/acknowledge", superuser_auth)
-
-    # Installation throws the end alert
-    payload = dict(lat=44.1, lon=3.9, event_id=event_id, type='end')
-    alert_id2 = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
+    api_request('put', f"{api_url}/alerts/{alert_id}/acknowledge", superuser_auth)
 
     # Cleaning (order is important because of foreign key protection in existing tables)
-    api_request('delete', f"{api_url}/alerts/{alert_id1}/", superuser_auth)
-    api_request('delete', f"{api_url}/alerts/{alert_id2}/", superuser_auth)
+    api_request('delete', f"{api_url}/alerts/{alert_id}/", superuser_auth)
     api_request('delete', f"{api_url}/events/{event_id}/", superuser_auth)
     api_request('delete', f"{api_url}/media/{media_id}/", superuser_auth)
     api_request('delete', f"{api_url}/installations/{installation_id}/", superuser_auth)
