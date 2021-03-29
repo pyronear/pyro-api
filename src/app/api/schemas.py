@@ -38,7 +38,7 @@ class CredHash(BaseModel):
 
 
 class AccessBase(Login):
-    scopes: AccessType = AccessType.user
+    scope: AccessType = AccessType.user
 
 
 class AccessAuth(AccessBase, Cred):
@@ -66,7 +66,7 @@ class UserRead(UserInfo, _CreatedAt, _Id):
 
 class UserAuth(UserInfo, Cred):
     # Authentication request
-    scopes: AccessType = AccessType.user
+    scope: AccessType = AccessType.user
 
 
 class UserCreation(UserInfo):
