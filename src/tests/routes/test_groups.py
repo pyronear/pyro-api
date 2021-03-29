@@ -13,8 +13,8 @@ from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime
 
 GROUP_TABLE = [
-    {"id": 1, "name": "first_group", "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "second_group", "created_at": "2020-09-13T08:18:45.447773"}
+    {"id": 1, "name": "first_group"},
+    {"id": 2, "name": "second_group"}
 ]
 
 
