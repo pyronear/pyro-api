@@ -76,8 +76,7 @@ def main(args):
     }
 
     # create an installation with this device and the site
-    payload = dict(device_id=device_id, site_id=site_id, lat=44.1, lon=3.9, elevation=100., yaw=0., pitch=0.,
-                   start_ts="2019-08-24T14:15:22.00")
+    payload = dict(device_id=device_id, site_id=site_id, start_ts="2019-08-24T14:15:22.00")
     installation_id = api_request('post', f"{api_url}/installations/", superuser_auth, payload)['id']
 
     # Installation creates a media

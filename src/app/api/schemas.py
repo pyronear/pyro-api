@@ -199,7 +199,7 @@ class MediaUrl(BaseModel):
 
 
 # Installations
-class InstallationIn(Location, _Rotation):
+class InstallationIn(BaseModel):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
     start_ts: datetime
