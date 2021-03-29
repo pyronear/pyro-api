@@ -42,6 +42,7 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scope", Enum(AccessType), default=AccessType.user, nullable=False),
+    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
 )
 
 groups = Table(

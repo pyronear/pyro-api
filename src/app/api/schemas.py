@@ -39,6 +39,7 @@ class CredHash(BaseModel):
 
 class AccessBase(Login):
     scope: AccessType = AccessType.user
+    group_id: int = Field(None, gt=0)
 
 
 class AccessAuth(AccessBase, Cred):
