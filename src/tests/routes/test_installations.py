@@ -42,12 +42,10 @@ SITE_TABLE = [
 ]
 
 INSTALLATION_TABLE = [
-    {"id": 1, "device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "is_trustworthy": True,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 2, "site_id": 2, "elevation": 58., "lat": 5., "lon": 8., "yaw": 10., "pitch": 0.,
-     "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None, "is_trustworthy": False,
-     "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 1, "device_id": 1, "site_id": 1, "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None,
+     "is_trustworthy": True, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "device_id": 2, "site_id": 2, "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None,
+     "is_trustworthy": False, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -116,22 +114,11 @@ async def test_fetch_installations(test_app_asyncio, init_test_db, access_idx, s
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-10-13T08:18:45.447773"},
-         401, "Permission denied"],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-10-13T08:18:45.447773"},
-         201, None],
-        [2, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-10-13T08:18:45.447773"},
-         401, "Permission denied"],
-        [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.},
-         422, None],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0.},
-         422, None],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 100., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "is_trustworthy": 5},
-         422, None],
+        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 401, "Permission denied"],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None],
+        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 401, "Permission denied"],
+        [1, {"device_id": 1, "site_id": "my_site"}, 422, None],
+        [1, {"device_id": 1}, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -165,29 +152,15 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, installation_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         401, "Permission denied"],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         200, None],
-        [2, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         401, "Permission denied"],
+        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 401, "Permission denied"],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
+        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"device_id": 1}, 1, 422, None],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 999,
-         404, "Entry not found"],
-        [1, {"device_id": 1, "site_id": 1, "elevation": "high", "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         422, None],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773", "is_trustworthy": 5.}, 1,
-         422, None],
-        [1, {"device_id": 1, "site_id": 1, "elevation": 123., "lat": 0., "lon": 0., "yaw": 0., "pitch": 0.,
-             "start_ts": "2020-07-13T08:18:45.447773"}, 0,
-         422, None],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 999, 404, "Entry not found"],
+        [1, {"device_id": 1, "site_id": "my_site", "start_ts": "2020-07-13T08:18:45.447773"}, 1, 422, None],
+        [1, {"device_id": 1, "site_id": 1, "is_trustworthy": 5.}, 1, 422, None],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 0, 422, None],
     ],
 )
 @pytest.mark.asyncio
