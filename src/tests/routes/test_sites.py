@@ -12,10 +12,18 @@ from app.api import crud
 from tests.db_utils import get_entry, fill_table
 from tests.utils import update_only_datetime
 
+
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+    {"id": 2, "name": "second_group"}
+]
+
 SITE_TABLE = [
-    {"id": 1, "name": "my_first_tower", "lat": 44.1, "lon": -0.7, "type": "tower", "country": "FR", "geocode": "40",
+    {"id": 1, "name": "my_first_tower", "group_id": 1,
+     "lat": 44.1, "lon": -0.7, "type": "tower", "country": "FR", "geocode": "40",
      "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "my_first_station", "lat": 44.1, "lon": 3.9, "type": "station", "country": "FR", "geocode": "30",
+    {"id": 2, "name": "my_first_station", "group_id": 2,
+     "lat": 44.1, "lon": 3.9, "type": "station", "country": "FR", "geocode": "30",
      "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
@@ -42,6 +50,7 @@ SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)
 
 
@@ -79,18 +88,26 @@ async def test_fetch_sites(test_app_asyncio, init_test_db):
 @pytest.mark.parametrize(
     "access_idx, payload, no_alert, status_code, status_details",
     [
-        [1, {"name": "my_site", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, False,
+        [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "type": "tower", "country": "FR", "geocode": "01"}, False,
          201, None],
-        [1, {"name": "my_site", "lat": 0., "lon": 0., "type": "station", "country": "FR", "geocode": "01"}, False,
+        [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "type": "station", "country": "FR", "geocode": "01"}, False,
          201, None],
-        [1, {"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, True, 201, None],
-        [0, {"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, False,
+        [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "country": "FR", "geocode": "01"}, True, 201, None],
+        [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "country": "FR", "geocode": "01"}, False,
          401, "Permission denied"],
-        [0, {"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, True, 201, None],
-        [2, {"name": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, False,
+        [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "country": "FR", "geocode": "01"}, True, 201, None],
+        [2, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "country": "FR", "geocode": "01"}, False,
          401, "Permission denied"],
-        [1, {"names": "my_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, False, 422, None],
-        [1, {"name": "my_site", "lat": 0., "country": "FR", "geocode": "01"}, False, 422, None],
+        [1, {"names": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
+             "country": "FR", "geocode": "01"}, False, 422, None],
+        [1, {"name": "my_site", "group_id": 1, "lat": 0.,
+             "country": "FR", "geocode": "01"}, False, 422, None],
     ],
 )
 @pytest.mark.asyncio

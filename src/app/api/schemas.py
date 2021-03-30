@@ -128,6 +128,7 @@ class DefaultPosition(DefaultLocation, _DefaultRotation):
 # Sites
 class SiteBase(_FlatLocation):
     name: str = Field(..., min_length=3, max_length=50, example="watchtower12")
+    group_id: int = Field(None, gt=0)
     country: str = Field(..., max_length=5, example="FR")
     geocode: str = Field(..., max_length=10, example="01")
 

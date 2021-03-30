@@ -132,7 +132,8 @@ class Client:
                    "lon": lon}
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
 
-    def create_no_alert_site(self, lat: float, lon: float, name: str, country: str, geocode: str) -> Response:
+    def create_no_alert_site(self, lat: float, lon: float, name: str, country: str,
+                             geocode: str, group_id: int = None) -> Response:
         """Create a site that is not supposed to generate alerts.
 
         Example::
@@ -155,6 +156,8 @@ class Client:
                    "name": name,
                    "country": country,
                    "geocode": geocode}
+        if group_id is not None:
+            payload["group_id"] = group_id
         return requests.post(self.routes["no-alert-site"], headers=self.headers, json=payload)
 
     def send_alert(self, lat: float, lon: float, event_id: int, device_id: int, media_id: int = None) -> Response:
