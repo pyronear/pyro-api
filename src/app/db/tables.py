@@ -64,6 +64,7 @@ sites = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("name", String(50)),
+    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("country", String(5), nullable=False),
