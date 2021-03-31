@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.api import crud
 from app.db import alerts, events, media
-from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, AccessType
 from app.api.deps import get_current_device, get_current_access
 
 
@@ -26,7 +26,7 @@ async def check_media_existence(media_id):
 
 
 @router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert")
-async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=["admin"])):
+async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Creates a new alert based on the given information
 
@@ -41,7 +41,7 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
 @router.post("/from-device", response_model=AlertOut, status_code=201,
              summary="Create an alert related to the authentified device")
 async def create_alert_from_device(payload: AlertBase,
-                                   device: DeviceOut = Security(get_current_device, scopes=["device"])):
+                                   device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])):
     """
     Creates an alert related to the authentified device, uses its device_id as argument
 
@@ -54,7 +54,7 @@ async def create_alert_from_device(payload: AlertBase,
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
-async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, retrieves information about the specified alert
     """
@@ -62,7 +62,7 @@ async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_acce
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(_=Security(get_current_access, scopes=["admin"])):
+async def fetch_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Retrieves the list of all alerts and their information
     """
@@ -73,7 +73,7 @@ async def fetch_alerts(_=Security(get_current_access, scopes=["admin"])):
 async def update_alert(
     payload: AlertIn,
     alert_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=["admin"])
+    _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a alert_id, updates information about the specified alert
@@ -82,7 +82,7 @@ async def update_alert(
 
 
 @router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
-async def acknowledge_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def acknowledge_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, acknowledge the specified alert
     """
@@ -90,7 +90,7 @@ async def acknowledge_alert(alert_id: int = Path(..., gt=0), _=Security(get_curr
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
@@ -100,7 +100,7 @@ async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_a
 @router.put("/{alert_id}/link-media", response_model=AlertOut, summary="Link an alert to a media")
 async def link_media(payload: AlertMediaId,
                      alert_id: int = Path(..., gt=0),
-                     current_device: DeviceOut = Security(get_current_device, scopes=["device"])):
+                     current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])):
     """
     Based on a alert_id, and media information as arguments, link the specified alert to a media
     """
@@ -119,7 +119,7 @@ async def link_media(payload: AlertMediaId,
 
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
-async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=["admin"])):
+async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Retrieves the list of ongoing alerts and their information
     """
@@ -137,7 +137,7 @@ async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=["admin"]))
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
-async def fetch_unacknowledged_alerts(_=Security(get_current_access, scopes=["admin"])):
+async def fetch_unacknowledged_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Retrieves the list of non confirmed alerts and their information
     """

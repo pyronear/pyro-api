@@ -9,7 +9,7 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import crud
 from app.db import users, accesses
-from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth
+from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
 from app.api.deps import get_current_user
 
 
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=UserRead, summary="Get information about the current user")
-async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
+async def get_my_user(me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
     """
     Retrieves information about the current user
     """
@@ -25,7 +25,7 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=["admin",
 
 
 @router.put("/update-info", response_model=UserRead, summary="Update information of the current user")
-async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
     """
     Updates information of the current user
     """
@@ -33,7 +33,7 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 
 
 @router.put("/update-pwd", response_model=UserInfo, summary="Update password of the current user")
-async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
+async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
     """
     Updates the password of the current user
     """
@@ -43,7 +43,7 @@ async def update_my_password(payload: Cred, me: UserRead = Security(get_current_
 
 
 @router.post("/", response_model=UserRead, status_code=201, summary="Create a new user")
-async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["admin"])):
+async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Creates a new user based on the given information
 
@@ -54,7 +54,7 @@ async def create_user(payload: UserAuth, _=Security(get_current_user, scopes=["a
 
 
 @router.get("/{user_id}/", response_model=UserRead, summary="Get information about a specific user")
-async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Based on a user_id, retrieves information about the specified user
     """
@@ -62,7 +62,7 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
-async def fetch_users(_=Security(get_current_user, scopes=["admin"])):
+async def fetch_users(_=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Retrieves the list of all users and their information
     """
@@ -71,7 +71,7 @@ async def fetch_users(_=Security(get_current_user, scopes=["admin"])):
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")
 async def update_user(
-    payload: UserInfo, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
+    payload: UserInfo, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
     Based on a user_id, updates information about the specified user
@@ -81,7 +81,7 @@ async def update_user(
 
 @router.put("/{user_id}/pwd", response_model=UserInfo, summary="Update the password of a specific user")
 async def update_user_password(
-    payload: Cred, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
+    payload: Cred, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
     Based on a user_id, updates the password of the specified user
@@ -92,7 +92,7 @@ async def update_user_password(
 
 
 @router.delete("/{user_id}/", response_model=UserRead, summary="Delete a specific user")
-async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Based on a user_id, deletes the specified user
     """

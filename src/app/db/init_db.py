@@ -6,7 +6,7 @@
 from app import config as cfg
 from app.api import crud
 from app.db import accesses, users
-from app.api.schemas import AccessCreation, UserCreation
+from app.api.schemas import AccessCreation, UserCreation, AccessType
 from app.api.security import hash_password
 
 
@@ -20,7 +20,7 @@ async def init_db():
 
         hashed_password = await hash_password(cfg.SUPERUSER_PWD)
 
-        access = AccessCreation(login=login, hashed_password=hashed_password, scope="admin")
+        access = AccessCreation(login=login, hashed_password=hashed_password, scope=AccessType.admin)
         access_entry = await crud.create_entry(accesses, access)
 
         await crud.create_entry(users, UserCreation(login=login, access_id=access_entry["id"]))

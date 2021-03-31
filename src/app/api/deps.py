@@ -11,16 +11,16 @@ from pydantic import ValidationError
 from app.api import crud
 from app.db import accesses, users, devices
 import app.config as cfg
-from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
+from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead, AccessType
 
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="login/access-token",
     scopes={
-        "user": "Read information about the current user.",
-        "admin": "Admin rights on all routes.",
-        "device": "Send heartbeat signal and media to the API for only one device"
+        AccessType.user: "Read information about the current user.",
+        AccessType.admin: "Admin rights on all routes.",
+        AccessType.device: "Send heartbeat signal and media to the API for only one device"
     }
 )
 
