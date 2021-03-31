@@ -11,6 +11,7 @@ from app.api import crud
 from app.db import users, accesses
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
 from app.api.deps import get_current_user
+from app.api.crud.authorizations import is_admin_access, is_in_same_group
 
 
 router = APIRouter()
@@ -25,7 +26,8 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=[AccessTy
 
 
 @router.put("/update-info", response_model=UserRead, summary="Update information of the current user")
-async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
+async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_user,
+                                                                    scopes=[AccessType.admin, AccessType.user])):
     """
     Updates information of the current user
     """
@@ -33,7 +35,8 @@ async def update_my_info(payload: UserInfo, me: UserRead = Security(get_current_
 
 
 @router.put("/update-pwd", response_model=UserInfo, summary="Update password of the current user")
-async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
+async def update_my_password(payload: Cred, me: UserRead = Security(get_current_user,
+                                                                    scopes=[AccessType.admin, AccessType.user])):
     """
     Updates the password of the current user
     """

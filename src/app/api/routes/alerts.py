@@ -9,7 +9,15 @@ from sqlalchemy import select
 
 from app.api import crud
 from app.db import alerts, events, media
-from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, AccessType
+from app.api.schemas import (
+    AlertBase,
+    AlertOut,
+    AlertIn,
+    AlertMediaId,
+    DeviceOut,
+    Ackowledgement,
+    AcknowledgementOut,
+    AccessType)
 from app.api.deps import get_current_device, get_current_access
 
 

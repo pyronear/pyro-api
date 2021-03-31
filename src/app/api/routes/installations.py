@@ -28,7 +28,8 @@ async def create_installation(payload: InstallationIn, _=Security(get_current_ac
 
 @router.get("/{installation_id}/", response_model=InstallationOut,
             summary="Get information about a specific installation")
-async def get_installation(installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_installation(installation_id: int = Path(..., gt=0),
+                           _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a installation_id, retrieves information about the specified installation
     """
@@ -57,7 +58,8 @@ async def update_installation(
 
 
 @router.delete("/{installation_id}/", response_model=InstallationOut, summary="Delete a specific installation")
-async def delete_installation(installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_installation(installation_id: int = Path(..., gt=0),
+                              _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a installation_id, deletes the specified installation
     """
@@ -66,7 +68,8 @@ async def delete_installation(installation_id: int = Path(..., gt=0), _=Security
 
 @router.get("/site-devices/{site_id}", response_model=List[int],
             summary="Get all devices related to a specific site")
-async def get_active_devices_on_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_active_devices_on_site(site_id: int = Path(..., gt=0),
+                                     _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
