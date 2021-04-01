@@ -5,12 +5,13 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, and_
 
 from app.api import crud
 from app.db import alerts, events, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
 from app.api.deps import get_current_device, get_current_access
+from app.api.routes.events import create_event
 
 
 router = APIRouter()
@@ -33,6 +34,32 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+
+    if payload.event_id is None:
+        # check whether there is an alert in the last 5 min by the same device
+        max_ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
+        query = (
+            alerts.select()
+            .where(
+                and_(
+                    alerts.c.device_id == payload.device_id,
+                    alerts.c.created_at >= max_ts
+                )
+            )
+            .limit(1)
+        )
+
+        previous_alert = await crud.base.database.fetch_all(query=query)
+        if len(previous_alert) == 0:
+            # Create an event & get the ID
+            event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.datetime.utcnow()))
+            event_id = event.id
+        # Get event ref
+        else:
+            event_id = previous_alert[0]['event_id']
+        payload.event_id = event_id
+
+
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
     return await crud.create_entry(alerts, payload)
