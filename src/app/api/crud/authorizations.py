@@ -13,7 +13,7 @@ from app.db import accesses
 
 
 async def is_in_same_group(table: Table, entry_id: int, group_id: int) -> bool:
-    user_or_device = await crud.base.get_entry(table, entry_id)
+    user_or_device = await crud.groups.get_entity_group_id(table, entry_id)
     return await is_access_in_group(user_or_device.access_id, group_id)
 
 
