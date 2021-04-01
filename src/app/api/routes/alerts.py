@@ -25,8 +25,17 @@ async def check_media_existence(media_id):
         )
 
 
-@router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert")
-async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=["admin"])):
+alert_callback_router = APIRouter()
+
+@alert_callback_router.post(
+    "{$callback_url}/invoices/{$request.body.id}", response_model=AlertOut
+)
+def alert_notification(body: AlertOut):
+    pass
+
+
+@router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert", callbacks=alert_callback_router.routes)
+async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=["admin"]), callback_url: Optional[HttpUrl] = None):
     """
     Creates a new alert based on the given information
 
