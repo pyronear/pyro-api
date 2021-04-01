@@ -4,11 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, status, HTTPException
 from app.api import crud
 from app.db import sites, SiteType
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
+from app.api.crud.authorizations import is_access_in_group, is_admin_access, check_group_access
+from app.api.crud.accesses import get_access_group_id
 
 
 router = APIRouter()
@@ -26,30 +28,42 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[Ac
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
 async def create_noalert_site(payload: SiteBase,
-                              _=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+                              requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    if ((payload.get("group_id") is not None) and
+        (not is_admin_access(requester.access_id)) and
+        (is_access_in_group(requester.access_id, payload.get("group_id")))):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You can't specify another group")
+    elif payload.get("group_id") is None:
+        payload.group_id = get_access_group_id(requester.access_id)
 
     return await crud.create_entry(sites, SiteIn(**payload.dict(), type=SiteType.no_alert))
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
-async def get_site(site_id: int = Path(..., gt=0)):
+async def get_site(site_id: int = Path(..., gt=0),
+                   requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a site_id, retrieves information about the specified site
     """
-    return await crud.get_entry(sites, site_id)
+    entry = await crud.get_entry(sites, site_id)
+    await check_group_access(requester.access_id, entry.get("group_id"))
+    return entry
 
 
-@router.get("/", response_model=List[SiteOut], summary="Get the list of all sites")
-async def fetch_sites():
+@router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
+async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Retrieves the list of all sites and their information
     """
-    return await crud.fetch_all(sites)
+    group_filtering = {}
+    if (not await is_admin_access(requester.access_id)):
+        group_filtering = {"group_id": get_access_group_id(requester.access_id)}
+    return await crud.fetch_all(sites, group_filtering)
 
 
 @router.put("/{site_id}/", response_model=SiteOut, summary="Update information about a specific site")

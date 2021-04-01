@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks, status
 from typing import List, Optional
 
 from app.api import crud
@@ -12,6 +12,8 @@ from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOu
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.security import hash_content_file
 from app.services import bucket_service, resolve_bucket_key
+from app.api.crud.authorizations import is_access_in_group, is_admin_access, check_group_access
+from app.api.crud.accesses import get_access_group_id
 
 
 router = APIRouter()
@@ -26,7 +28,7 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
     existing_media = await crud.fetch_one(media, filters)
     if existing_media is None:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Permission denied"
         )
     return existing_media
@@ -57,11 +59,13 @@ async def create_media_from_device(payload: BaseMedia,
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
-async def get_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a media_id, retrieves information about the specified media
     """
-    return await crud.get_entry(media, media_id)
+    entry = await crud.get_entry(media, media_id)
+    await check_group_access(requester.access_id, entry.get("group_id"))
+    return await entry
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
@@ -69,6 +73,7 @@ async def fetch_media(_=Security(get_current_access, scopes=[AccessType.admin]))
     """
     Retrieves the list of all media and their information
     """
+    # TODO fetch only group
     return await crud.fetch_all(media)
 
 

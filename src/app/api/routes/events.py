@@ -4,12 +4,14 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, status, HTTPException
 from app.api import crud
 from app.db import events
 from app.api.schemas import EventOut, EventIn, AccessType
 from app.api.deps import get_current_access
 
+from app.api.crud.authorizations import is_access_in_group, is_admin_access, check_group_access
+from app.api.crud.accesses import get_access_group_id
 
 router = APIRouter()
 
@@ -25,10 +27,12 @@ async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[
 
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
-async def get_event(event_id: int = Path(..., gt=0)):
+async def get_event(event_id: int = Path(..., gt=0),
+                    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])):
     """
     Based on a event_id, retrieves information about the specified event
     """
+    # TODO: would need to check the group from the device entry
     return await crud.get_entry(events, event_id)
 
 
@@ -37,6 +41,7 @@ async def fetch_events():
     """
     Retrieves the list of all events and their information
     """
+    # TODO fetch only group
     return await crud.fetch_all(events)
 
 
@@ -45,6 +50,7 @@ async def fetch_past_events():
     """
     Retrieves the list of all events and their information
     """
+    # TODO fetch only group
     return await crud.fetch_all(events, exclusions={"end_ts": None})
 
 
@@ -52,11 +58,12 @@ async def fetch_past_events():
 async def update_event(
     payload: EventIn,
     event_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
 ):
     """
     Based on a event_id, updates information about the specified event
     """
+    
     return await crud.update_entry(events, payload, event_id)
 
 

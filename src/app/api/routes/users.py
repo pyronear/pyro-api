@@ -5,7 +5,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, HTTPException, status
 
 from app.api import crud
 from app.db import users, accesses
