@@ -179,6 +179,7 @@ async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, acces
         [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 201, None],
+        [1, {"device_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 201, None],
         [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5},
          401, "Permission denied"],
         [1, {"event_id": 2, "lat": 10., "lon": 8.}, 422, None],
