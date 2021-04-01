@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media
-from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, EventIn
 from app.api.deps import get_current_device, get_current_access
 from app.api.routes.events import create_event
 
@@ -38,7 +38,7 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
 
     if payload.event_id is None:
         # check whether there is an alert in the last 5 min by the same device
-        max_ts = datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
+        max_ts = datetime.utcnow() - timedelta(minutes=5)
         query = (
             alerts.select()
             .where(
@@ -53,8 +53,8 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
         previous_alert = await crud.base.database.fetch_all(query=query)
         if len(previous_alert) == 0:
             # Create an event & get the ID
-            event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.datetime.utcnow()))
-            event_id = event.id
+            event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
+            event_id = event['id']
         # Get event ref
         else:
             event_id = previous_alert[0]['event_id']
