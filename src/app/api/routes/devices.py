@@ -18,6 +18,7 @@ from app.api.schemas import (
     UserRead,
     DefaultPosition,
     Cred,
+    SoftwareHash,
 )
 from app.api.deps import get_current_device, get_current_user
 
@@ -128,6 +129,20 @@ async def update_device_location(
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
 async def update_my_location(
     payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=["device"])
+):
+    """
+    Updates the location of the current device
+    """
+    # Update only the position
+    for k, v in payload.dict().items():
+        setattr(device, k, v)
+    await crud.update_entry(devices, device, device.id)
+    return device
+
+
+@router.put("/hash", response_model=DeviceOut, summary="Update the software hash of the current device")
+async def update_my_hash(
+    payload: SoftwareHash, device: DeviceOut = Security(get_current_device, scopes=["device"])
 ):
     """
     Updates the location of the current device
