@@ -85,7 +85,7 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    response = await test_app_asyncio.get(f"/devices/me", headers=auth)
+    response = await test_app_asyncio.get("/devices/me", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
@@ -369,7 +369,7 @@ async def test_update_my_hash(test_app_asyncio, init_test_db, test_db,
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    response = await test_app_asyncio.put(f"/devices/hash", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/devices/hash", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
