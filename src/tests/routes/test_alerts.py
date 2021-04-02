@@ -147,8 +147,8 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == ALERT_TABLE[:2]
-
+        event_ids = [entry['id'] for entry in EVENT_TABLE if entry['end_ts'] is None]
+        assert response.json() == [entry for entry in ALERT_TABLE if entry['event_id'] in event_ids]
 
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
