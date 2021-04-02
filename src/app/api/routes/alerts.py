@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media
-from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, EventIn
+from app.api.schemas import (
+    AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, EventIn
+)
 from app.api.deps import get_current_device, get_current_access
 from app.api.routes.events import create_event
 
@@ -59,7 +61,6 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
         else:
             event_id = previous_alert[0]['event_id']
         payload.event_id = event_id
-
 
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)

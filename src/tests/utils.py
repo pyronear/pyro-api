@@ -22,5 +22,6 @@ def update_only_datetime(entity_as_dict):
 def parse_time(d):
     return datetime.strptime(d, DATETIME_FORMAT)
 
+
 def ts_to_string(ts):
     return datetime.strftime(ts, DATETIME_FORMAT)
