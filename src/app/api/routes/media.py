@@ -12,8 +12,6 @@ from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOu
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.security import hash_content_file
 from app.services import bucket_service, resolve_bucket_key
-from app.api.crud.authorizations import is_access_in_group, is_admin_access, check_group_access
-from app.api.crud.accesses import get_access_group_id
 
 
 router = APIRouter()
@@ -64,7 +62,8 @@ async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_curr
     Based on a media_id, retrieves information about the specified media
     """
     entry = await crud.get_entry(media, media_id)
-    await check_group_access(requester.access_id, entry.get("group_id"))
+    # TODO: would need to retrieve group_id
+    # await check_group_access(requester.access_id, entry.get("group_id"))
     return await entry
 
 

@@ -9,8 +9,6 @@ from app.api import crud
 from app.db import sites, SiteType
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_access_in_group, is_admin_access, check_group_access
-from app.api.crud.accesses import get_access_group_id
 
 
 router = APIRouter()
@@ -34,12 +32,6 @@ async def create_noalert_site(payload: SiteBase,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    if ((payload.get("group_id") is not None) and
-        (not is_admin_access(requester.access_id)) and
-        (is_access_in_group(requester.access_id, payload.get("group_id")))):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You can't specify another group")
-    elif payload.get("group_id") is None:
-        payload.group_id = get_access_group_id(requester.access_id)
 
     return await crud.create_entry(sites, SiteIn(**payload.dict(), type=SiteType.no_alert))
 
@@ -51,7 +43,6 @@ async def get_site(site_id: int = Path(..., gt=0),
     Based on a site_id, retrieves information about the specified site
     """
     entry = await crud.get_entry(sites, site_id)
-    await check_group_access(requester.access_id, entry.get("group_id"))
     return entry
 
 
@@ -61,8 +52,6 @@ async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.
     Retrieves the list of all sites and their information
     """
     group_filtering = {}
-    if (not await is_admin_access(requester.access_id)):
-        group_filtering = {"group_id": get_access_group_id(requester.access_id)}
     return await crud.fetch_all(sites, group_filtering)
 
 
