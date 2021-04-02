@@ -13,27 +13,30 @@ from app.db import accesses
 
 
 async def is_in_same_group(table: Table, entry_id: int, group_id: int) -> bool:
-    user_or_device = await crud.groups.get_entity_group_id(table, entry_id)
-    return await is_access_in_group(user_or_device.access_id, group_id)
+    entity_group_id = await crud.groups.get_entity_group_id(table, entry_id)
+    return entity_group_id == group_id
 
 
 async def is_access_in_group(access_id: int, group_id: int) -> bool:
-    access = await crud.base.get_entry(accesses, access_id)
-    return await are_same_group(access.group_id, group_id)
-
-
-def are_same_group(group_id_a: int, group_id_b: int) -> bool:
-    if group_id_a != group_id_b:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You don't belong to the same group")
-    return True
+    access_group_id = await crud.groups.get_entity_group_id(accesses, access_id)
+    return access_group_id == group_id
 
 
 async def is_admin_access(access_id: int) -> bool:
     access = await crud.base.get_entry(accesses, access_id)
-    return access.scope == AccessType.admin
+    return access["scope"] == AccessType.admin
 
 
-async def check_group_access(access_id: int, group_id: int) -> bool:
+async def check_group_read(access_id: int, group_id: int) -> bool:
     if (not await is_admin_access(access_id)) and not (await is_access_in_group(access_id, group_id)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You can't access this ressource")
+    return True
+
+
+async def check_group_update(access_id: int, group_id: int) -> bool:
+    if (
+            (group_id is not None)
+            and (not await is_admin_access(access_id)) 
+            and (not await is_access_in_group(access_id, group_id))):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You can't specify another group")
     return True
