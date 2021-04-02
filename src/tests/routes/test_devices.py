@@ -95,7 +95,7 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
             if device['access_id'] == ACCESS_TABLE[access_idx]['id']:
                 entry = device
                 break
-        assert response.json() == {k: v for k, v in device.items() if k != "access_id"}
+        assert response.json() == {k: v for k, v in entry.items() if k != "access_id"}
 
 
 @pytest.mark.parametrize(
