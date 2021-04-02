@@ -17,6 +17,8 @@ DATABASE_URL: str = os.getenv("DATABASE_URL")
 TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
 LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
+ALERT_RELAXATION_SECONDS: int = 5 * 60
+
 
 SECRET_KEY: str = secrets.token_urlsafe(32)
 if DEBUG:

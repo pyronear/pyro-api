@@ -15,6 +15,7 @@ from app.api.schemas import (
 )
 from app.api.deps import get_current_device, get_current_access
 from app.api.routes.events import create_event
+import app.config as cfg
 
 
 router = APIRouter()
@@ -40,7 +41,7 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
 
     if payload.event_id is None:
         # check whether there is an alert in the last 5 min by the same device
-        max_ts = datetime.utcnow() - timedelta(minutes=5)
+        max_ts = datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS)
         query = (
             alerts.select()
             .where(
