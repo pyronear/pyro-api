@@ -60,6 +60,14 @@ async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_us
     return await crud.get_entry(devices, device_id)
 
 
+@router.get("/me", response_model=DeviceOut, summary="Get information about the current device")
+async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["device"])):
+    """
+    Retrieves information about the current device
+    """
+    return me
+
+
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
 async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
     """
