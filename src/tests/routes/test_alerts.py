@@ -218,16 +218,18 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    "access_idx, payload, expected_event_id, status_code, status_details",
     [
-        [0, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
-        [1, {"event_id": 2, "lat": 10., "lon": 8.}, 401, "Permission denied"],
-        [2, {"event_id": 2, "lat": 10., "lon": 8.}, 201, None],
+        [0, {"event_id": 2, "lat": 10., "lon": 8.}, None, 401, "Permission denied"],
+        [1, {"event_id": 2, "lat": 10., "lon": 8.}, None, 401, "Permission denied"],
+        [2, {"event_id": 2, "lat": 10., "lon": 8.}, None, 201, None],
+        [2, {"lat": 10., "lon": 8.}, 3, 201, None],
+        [3, {"lat": 10., "lon": 8.}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
 async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
-                                      access_idx, payload, status_code, status_details):
+                                      access_idx, payload, expected_event_id, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -249,6 +251,8 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
         test_response = {"id": len(ALERT_TABLE) + 1,
                          "device_id": device_id, **payload,
                          "media_id": None, "is_acknowledged": False, "azimuth": None}
+        if isinstance(expected_event_id, int):
+            test_response['event_id'] = expected_event_id
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
