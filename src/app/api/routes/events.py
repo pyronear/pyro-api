@@ -24,8 +24,7 @@ async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[
 
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
-async def get_event(event_id: int = Path(..., gt=0),
-                    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])):
+async def get_event(event_id: int = Path(..., gt=0)):
     """
     Based on a event_id, retrieves information about the specified event
     """

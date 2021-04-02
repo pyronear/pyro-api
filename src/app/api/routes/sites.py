@@ -26,7 +26,7 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[Ac
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
 async def create_noalert_site(payload: SiteBase,
-                              requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+                              _=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -37,8 +37,7 @@ async def create_noalert_site(payload: SiteBase,
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
-async def get_site(site_id: int = Path(..., gt=0),
-                   requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def get_site(site_id: int = Path(..., gt=0)):
     """
     Based on a site_id, retrieves information about the specified site
     """
@@ -47,12 +46,11 @@ async def get_site(site_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
-async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def fetch_sites():
     """
     Retrieves the list of all sites and their information
     """
-    group_filtering = {}
-    return await crud.fetch_all(sites, group_filtering)
+    return await crud.fetch_all(sites)
 
 
 @router.put("/{site_id}/", response_model=SiteOut, summary="Update information about a specific site")

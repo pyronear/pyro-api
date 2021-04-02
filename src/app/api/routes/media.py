@@ -61,10 +61,9 @@ async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_curr
     """
     Based on a media_id, retrieves information about the specified media
     """
-    entry = await crud.get_entry(media, media_id)
     # TODO: would need to retrieve group_id
     # await check_group_access(requester.access_id, entry.get("group_id"))
-    return await entry
+    return await crud.get_entry(media, media_id)
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
