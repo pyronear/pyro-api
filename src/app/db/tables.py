@@ -100,6 +100,7 @@ devices = Table(
     Column("owner_id", Integer, ForeignKey("users.id")),
     Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
     Column("specs", String(50)),
+    Column("software_hash", String(16), default=None, nullable=True),
     Column("angle_of_view", Float(2, asdecimal=True)),
     Column("elevation", Float(1, asdecimal=True), default=None, nullable=True),
     Column("lat", Float(4, asdecimal=True), default=None, nullable=True),
