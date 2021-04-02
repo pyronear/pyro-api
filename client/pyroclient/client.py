@@ -8,7 +8,7 @@ from requests.models import Response
 import logging
 from urllib.parse import urljoin
 import io
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .exceptions import HTTPRequestException
 
@@ -82,8 +82,14 @@ class Client:
         """
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
-    def update_my_location(self, lat: float = None, lon: float = None,
-                           elevation: float = None, yaw: float = None, pitch: float = None) -> Response:
+    def update_my_location(
+        self,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None,
+        elevation: Optional[float] = None,
+        yaw: Optional[float] = None,
+        pitch: Optional[float] = None
+    ) -> Response:
         """Updates the location of the device
 
         Example::
@@ -157,7 +163,14 @@ class Client:
                    "geocode": geocode}
         return requests.post(self.routes["no-alert-site"], headers=self.headers, json=payload)
 
-    def send_alert(self, lat: float, lon: float, event_id: int, device_id: int, media_id: int = None) -> Response:
+    def send_alert(
+        self,
+        lat: float,
+        lon: float,
+        device_id: int,
+        event_id: Optional[int] = None,
+        media_id: Optional[int] = None
+    ) -> Response:
         """Raise an alert to the API.
 
         Example::
@@ -186,7 +199,13 @@ class Client:
 
         return requests.post(self.routes["send-alert"], headers=self.headers, json=payload)
 
-    def send_alert_from_device(self, lat: float, lon: float, event_id: int, media_id: int = None) -> Response:
+    def send_alert_from_device(
+        self,
+        lat: float,
+        lon: float,
+        event_id: Optional[int] = None,
+        media_id: Optional[int] = None
+    ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
 
         Example::
