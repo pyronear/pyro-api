@@ -11,8 +11,8 @@ from fastapi import HTTPException, status
 from app.api import crud
 from app.api.schemas import AccessType
 from app.db import (
-    accesses, users, accesses, groups,
-    sites, events, devices, media, 
+    accesses, users, groups,
+    sites, events, devices, media,
     installations, alerts)
 
 

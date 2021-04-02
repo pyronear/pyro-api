@@ -36,7 +36,7 @@ async def check_group_read(access_id: int, group_id: int) -> bool:
 async def check_group_update(access_id: int, group_id: int) -> bool:
     if (
             (group_id is not None)
-            and (not await is_admin_access(access_id)) 
+            and (not await is_admin_access(access_id))
             and (not await is_access_in_group(access_id, group_id))):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You can't specify another group")
     return True

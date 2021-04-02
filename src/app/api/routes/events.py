@@ -60,7 +60,6 @@ async def update_event(
     """
     Based on a event_id, updates information about the specified event
     """
-    
     return await crud.update_entry(events, payload, event_id)
 
 

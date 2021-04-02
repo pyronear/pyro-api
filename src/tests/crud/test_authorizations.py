@@ -144,7 +144,6 @@ async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_
     assert admin_access_result == expected_result
 
 
-
 @pytest.mark.parametrize(
     "access_id, group_id, should_raise",
     [
