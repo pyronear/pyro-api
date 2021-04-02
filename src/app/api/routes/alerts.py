@@ -156,7 +156,7 @@ async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=["admin"]))
         .where(
             alerts.c.event_id.in_(
                 select([events.c.id])
-                .where(events.c.end_ts.isnot(None))
+                .where(events.c.end_ts.is_(None))
             )
         )
     )
