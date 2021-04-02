@@ -5,17 +5,13 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media
-from app.api.schemas import (
-    AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut, EventIn
-)
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
 from app.api.deps import get_current_device, get_current_access
-from app.api.routes.events import create_event
-import app.config as cfg
 
 
 router = APIRouter()
@@ -39,32 +35,12 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
     or "Example Value" to get a concrete idea of arguments
     """
 
-    if payload.event_id is None:
-        # check whether there is an alert in the last 5 min by the same device
-        max_ts = datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS)
-        query = (
-            alerts.select()
-            .where(
-                and_(
-                    alerts.c.device_id == payload.device_id,
-                    alerts.c.created_at >= max_ts
-                )
-            )
-            .limit(1)
-        )
-
-        previous_alert = await crud.base.database.fetch_all(query=query)
-        if len(previous_alert) == 0:
-            # Create an event & get the ID
-            event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
-            event_id = event['id']
-        # Get event ref
-        else:
-            event_id = previous_alert[0]['event_id']
-        payload.event_id = event_id
-
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
+
+    if payload.event_id is None:
+        payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
+
     return await crud.create_entry(alerts, payload)
 
 
@@ -78,9 +54,8 @@ async def create_alert_from_device(payload: AlertBase,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    if payload.media_id is not None:
-        await check_media_existence(payload.media_id)
-    return await crud.create_entry(alerts, AlertIn(**payload.dict(), device_id=device.id))
+
+    return await create_alert(AlertIn(**payload.dict(), device_id=device.id))
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
