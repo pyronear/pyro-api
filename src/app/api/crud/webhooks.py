@@ -4,8 +4,9 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
+from sqlalchemy import select
 
-from app.api import crud
+from app.api.crud import database
 from app.db import webhooks
 
 
@@ -16,4 +17,4 @@ async def fetch_webhook_urls(route: str) -> List[str]:
         .where(webhooks.c.callback == route)
     )
 
-    return await crud.base.database.fetch_all(query=query)
+    return await database.fetch_all(query=query)
