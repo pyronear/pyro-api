@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, Path, Security
 from app.api import crud
 from app.db import groups
-from app.api.schemas import GroupIn, GroupOut
+from app.api.schemas import GroupIn, GroupOut, AccessType
 from app.api.deps import get_current_access
 
 
@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=GroupOut, status_code=201, summary="Create a new group")
-async def create_group(payload: GroupIn, _=Security(get_current_access, scopes=["admin"])):
+async def create_group(payload: GroupIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new group based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -44,7 +44,7 @@ async def fetch_groups():
 async def update_group(
     payload: GroupIn,
     group_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=["admin"])
+    _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a group_id, updates information about the specified group
@@ -53,7 +53,7 @@ async def update_group(
 
 
 @router.delete("/{group_id}/", response_model=GroupOut, summary="Delete a specific group")
-async def delete_group(group_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def delete_group(group_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a group_id, deletes the specified group
     """

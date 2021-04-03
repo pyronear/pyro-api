@@ -18,6 +18,7 @@ from app.api.schemas import (
     UserRead,
     DefaultPosition,
     Cred,
+    AccessType
 )
 from app.api.deps import get_current_device, get_current_user
 
@@ -26,7 +27,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201, summary="Create a new device")
-async def register_device(payload: DeviceAuth, _=Security(get_current_user, scopes=["admin"])):
+async def register_device(payload: DeviceAuth, _=Security(get_current_user, scopes=[AccessType.admin])):
     """Creates a new device based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -40,7 +41,7 @@ async def register_device(payload: DeviceAuth, _=Security(get_current_user, scop
 @router.post("/register", response_model=DeviceOut, status_code=201, summary="Register your device")
 async def register_my_device(
     payload: MyDeviceAuth,
-    me: UserRead = Security(get_current_user, scopes=["admin", "user"])
+    me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
     """Creates a new device with the current user being the owner based on the given information
 
@@ -52,7 +53,7 @@ async def register_my_device(
 
 
 @router.get("/{device_id}/", response_model=DeviceOut, summary="Get information about a specific device")
-async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Based on a device_id, retrieves information about the specified device
     """
@@ -60,7 +61,7 @@ async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_us
 
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
-async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
+async def fetch_devices(_=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Retrieves the list of all devices and their information
     """
@@ -69,7 +70,7 @@ async def fetch_devices(_=Security(get_current_user, scopes=["admin"])):
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
 async def update_device(
-    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
+    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates information about the specified device
@@ -78,7 +79,7 @@ async def update_device(
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
-async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])):
+async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
     """
     Based on a device_id, deletes the specified device
     """
@@ -88,7 +89,7 @@ async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current
 @router.get(
     "/my-devices", response_model=List[DeviceOut], summary="Get the list of all devices belonging to the current user"
 )
-async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["admin", "user"])):
+async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])):
     """
     Retrieves the list of all devices and the information which are owned by the current user
     """
@@ -96,7 +97,7 @@ async def fetch_my_devices(me: UserRead = Security(get_current_user, scopes=["ad
 
 
 @router.put("/heartbeat", response_model=DeviceOut, summary="Update the last ping of the current device")
-async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])):
     """
     Updates the last ping of the current device with the current datetime
     """
@@ -109,7 +110,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=["de
 async def update_device_location(
     payload: DefaultPosition,
     device_id: int = Path(..., gt=0),
-    user: UserRead = Security(get_current_user, scopes=["admin", "user"]),
+    user: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user]),
 ):
     """
     Based on a device_id, updates the location of the specified device
@@ -127,7 +128,7 @@ async def update_device_location(
 
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
 async def update_my_location(
-    payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=["device"])
+    payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
 ):
     """
     Updates the location of the current device
@@ -141,7 +142,7 @@ async def update_my_location(
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut, summary="Update the password of a specific device")
 async def update_device_password(
-    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=["admin"])
+    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates the password of the specified device
