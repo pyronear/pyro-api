@@ -11,16 +11,16 @@ from pydantic import ValidationError
 from app.api import crud
 from app.db import accesses, users, devices
 import app.config as cfg
-from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead
+from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead, AccessType
 
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="login/access-token",
     scopes={
-        "user": "Read information about the current user.",
-        "admin": "Admin rights on all routes.",
-        "device": "Send heartbeat signal and media to the API for only one device"
+        AccessType.user: "Read information about the current user.",
+        AccessType.admin: "Admin rights on all routes.",
+        AccessType.device: "Send heartbeat signal and media to the API for only one device"
     }
 )
 
@@ -71,7 +71,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, {'access_id': access.id})
     if user is None:
-        raise HTTPException(status_code=400, detail="Permission denied")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
 
     return UserRead(**user)
 
@@ -79,6 +79,6 @@ async def get_current_user(access: AccessRead = Depends(get_current_access)) -> 
 async def get_current_device(access: AccessRead = Depends(get_current_access)) -> DeviceOut:
     device = await crud.fetch_one(devices, {'access_id': access.id})
     if device is None:
-        raise HTTPException(status_code=400, detail="Permission denied")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
 
     return DeviceOut(**device)

@@ -9,7 +9,7 @@ from sqlalchemy import and_, or_
 from datetime import datetime
 from app.api import crud
 from app.db import installations, database
-from app.api.schemas import InstallationOut, InstallationIn
+from app.api.schemas import InstallationOut, InstallationIn, AccessType
 from app.api.deps import get_current_access
 
 
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=InstallationOut, status_code=201, summary="Create a new installation")
-async def create_installation(payload: InstallationIn, _=Security(get_current_access, scopes=["admin"])):
+async def create_installation(payload: InstallationIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new installation based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -28,7 +28,8 @@ async def create_installation(payload: InstallationIn, _=Security(get_current_ac
 
 @router.get("/{installation_id}/", response_model=InstallationOut,
             summary="Get information about a specific installation")
-async def get_installation(installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def get_installation(installation_id: int = Path(..., gt=0),
+                           _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a installation_id, retrieves information about the specified installation
     """
@@ -36,7 +37,7 @@ async def get_installation(installation_id: int = Path(..., gt=0), _=Security(ge
 
 
 @router.get("/", response_model=List[InstallationOut], summary="Get the list of all installations")
-async def fetch_installations(_=Security(get_current_access, scopes=["admin"])):
+async def fetch_installations(_=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Retrieves the list of all installations and their information
     """
@@ -48,7 +49,7 @@ async def fetch_installations(_=Security(get_current_access, scopes=["admin"])):
 async def update_installation(
     payload: InstallationIn,
     installation_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=["admin"])
+    _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a installation_id, updates information about the specified installation
@@ -57,7 +58,8 @@ async def update_installation(
 
 
 @router.delete("/{installation_id}/", response_model=InstallationOut, summary="Delete a specific installation")
-async def delete_installation(installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def delete_installation(installation_id: int = Path(..., gt=0),
+                              _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a installation_id, deletes the specified installation
     """
@@ -66,7 +68,8 @@ async def delete_installation(installation_id: int = Path(..., gt=0), _=Security
 
 @router.get("/site-devices/{site_id}", response_model=List[int],
             summary="Get all devices related to a specific site")
-async def get_active_devices_on_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def get_active_devices_on_site(site_id: int = Path(..., gt=0),
+                                     _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
