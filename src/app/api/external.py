@@ -5,7 +5,7 @@
 
 import requests
 from pydantic import BaseModel
-from typing import Any, Optional
+from typing import Optional
 
 
 def post_request(url: str, payload: Optional[BaseModel] = None) -> requests.Response:
