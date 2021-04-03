@@ -35,7 +35,7 @@ async def check_media_existence(media_id):
         )
 
 
-def alert_notification(payload: AlertOut):
+async def alert_notification(payload: AlertOut):
     # Fetch URLs that required POST upon route completion
     webhook_urls = await crud.webhooks.fetch_webhook_urls("create_alert")
     # Post the payload to each URL
