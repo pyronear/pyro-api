@@ -4,13 +4,15 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, HTTPException, status
+from fastapi import APIRouter, Path, Security, HTTPException, status, BackgroundTasks
 from sqlalchemy import select
+from functools import partial
 
 from app.api import crud
 from app.db import alerts, events, media
 from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, Ackowledgement, AcknowledgementOut
 from app.api.deps import get_current_device, get_current_access
+from app.api.external import post_request
 
 
 router = APIRouter()
@@ -25,17 +27,19 @@ async def check_media_existence(media_id):
         )
 
 
-alert_callback_router = APIRouter()
-
-@alert_callback_router.post(
-    "{$callback_url}/invoices/{$request.body.id}", response_model=AlertOut
-)
-def alert_notification(body: AlertOut):
-    pass
+def alert_notification(payload: AlertOut):
+    # Fetch URLs that required POST upon route completion
+    webhook_urls = await crud.webhooks.fetch_webhook_urls("create_alert")
+    # Post the payload to each URL
+    map(partial(post_request, payload=payload), webhook_urls)
 
 
-@router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert", callbacks=alert_callback_router.routes)
-async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=["admin"]), callback_url: Optional[HttpUrl] = None):
+@router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert")
+async def create_alert(
+    payload: AlertIn,
+    background_tasks: BackgroundTasks,
+    _=Security(get_current_access, scopes=["admin"]),
+):
     """
     Creates a new alert based on the given information
 
@@ -44,13 +48,19 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
     """
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
-    return await crud.create_entry(alerts, payload)
+
+    alert = await crud.create_entry(alerts, payload)
+    # Send notification
+    background_tasks.add_task(alert_notification, alert)
+    return alert
 
 
 @router.post("/from-device", response_model=AlertOut, status_code=201,
              summary="Create an alert related to the authentified device")
-async def create_alert_from_device(payload: AlertBase,
-                                   device: DeviceOut = Security(get_current_device, scopes=["device"])):
+async def create_alert_from_device(
+    payload: AlertBase,
+    device: DeviceOut = Security(get_current_device, scopes=["device"]),
+):
     """
     Creates an alert related to the authentified device, uses its device_id as argument
 
