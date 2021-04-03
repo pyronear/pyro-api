@@ -5,10 +5,10 @@
 
 import requests
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 
-def post_request(url: str, payload: BaseModel) -> requests.Response:
+def post_request(url: str, payload: Optional[BaseModel] = None) -> requests.Response:
     """Performs a POST request to a given URL
 
     Args:
@@ -17,4 +17,5 @@ def post_request(url: str, payload: BaseModel) -> requests.Response:
     Returns:
         HTTP response
     """
-    return requests.post(url, headers={"Content-Type": "application/json"}, json=payload)
+    kwargs = {} if payload is None else {"json": payload}
+    return requests.post(url, headers={"Content-Type": "application/json"}, **kwargs)
