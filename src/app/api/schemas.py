@@ -245,5 +245,6 @@ class WebhookIn(BaseModel):
     callback: str = Field(..., max_length=50)
     url: HttpUrl
 
+
 class WebhookOut(WebhookIn, _Id):
     pass
