@@ -6,7 +6,7 @@
 from typing import List
 from sqlalchemy import select
 
-from app.api.crud import database
+from app.api import crud
 from app.db import webhooks
 
 
@@ -17,4 +17,4 @@ async def fetch_webhook_urls(route: str) -> List[str]:
         .where(webhooks.c.callback == route)
     )
 
-    return await database.fetch_all(query=query)
+    return await crud.base.database.fetch_all(query=query)
