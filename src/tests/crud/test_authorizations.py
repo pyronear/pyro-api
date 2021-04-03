@@ -7,6 +7,7 @@ import json
 import pytest
 from datetime import datetime
 
+from fastapi import HTTPException
 from app import db
 from app.api import crud
 from tests.db_utils import get_entry, fill_table
@@ -156,7 +157,7 @@ async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_
 @pytest.mark.asyncio
 async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
     if should_raise:
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException):
             await crud.authorizations.check_group_read(access_id, group_id)
     else:
         await crud.authorizations.check_group_read(access_id, group_id)
@@ -177,7 +178,7 @@ async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group
 @pytest.mark.asyncio
 async def test_check_group_update(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
     if should_raise:
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException):
             await crud.authorizations.check_group_update(access_id, group_id)
     else:
         await crud.authorizations.check_group_update(access_id, group_id)

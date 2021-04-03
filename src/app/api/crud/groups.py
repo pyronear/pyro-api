@@ -70,7 +70,7 @@ async def _get_media_group_id(entry_id: int) -> int:
 
 async def _get_installation_group_id(entry_id: int) -> int:
     entry = await crud.base.get_entry(installations, entry_id)
-    return await _get_device_group_id(entry["device_id"])
+    return await _get_site_group_id(entry["site_id"])
 
 
 async def _get_alert_group_id(entry_id: int) -> int:
