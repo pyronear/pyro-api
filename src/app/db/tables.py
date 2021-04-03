@@ -4,8 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import enum
-from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
-                        ForeignKey, MetaData)
+from sqlalchemy import Column, DateTime, Integer, Float, String, Table, Enum, Boolean, ForeignKey, MetaData
 from sqlalchemy.sql import func
 
 
@@ -160,5 +159,5 @@ webhooks = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("callback", String(50), nullable=False),
-    Column("url", String(100), nullable=False,
+    Column("url", String(100), nullable=False),
 )
