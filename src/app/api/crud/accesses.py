@@ -22,6 +22,10 @@ from app.api.schemas import (
 )
 
 
+async def get_access_group_id(table: Table, access_id: int) -> int:
+    return await base.get_entry(table, access_id)["group_id"]
+
+
 async def check_login_existence(table: Table, login: str):
     """Check that the login does not already exist, raises a 400 exception if do so."""
     if await base.fetch_one(table, {"login": login}) is not None:

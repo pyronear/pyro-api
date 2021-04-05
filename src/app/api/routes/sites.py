@@ -4,10 +4,10 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, status, HTTPException
 from app.api import crud
 from app.db import sites, SiteType
-from app.api.schemas import SiteOut, SiteIn, SiteBase
+from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
 
 
@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
-async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=["admin"])):
+async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -25,7 +25,8 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=["a
 
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
-async def create_noalert_site(payload: SiteBase, _=Security(get_current_access, scopes=["user", "admin"])):
+async def create_noalert_site(payload: SiteBase,
+                              _=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -40,10 +41,11 @@ async def get_site(site_id: int = Path(..., gt=0)):
     """
     Based on a site_id, retrieves information about the specified site
     """
-    return await crud.get_entry(sites, site_id)
+    entry = await crud.get_entry(sites, site_id)
+    return entry
 
 
-@router.get("/", response_model=List[SiteOut], summary="Get the list of all sites")
+@router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
 async def fetch_sites():
     """
     Retrieves the list of all sites and their information
@@ -55,7 +57,7 @@ async def fetch_sites():
 async def update_site(
     payload: SiteIn,
     site_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=["admin"])
+    _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a site_id, updates information about the specified site
@@ -64,7 +66,7 @@ async def update_site(
 
 
 @router.delete("/{site_id}/", response_model=SiteOut, summary="Delete a specific site")
-async def delete_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=["admin"])):
+async def delete_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a site_id, deletes the specified site
     """
