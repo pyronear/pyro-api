@@ -219,7 +219,7 @@ class AlertMediaId(BaseModel):
 
 
 class AlertBase(_FlatLocation, AlertMediaId):
-    event_id: int = Field(..., gt=0)
+    event_id: int = Field(None, gt=0)
     is_acknowledged: bool = Field(False)
     azimuth: float = Field(default=None, gt=0, lt=360)
 

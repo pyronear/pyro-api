@@ -6,6 +6,7 @@
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status
 from sqlalchemy import select
+from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media
@@ -41,8 +42,13 @@ async def create_alert(payload: AlertIn, _=Security(get_current_access, scopes=[
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
+
+    if payload.event_id is None:
+        payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
+
     return await crud.create_entry(alerts, payload)
 
 
@@ -56,9 +62,8 @@ async def create_alert_from_device(payload: AlertBase,
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    if payload.media_id is not None:
-        await check_media_existence(payload.media_id)
-    return await crud.create_entry(alerts, AlertIn(**payload.dict(), device_id=device.id))
+
+    return await create_alert(AlertIn(**payload.dict(), device_id=device.id))
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
@@ -136,7 +141,7 @@ async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=[AccessType
         .where(
             alerts.c.event_id.in_(
                 select([events.c.id])
-                .where(events.c.end_ts.isnot(None))
+                .where(events.c.end_ts.is_(None))
             )
         )
     )
