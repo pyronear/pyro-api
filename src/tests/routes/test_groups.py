@@ -19,9 +19,10 @@ GROUP_TABLE = [
 
 
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 
@@ -31,8 +32,8 @@ GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.groups, GROUP_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 
 @pytest.mark.parametrize(

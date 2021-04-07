@@ -42,7 +42,7 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scope", Enum(AccessType), default=AccessType.user, nullable=False),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id"), nullable=False),
 )
 
 groups = Table(
@@ -64,7 +64,7 @@ sites = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("name", String(50)),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id"), nullable=False),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("country", String(5), nullable=False),

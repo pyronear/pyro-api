@@ -24,6 +24,10 @@ class _Id(BaseModel):
     id: int = Field(..., gt=0)
 
 
+class _GroupId(BaseModel):
+    group_id: int = Field(..., gt=0)
+
+
 # Accesses
 class Login(BaseModel):
     login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
@@ -37,9 +41,8 @@ class CredHash(BaseModel):
     hashed_password: str
 
 
-class AccessBase(Login):
+class AccessBase(Login, _GroupId):
     scope: AccessType = AccessType.user
-    group_id: int = Field(None, gt=0)
 
 
 class AccessAuth(AccessBase, Cred):
@@ -65,7 +68,7 @@ class UserRead(UserInfo, _CreatedAt, _Id):
     pass
 
 
-class UserAuth(UserInfo, Cred):
+class UserAuth(UserInfo, Cred, _GroupId):
     # Authentication request
     scope: AccessType = AccessType.user
 
@@ -167,7 +170,7 @@ class MyDeviceAuth(MyDeviceIn, Cred):
     scope: AccessType = AccessType.device
 
 
-class DeviceAuth(DeviceIn, Cred):
+class DeviceAuth(DeviceIn, Cred, _GroupId):
     scope: AccessType = AccessType.device
 
 

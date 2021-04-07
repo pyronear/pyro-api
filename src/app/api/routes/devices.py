@@ -21,6 +21,7 @@ from app.api.schemas import (
     AccessType
 )
 from app.api.deps import get_current_device, get_current_user
+from app.api.crud.groups import get_entity_group_id
 
 
 router = APIRouter()
@@ -48,7 +49,7 @@ async def register_my_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id)
+    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id, group_id=get_entity_group_id(accesses, me.access_id))
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 
