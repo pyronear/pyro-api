@@ -28,7 +28,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201, summary="Create a new device")
-async def register_device(payload: DeviceAuth, _=Security(get_current_user, scopes=[AccessType.admin])):
+async def register_device(payload: DeviceAuth, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new device based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -54,7 +54,7 @@ async def register_my_device(
 
 
 @router.get("/{device_id}/", response_model=DeviceOut, summary="Get information about a specific device")
-async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
+async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a device_id, retrieves information about the specified device
     """
@@ -70,7 +70,7 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
-async def fetch_devices(_=Security(get_current_user, scopes=[AccessType.admin])):
+async def fetch_devices(_=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Retrieves the list of all devices and their information
     """
@@ -79,7 +79,7 @@ async def fetch_devices(_=Security(get_current_user, scopes=[AccessType.admin]))
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
 async def update_device(
-    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
+    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates information about the specified device
@@ -88,7 +88,7 @@ async def update_device(
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
-async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])):
+async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a device_id, deletes the specified device
     """
@@ -166,7 +166,7 @@ async def update_device_hash(
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut, summary="Update the password of a specific device")
 async def update_device_password(
-    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
+    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates the password of the specified device
