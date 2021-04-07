@@ -154,9 +154,9 @@ async def update_my_hash(
     payload: SoftwareHash, device: DeviceOut = Security(get_current_device, scopes=["device"])
 ):
     """
-    Updates the location of the current device
+    Updates the expected software hash of the device
     """
-    # Update only the position
+    # Update only the corresponding field
     for k, v in payload.dict().items():
         setattr(device, k, v)
     await crud.update_entry(devices, device, device.id)
