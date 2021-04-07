@@ -21,7 +21,7 @@ from app.api.schemas import (
     SoftwareHash,
     AccessType
 )
-from app.api.deps import get_current_device, get_current_user
+from app.api.deps import get_current_device, get_current_user, get_current_access
 
 
 router = APIRouter()
@@ -149,17 +149,18 @@ async def update_my_location(
     return device
 
 
-@router.put("/hash", response_model=DeviceOut, summary="Update the software hash of the current device")
-async def update_my_hash(
-    payload: SoftwareHash, device: DeviceOut = Security(get_current_device, scopes=["device"])
+@router.put("/{device_id}/hash", response_model=DeviceOut, summary="Update the software hash of a specific device")
+async def update_device_hash(
+    payload: SoftwareHash, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Updates the expected software hash of the device
     """
+    device = await crud.get_entry(devices, device_id)
     # Update only the corresponding field
-    for k, v in payload.dict().items():
-        setattr(device, k, v)
-    await crud.update_entry(devices, device, device.id)
+    device.update(payload.dict())
+    device = DeviceOut(**device)
+    await crud.update_entry(devices, device, device_id)
     return device
 
 
