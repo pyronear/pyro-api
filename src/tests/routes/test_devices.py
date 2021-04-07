@@ -351,35 +351,32 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    "access_idx, payload, device_id, status_code, status_details",
     [
-        [0, {"software_hash": "my_sha256hash"}, 401, "Permission denied"],
-        [1, {"software_hash": "my_sha256hash"}, 401, "Permission denied"],
-        [2, {"software_hash": "my_sha256hash"}, 200, None],
-        [3, {"software_hash": "my_sha256hash"}, 200, None],
-        [3, {}, 422, None],
-        [3, {"software_hash": "my_hash"}, 422, None],
-        [3, {"software_hash": "my_way_too_long_sha26_hash"}, 422, None],
+        [0, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [1, {"software_hash": "my_sha256hash"}, 1, 200, None],
+        [2, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [3, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [1, {}, 1, 422, None],
+        [1, {"software_hash": "my_hash"}, 1, 422, None],
+        [1, {"software_hash": "my_way_too_long_sha26_hash"}, 1, 422, None],
+        [1, {"software_hash": "my_sha256hash"}, 0, 422, None],
+        [1, {"software_hash": "my_sha256hash"}, 999, 404, "Entry not found"],
     ],
 )
 @pytest.mark.asyncio
-async def test_update_my_hash(test_app_asyncio, init_test_db, test_db,
-                              access_idx, payload, status_code, status_details):
+async def test_update_device_hash(test_app_asyncio, init_test_db, test_db,
+                                  access_idx, payload, device_id, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    response = await test_app_asyncio.put("/devices/hash", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/hash", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        device_id = None
-        for device in DEVICE_TABLE:
-            if device['access_id'] == ACCESS_TABLE[access_idx]['id']:
-                device_id = device["id"]
-                break
         updated_device = await get_entry(test_db, db.devices, device_id)
         updated_device = dict(**updated_device)
         assert updated_device['software_hash'] == payload['software_hash']
