@@ -57,4 +57,4 @@ async def delete_group(group_id: int = Path(..., gt=0), _=Security(get_current_a
     """
     Based on a group_id, deletes the specified group
     """
-    return await crud.delete_entry(groups, group_id)
+    return await crud.groups.delete_group(group_id)

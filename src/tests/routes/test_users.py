@@ -124,12 +124,12 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
-        [1, {"login": "fourth_user", "password": "third_pwd"}, 201, None],
-        [2, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
-        [1, {"login": "first_login", "password": "pwd"}, 400, "An entry with login='first_login' already exists."],
-        [1, {"login": "fourth_user"}, 422, None],
-        [1, {"logins": "fourth_user", "password": "third_pwd"}, 422, None],
+        [0, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 401, "Permission denied"],
+        [1, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 201, None],
+        [2, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 401, "Permission denied"],
+        [1, {"login": "first_login", "password": "pwd", "group_id": 1}, 400, "An entry with login='first_login' already exists."],
+        [1, {"login": "fourth_user", "group_id": 1}, 422, None],
+        [1, {"logins": "fourth_user", "password": "third_pwd", "group_id": 1}, 422, None],
     ],
 )
 @pytest.mark.asyncio
