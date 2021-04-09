@@ -44,7 +44,6 @@ ACCESS_TABLE = [
 ]
 
 
-
 GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
@@ -57,7 +56,6 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
-
 
 
 @pytest.mark.parametrize(
