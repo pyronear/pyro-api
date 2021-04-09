@@ -71,6 +71,7 @@ async def create_alert(
              summary="Create an alert related to the authentified device")
 async def create_alert_from_device(
     payload: AlertBase,
+    background_tasks: BackgroundTasks,
     device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
 ):
     """
@@ -80,7 +81,7 @@ async def create_alert_from_device(
     or "Example Value" to get a concrete idea of arguments
     """
 
-    return await create_alert(AlertIn(**payload.dict(), device_id=device.id))
+    return await create_alert(AlertIn(**payload.dict(), device_id=device.id), background_tasks)
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
