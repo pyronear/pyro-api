@@ -37,11 +37,14 @@ async def register_device(payload: AdminDeviceAuth, _=Security(get_current_user,
     """
     if await crud.get(payload.owner_id, users) is None:
         raise HTTPException(status_code=404, detail=f"Unknown user for owner_id={payload.owner_id}")
-    device_payload = DeviceAuth(**payload.dict(), group_id=await get_entity_group_id(users, payload.owner_id))
-    return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
+    if payload.group_id is None:
+        payload = payload.dict()
+        payload["group_id"] = await get_entity_group_id(users, payload["owner_id"])
+        payload = DeviceAuth(**payload)
+    return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
-@router.post("/register", response_model=DeviceOut, status_code=201, summary="Register your device")
+@router.post("/register", response_model=DeviceOut, status_code=201, summary="Reg   ister your device")
 async def register_my_device(
     payload: MyDeviceAuth,
     me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])

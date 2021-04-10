@@ -170,11 +170,15 @@ class MyDeviceAuth(MyDeviceIn, Cred):
     scope: AccessType = AccessType.device
 
 
-class AdminDeviceAuth(DeviceIn, Cred):
+class CommonDeviceAuth(DeviceIn, Cred):
     scope: AccessType = AccessType.device
 
 
-class DeviceAuth(AdminDeviceAuth, _GroupId):
+class AdminDeviceAuth(CommonDeviceAuth):
+    group_id: int = Field(None, gt=0)  # Defined here as optionnal
+
+
+class DeviceAuth(CommonDeviceAuth, _GroupId):
     pass
 
 

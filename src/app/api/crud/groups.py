@@ -76,23 +76,3 @@ async def _get_installation_group_id(entry_id: int) -> int:
 async def _get_alert_group_id(entry_id: int) -> int:
     entry = await crud.base.get_entry(alerts, entry_id)
     return await _get_device_group_id(entry["device_id"])
-
-
-async def delete_group(group_id: int) -> None:
-    group_accesses = await crud.base.fetch_all(accesses, query_filters={"group_id": group_id})
-
-    async with crud.base.database.transaction():
-        # 1  Delete the devices
-        for access in group_accesses:
-            device = await crud.base.fetch_one(devices, {"access_id": access["id"]})
-            if device is not None:
-                await crud.accesses.delete_accessed_entry(devices, accesses, device["id"])
-        # 2  Delete the users
-        for access in group_accesses:
-            user = await crud.base.fetch_one(users, {"access_id": access["id"]})
-            if user is not None:
-                await crud.accesses.delete_accessed_entry(users, accesses, user["id"])
-
-        entry = await crud.base.get_entry(groups, group_id)
-        await crud.base.delete_entry(groups, group_id)
-        return entry
