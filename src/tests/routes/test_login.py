@@ -9,9 +9,14 @@ from app import db
 from app.api import crud, security
 from tests.db_utils import fill_table
 
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+    {"id": 2, "name": "second_group"}
+]
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scope": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scope": "user"},
+    {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scope": "user"},
+    {"id": 2, "group_id": 2, "login": "second_login", "hashed_password": "hashed_second_pwd", "scope": "user"},
 ]
 
 
@@ -19,6 +24,7 @@ ACCESS_TABLE = [
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
     monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
 
 

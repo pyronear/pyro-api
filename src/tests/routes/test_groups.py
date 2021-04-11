@@ -18,21 +18,44 @@ GROUP_TABLE = [
 ]
 
 
+USER_TABLE = [
+    {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "third_login2", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
+]
+
+
+DEVICE_TABLE = [
+    {"id": 1, "login": "third_login", "owner_id": 1,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "fourth_login", "owner_id": 3, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
+     "created_at": "2020-10-13T08:18:45.447773"},
+]
+
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "third_login2", "hashed_password": "hashed_pwd", "scope": "user"},
 ]
 
 
 GROUP_TABLE_FOR_DB = list(map(update_only_datetime, GROUP_TABLE))
+USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
+DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 
 
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.groups, GROUP_TABLE_FOR_DB)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(

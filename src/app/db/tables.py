@@ -23,7 +23,7 @@ users = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
-    Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
+    Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )
 
@@ -41,7 +41,7 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scope", Enum(AccessType), default=AccessType.user, nullable=False),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False),
 )
 
 groups = Table(
@@ -63,7 +63,7 @@ sites = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("name", String(50)),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("country", String(5), nullable=False),
@@ -97,7 +97,7 @@ devices = Table(
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
     Column("owner_id", Integer, ForeignKey("users.id")),
-    Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
+    Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
     Column("specs", String(50)),
     Column("angle_of_view", Float(2, asdecimal=True)),
     Column("elevation", Float(1, asdecimal=True), default=None, nullable=True),

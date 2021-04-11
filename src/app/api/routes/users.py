@@ -99,4 +99,6 @@ async def delete_user(user_id: int = Path(..., gt=0), _=Security(get_current_use
     """
     Based on a user_id, deletes the specified user
     """
+    # TODO: Doesn't work when there is a owned device
+    # It will yield an exception if the deleted user is the owner_id field of one device.
     return await crud.accesses.delete_accessed_entry(users, accesses, user_id)

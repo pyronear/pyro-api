@@ -40,14 +40,14 @@ async def update_login(accesses: Table, login: str, access_id: int):
     return await base.update_entry(accesses, Login(login=login), access_id)
 
 
-async def post_access(accesses: Table, login: str, password: str, scope: str) -> AccessRead:
+async def post_access(accesses: Table, login: str, password: str, scope: str, group_id: int) -> AccessRead:
     """Insert an access entry in the accesses table, call within a transaction to reuse returned access id."""
     await check_login_existence(accesses, login)
 
     # Hash the password
     pwd = await security.hash_password(password)
 
-    access = AccessCreation(login=login, hashed_password=pwd, scope=scope)
+    access = AccessCreation(login=login, hashed_password=pwd, scope=scope, group_id=group_id)
     entry = await base.create_entry(accesses, access)
 
     return AccessRead(**entry)
@@ -70,7 +70,7 @@ async def create_accessed_entry(
     """Create an access and refers it to a new entry (User, Device, ...)."""
     # Ensure database consistency between tables with a transaction
     async with base.database.transaction():
-        access_entry = await post_access(accesses, payload.login, payload.password, payload.scope)
+        access_entry = await post_access(accesses, payload.login, payload.password, payload.scope, payload.group_id)
         entry = await base.create_entry(table, schema(**payload.dict(), access_id=access_entry.id))
 
     return entry
