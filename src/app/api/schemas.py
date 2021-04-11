@@ -5,7 +5,7 @@
 
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, HttpUrl
 
 from app.db.tables import SiteType, EventType, MediaType, AccessType
 
@@ -237,4 +237,14 @@ class Ackowledgement(BaseModel):
 
 
 class AcknowledgementOut(Ackowledgement, _Id):
+    pass
+
+
+# Webhooks
+class WebhookIn(BaseModel):
+    callback: str = Field(..., max_length=50)
+    url: HttpUrl
+
+
+class WebhookOut(WebhookIn, _Id):
     pass

@@ -4,13 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import enum
-from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
-                        ForeignKey, MetaData)
+from sqlalchemy import Column, DateTime, Integer, Float, String, Table, Enum, Boolean, ForeignKey, MetaData
 from sqlalchemy.sql import func
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType',
-           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
+           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts', 'webhooks']
 
 
 # SQLAlchemy
@@ -152,4 +151,13 @@ alerts = Table(
     Column("lon", Float(4, asdecimal=True)),
     Column("is_acknowledged", Boolean, default=False),
     Column("created_at", DateTime, default=func.now()),
+)
+
+
+webhooks = Table(
+    "webhooks",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("callback", String(50), nullable=False),
+    Column("url", String(100), nullable=False),
 )
