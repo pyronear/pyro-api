@@ -58,7 +58,7 @@ def main(args):
     }
 
     # Create a site
-    payload = dict(name='first_site', country="FR", geocode="01", lat=44.1, lon=3.9)
+    payload = dict(name='first_site', country="FR", geocode="01", lat=44.1, lon=3.9, group_id=1)
     site_id = api_request('post', f"{api_url}/sites/", superuser_auth, payload)['id']
 
     # Update the user password
