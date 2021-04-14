@@ -203,6 +203,8 @@
     <span class="s2">&quot;get-site-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/installations/site-devices/</span><span class="si">{site_id}</span><span class="s2">&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-media-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-past-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/past&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-my-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/me&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;update-my-hash&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/hash&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -597,7 +599,35 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of past events</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-past-events&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-past-events&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.get_my_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_my_device">[docs]</a>    <span class="k">def</span> <span class="nf">get_my_device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get information about the current device</span>
+
+<span class="sd">        Example::</span>
+<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; response = api_client.get_my_device()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the device information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-my-device&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.update_my_hash"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_my_hash">[docs]</a>    <span class="k">def</span> <span class="nf">update_my_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">software_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Updates the software hash of the current device</span>
+
+<span class="sd">        Example::</span>
+<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; response = api_client.update_my_hash()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the updated device information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;software_hash&quot;</span><span class="p">:</span> <span class="n">software_hash</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;update-my-hash&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>
