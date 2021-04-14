@@ -18,10 +18,16 @@ USER_TABLE = [
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+    {"id": 2, "name": "second_group"}
+]
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
-    {"id": 2, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
+    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
 
@@ -31,6 +37,7 @@ USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
@@ -117,12 +124,13 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
-        [1, {"login": "fourth_user", "password": "third_pwd"}, 201, None],
-        [2, {"login": "fourth_user", "password": "third_pwd"}, 401, "Permission denied"],
-        [1, {"login": "first_login", "password": "pwd"}, 400, "An entry with login='first_login' already exists."],
-        [1, {"login": "fourth_user"}, 422, None],
-        [1, {"logins": "fourth_user", "password": "third_pwd"}, 422, None],
+        [0, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 401, "Permission denied"],
+        [1, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 201, None],
+        [2, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 401, "Permission denied"],
+        [1, {"login": "first_login", "password": "pwd", "group_id": 1}, 400,
+         "An entry with login='first_login' already exists."],
+        [1, {"login": "fourth_user", "group_id": 1}, 422, None],
+        [1, {"logins": "fourth_user", "password": "third_pwd", "group_id": 1}, 422, None],
     ],
 )
 @pytest.mark.asyncio

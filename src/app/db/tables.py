@@ -4,13 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import enum
-from sqlalchemy import (Column, DateTime, Integer, Float, String, Table, Enum, Boolean,
-                        ForeignKey, MetaData)
+from sqlalchemy import Column, DateTime, Integer, Float, String, Table, Enum, Boolean, ForeignKey, MetaData
 from sqlalchemy.sql import func
 
 
 __all__ = ['metadata', 'SiteType', 'EventType', 'MediaType',
-           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts']
+           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media', 'installations', 'alerts', 'webhooks']
 
 
 # SQLAlchemy
@@ -24,7 +23,7 @@ users = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
-    Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
+    Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
     Column("created_at", DateTime, default=func.now()),
 )
 
@@ -42,7 +41,7 @@ accesses = Table(
     Column("login", String(50), unique=True, index=True),  # index for fast lookup
     Column("hashed_password", String(70), nullable=False),
     Column("scope", Enum(AccessType), default=AccessType.user, nullable=False),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False),
 )
 
 groups = Table(
@@ -64,7 +63,7 @@ sites = Table(
     metadata,
     Column("id", Integer, primary_key=True),
     Column("name", String(50)),
-    Column("group_id", Integer, ForeignKey("groups.id"), default=None),
+    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False),
     Column("lat", Float(4, asdecimal=True)),
     Column("lon", Float(4, asdecimal=True)),
     Column("country", String(5), nullable=False),
@@ -98,7 +97,7 @@ devices = Table(
     Column("id", Integer, primary_key=True),
     Column("login", String(50), unique=True),
     Column("owner_id", Integer, ForeignKey("users.id")),
-    Column("access_id", Integer, ForeignKey("accesses.id"), unique=True),
+    Column("access_id", Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True),
     Column("specs", String(50)),
     Column("software_hash", String(16), default=None, nullable=True),
     Column("angle_of_view", Float(2, asdecimal=True)),
@@ -153,4 +152,13 @@ alerts = Table(
     Column("lon", Float(4, asdecimal=True)),
     Column("is_acknowledged", Boolean, default=False),
     Column("created_at", DateTime, default=func.now()),
+)
+
+
+webhooks = Table(
+    "webhooks",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("callback", String(50), nullable=False),
+    Column("url", String(100), nullable=False),
 )

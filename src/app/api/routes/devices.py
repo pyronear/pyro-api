@@ -13,6 +13,7 @@ from app.api.schemas import (
     DeviceOut,
     DeviceAuth,
     MyDeviceAuth,
+    AdminDeviceAuth,
     DeviceCreation,
     DeviceIn,
     UserRead,
@@ -22,13 +23,14 @@ from app.api.schemas import (
     AccessType
 )
 from app.api.deps import get_current_device, get_current_user, get_current_access
+from app.api.crud.groups import get_entity_group_id
 
 
 router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=201, summary="Create a new device")
-async def register_device(payload: DeviceAuth, _=Security(get_current_access, scopes=[AccessType.admin])):
+async def register_device(payload: AdminDeviceAuth, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new device based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -36,10 +38,14 @@ async def register_device(payload: DeviceAuth, _=Security(get_current_access, sc
     """
     if await crud.get(payload.owner_id, users) is None:
         raise HTTPException(status_code=404, detail=f"Unknown user for owner_id={payload.owner_id}")
+    if payload.group_id is None:
+        payload = payload.dict()
+        payload["group_id"] = await get_entity_group_id(users, payload["owner_id"])
+        payload = DeviceAuth(**payload)
     return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
-@router.post("/register", response_model=DeviceOut, status_code=201, summary="Register your device")
+@router.post("/register", response_model=DeviceOut, status_code=201, summary="Reg   ister your device")
 async def register_my_device(
     payload: MyDeviceAuth,
     me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
@@ -49,7 +55,7 @@ async def register_my_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id)
+    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id, group_id=await get_entity_group_id(users, me.id))
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 

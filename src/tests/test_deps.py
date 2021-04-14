@@ -31,12 +31,17 @@ DEVICE_TABLE = [
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
+GROUP_TABLE = [
+    {"id": 1, "name": "first_group"},
+    {"id": 2, "name": "second_group"}
+]
+
 ACCESS_TABLE = [
-    {"id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
-    {"id": 2, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
-    {"id": 3, "login": "first_device", "hashed_password": "first_pwd_hashed", "scope": "device"},
-    {"id": 4, "login": "second_device", "hashed_password": "second_pwd_hashed", "scope": "device"},
-    {"id": 5, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scope": "device"},
+    {"id": 1, "group_id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
+    {"id": 2, "group_id": 1, "login": "connected_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
+    {"id": 3, "group_id": 1, "login": "first_device", "hashed_password": "first_pwd_hashed", "scope": "device"},
+    {"id": 4, "group_id": 2, "login": "second_device", "hashed_password": "second_pwd_hashed", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "connected_device", "hashed_password": "third_pwd_hashed", "scope": "device"},
 ]
 
 
@@ -47,6 +52,7 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)

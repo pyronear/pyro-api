@@ -47,9 +47,10 @@ def main(args):
 
     user_login = 'my_user'
     user_pwd = 'my_pwd'
+    user_group = 1
 
     # create a user
-    payload = dict(login=user_login, password=user_pwd, scope="user")
+    payload = dict(login=user_login, password=user_pwd, scope="user", group_id=user_group)
     user_id = api_request('post', f"{api_url}/users/", superuser_auth, payload)['id']
     user_auth = {
         "Authorization": f"Bearer {get_token(api_url, user_login, user_pwd)}",
@@ -57,7 +58,7 @@ def main(args):
     }
 
     # Create a site
-    payload = dict(name='first_site', country="FR", geocode="01", lat=44.1, lon=3.9)
+    payload = dict(name='first_site', country="FR", geocode="01", lat=44.1, lon=3.9, group_id=1)
     site_id = api_request('post', f"{api_url}/sites/", superuser_auth, payload)['id']
 
     # Update the user password
