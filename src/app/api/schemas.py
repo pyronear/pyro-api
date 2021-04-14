@@ -156,10 +156,15 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 
 # Device
+class SoftwareHash(BaseModel):
+    software_hash: str = Field(..., min_length=8, max_length=16)
+
+
 class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: datetime = Field(default=None, example=datetime.utcnow())
     angle_of_view: float = Field(..., gt=0, lt=360)
+    software_hash: str = Field(None, min_length=8, max_length=16)
 
 
 class DeviceIn(MyDeviceIn):

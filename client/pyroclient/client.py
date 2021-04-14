@@ -37,6 +37,8 @@ ROUTES: Dict[str, str] = {
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
     "get-past-events": "/events/past",
+    "get-my-device": "/devices/me",
+    "update-my-hash": "/devices/hash",
 }
 
 
@@ -432,3 +434,31 @@ class Client:
             HTTP response containing the list of past events
         """
         return requests.get(self.routes["get-past-events"], headers=self.headers)
+
+    def get_my_device(self) -> Response:
+        """Get information about the current device
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.get_my_device()
+
+        Returns:
+            HTTP response containing the device information
+        """
+        return requests.get(self.routes["get-my-device"], headers=self.headers)
+
+    def update_my_hash(self, software_hash: str) -> Response:
+        """Updates the software hash of the current device
+
+        Example::
+            >>> from pyroclient import client
+            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+            >>> response = api_client.update_my_hash()
+
+        Returns:
+            HTTP response containing the updated device information
+        """
+        payload = {"software_hash": software_hash}
+
+        return requests.put(self.routes["update-my-hash"], headers=self.headers, json=payload)

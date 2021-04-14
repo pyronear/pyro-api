@@ -19,10 +19,10 @@ USER_TABLE = [
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
@@ -74,6 +74,34 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
         assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != "access_id"}
+
+
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details",
+    [
+        [0, 401, "Permission denied"],
+        [1, 401, "Permission denied"],
+        [2, 200, None],
+        [3, 200, None],
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.get("/devices/me", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+    if response.status_code // 100 == 2:
+        entry = None
+        for device in DEVICE_TABLE:
+            if device['access_id'] == ACCESS_TABLE[access_idx]['id']:
+                entry = device
+                break
+        assert response.json() == {k: v for k, v in entry.items() if k != "access_id"}
 
 
 @pytest.mark.parametrize(
@@ -326,6 +354,38 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
 
         assert all(updated_device[k] == v for k, v in payload.items())
         assert all(updated_device[k] == v for k, v in DEVICE_TABLE_FOR_DB[device_id - 1].items() if k not in payload)
+
+
+@pytest.mark.parametrize(
+    "access_idx, payload, device_id, status_code, status_details",
+    [
+        [0, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [1, {"software_hash": "my_sha256hash"}, 1, 200, None],
+        [2, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [3, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [1, {}, 1, 422, None],
+        [1, {"software_hash": "my_hash"}, 1, 422, None],
+        [1, {"software_hash": "my_way_too_long_sha26_hash"}, 1, 422, None],
+        [1, {"software_hash": "my_sha256hash"}, 0, 422, None],
+        [1, {"software_hash": "my_sha256hash"}, 999, 404, "Entry not found"],
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_device_hash(test_app_asyncio, init_test_db, test_db,
+                                  access_idx, payload, device_id, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.put(f"/devices/{device_id}/hash", data=json.dumps(payload), headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        updated_device = await get_entry(test_db, db.devices, device_id)
+        updated_device = dict(**updated_device)
+        assert updated_device['software_hash'] == payload['software_hash']
 
 
 @pytest.mark.parametrize(

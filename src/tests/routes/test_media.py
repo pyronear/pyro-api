@@ -24,10 +24,10 @@ USER_TABLE = [
 
 DEVICE_TABLE = [
     {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
 
