@@ -3,7 +3,8 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from sqlalchemy import MetaData
+
+from .session import Base
 from .models import (Users, Accesses, Alerts, Devices, Events,
                      Groups, Installations, Media, Sites, Webhooks, EventType, AccessType, SiteType, MediaType)
 
@@ -22,4 +23,4 @@ installations = Installations.__table__
 alerts = Alerts.__table__
 webhooks = Webhooks.__table__
 
-metadata = MetaData()
+metadata = Base.metadata

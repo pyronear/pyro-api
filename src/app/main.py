@@ -14,7 +14,7 @@ from app.api.routes import (
 )
 from app.db import engine, metadata, database, init_db, Base
 
-Base.metadata.create_all(bind=engine)
+metadata.create_all(bind=engine)
 
 # Sentry
 if isinstance(cfg.SENTRY_DSN, str):

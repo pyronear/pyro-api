@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Mapping
 from sqlalchemy import create_engine, Table
 from databases import Database
 
-from app.db import metadata, Base
+from app.db import metadata
 import app.config as cfg
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -16,7 +16,7 @@ SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL
 )
-Base.metadata.create_all(bind=engine)
+metadata.create_all(bind=engine)
 database = Database(SQLALCHEMY_DATABASE_URL)
 
 
