@@ -12,7 +12,7 @@ from app import config as cfg
 from app.api.routes import (
     login, users, groups, sites, events, devices, media, installations, alerts, accesses, webhooks
 )
-from app.db import engine, metadata, database, init_db, Base
+from app.db import engine, metadata, database, init_db
 
 metadata.create_all(bind=engine)
 
