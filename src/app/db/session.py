@@ -5,9 +5,14 @@
 
 from sqlalchemy import create_engine
 from databases import Database
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from app import config as cfg
 
 
 engine = create_engine(cfg.DATABASE_URL)
 database = Database(cfg.DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
