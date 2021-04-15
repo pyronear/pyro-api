@@ -140,8 +140,7 @@ class Alerts(Base):
 
 class Webhooks(Base):
     __tablename__ = "webhooks"
-    
+
     id = Column(Integer, primary_key=True)
     callback = Column(String(50), nullable=False)
     url = Column(String(100), nullable=False)
-

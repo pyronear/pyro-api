@@ -69,10 +69,6 @@ async def fetch_users(_=Security(get_current_user, scopes=[AccessType.admin]), s
     """
     Retrieves the list of all users and their information
     """
-    # print("session:", session)
-    # print("all users:", [u.login for u in session.query(models.Users).all()])
-    # print("exemple", list(models.Users))
-
     return await crud.fetch_all(users)
 
 
