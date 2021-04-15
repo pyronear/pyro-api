@@ -10,7 +10,6 @@ from databases import Database
 
 from app.db import metadata
 import app.config as cfg
-from sqlalchemy.ext.declarative import declarative_base
 
 SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
 engine = create_engine(
