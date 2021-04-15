@@ -5,10 +5,10 @@
 
 from typing import List
 
-from fastapi import APIRouter, Path, Security, HTTPException, status
+from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
 
 from app.api import crud
-from app.db import users, accesses
+from app.db import users, accesses, get_session, models
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
 from app.api.deps import get_current_user
 from app.api.crud.authorizations import is_admin_access, is_in_same_group
@@ -65,7 +65,7 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
-async def fetch_users(_=Security(get_current_user, scopes=[AccessType.admin])):
+async def fetch_users(_=Security(get_current_user, scopes=[AccessType.admin]), session=Depends(get_session)):
     """
     Retrieves the list of all users and their information
     """
