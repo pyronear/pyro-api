@@ -243,7 +243,7 @@ class Client:
 
         if isinstance(azimuth, float):
             payload["azimuth"] = azimuth
-            
+
         return requests.post(self.routes["send-alert-from-device"], headers=self.headers, json=payload)
 
     def create_media(self, device_id: int) -> Response:
