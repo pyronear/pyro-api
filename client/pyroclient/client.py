@@ -173,6 +173,7 @@ class Client:
         lat: float,
         lon: float,
         device_id: int,
+        azimuth: Optional[float] = None,
         event_id: Optional[int] = None,
         media_id: Optional[int] = None
     ) -> Response:
@@ -182,11 +183,12 @@ class Client:
             >>> from pyroclient import client
             >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
             >>> event = api_client.create_event(lat=10., lon=-5.45).json()
-            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'], device_id=3)
+            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'], device_id=3, azimuth=2.)
 
         Args:
             lat: the latitude of the alert
             lon: the longitude of the alert
+            azimuth: the azimuth of the alert
             event_id: the ID of the event this alerts relates to
             device_id: the ID of the device that raised this alert
             media_id: optional media ID linked to this alert
@@ -201,6 +203,8 @@ class Client:
                    }
         if isinstance(media_id, int):
             payload["media_id"] = media_id
+        if isinstance(azimuth, float):
+            payload["azimuth"] = azimuth
 
         return requests.post(self.routes["send-alert"], headers=self.headers, json=payload)
 
@@ -208,6 +212,7 @@ class Client:
         self,
         lat: float,
         lon: float,
+        azimuth: Optional[float] = None,
         event_id: Optional[int] = None,
         media_id: Optional[int] = None
     ) -> Response:
@@ -222,6 +227,7 @@ class Client:
         Args:
             lat: the latitude of the alert
             lon: the longitude of the alert
+            -azimuth: the azimuth of the alert
             event_id: the ID of the event this alerts relates to
             media_id: optional media ID linked to this alert
 
@@ -235,6 +241,9 @@ class Client:
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 
+        if isinstance(azimuth, float):
+            payload["azimuth"] = azimuth
+            
         return requests.post(self.routes["send-alert-from-device"], headers=self.headers, json=payload)
 
     def create_media(self, device_id: int) -> Response:
