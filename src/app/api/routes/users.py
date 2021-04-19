@@ -8,7 +8,7 @@ from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
 
 from app.api import crud
-from app.db import users, accesses, get_session, models
+from app.db import users, accesses, get_session
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
 from app.api.deps import get_current_user
 from app.api.crud.authorizations import is_admin_access, is_in_same_group

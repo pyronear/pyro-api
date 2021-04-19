@@ -6,7 +6,7 @@
 import enum
 from .session import Base
 from sqlalchemy.sql import func
-from sqlalchemy import Column, DateTime, Integer, Float, String, Table, Enum, Boolean, ForeignKey, MetaData
+from sqlalchemy import Column, DateTime, Integer, Float, String, Enum, Boolean, ForeignKey, MetaData
 
 
 class Users(Base):

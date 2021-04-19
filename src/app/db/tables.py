@@ -8,9 +8,8 @@ from .session import Base
 from .models import (Users, Accesses, Alerts, Devices, Events,
                      Groups, Installations, Media, Sites, Webhooks, EventType, AccessType, SiteType, MediaType)
 
-__all__ = ['metadata', 'SiteType', 'EventType', 'MediaType',
-           'users', 'accesses', 'groups', 'sites', 'events', 'devices', 'media',
-           'installations', 'alerts', 'webhooks']
+__all__ = ['metadata', 'users', 'accesses', 'groups', 'sites', 'events',
+           'devices', 'media', 'installations', 'alerts', 'webhooks']
 
 users = Users.__table__
 accesses = Accesses.__table__
