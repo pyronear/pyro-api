@@ -227,7 +227,7 @@ class Client:
         Args:
             lat: the latitude of the alert
             lon: the longitude of the alert
-            -azimuth: the azimuth of the alert
+            azimuth: the azimuth of the alert
             event_id: the ID of the event this alerts relates to
             media_id: optional media ID linked to this alert
 
