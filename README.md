@@ -24,7 +24,7 @@ The building blocks of our wildfire detection & monitoring API.
 
 ### Prerequisites
 
-- Python 3.6 (or more recent)
+- Python 3.7 (or more recent)
 - [pip](https://pip.pypa.io/en/stable/)
 
 ### Installation
