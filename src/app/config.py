@@ -14,6 +14,10 @@ API_BASE: str = 'api/'
 VERSION: str = "0.1.2a0"
 DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
 DATABASE_URL: str = os.getenv("DATABASE_URL")
+# Fix for SqlAlchemy 1.4+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL")
 LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
