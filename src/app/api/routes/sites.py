@@ -16,7 +16,8 @@ router = APIRouter()
 
 
 @router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
-async def create_site(payload: SiteIn, requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def create_site(payload: SiteIn,
+                      requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """Creates a new site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
