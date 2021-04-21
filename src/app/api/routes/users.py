@@ -8,9 +8,9 @@ from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
 
 from app.api import crud
-from app.db import users, accesses, get_session
+from app.db import users, accesses, get_session, models
 from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_access
 from app.api.crud.authorizations import is_admin_access, is_in_same_group
 
 
@@ -65,11 +65,21 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
-async def fetch_users(_=Security(get_current_user, scopes=[AccessType.admin]), session=Depends(get_session)):
+async def fetch_users(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+                      session=Depends(get_session)):
     """
     Retrieves the list of all users and their information
     """
-    return await crud.fetch_all(users)
+    if await is_admin_access(requester.id):
+        blouauser = await crud.fetch_all(users)
+        print("blouauser:", blouauser)
+        return blouauser
+    else:
+        print(session.query(models.Users).first().access)
+        retrieved_users = session.query(models.Users).join(models.Accesses).filter(models.Accesses.group_id == requester.group_id).all()
+        retrieved_users = [x.__dict__ for x in retrieved_users]
+        print("retrieved_users," , retrieved_users)
+        return retrieved_users
 
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")

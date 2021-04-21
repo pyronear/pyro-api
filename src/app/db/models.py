@@ -7,6 +7,7 @@ import enum
 from .session import Base
 from sqlalchemy.sql import func
 from sqlalchemy import Column, DateTime, Integer, Float, String, Enum, Boolean, ForeignKey, MetaData
+from sqlalchemy.orm import relationship
 
 
 class Users(Base):
@@ -16,6 +17,11 @@ class Users(Base):
     login = Column(String(50), unique=True)
     access_id = Column(Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True)
     created_at = Column(DateTime, default=func.now())
+
+    access = relationship("Accesses", uselist=False, back_populates="user")
+
+    def __repr__(self):
+        return "<User(login='%s', created_at='%s'>" % (self.login, self.created_at)
 
 
 class AccessType(str, enum.Enum):
@@ -32,6 +38,11 @@ class Accesses(Base):
     hashed_password = Column(String(70), nullable=False)
     scope = Column(Enum(AccessType), default=AccessType.user, nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
+
+    user = relationship("Users", uselist=False, back_populates="access")
+
+    def __repr__(self):
+        return "<Access(login='%s', scope='%s', group_id='%s')>" % (self.login, self.scope, self.group_id)
 
 
 class Groups(Base):

@@ -23,7 +23,7 @@ Client for the [Pyronear API](https://github.com/pyronear/pyro-api)
 
 ### Prerequisites
 
-- Python 3.6 (or more recent)
+- Python 3.6   (or more recent)
 - [pip](https://pip.pypa.io/en/stable/)
 
 ### Installation
