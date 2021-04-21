@@ -16,19 +16,12 @@ router = APIRouter()
 
 
 @router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
-async def create_site(payload: SiteIn,
-                      requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    await check_group_update(requester.id, payload.group_id)
-
-    if payload.group_id is None:
-        payload = payload.dict()
-        payload["group_id"] = requester.group_id
-        payload = SiteIn(**payload)
 
     return await crud.create_entry(sites, payload)
 
