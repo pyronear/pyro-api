@@ -87,41 +87,44 @@ async def test_fetch_sites(test_app_asyncio, init_test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, no_alert, status_code, status_details",
+    "access_idx, payload, expected_group_id, no_alert, status_code, status_details",
     [
         [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "type": "tower", "country": "FR", "geocode": "01"}, False,
+             "type": "tower", "country": "FR", "geocode": "01"}, 1, False,
          201, None],
         [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "type": "station", "country": "FR", "geocode": "01"}, False,
+             "type": "station", "country": "FR", "geocode": "01"}, 1, False,
+         201, None],
+        [1, {"name": "my_site", "lat": 0., "lon": 0.,  # Make sure there is no issue when group_id is not specified
+             "type": "station", "country": "FR", "geocode": "01"}, 1, True,
          201, None],
         [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, True, 201, None],
+             "country": "FR", "geocode": "01"}, 1, True, 201, None],
         [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, False,
+             "country": "FR", "geocode": "01"}, 1, False,
          401, "Permission denied"],
         [0, {"name": "my_site", "group_id": 2, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, True,
+             "country": "FR", "geocode": "01"}, 1, True,
          401, "You can't specify another group"],
         [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, True, 201, None],
+             "country": "FR", "geocode": "01"}, 1, True, 201, None],
         [2, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, False,
+             "country": "FR", "geocode": "01"}, 1, False,
          401, "Permission denied"],
         [1, {"names": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
-             "country": "FR", "geocode": "01"}, False, 422, None],
+             "country": "FR", "geocode": "01"}, 1, False, 422, None],
         [1, {"name": "my_site", "group_id": 1, "lat": 0.,
-             "country": "FR", "geocode": "01"}, False, 422, None],
+             "country": "FR", "geocode": "01"}, 1, False, 422, None],
     ],
 )
 @pytest.mark.asyncio
 async def test_create_site(test_app_asyncio, init_test_db, test_db,
-                           access_idx, payload, no_alert, status_code, status_details):
+                           access_idx, payload, expected_group_id, no_alert, status_code, status_details):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    test_response = {"id": len(SITE_TABLE) + 1, **payload}
+    test_response = {"id": len(SITE_TABLE) + 1, "group_id": expected_group_id, **payload}
     subroute = ""
     if no_alert:
         test_response['type'] = 'no_alert'
