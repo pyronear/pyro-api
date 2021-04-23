@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry, fill_table
+from tests.db_utils import get_entry, fill_table, TestSessionLocal
 from tests.utils import update_only_datetime
 
 
@@ -50,6 +50,7 @@ SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)

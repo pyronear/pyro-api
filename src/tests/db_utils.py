@@ -7,6 +7,7 @@ import contextlib
 from typing import List, Dict, Any, Mapping
 from sqlalchemy import create_engine, Table
 from databases import Database
+from sqlalchemy.orm import sessionmaker
 
 from app.db import metadata
 import app.config as cfg
@@ -17,6 +18,7 @@ engine = create_engine(
 )
 metadata.create_all(bind=engine)
 database = Database(SQLALCHEMY_DATABASE_URL)
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 async def reset_test_db():

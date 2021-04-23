@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry, fill_table
+from tests.db_utils import get_entry, fill_table, TestSessionLocal
 from tests.utils import update_only_datetime, parse_time, ts_to_string
 
 
@@ -76,6 +76,7 @@ ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
@@ -115,7 +116,7 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
+        [0, 200, None],
         [1, 200, None],
         [2, 401, "Permission denied"],
     ],
@@ -132,6 +133,8 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
+        print(response.json())
+        print("Alert Table", ALERT_TABLE)
         assert response.json() == ALERT_TABLE
 
 
