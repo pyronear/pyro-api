@@ -92,7 +92,7 @@ async def fetch_devices(requester=Security(get_current_access, scopes=[AccessTyp
                              .join(models.Accesses)
                              .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_devices = [x.__dict__ for x in retrieved_devices]
-        print(retrieved_devices)
+
         return retrieved_devices
 
     return await crud.fetch_all(devices)

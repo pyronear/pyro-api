@@ -4,11 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, status, HTTPException
+from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
 from app.api import crud
-from app.db import sites, SiteType
+from app.db import sites, SiteType, get_session
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
+from app.api.crud.authorizations import is_admin_access, is_in_same_group
 
 
 router = APIRouter()
@@ -46,11 +47,16 @@ async def get_site(site_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
-async def fetch_sites():
+async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+                      session=Depends(get_session)):
     """
     Retrieves the list of all sites and their information
     """
-    return await crud.fetch_all(sites)
+
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(sites)
+    else:
+        return await crud.fetch_all(sites, {"group_id": requester.group_id})
 
 
 @router.put("/{site_id}/", response_model=SiteOut, summary="Update information about a specific site")
