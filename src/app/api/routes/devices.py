@@ -85,7 +85,7 @@ async def fetch_devices(requester=Security(get_current_access, scopes=[AccessTyp
     Retrieves the list of all devices and their information
     """
     if await is_admin_access(requester.id):
-        return await crud.fetch_all(users)
+        return await crud.fetch_all(devices)
     else:
         print(session.query(models.Devices).first().access)
         retrieved_devices = (session.query(models.Devices)
@@ -94,8 +94,6 @@ async def fetch_devices(requester=Security(get_current_access, scopes=[AccessTyp
         retrieved_devices = [x.__dict__ for x in retrieved_devices]
 
         return retrieved_devices
-
-    return await crud.fetch_all(devices)
 
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")

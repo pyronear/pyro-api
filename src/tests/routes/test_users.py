@@ -16,6 +16,7 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "fifth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 GROUP_TABLE = [
@@ -28,6 +29,7 @@ ACCESS_TABLE = [
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
     {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
 ]
 
 
@@ -100,15 +102,17 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    "access_idx, status_code, status_details, expected_users",
     [
-        [0, 401, "Permission denied"],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
+        [0, 200, None, [USER_TABLE[0], USER_TABLE[1]]],
+        [4, 200, None, [USER_TABLE[-1]]],
+        [1, 200, None, USER_TABLE],
+        [2, 401, "Permission denied", None],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, 
+                           status_code, status_details, expected_users):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -119,7 +123,7 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
-        assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in USER_TABLE]
+        assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in expected_users]
 
 
 @pytest.mark.parametrize(

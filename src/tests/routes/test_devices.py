@@ -15,6 +15,7 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "sixth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
@@ -22,6 +23,9 @@ DEVICE_TABLE = [
      "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
+     "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 3, "login": "fifth_login", "owner_id": 3, "access_id": 5, "specs": "v0.1", "elevation": None, "lat": None,
      "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
      "created_at": "2020-10-13T08:18:45.447773"},
 ]
@@ -34,8 +38,11 @@ GROUP_TABLE = [
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
-    {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 4, "group_id": 1, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    {"id": 6, "group_id": 2, "login": "sixth_login", "hashed_password": "hashed_pwd", "scope": "user"},
+    
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -106,15 +113,16 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    "access_idx, status_code, status_details, expected_devices",
     [
-        [0, 401, "Permission denied"],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
+        [0, 200, None, [DEVICE_TABLE[0], DEVICE_TABLE[1]]],
+        [5, 200, None, [DEVICE_TABLE[-1]]],
+        [1, 200, None, DEVICE_TABLE],
+        [2, 401, "Permission denied", None],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_devices):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -125,7 +133,7 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in DEVICE_TABLE]
+        assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in expected_devices]
 
 
 @pytest.mark.parametrize(

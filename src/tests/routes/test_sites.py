@@ -77,14 +77,29 @@ async def test_get_site(test_app_asyncio, init_test_db, site_id, status_code, st
         compare_entries(response_json, SITE_TABLE[site_id - 1])
 
 
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details, expected_sites",
+    [
+        [0, 200, None, [SITE_TABLE[0]]],
+        [1, 200, None, SITE_TABLE],
+        [2, 401, "Permission denied", None],
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_sites(test_app_asyncio, init_test_db):
+async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_sites):
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    response = await test_app_asyncio.get("/sites/")
-    assert response.status_code == 200
-    response_json = response.json()
-    for (i, entry) in enumerate(response_json):
-        compare_entries(entry, SITE_TABLE[i])
+    response = await test_app_asyncio.get("/sites/", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+
+        for (i, entry) in enumerate(response.json()):
+            compare_entries(entry, expected_sites[i])
+            # assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in expected_sites]
 
 
 @pytest.mark.parametrize(
@@ -197,5 +212,5 @@ async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, 
 
     if response.status_code // 100 == 2:
         compare_entries(response.json(), SITE_TABLE[site_id - 1])
-        remaining_sites = await test_app_asyncio.get("/sites/")
+        remaining_sites = await test_app_asyncio.get("/sites/", headers=auth)
         assert all(entry['id'] != site_id for entry in remaining_sites.json())
