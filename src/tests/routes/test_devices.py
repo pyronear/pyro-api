@@ -42,7 +42,6 @@ ACCESS_TABLE = [
     {"id": 4, "group_id": 1, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
     {"id": 6, "group_id": 2, "login": "sixth_login", "hashed_password": "hashed_pwd", "scope": "user"},
-    
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))

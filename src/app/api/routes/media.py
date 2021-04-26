@@ -73,16 +73,15 @@ async def fetch_media(requester=Security(get_current_access, scopes=[AccessType.
     """
     Retrieves the list of all media and their information
     """
-    # TODO fetch only group
     if await is_admin_access(requester.id):
         return await crud.fetch_all(media)
     else:
-        print(session.query(models.Media).first().access)
         retrieved_media = (session.query(models.Media)
-                                   .join(models.Devices)
-                                   .join(models.Accesses)
-                                   .filter(models.Accesses.group_id == requester.group_id).all())
+                                  .join(models.Devices)
+                                  .join(models.Accesses)
+                                  .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_media = [x.__dict__ for x in retrieved_media]
+        print("retrieved_media:", retrieved_media)
         return retrieved_media
 
 

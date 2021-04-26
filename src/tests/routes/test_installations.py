@@ -97,15 +97,16 @@ async def test_get_installation(test_app_asyncio, init_test_db,
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    "access_idx, status_code, status_details, expected_results",
     [
-        [0, 401, "Permission denied"],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
+        [0, 200, None, [INSTALLATION_TABLE[0]]],
+        [1, 200, None, INSTALLATION_TABLE],
+        [2, 401, "Permission denied", None],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_installations(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+async def test_fetch_installations(test_app_asyncio, init_test_db,
+                                   access_idx, status_code, status_details, expected_results):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -115,7 +116,7 @@ async def test_fetch_installations(test_app_asyncio, init_test_db, access_idx, s
     if isinstance(status_details, str):
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
-        assert response.json() == INSTALLATION_TABLE
+        assert response.json() == expected_results
 
 
 @pytest.mark.parametrize(

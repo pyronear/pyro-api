@@ -10,8 +10,13 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from tests.db_utils import get_entry, fill_table, TestSessionLocal
-from tests.utils import update_only_datetime
+from tests.utils import update_only_datetime, parse_time, ts_to_string
 
+
+USER_TABLE = [
+    {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+]
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None,
@@ -27,15 +32,37 @@ GROUP_TABLE = [
     {"id": 2, "name": "second_group"}
 ]
 
+DEVICE_TABLE = [
+    {"id": 1, "login": "third_login", "owner_id": 1,
+     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
+     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
+     "created_at": "2020-10-13T08:18:45.447773"},
+]
+
+ALERT_TABLE = [
+    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
+     "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "device_id": 1, "event_id": 2, "media_id": None, "lat": 0., "lon": 0.,
+     "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
+     "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
+    {"id": 4, "device_id": 2, "event_id": 3, "media_id": None, "lat": 0., "lon": 0.,
+     "azimuth": 47., "is_acknowledged": True, "created_at": ts_to_string(datetime.utcnow())},
+]
+
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
-
+USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
+DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
+ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 
 
 @pytest.fixture(scope="function")
@@ -44,7 +71,10 @@ async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
+    await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -67,12 +97,29 @@ async def test_get_event(test_app_asyncio, init_test_db, event_id, status_code, 
         assert response.json() == EVENT_TABLE[event_id - 1]
 
 
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details, expected_results",
+    [
+        [0, 200, None, [EVENT_TABLE[0], EVENT_TABLE[1]]],
+        [1, 200, None, EVENT_TABLE],
+        [2, 401, "Permission denied", None],
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_events(test_app_asyncio, init_test_db):
+async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
 
-    response = await test_app_asyncio.get("/events/")
-    assert response.status_code == 200
-    assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in EVENT_TABLE]
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.get("/events/", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        print("response.json():", response.json())
+        print("expected_result:", expected_results)
+        assert response.json() == expected_results
 
 
 @pytest.mark.asyncio
@@ -175,5 +222,5 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
         assert response.json() == EVENT_TABLE[event_id - 1]
-        remaining_events = await test_app_asyncio.get("/events/")
+        remaining_events = await test_app_asyncio.get("/events/", headers=auth)
         assert all(entry['id'] != event_id for entry in remaining_events.json())

@@ -94,7 +94,7 @@ async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_acce
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), 
+async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                        session=Depends(get_session)):
     """
     Retrieves the list of all alerts and their information
@@ -102,12 +102,12 @@ async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType
     if await is_admin_access(requester.id):
         return await crud.fetch_all(alerts)
     else:
-        print(session.query(models.Alerts).first())
         retrieved_alerts = (session.query(models.Alerts)
                             .join(models.Devices)
                             .join(models.Accesses)
                             .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
+        print("retrieved_alert:", retrieved_alerts)
         return retrieved_alerts
 
 

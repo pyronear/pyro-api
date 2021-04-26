@@ -74,7 +74,9 @@ async def fetch_users(requester=Security(get_current_access, scopes=[AccessType.
         return await crud.fetch_all(users)
     else:
         print(session.query(models.Users).first().access)
-        retrieved_users = session.query(models.Users).join(models.Accesses).filter(models.Accesses.group_id == requester.group_id).all()
+        retrieved_users = (session.query(models.Users)
+                           .join(models.Accesses)
+                           .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_users = [x.__dict__ for x in retrieved_users]
         return retrieved_users
 

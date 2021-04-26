@@ -103,7 +103,8 @@ class Events(Base):
     end_ts = Column(DateTime, default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
-    alerts = relationship("Alerts", back_populates="event")
+    # alerts = relationship("Alerts", back_populates="event")
+    alerts = relationship("Alerts")
 
     def __repr__(self):
         return "<Event(lat='%s', lon='%s', country='%s', geocode='%s', type='%s')>" % (
@@ -186,7 +187,7 @@ class Alerts(Base):
 
     id = Column(Integer, primary_key=True)
     device_id = Column(Integer, ForeignKey("devices.id"))
-    event_id = Column(Integer, ForeignKey("events.id"))
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"))
     media_id = Column(Integer, ForeignKey("media.id"), default=None)
     azimuth = Column(Float(4, asdecimal=True), default=None)
     lat = Column(Float(4, asdecimal=True))
@@ -195,7 +196,7 @@ class Alerts(Base):
     created_at = Column(DateTime, default=func.now())
 
     device = relationship("Devices", back_populates="alerts")
-    event = relationship("Events", back_populates="alerts")
+    # event = relationship("Events", back_populates="alerts")
     media = relationship("Media", back_populates="alerts")
 
     def __repr__(self):

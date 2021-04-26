@@ -99,7 +99,6 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
 
         for (i, entry) in enumerate(response.json()):
             compare_entries(entry, expected_sites[i])
-            # assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in expected_sites]
 
 
 @pytest.mark.parametrize(

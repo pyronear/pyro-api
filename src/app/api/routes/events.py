@@ -42,13 +42,13 @@ async def fetch_events(requester=Security(get_current_access, scopes=[AccessType
     if await is_admin_access(requester.id):
         return await crud.fetch_all(events)
     else:
-        print(session.query(models.Events).first().access)
         retrieved_events = (session.query(models.Events)
                             .join(models.Alerts)
                             .join(models.Devices)
                             .join(models.Accesses)
                             .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_events = [x.__dict__ for x in retrieved_events]
+        print("retrieved_events:", retrieved_events)
         return retrieved_events
 
 

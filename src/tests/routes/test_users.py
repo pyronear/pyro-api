@@ -111,7 +111,7 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, 
+async def test_fetch_users(test_app_asyncio, init_test_db, access_idx,
                            status_code, status_details, expected_users):
 
     # Create a custom access token

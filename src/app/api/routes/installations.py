@@ -46,7 +46,6 @@ async def fetch_installations(requester=Security(get_current_access, scopes=[Acc
     if await is_admin_access(requester.id):
         return await crud.fetch_all(installations)
     else:
-        print(session.query(models.Installations).first().access)
         retrieved_installations = (session.query(models.Installations)
                                    .join(models.Sites)
                                    .filter(models.Sites.group_id == requester.group_id).all())

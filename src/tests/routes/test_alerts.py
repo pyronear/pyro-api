@@ -36,7 +36,7 @@ GROUP_TABLE = [
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
@@ -114,15 +114,16 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    "access_idx, status_code, status_details, expected_results",
     [
-        [0, 200, None],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
+        [0, 200, None, [ALERT_TABLE[0], ALERT_TABLE[1], ALERT_TABLE[3]]],
+        [1, 200, None, ALERT_TABLE],
+        [2, 401, "Permission denied", None],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code,
+                            status_details, expected_results):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -133,9 +134,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        print(response.json())
-        print("Alert Table", ALERT_TABLE)
-        assert response.json() == ALERT_TABLE
+        assert response.json() == expected_results
 
 
 @pytest.mark.parametrize(
