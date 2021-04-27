@@ -74,7 +74,8 @@ async def update_event(
 
 
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
-async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin]),
+                       session=Depends(get_session)):
     """
     Based on a event_id, deletes the specified event
     """
