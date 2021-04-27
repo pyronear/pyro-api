@@ -48,7 +48,6 @@ async def fetch_events(requester=Security(get_current_access, scopes=[AccessType
                             .join(models.Accesses)
                             .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_events = [x.__dict__ for x in retrieved_events]
-        print("retrieved_events:", retrieved_events)
         return retrieved_events
 
 

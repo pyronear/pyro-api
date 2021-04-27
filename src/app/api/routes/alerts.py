@@ -107,7 +107,6 @@ async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType
                             .join(models.Accesses)
                             .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
-        print("retrieved_alert:", retrieved_alerts)
         return retrieved_alerts
 
 
