@@ -6,6 +6,7 @@
 from typing import List
 from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
 from app.api import crud
+from app.api.crud.authorizations import check_group_update
 from app.db import sites, SiteType, get_session
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
@@ -22,19 +23,25 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[Ac
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+
     return await crud.create_entry(sites, payload)
 
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
 async def create_noalert_site(payload: SiteBase,
-                              _=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+                              requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    await check_group_update(requester.id, payload.group_id)
+    payload = payload.dict()
 
-    return await crud.create_entry(sites, SiteIn(**payload.dict(), type=SiteType.no_alert))
+    if payload['group_id'] is None:
+        payload["group_id"] = requester.group_id
+
+    return await crud.create_entry(sites, SiteIn(**payload, type=SiteType.no_alert))
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
