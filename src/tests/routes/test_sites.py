@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry, fill_table
+from tests.db_utils import get_entry, fill_table, TestSessionLocal
 from tests.utils import update_only_datetime
 
 
@@ -50,6 +50,7 @@ SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)
@@ -76,14 +77,28 @@ async def test_get_site(test_app_asyncio, init_test_db, site_id, status_code, st
         compare_entries(response_json, SITE_TABLE[site_id - 1])
 
 
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details, expected_sites",
+    [
+        [0, 200, None, [SITE_TABLE[0]]],
+        [1, 200, None, SITE_TABLE],
+        [2, 401, "Permission denied", None],
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_sites(test_app_asyncio, init_test_db):
+async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_sites):
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    response = await test_app_asyncio.get("/sites/")
-    assert response.status_code == 200
-    response_json = response.json()
-    for (i, entry) in enumerate(response_json):
-        compare_entries(entry, SITE_TABLE[i])
+    response = await test_app_asyncio.get("/sites/", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+
+        for (i, entry) in enumerate(response.json()):
+            compare_entries(entry, expected_sites[i])
 
 
 @pytest.mark.parametrize(
@@ -202,5 +217,5 @@ async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, 
 
     if response.status_code // 100 == 2:
         compare_entries(response.json(), SITE_TABLE[site_id - 1])
-        remaining_sites = await test_app_asyncio.get("/sites/")
+        remaining_sites = await test_app_asyncio.get("/sites/", headers=auth)
         assert all(entry['id'] != site_id for entry in remaining_sites.json())

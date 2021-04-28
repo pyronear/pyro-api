@@ -5,10 +5,10 @@
 
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Path, Security, HTTPException, status
+from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
 
 from app.api import crud
-from app.db import devices, accesses, users
+from app.db import devices, accesses, users, get_session, models
 from app.api.schemas import (
     DeviceOut,
     DeviceAuth,
@@ -24,6 +24,7 @@ from app.api.schemas import (
 )
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.crud.groups import get_entity_group_id
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -76,11 +77,21 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
-async def fetch_devices(_=Security(get_current_access, scopes=[AccessType.admin])):
+async def fetch_devices(requester=Security(get_current_access,
+                        scopes=[AccessType.admin, AccessType.user]),
+                        session=Depends(get_session)):
     """
     Retrieves the list of all devices and their information
     """
-    return await crud.fetch_all(devices)
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(devices)
+    else:
+        retrieved_devices = (session.query(models.Devices)
+                             .join(models.Accesses)
+                             .filter(models.Accesses.group_id == requester.group_id).all())
+        retrieved_devices = [x.__dict__ for x in retrieved_devices]
+
+        return retrieved_devices
 
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")

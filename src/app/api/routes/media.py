@@ -3,15 +3,16 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks, status
+from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks, status, Depends
 from typing import List, Optional
 
 from app.api import crud
-from app.db import media
+from app.db import media, get_session, models
 from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOut, BaseMedia, AccessType
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.security import hash_content_file
 from app.services import bucket_service, resolve_bucket_key
+from app.api.crud.authorizations import is_admin_access, is_in_same_group
 
 
 router = APIRouter()
@@ -67,12 +68,21 @@ async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_curr
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
-async def fetch_media(_=Security(get_current_access, scopes=[AccessType.admin])):
+async def fetch_media(requester=Security(get_current_access,
+                      scopes=[AccessType.admin, AccessType.user]),
+                      session=Depends(get_session)):
     """
     Retrieves the list of all media and their information
     """
-    # TODO fetch only group
-    return await crud.fetch_all(media)
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(media)
+    else:
+        retrieved_media = (session.query(models.Media)
+                                  .join(models.Devices)
+                                  .join(models.Accesses)
+                                  .filter(models.Accesses.group_id == requester.group_id).all())
+        retrieved_media = [x.__dict__ for x in retrieved_media]
+        return retrieved_media
 
 
 @router.put("/{media_id}/", response_model=MediaOut, summary="Update information about a specific media")

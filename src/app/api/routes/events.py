@@ -4,11 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, status, HTTPException
+from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
 from app.api import crud
-from app.db import events
+from app.db import events, get_session, models
 from app.api.schemas import EventOut, EventIn, AccessType
 from app.api.deps import get_current_access
+from app.api.crud.authorizations import is_admin_access
 
 router = APIRouter()
 
@@ -33,12 +34,22 @@ async def get_event(event_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
-async def fetch_events():
+async def fetch_events(requester=Security(get_current_access,
+                       scopes=[AccessType.admin, AccessType.user]),
+                       session=Depends(get_session)):
     """
     Retrieves the list of all events and their information
     """
-    # TODO fetch only group
-    return await crud.fetch_all(events)
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(events)
+    else:
+        retrieved_events = (session.query(models.Events)
+                            .join(models.Alerts)
+                            .join(models.Devices)
+                            .join(models.Accesses)
+                            .filter(models.Accesses.group_id == requester.group_id))
+        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
+        return retrieved_events
 
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
@@ -63,7 +74,8 @@ async def update_event(
 
 
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
-async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin]),
+                       session=Depends(get_session)):
     """
     Based on a event_id, deletes the specified event
     """

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry, fill_table
+from tests.db_utils import get_entry, fill_table, TestSessionLocal
 from tests.utils import update_only_datetime, parse_time, ts_to_string
 
 
@@ -36,7 +36,7 @@ GROUP_TABLE = [
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
-    {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
 ]
 
@@ -76,6 +76,7 @@ ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 @pytest.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
+    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
@@ -113,15 +114,16 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    "access_idx, status_code, status_details, expected_results",
     [
-        [0, 401, "Permission denied"],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
+        [0, 200, None, [ALERT_TABLE[0], ALERT_TABLE[1], ALERT_TABLE[3]]],
+        [1, 200, None, ALERT_TABLE],
+        [2, 401, "Permission denied", None],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code,
+                            status_details, expected_results):
 
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
@@ -132,7 +134,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == ALERT_TABLE
+        assert response.json() == expected_results
 
 
 @pytest.mark.parametrize(

@@ -4,13 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Path, Security, HTTPException, status, BackgroundTasks, Depends
 from sqlalchemy import select
 from functools import partial
 from datetime import datetime, timedelta
 
 from app.api import crud
-from app.db import alerts, events, media
+from app.db import alerts, events, media, get_session, models
 from app.api.schemas import (
     AlertBase,
     AlertOut,
@@ -22,6 +22,7 @@ from app.api.schemas import (
     AccessType)
 from app.api.deps import get_current_device, get_current_access
 from app.api.external import post_request
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -93,11 +94,21 @@ async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_acce
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
+async def fetch_alerts(requester=Security(get_current_access,
+                       scopes=[AccessType.admin, AccessType.user]),
+                       session=Depends(get_session)):
     """
     Retrieves the list of all alerts and their information
     """
-    return await crud.fetch_all(alerts)
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(alerts)
+    else:
+        retrieved_alerts = (session.query(models.Alerts)
+                            .join(models.Devices)
+                            .join(models.Accesses)
+                            .filter(models.Accesses.group_id == requester.group_id).all())
+        retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
+        return retrieved_alerts
 
 
 @router.put("/{alert_id}/", response_model=AlertOut, summary="Update information about a specific alert")
