@@ -11,7 +11,7 @@ from app.api import crud
 from app.db import installations, database, get_session, models
 from app.api.schemas import InstallationOut, InstallationIn, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -38,7 +38,8 @@ async def get_installation(installation_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[InstallationOut], summary="Get the list of all installations")
-async def fetch_installations(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_installations(requester=Security(get_current_access,
+                              scopes=[AccessType.admin, AccessType.user]),
                               session=Depends(get_session)):
     """
     Retrieves the list of all installations and their information

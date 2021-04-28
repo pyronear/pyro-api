@@ -10,7 +10,7 @@ from app.api.crud.authorizations import check_group_update
 from app.db import sites, SiteType, get_session
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -54,7 +54,8 @@ async def get_site(site_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
-async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_sites(requester=Security(get_current_access,
+                      scopes=[AccessType.admin, AccessType.user]),
                       session=Depends(get_session)):
     """
     Retrieves the list of all sites and their information

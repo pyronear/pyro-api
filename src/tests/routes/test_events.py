@@ -117,8 +117,6 @@ async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_c
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        print("response.json():", response.json())
-        print("expected_result:", expected_results)
         assert response.json() == expected_results
 
 

@@ -24,9 +24,7 @@ from app.api.schemas import (
 )
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.crud.groups import get_entity_group_id
-
-
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -79,7 +77,8 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
-async def fetch_devices(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_devices(requester=Security(get_current_access,
+                        scopes=[AccessType.admin, AccessType.user]),
                         session=Depends(get_session)):
     """
     Retrieves the list of all devices and their information

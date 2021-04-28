@@ -22,7 +22,7 @@ from app.api.schemas import (
     AccessType)
 from app.api.deps import get_current_device, get_current_access
 from app.api.external import post_request
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access
 
 
 router = APIRouter()
@@ -94,7 +94,8 @@ async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_acce
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_alerts(requester=Security(get_current_access,
+                       scopes=[AccessType.admin, AccessType.user]),
                        session=Depends(get_session)):
     """
     Retrieves the list of all alerts and their information

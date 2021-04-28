@@ -9,7 +9,7 @@ from app.api import crud
 from app.db import events, get_session, models
 from app.api.schemas import EventOut, EventIn, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access
 
 router = APIRouter()
 
@@ -34,7 +34,8 @@ async def get_event(event_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
-async def fetch_events(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_events(requester=Security(get_current_access,
+                       scopes=[AccessType.admin, AccessType.user]),
                        session=Depends(get_session)):
     """
     Retrieves the list of all events and their information
@@ -46,8 +47,8 @@ async def fetch_events(requester=Security(get_current_access, scopes=[AccessType
                             .join(models.Alerts)
                             .join(models.Devices)
                             .join(models.Accesses)
-                            .filter(models.Accesses.group_id == requester.group_id).all())
-        retrieved_events = [x.__dict__ for x in retrieved_events]
+                            .filter(models.Accesses.group_id == requester.group_id))
+        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
 
 

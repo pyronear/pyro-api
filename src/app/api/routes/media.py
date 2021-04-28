@@ -68,7 +68,8 @@ async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_curr
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
-async def fetch_media(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+async def fetch_media(requester=Security(get_current_access,
+                      scopes=[AccessType.admin, AccessType.user]),
                       session=Depends(get_session)):
     """
     Retrieves the list of all media and their information
@@ -81,7 +82,6 @@ async def fetch_media(requester=Security(get_current_access, scopes=[AccessType.
                                   .join(models.Accesses)
                                   .filter(models.Accesses.group_id == requester.group_id).all())
         retrieved_media = [x.__dict__ for x in retrieved_media]
-        print("retrieved_media:", retrieved_media)
         return retrieved_media
 
 

@@ -106,8 +106,8 @@ class Events(Base):
     alerts = relationship("Alerts", back_populates="event")
 
     def __repr__(self):
-        return "<Event(lat='%s', lon='%s', country='%s', geocode='%s', type='%s')>" % (
-            self.lat, self.lon, self.country, self.geocode, self.type)
+        return "<Event(lat='%s', lon='%s', type='%s')>" % (
+            self.lat, self.lon, self.type)
 
 
 # Linked tables
