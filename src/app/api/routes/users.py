@@ -74,7 +74,6 @@ async def fetch_users(requester=Security(get_current_access,
     if await is_admin_access(requester.id):
         return await crud.fetch_all(users)
     else:
-        print(session.query(models.Users).first().access)
         retrieved_users = (session.query(models.Users)
                            .join(models.Accesses)
                            .filter(models.Accesses.group_id == requester.group_id).all())

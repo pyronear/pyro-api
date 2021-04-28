@@ -86,7 +86,6 @@ async def fetch_devices(requester=Security(get_current_access,
     if await is_admin_access(requester.id):
         return await crud.fetch_all(devices)
     else:
-        print(session.query(models.Devices).first().access)
         retrieved_devices = (session.query(models.Devices)
                              .join(models.Accesses)
                              .filter(models.Accesses.group_id == requester.group_id).all())
