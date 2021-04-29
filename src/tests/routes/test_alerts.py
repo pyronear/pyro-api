@@ -16,6 +16,7 @@ from tests.utils import update_only_datetime, parse_time, ts_to_string
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "fifth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 
@@ -38,6 +39,7 @@ ACCESS_TABLE = [
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
     {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
 ]
 
 MEDIA_TABLE = [
@@ -52,7 +54,7 @@ EVENT_TABLE = [
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
      "created_at": "2020-09-13T08:18:45.447773"},
     {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": "2021-03-13T10:18:45.447773", "created_at": "2020-09-13T08:18:45.447773"},
+     "end_ts": None, "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 ALERT_TABLE = [
@@ -89,11 +91,12 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [0, 1, 200, None],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
+        [4, 1, 401, "You can't access this ressource"],
     ],
 )
 @pytest.mark.asyncio
@@ -140,9 +143,10 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
+        [0, 200, None],
         [1, 200, None],
         [2, 401, "Permission denied"],
+        [4, 200, None]
     ],
 )
 @pytest.mark.asyncio
@@ -158,15 +162,27 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 
     if response.status_code // 100 == 2:
         event_ids = [entry['id'] for entry in EVENT_TABLE if entry['end_ts'] is None]
-        assert response.json() == [entry for entry in ALERT_TABLE if entry['event_id'] in event_ids]
+
+        alerts_group_id = [entry["id"] for entry in ALERT_TABLE]
+
+        # Retrieve group_id condition first
+        if ACCESS_TABLE[access_idx]["scope"] != "admin":
+            group_id = ACCESS_TABLE[access_idx]["group_id"]
+            access_group_id = [access["id"] for access in ACCESS_TABLE if access["group_id"] == group_id]
+            devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
+            alerts_group_id = [alert["id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
+
+        assert response.json() == [entry for entry in ALERT_TABLE if (
+            entry['event_id'] in event_ids and entry["id"] in alerts_group_id)]
 
 
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
+        [0, 200, None],
         [1, 200, None],
         [2, 401, "Permission denied"],
+        [4, 200, None]
     ],
 )
 @pytest.mark.asyncio
@@ -181,7 +197,17 @@ async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, acces
         assert response.json()['detail'] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == [x for x in ALERT_TABLE if x["is_acknowledged"] is False]
+        alerts_group_id = [entry["id"] for entry in ALERT_TABLE]
+
+        # Retrieve group_id condition first
+        if ACCESS_TABLE[access_idx]["scope"] != "admin":
+            group_id = ACCESS_TABLE[access_idx]["group_id"]
+            access_group_id = [access["id"] for access in ACCESS_TABLE if access["group_id"] == group_id]
+            devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
+            alerts_group_id = [alert["id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
+
+        assert response.json() == [x for x in ALERT_TABLE if x["is_acknowledged"] is False
+                                   and x["id"] in alerts_group_id]
 
 
 @pytest.mark.parametrize(
@@ -270,7 +296,7 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, alert_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
+        [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
         [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
         [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
@@ -286,6 +312,8 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True,
              "azimuth": -5.}, 1,
          422, None],
+        [4, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "You can't specify another group"],
+
     ],
 )
 @pytest.mark.asyncio
@@ -309,7 +337,7 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [0, 1, 200, None],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
     ],
