@@ -20,6 +20,7 @@ from tests.utils import update_only_datetime
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "fifth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
@@ -41,6 +42,8 @@ ACCESS_TABLE = [
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
     {"id": 3, "group_id": 1, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
+
 ]
 
 MEDIA_TABLE = [
@@ -68,11 +71,12 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, media_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [0, 1, 200, None],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
+        [4, 1, 401, "You can't access this ressource"],
     ],
 )
 @pytest.mark.asyncio
