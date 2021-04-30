@@ -11,8 +11,8 @@ from app.api import crud
 from app.db import installations, database, get_session, models
 from app.api.schemas import InstallationOut, InstallationIn, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_admin_access
-
+from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
+from app.api.crud.groups import get_entity_group_id
 
 router = APIRouter()
 
@@ -30,10 +30,13 @@ async def create_installation(payload: InstallationIn, _=Security(get_current_ac
 @router.get("/{installation_id}/", response_model=InstallationOut,
             summary="Get information about a specific installation")
 async def get_installation(installation_id: int = Path(..., gt=0),
-                           _=Security(get_current_access, scopes=[AccessType.admin])):
+                           requester=Security(get_current_access,
+                           scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a installation_id, retrieves information about the specified installation
     """
+    requested_group_id = await get_entity_group_id(installations, installation_id)
+    await check_group_read(requester.id, requested_group_id)
     return await crud.get_entry(installations, installation_id)
 
 
@@ -59,11 +62,13 @@ async def fetch_installations(requester=Security(get_current_access,
 async def update_installation(
     payload: InstallationIn,
     installation_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a installation_id, updates information about the specified installation
     """
+    requested_group_id = await get_entity_group_id(installations, installation_id)
+    await check_group_update(requester.id, requested_group_id)
     return await crud.update_entry(installations, payload, installation_id)
 
 
@@ -79,16 +84,25 @@ async def delete_installation(installation_id: int = Path(..., gt=0),
 @router.get("/site-devices/{site_id}", response_model=List[int],
             summary="Get all devices related to a specific site")
 async def get_active_devices_on_site(site_id: int = Path(..., gt=0),
-                                     _=Security(get_current_access, scopes=[AccessType.admin])):
+                                     requester=Security(get_current_access,
+                                     scopes=[AccessType.admin, AccessType.user]),
+                                     session=Depends(get_session)):
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
-
     current_ts = datetime.utcnow()
 
-    query = installations.select().where(and_(installations.c.site_id == site_id,
-                                              installations.c.start_ts <= current_ts,
-                                              or_(installations.c.end_ts.is_(None),
-                                                  installations.c.end_ts >= current_ts)))
+    query = (session.query(models.Installations)
+                    .join(models.Sites)
+                    .filter(and_(models.Sites.id == site_id,
+                                 models.Installations.start_ts <= current_ts,
+                                 or_(models.Installations.end_ts.is_(None),
+                                     models.Installations.end_ts >= current_ts)
+                                 )))
 
-    return [entry['device_id'] for entry in await database.fetch_all(query=query)]
+    if not await is_admin_access(requester.id):
+        # Restrict on the group_id of the requester
+        query = query.filter(models.Sites.group_id == requester.group_id)
+
+    retrieved_device_ids = [x.__dict__['device_id'] for x in query.all()]
+    return retrieved_device_ids
