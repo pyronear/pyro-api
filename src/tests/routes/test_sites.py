@@ -32,6 +32,7 @@ ACCESS_TABLE = [
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
     {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
 ]
 
 
@@ -57,17 +58,23 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "site_id, status_code, status_details",
+    "access_idx, site_id, status_code, status_details",
     [
-        [1, 200, None],
-        [999, 404, "Entry not found"],
-        [0, 422, None],
+        [0, 1, 200, None],
+        [1, 1, 200, None],
+        [1, 999, 404, "Entry not found"],
+        [0, 0, 422, None],
+        [4, 1, 401, "You can't access this ressource"],
     ],
 )
 @pytest.mark.asyncio
-async def test_get_site(test_app_asyncio, init_test_db, site_id, status_code, status_details):
+async def test_get_site(test_app_asyncio, init_test_db, access_idx,
+                        site_id, status_code, status_details):
 
-    response = await test_app_asyncio.get(f"/sites/{site_id}")
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.get(f"/sites/{site_id}", headers=auth)
     response_json = response.json()
     assert response.status_code == status_code
 
@@ -166,12 +173,16 @@ async def test_create_site(test_app_asyncio, init_test_db, test_db,
     [
         [1, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1, 200, None],
         [0, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1,
+         200, None],
+        [2, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1,
          401, "Permission denied"],
         [1, {}, 1, 422, None],
         [1, {"site_name": "foo"}, 1, 422, None],
         [1, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 999, 404, None],
         [1, {"name": "1", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 1, 422, None],
         [1, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 0, 422, None],
+        [4, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"},
+         1, 401, "You can't specify another group"],
     ],
 )
 @pytest.mark.asyncio
