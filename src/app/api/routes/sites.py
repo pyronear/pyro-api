@@ -45,8 +45,7 @@ async def create_noalert_site(payload: SiteBase,
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
 async def get_site(site_id: int = Path(..., gt=0),
-                   requester=Security(get_current_access,
-                   scopes=[AccessType.admin, AccessType.user])):
+                   requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a site_id, retrieves information about the specified site
     """
@@ -56,8 +55,7 @@ async def get_site(site_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
-async def fetch_sites(requester=Security(get_current_access,
-                      scopes=[AccessType.admin, AccessType.user]),
+async def fetch_sites(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                       session=Depends(get_session)):
     """
     Retrieves the list of all sites and their information

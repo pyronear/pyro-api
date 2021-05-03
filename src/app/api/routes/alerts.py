@@ -86,8 +86,7 @@ async def create_alert_from_device(
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
 async def get_alert(alert_id: int = Path(..., gt=0),
-                    requester=Security(get_current_access,
-                    scopes=[AccessType.admin, AccessType.user])):
+                    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a alert_id, retrieves information about the specified alert
     """
@@ -97,8 +96,7 @@ async def get_alert(alert_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(requester=Security(get_current_access,
-                       scopes=[AccessType.admin, AccessType.user]),
+async def fetch_alerts(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                        session=Depends(get_session)):
     """
     Retrieves the list of all alerts and their information
@@ -128,8 +126,7 @@ async def update_alert(payload: AlertIn,
 
 @router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
 async def acknowledge_alert(alert_id: int = Path(..., gt=0),
-                            requester=Security(get_current_access,
-                            scopes=[AccessType.admin, AccessType.user])):
+                            requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a alert_id, acknowledge the specified alert
     """
@@ -139,7 +136,8 @@ async def acknowledge_alert(alert_id: int = Path(..., gt=0),
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_alert(alert_id: int = Path(..., gt=0),
+                       _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
@@ -168,8 +166,7 @@ async def link_media(payload: AlertMediaId,
 
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
-async def fetch_ongoing_alerts(requester=Security(get_current_access,
-                               scopes=[AccessType.admin, AccessType.user]),
+async def fetch_ongoing_alerts(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                                session=Depends(get_session)):
     """
     Retrieves the list of ongoing alerts and their information
@@ -197,7 +194,7 @@ async def fetch_ongoing_alerts(requester=Security(get_current_access,
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
 async def fetch_unacknowledged_alerts(requester=Security(get_current_access,
-                                      scopes=[AccessType.admin, AccessType.user]),
+                                                         scopes=[AccessType.admin, AccessType.user]),
                                       session=Depends(get_session)):
     """
     Retrieves the list of non confirmed alerts and their information

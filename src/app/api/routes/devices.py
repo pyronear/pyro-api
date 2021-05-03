@@ -77,8 +77,7 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
-async def fetch_devices(requester=Security(get_current_access,
-                        scopes=[AccessType.admin, AccessType.user]),
+async def fetch_devices(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                         session=Depends(get_session)):
     """
     Retrieves the list of all devices and their information

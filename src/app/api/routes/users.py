@@ -65,8 +65,7 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
-async def fetch_users(requester=Security(get_current_access,
-                      scopes=[AccessType.admin, AccessType.user]),
+async def fetch_users(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                       session=Depends(get_session)):
     """
     Retrieves the list of all users and their information

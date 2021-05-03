@@ -5,7 +5,7 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from app.api import crud
 from app.db import events, get_session, models
 from app.api.schemas import EventOut, EventIn, AccessType
@@ -28,8 +28,7 @@ async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
 async def get_event(event_id: int = Path(..., gt=0),
-                    requester=Security(get_current_access,
-                    scopes=[AccessType.admin, AccessType.user])):
+                    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
     """
     Based on a event_id, retrieves information about the specified event
     """
@@ -39,8 +38,7 @@ async def get_event(event_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
-async def fetch_events(requester=Security(get_current_access,
-                       scopes=[AccessType.admin, AccessType.user]),
+async def fetch_events(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                        session=Depends(get_session)):
     """
     Retrieves the list of all events and their information
@@ -58,8 +56,7 @@ async def fetch_events(requester=Security(get_current_access,
 
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
-async def fetch_past_events(requester=Security(get_current_access,
-                            scopes=[AccessType.admin, AccessType.user]),
+async def fetch_past_events(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
                             session=Depends(get_session)):
     """
     Retrieves the list of all events and their information
