@@ -17,7 +17,10 @@ router = APIRouter()
 
 
 @router.post("/", response_model=EventOut, status_code=201, summary="Create a new event")
-async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])):
+async def create_event(
+    payload: EventIn,
+    _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
+):
     """Creates a new event based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -27,8 +30,10 @@ async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[
 
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
-async def get_event(event_id: int = Path(..., gt=0),
-                    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def get_event(
+    event_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """
     Based on a event_id, retrieves information about the specified event
     """
@@ -38,8 +43,10 @@ async def get_event(event_id: int = Path(..., gt=0),
 
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
-async def fetch_events(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-                       session=Depends(get_session)):
+async def fetch_events(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of all events and their information
     """
@@ -56,8 +63,10 @@ async def fetch_events(requester=Security(get_current_access, scopes=[AccessType
 
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
-async def fetch_past_events(requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-                            session=Depends(get_session)):
+async def fetch_past_events(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of all events and their information
     """
@@ -89,8 +98,11 @@ async def update_event(
 
 
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
-async def delete_event(event_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin]),
-                       session=Depends(get_session)):
+async def delete_event(
+    event_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=[AccessType.admin]),
+    session=Depends(get_session)
+):
     """
     Based on a event_id, deletes the specified event
     """
