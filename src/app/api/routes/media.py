@@ -12,7 +12,8 @@ from app.api.schemas import MediaOut, MediaIn, MediaCreation, MediaUrl, DeviceOu
 from app.api.deps import get_current_device, get_current_user, get_current_access
 from app.api.security import hash_content_file
 from app.services import bucket_service, resolve_bucket_key
-from app.api.crud.authorizations import is_admin_access, is_in_same_group
+from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
+from app.api.crud.groups import get_entity_group_id
 
 
 router = APIRouter()
@@ -34,7 +35,10 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
 
 
 @router.post("/", response_model=MediaOut, status_code=201, summary="Create a media related to a specific device")
-async def create_media(payload: MediaIn, _=Security(get_current_access, scopes=[AccessType.admin])):
+async def create_media(
+    payload: MediaIn,
+    _=Security(get_current_access, scopes=[AccessType.admin])
+):
     """
     Creates a media related to specific device, based on device_id as argument
 
@@ -46,8 +50,10 @@ async def create_media(payload: MediaIn, _=Security(get_current_access, scopes=[
 
 @router.post("/from-device", response_model=MediaOut, status_code=201,
              summary="Create a media related to the authentified device")
-async def create_media_from_device(payload: BaseMedia,
-                                   device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])):
+async def create_media_from_device(
+    payload: BaseMedia,
+    device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
+):
     """
     Creates a media related to the authentified device, uses its device_id as argument
 
@@ -58,19 +64,24 @@ async def create_media_from_device(payload: BaseMedia,
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")
-async def get_media(media_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_media(
+    media_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """
     Based on a media_id, retrieves information about the specified media
     """
-    # TODO: would need to retrieve group_id
-    # await check_group_access(requester.access_id, entry.get("group_id"))
+    # TODO: confirm this one
+    requested_group_id = await get_entity_group_id(media, media_id)
+    await check_group_read(requester.id, requested_group_id)
     return await crud.get_entry(media, media_id)
 
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
-async def fetch_media(requester=Security(get_current_access,
-                      scopes=[AccessType.admin, AccessType.user]),
-                      session=Depends(get_session)):
+async def fetch_media(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of all media and their information
     """
@@ -98,7 +109,10 @@ async def update_media(
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
-async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_media(
+    media_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=[AccessType.admin])
+):
     """
     Based on a media_id, deletes the specified media
     """
@@ -166,11 +180,14 @@ async def upload_media_from_device(
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
 async def get_media_url(
     media_id: int = Path(..., gt=0),
-    _=Security(get_current_user, scopes=[AccessType.admin])
+    requester=Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
     """Resolve the temporary media image URL"""
+    requested_group_id = await get_entity_group_id(media, media_id)
+    await check_group_read(requester.id, requested_group_id)
+
     # Check in DB
-    media = await check_media_registration(media_id)
+    media_instance = await check_media_registration(media_id)
     # Check in bucket
-    temp_public_url = await bucket_service.get_public_url(media['bucket_key'])
+    temp_public_url = await bucket_service.get_public_url(media_instance['bucket_key'])
     return MediaUrl(url=temp_public_url)

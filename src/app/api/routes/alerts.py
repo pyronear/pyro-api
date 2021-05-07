@@ -5,7 +5,7 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status, BackgroundTasks, Depends
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from functools import partial
 from datetime import datetime, timedelta
 
@@ -22,8 +22,8 @@ from app.api.schemas import (
     AccessType)
 from app.api.deps import get_current_device, get_current_access
 from app.api.external import post_request
-from app.api.crud.authorizations import is_admin_access
-
+from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
+from app.api.crud.groups import get_entity_group_id
 
 router = APIRouter()
 
@@ -81,22 +81,27 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-
     return await create_alert(AlertIn(**payload.dict(), device_id=device.id), background_tasks)
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
-async def get_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_alert(
+    alert_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """
     Based on a alert_id, retrieves information about the specified alert
     """
+    requested_group_id = await get_entity_group_id(alerts, alert_id)
+    await check_group_read(requester.id, requested_group_id)
     return await crud.get_entry(alerts, alert_id)
 
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
-async def fetch_alerts(requester=Security(get_current_access,
-                       scopes=[AccessType.admin, AccessType.user]),
-                       session=Depends(get_session)):
+async def fetch_alerts(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of all alerts and their information
     """
@@ -115,24 +120,34 @@ async def fetch_alerts(requester=Security(get_current_access,
 async def update_alert(
     payload: AlertIn,
     alert_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a alert_id, updates information about the specified alert
     """
+    requested_group_id = await get_entity_group_id(alerts, alert_id)
+    await check_group_update(requester.id, requested_group_id)
     return await crud.update_entry(alerts, payload, alert_id)
 
 
 @router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
-async def acknowledge_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def acknowledge_alert(
+    alert_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """
     Based on a alert_id, acknowledge the specified alert
     """
+    requested_group_id = await get_entity_group_id(alerts, alert_id)
+    await check_group_update(requester.id, requested_group_id)
     return await crud.update_entry(alerts, Ackowledgement(is_acknowledged=True), alert_id)
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_alert(
+    alert_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=[AccessType.admin])
+):
     """
     Based on a alert_id, deletes the specified alert
     """
@@ -140,9 +155,11 @@ async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_a
 
 
 @router.put("/{alert_id}/link-media", response_model=AlertOut, summary="Link an alert to a media")
-async def link_media(payload: AlertMediaId,
-                     alert_id: int = Path(..., gt=0),
-                     current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])):
+async def link_media(
+    payload: AlertMediaId,
+    alert_id: int = Path(..., gt=0),
+    current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
+):
     """
     Based on a alert_id, and media information as arguments, link the specified alert to a media
     """
@@ -161,26 +178,49 @@ async def link_media(payload: AlertMediaId,
 
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
-async def fetch_ongoing_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
+async def fetch_ongoing_alerts(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of ongoing alerts and their information
     """
-    query = (
-        alerts.select()
-        .where(
-            alerts.c.event_id.in_(
-                select([events.c.id])
-                .where(events.c.end_ts.is_(None))
-            )
-        )
-    )
 
-    return await crud.base.database.fetch_all(query=query)
+    if await is_admin_access(requester.id):
+        query = (
+            alerts.select().where(
+                alerts.c.event_id.in_(
+                    select([events.c.id])
+                    .where(events.c.end_ts.is_(None))
+                )))
+
+        return await crud.base.database.fetch_all(query=query)
+    else:
+        retrieved_alerts = (session.query(models.Alerts)
+                            .join(models.Events)
+                            .filter(models.Events.end_ts.is_(None))
+                            .join(models.Devices)
+                            .join(models.Accesses)
+                            .filter(models.Accesses.group_id == requester.group_id))
+        retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
+        return retrieved_alerts
 
 
 @router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
-async def fetch_unacknowledged_alerts(_=Security(get_current_access, scopes=[AccessType.admin])):
+async def fetch_unacknowledged_alerts(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of non confirmed alerts and their information
     """
-    return await crud.fetch_all(alerts, {"is_acknowledged": False})
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(alerts, {"is_acknowledged": False})
+    else:
+        retrieved_alerts = (session.query(models.Alerts)
+                            .join(models.Devices)
+                            .join(models.Accesses)
+                            .filter(and_(models.Accesses.group_id == requester.group_id,
+                                         models.Alerts.is_acknowledged.is_(False))))
+        retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
+        return retrieved_alerts

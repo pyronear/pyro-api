@@ -6,18 +6,20 @@
 from typing import List
 from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
 from app.api import crud
-from app.api.crud.authorizations import check_group_update
 from app.db import sites, SiteType, get_session
 from app.api.schemas import SiteOut, SiteIn, SiteBase, AccessType
 from app.api.deps import get_current_access
-from app.api.crud.authorizations import is_admin_access
-
+from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
+from app.api.crud.groups import get_entity_group_id
 
 router = APIRouter()
 
 
 @router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
-async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[AccessType.admin])):
+async def create_site(
+    payload: SiteIn,
+    _=Security(get_current_access, scopes=[AccessType.admin])
+):
     """Creates a new site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -28,8 +30,10 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[Ac
 
 
 @router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
-async def create_noalert_site(payload: SiteBase,
-                              requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])):
+async def create_noalert_site(
+    payload: SiteBase,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """Creates a new no-alert site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -45,22 +49,26 @@ async def create_noalert_site(payload: SiteBase,
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
-async def get_site(site_id: int = Path(..., gt=0)):
+async def get_site(
+    site_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
     """
     Based on a site_id, retrieves information about the specified site
     """
-    entry = await crud.get_entry(sites, site_id)
-    return entry
+    requested_group_id = await get_entity_group_id(sites, site_id)
+    await check_group_read(requester.id, requested_group_id)
+    return await crud.get_entry(sites, site_id)
 
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
-async def fetch_sites(requester=Security(get_current_access,
-                      scopes=[AccessType.admin, AccessType.user]),
-                      session=Depends(get_session)):
+async def fetch_sites(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
     """
     Retrieves the list of all sites and their information
     """
-
     if await is_admin_access(requester.id):
         return await crud.fetch_all(sites)
     else:
@@ -71,16 +79,22 @@ async def fetch_sites(requester=Security(get_current_access,
 async def update_site(
     payload: SiteIn,
     site_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a site_id, updates information about the specified site
     """
+    # TODO: validate this one
+    requested_group_id = await get_entity_group_id(sites, site_id)
+    await check_group_update(requester.id, requested_group_id)
     return await crud.update_entry(sites, payload, site_id)
 
 
 @router.delete("/{site_id}/", response_model=SiteOut, summary="Delete a specific site")
-async def delete_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_site(
+    site_id: int = Path(..., gt=0),
+    _=Security(get_current_access, scopes=[AccessType.admin])
+):
     """
     Based on a site_id, deletes the specified site
     """

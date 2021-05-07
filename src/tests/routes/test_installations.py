@@ -16,6 +16,7 @@ from tests.utils import update_only_datetime, parse_time
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},
+    {"id": 3, "login": "fifth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
 DEVICE_TABLE = [
@@ -37,6 +38,7 @@ ACCESS_TABLE = [
     {"id": 2, "group_id": 1, "login": "second_login", "hashed_password": "hashed_pwd", "scope": "admin"},
     {"id": 3, "group_id": 2, "login": "third_login", "hashed_password": "hashed_pwd", "scope": "device"},
     {"id": 4, "group_id": 2, "login": "fourth_login", "hashed_password": "hashed_pwd", "scope": "device"},
+    {"id": 5, "group_id": 2, "login": "fifth_login", "hashed_password": "hashed_pwd", "scope": "user"},
 ]
 
 SITE_TABLE = [
@@ -74,11 +76,12 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, installation_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [0, 1, 200, None],
         [1, 1, 200, None],
         [2, 1, 401, "Permission denied"],
         [1, 999, 404, "Entry not found"],
         [1, 0, 422, None],
+        [4, 1, 401, "You can't access this ressource"],
     ],
 )
 @pytest.mark.asyncio
@@ -160,9 +163,11 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, installation_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 401, "Permission denied"],
+        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
         [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 401, "Permission denied"],
+        [4, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
+         1, 401, "You can't specify another group"],
         [1, {}, 1, 422, None],
         [1, {"device_id": 1}, 1, 422, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 999, 404, "Entry not found"],
@@ -224,11 +229,12 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, installation_id, device_ids, status_code, status_details",
     [
-        [0, 1, [], 401, "Permission denied"],
+        [0, 1, [1], 200, None],
         [1, 1, [1], 200, None],
-        [2, 1, [], 401, "Permission denied"],
+        [4, 2, [2], 200, None],
         [1, 999, [], 200, None],  # TODO: this should fail since the site doesn't exist
         [1, 0, [], 422, None],
+        [2, 1, [], 401, "Permission denied"],
     ],
 )
 @pytest.mark.asyncio
