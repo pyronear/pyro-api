@@ -252,7 +252,7 @@ class Acknowledgement(BaseModel):
     is_acknowledged: bool = Field(False)
 
 
-class AcknowledgementOut(Ackowledgement, _Id):
+class AcknowledgementOut(Acknowledgement, _Id):
     pass
 
 
