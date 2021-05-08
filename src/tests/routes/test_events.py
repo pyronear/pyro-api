@@ -21,11 +21,11 @@ USER_TABLE = [
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": "2020-09-13T08:18:45.447773",
-     "end_ts": "2020-09-13T08:18:45.447773", "created_at": "2020-10-13T08:18:45.447773"},
+     "end_ts": "2020-09-13T08:18:45.447773", "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
-     "created_at": "2020-09-13T08:18:45.447773"},
+     "is_acknowledged": True, "created_at": "2020-09-13T08:18:45.447773"},
     {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": "2021-03-13T10:18:45.447773", "created_at": "2020-09-13T08:18:45.447773"},
+     "end_ts": "2021-03-13T10:18:45.447773", "is_acknowledged": False, "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 GROUP_TABLE = [
@@ -44,13 +44,13 @@ DEVICE_TABLE = [
 
 ALERT_TABLE = [
     {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+     "azimuth": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 2, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+     "azimuth": 47., "created_at": "2020-10-13T09:18:45.447773"},
     {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
-     "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
+     "azimuth": 123., "created_at": "2020-11-03T11:18:45.447773"},
     {"id": 4, "device_id": 2, "event_id": 3, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "is_acknowledged": True, "created_at": ts_to_string(datetime.utcnow())},
+     "azimuth": 47., "created_at": ts_to_string(datetime.utcnow())},
 ]
 
 ACCESS_TABLE = [
@@ -165,8 +165,6 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
     # Create a custom access token
     auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
-    test_response = {"id": len(EVENT_TABLE) + 1, **payload}
-
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/events/", data=json.dumps(payload), headers=auth)
 
@@ -176,6 +174,7 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
         assert response.json()['detail'] == status_details
     if response.status_code // 100 == 2:
         json_response = response.json()
+        test_response = {"id": len(EVENT_TABLE) + 1, **payload, "is_acknowledged": False}
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
@@ -185,9 +184,9 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, event_id, status_code, status_details",
     [
-        [0, {"lat": 5., "lon": 10., "type": "wildfire"}, 1, 401, "Permission denied"],
-        [1, {"lat": 5., "lon": 10., "type": "wildfire"}, 1, 200, None],
-        [2, {"lat": 5., "lon": 10., "type": "wildfire"}, 1, 200, None],
+        [0, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 401, "Permission denied"],
+        [1, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
+        [2, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
         [1, {}, 1, 422, None],
         [1, {"type": "wildfire"}, 1, 422, None],
         [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 999, 404, "Entry not found"],
@@ -243,3 +242,64 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
         assert response.json() == EVENT_TABLE[event_id - 1]
         remaining_events = await test_app_asyncio.get("/events/", headers=auth)
         assert all(entry['id'] != event_id for entry in remaining_events.json())
+
+
+@pytest.mark.parametrize(
+    "access_idx, event_id, status_code, status_details",
+    [
+        [0, 1, 200, None],
+        [1, 1, 200, None],
+        [2, 1, 401, "Permission denied"],
+    ],
+)
+@pytest.mark.asyncio
+async def test_acknowledge_event(test_app_asyncio, init_test_db, test_db,
+                                 access_idx, event_id, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.put(f"/events/{event_id}/acknowledge", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        updated_event = await get_entry(test_db, db.events, event_id)
+        updated_event = dict(**updated_event)
+        assert updated_event['is_acknowledged']
+
+
+@pytest.mark.parametrize(
+    "access_idx, status_code, status_details",
+    [
+        [0, 200, None],
+        [1, 200, None],
+        [2, 401, "Permission denied"],
+        [4, 200, None]
+    ],
+)
+@pytest.mark.asyncio
+async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
+
+    # Create a custom access token
+    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+
+    response = await test_app_asyncio.get("/events/unacknowledged", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()['detail'] == status_details
+
+    if response.status_code // 100 == 2:
+        events_group_id = [entry["id"] for entry in EVENT_TABLE]
+
+        # Retrieve group_id condition first
+        if ACCESS_TABLE[access_idx]["scope"] != "admin":
+            group_id = ACCESS_TABLE[access_idx]["group_id"]
+            access_group_id = [access["id"] for access in ACCESS_TABLE if access["group_id"] == group_id]
+            devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
+            event_ids = [alert["event_id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
+            events_group_id = [event["id"] for event in EVENT_TABLE if event["id"] in event_ids]
+
+        assert response.json() == [x for x in EVENT_TABLE if x["is_acknowledged"] is False
+                                   and x["id"] in events_group_id]
