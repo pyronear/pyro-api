@@ -40,7 +40,7 @@ class ClientTester(unittest.TestCase):
             # Create event
             event_id = self._test_route_return(api_client.create_event(0., 0.), dict)['id']
             # Create an alert
-            alert = self._test_route_return(api_client.send_alert(0., 0., event_id, all_devices[0]['id']), dict)
+            _ = self._test_route_return(api_client.send_alert(0., 0., event_id, all_devices[0]['id']), dict)
             # Acknowledge it
             updated_event = self._test_route_return(api_client.acknowledge_event(event_id), dict)
             self.assertTrue(updated_event['is_acknowledged'])
