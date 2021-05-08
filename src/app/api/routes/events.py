@@ -8,7 +8,7 @@ from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
 from sqlalchemy import and_
 from app.api import crud
 from app.db import events, get_session, models
-from app.api.schemas import EventOut, EventIn, AccessType
+from app.api.schemas import EventOut, EventIn, AccessType, Acknowledgement, AcknowledgementOut
 from app.api.deps import get_current_access
 from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
 from app.api.crud.groups import get_entity_group_id
@@ -97,6 +97,19 @@ async def update_event(
     return await crud.update_entry(events, payload, event_id)
 
 
+@router.put("/{event_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing event")
+async def acknowledge_event(
+    event_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+):
+    """
+    Based on a event_id, acknowledge the specified event
+    """
+    requested_group_id = await get_entity_group_id(events, event_id)
+    await check_group_update(requester.id, requested_group_id)
+    return await crud.update_entry(events, Acknowledgement(is_acknowledged=True), event_id)
+
+
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
 async def delete_event(
     event_id: int = Path(..., gt=0),
@@ -107,3 +120,25 @@ async def delete_event(
     Based on a event_id, deletes the specified event
     """
     return await crud.delete_entry(events, event_id)
+
+
+@router.get("/unacknowledged", response_model=List[EventOut],
+            summary="Get the list of events that haven't been acknowledged")
+async def fetch_unacknowledged_events(
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_session)
+):
+    """
+    Retrieves the list of non confirmed alerts and their information
+    """
+    if await is_admin_access(requester.id):
+        return await crud.fetch_all(events, {"is_acknowledged": False})
+    else:
+        retrieved_events = (session.query(models.Events)
+                            .join(models.Alerts)
+                            .join(models.Devices)
+                            .join(models.Accesses)
+                            .filter(and_(models.Accesses.group_id == requester.group_id,
+                                         models.Events.is_acknowledged.is_(False))))
+        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
+        return retrieved_events

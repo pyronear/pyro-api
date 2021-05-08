@@ -11,15 +11,7 @@ from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media, get_session, models
-from app.api.schemas import (
-    AlertBase,
-    AlertOut,
-    AlertIn,
-    AlertMediaId,
-    DeviceOut,
-    Ackowledgement,
-    AcknowledgementOut,
-    AccessType)
+from app.api.schemas import AlertBase, AlertOut, AlertIn, AlertMediaId, DeviceOut, AccessType
 from app.api.deps import get_current_device, get_current_access
 from app.api.external import post_request
 from app.api.crud.authorizations import is_admin_access, check_group_read, check_group_update
@@ -130,19 +122,6 @@ async def update_alert(
     return await crud.update_entry(alerts, payload, alert_id)
 
 
-@router.put("/{alert_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing alert")
-async def acknowledge_alert(
-    alert_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
-):
-    """
-    Based on a alert_id, acknowledge the specified alert
-    """
-    requested_group_id = await get_entity_group_id(alerts, alert_id)
-    await check_group_update(requester.id, requested_group_id)
-    return await crud.update_entry(alerts, Ackowledgement(is_acknowledged=True), alert_id)
-
-
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
 async def delete_alert(
     alert_id: int = Path(..., gt=0),
@@ -202,25 +181,5 @@ async def fetch_ongoing_alerts(
                             .join(models.Devices)
                             .join(models.Accesses)
                             .filter(models.Accesses.group_id == requester.group_id))
-        retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
-        return retrieved_alerts
-
-
-@router.get("/unacknowledged", response_model=List[AlertOut], summary="Get the list of non confirmed alerts")
-async def fetch_unacknowledged_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
-):
-    """
-    Retrieves the list of non confirmed alerts and their information
-    """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(alerts, {"is_acknowledged": False})
-    else:
-        retrieved_alerts = (session.query(models.Alerts)
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(and_(models.Accesses.group_id == requester.group_id,
-                                         models.Alerts.is_acknowledged.is_(False))))
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts
