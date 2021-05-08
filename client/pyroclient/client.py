@@ -32,8 +32,8 @@ ROUTES: Dict[str, str] = {
     "get-sites": "/sites",
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
-    "get-unacknowledged-alerts": "/alerts/unacknowledged",
-    "acknowledge-alert": "/alerts/{alert_id}/acknowledge",
+    "get-unacknowledged-events": "/events/unacknowledged",
+    "acknowledge-event": "/events/{event_id}/acknowledge",
     "get-site-devices": "/installations/site-devices/{site_id}",
     "get-media-url": "/media/{media_id}/url",
     "get-past-events": "/events/past",
@@ -351,35 +351,35 @@ class Client:
 
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers)
 
-    def get_unacknowledged_alerts(self) -> Response:
-        """Get all the existing alerts in the DB that have the field "is_acknowledged" set to `False`
+    def get_unacknowledged_events(self) -> Response:
+        """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
 
         Example::
             >>> from pyroclient import client
             >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_unacknowledged_alerts()
+            >>> response = api_client.get_unacknowledged_events()
 
         Returns:
-            HTTP response containing the list of all alerts that haven't been acknowledged
+            HTTP response containing the list of all events that haven't been acknowledged
         """
-        return requests.get(self.routes["get-unacknowledged-alerts"], headers=self.headers)
+        return requests.get(self.routes["get-unacknowledged-events"], headers=self.headers)
 
-    def acknowledge_alert(self, alert_id: int) -> Response:
-        """Switch the `is_acknowledged` field value of the alert to `True`
+    def acknowledge_event(self, event_id: int) -> Response:
+        """Switch the `is_acknowledged` field value of the event to `True`
 
         Example::
             >>> from pyroclient import client
             >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.acknowledge_alert(alert_id=1)
+            >>> response = api_client.acknowledge_event(event_id=1)
 
         Args:
-            alert_id: ID of the associated alert entry
+            event_id: ID of the associated event entry
 
         Returns:
-            HTTP response containing the updated alert
+            HTTP response containing the updated event
         """
 
-        return requests.put(self.routes["acknowledge-alert"].format(alert_id=alert_id), headers=self.headers)
+        return requests.put(self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers)
 
     def get_site_devices(self, site_id: int) -> Response:
         """Fetch the devices that are installed on a specific site
