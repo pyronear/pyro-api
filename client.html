@@ -5,7 +5,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>pyroclient.client &mdash; pyroclient 0.1.2a0-git documentation</title>
@@ -21,6 +22,7 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
@@ -32,6 +34,8 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato" type="text/css" />
   <link rel="stylesheet" href="_static/css/my_theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -166,14 +170,14 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="pyroclient-client">
+  <section id="pyroclient-client">
 <h1>pyroclient.client<a class="headerlink" href="#pyroclient-client" title="Permalink to this headline">¶</a></h1>
 <p>The client subpackage contains the core definition of the API client.</p>
-<div class="section" id="api-client">
+<section id="api-client">
 <h2>API Client<a class="headerlink" href="#api-client" title="Permalink to this headline">¶</a></h2>
 <dl class="py class">
-<dt id="pyroclient.client.Client">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">pyroclient.client.</span></code><code class="sig-name descname"><span class="pre">Client</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_login</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_password</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">pyroclient.client.</span></span><span class="sig-name descname"><span class="pre">Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_url</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_login</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">credentials_password</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Client class to interact with the PyroNear API</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -185,30 +189,30 @@
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pyroclient.client.Client.acknowledge_alert">
-<code class="sig-name descname"><span class="pre">acknowledge_alert</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.acknowledge_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.acknowledge_alert" title="Permalink to this definition">¶</a></dt>
-<dd><p>Switch the <cite>is_acknowledged</cite> field value of the alert to <cite>True</cite></p>
+<dt class="sig sig-object py" id="pyroclient.client.Client.acknowledge_event">
+<span class="sig-name descname"><span class="pre">acknowledge_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.acknowledge_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.acknowledge_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Switch the <cite>is_acknowledged</cite> field value of the event to <cite>True</cite></p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://pyronear-api.herokuapp.com&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_LOGIN&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_PWD&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">acknowledge_alert</span><span class="p">(</span><span class="n">alert_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">acknowledge_event</span><span class="p">(</span><span class="n">event_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>alert_id</strong> – ID of the associated alert entry</p>
+<dd class="field-odd"><p><strong>event_id</strong> – ID of the associated event entry</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>HTTP response containing the updated alert</p>
+<dd class="field-even"><p>HTTP response containing the updated event</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.create_event">
-<code class="sig-name descname"><span class="pre">create_event</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_event" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.create_event">
+<span class="sig-name descname"><span class="pre">create_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Register an event (e.g wildfire).</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -232,8 +236,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.create_media">
-<code class="sig-name descname"><span class="pre">create_media</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_media" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.create_media">
+<span class="sig-name descname"><span class="pre">create_media</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_media" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a media entry</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -254,8 +258,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.create_media_from_device">
-<code class="sig-name descname"><span class="pre">create_media_from_device</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media_from_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_media_from_device" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.create_media_from_device">
+<span class="sig-name descname"><span class="pre">create_media_from_device</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_media_from_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_media_from_device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a media entry from a device (no need to specify device ID).</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -273,8 +277,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.create_no_alert_site">
-<code class="sig-name descname"><span class="pre">create_no_alert_site</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geocode</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_no_alert_site"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_no_alert_site" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.create_no_alert_site">
+<span class="sig-name descname"><span class="pre">create_no_alert_site</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geocode</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_no_alert_site"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_no_alert_site" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a site that is not supposed to generate alerts.</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -301,8 +305,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_all_alerts">
-<code class="sig-name descname"><span class="pre">get_all_alerts</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_all_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_all_alerts" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_all_alerts">
+<span class="sig-name descname"><span class="pre">get_all_alerts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_all_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_all_alerts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all the existing alerts in the DB</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -320,8 +324,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_media_url">
-<code class="sig-name descname"><span class="pre">get_media_url</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_media_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_media_url" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_media_url">
+<span class="sig-name descname"><span class="pre">get_media_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_media_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_media_url" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the image as a URL</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -342,8 +346,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_media_url_and_read">
-<code class="sig-name descname"><span class="pre">get_media_url_and_read</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_media_url_and_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_media_url_and_read" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_media_url_and_read">
+<span class="sig-name descname"><span class="pre">get_media_url_and_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_media_url_and_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_media_url_and_read" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the image as a url and read it</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -364,8 +368,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_my_device">
-<code class="sig-name descname"><span class="pre">get_my_device</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_my_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_my_device" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_my_device">
+<span class="sig-name descname"><span class="pre">get_my_device</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_my_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_my_device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get information about the current device</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -383,8 +387,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_my_devices">
-<code class="sig-name descname"><span class="pre">get_my_devices</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_my_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_my_devices" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_my_devices">
+<span class="sig-name descname"><span class="pre">get_my_devices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_my_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_my_devices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the devices who are owned by the logged user</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -402,8 +406,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_ongoing_alerts">
-<code class="sig-name descname"><span class="pre">get_ongoing_alerts</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_ongoing_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_ongoing_alerts" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_ongoing_alerts">
+<span class="sig-name descname"><span class="pre">get_ongoing_alerts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_ongoing_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_ongoing_alerts" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all the existing alerts in the DB that have the status ‘start’</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -421,8 +425,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_past_events">
-<code class="sig-name descname"><span class="pre">get_past_events</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_past_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_past_events" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_past_events">
+<span class="sig-name descname"><span class="pre">get_past_events</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_past_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_past_events" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all past events</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -440,8 +444,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_site_devices">
-<code class="sig-name descname"><span class="pre">get_site_devices</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_site_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_site_devices" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_site_devices">
+<span class="sig-name descname"><span class="pre">get_site_devices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_site_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_site_devices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fetch the devices that are installed on a specific site</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -462,8 +466,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_sites">
-<code class="sig-name descname"><span class="pre">get_sites</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_sites"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_sites" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_sites">
+<span class="sig-name descname"><span class="pre">get_sites</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_sites"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_sites" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all the existing sites in the DB</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -481,27 +485,27 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.get_unacknowledged_alerts">
-<code class="sig-name descname"><span class="pre">get_unacknowledged_alerts</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_unacknowledged_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_unacknowledged_alerts" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get all the existing alerts in the DB that have the field “is_acknowledged” set to <cite>False</cite></p>
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_unacknowledged_events">
+<span class="sig-name descname"><span class="pre">get_unacknowledged_events</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_unacknowledged_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_unacknowledged_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all the existing events in the DB that have the field “is_acknowledged” set to <cite>False</cite></p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://pyronear-api.herokuapp.com&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_LOGIN&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_PWD&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">get_unacknowledged_alerts</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">get_unacknowledged_events</span><span class="p">()</span>
 </pre></div>
 </div>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>HTTP response containing the list of all alerts that haven’t been acknowledged</p>
+<dd class="field-odd"><p>HTTP response containing the list of all events that haven’t been acknowledged</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.heartbeat">
-<code class="sig-name descname"><span class="pre">heartbeat</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.heartbeat">
+<span class="sig-name descname"><span class="pre">heartbeat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the last ping of the device</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -519,8 +523,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.send_alert">
-<code class="sig-name descname"><span class="pre">send_alert</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.send_alert">
+<span class="sig-name descname"><span class="pre">send_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Raise an alert to the API.</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -549,8 +553,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.send_alert_from_device">
-<code class="sig-name descname"><span class="pre">send_alert_from_device</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert_from_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert_from_device" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.send_alert_from_device">
+<span class="sig-name descname"><span class="pre">send_alert_from_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.send_alert_from_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.send_alert_from_device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Raise an alert to the API from a device (no need to specify device ID).</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -578,8 +582,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.update_my_hash">
-<code class="sig-name descname"><span class="pre">update_my_hash</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">software_hash</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_hash"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_hash" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.update_my_hash">
+<span class="sig-name descname"><span class="pre">update_my_hash</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">software_hash</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_hash"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_hash" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the software hash of the current device</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -597,8 +601,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.update_my_location">
-<code class="sig-name descname"><span class="pre">update_my_location</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elevation</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yaw</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pitch</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_location" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.update_my_location">
+<span class="sig-name descname"><span class="pre">update_my_location</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elevation</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yaw</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pitch</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_my_location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_my_location" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the location of the device</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -616,8 +620,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pyroclient.client.Client.upload_media">
-<code class="sig-name descname"><span class="pre">upload_media</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.upload_media"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.upload_media" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pyroclient.client.Client.upload_media">
+<span class="sig-name descname"><span class="pre">upload_media</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">media_data</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">requests.models.Response</span><a class="reference internal" href="_modules/pyroclient/client.html#Client.upload_media"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.upload_media" title="Permalink to this definition">¶</a></dt>
 <dd><p>Upload the media content</p>
 <dl>
 <dt>Example::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
@@ -643,8 +647,8 @@
 
 </dd></dl>
 
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
