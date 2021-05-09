@@ -50,22 +50,22 @@ MEDIA_TABLE = [
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": "2021-03-13T10:18:45.447773",
-     "created_at": "2020-10-13T08:18:45.447773"},
+     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
-     "created_at": "2020-09-13T08:18:45.447773"},
+     "is_acknowledged": True, "created_at": "2020-09-13T08:18:45.447773"},
     {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": None, "created_at": "2020-09-13T08:18:45.447773"},
+     "end_ts": None, "is_acknowledged": False, "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 ALERT_TABLE = [
     {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+     "azimuth": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+     "azimuth": 47., "created_at": "2020-10-13T09:18:45.447773"},
     {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
-     "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
+     "azimuth": 123., "created_at": "2020-11-03T11:18:45.447773"},
     {"id": 4, "device_id": 1, "event_id": 3, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "is_acknowledged": True, "created_at": ts_to_string(datetime.utcnow())},
+     "azimuth": 47., "created_at": ts_to_string(datetime.utcnow())},
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -177,40 +177,6 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
-    [
-        [0, 200, None],
-        [1, 200, None],
-        [2, 401, "Permission denied"],
-        [4, 200, None]
-    ],
-)
-@pytest.mark.asyncio
-async def test_fetch_unacknowledged_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
-    # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
-
-    response = await test_app_asyncio.get("/alerts/unacknowledged", headers=auth)
-    assert response.status_code == status_code
-    if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
-
-    if response.status_code // 100 == 2:
-        alerts_group_id = [entry["id"] for entry in ALERT_TABLE]
-
-        # Retrieve group_id condition first
-        if ACCESS_TABLE[access_idx]["scope"] != "admin":
-            group_id = ACCESS_TABLE[access_idx]["group_id"]
-            access_group_id = [access["id"] for access in ACCESS_TABLE if access["group_id"] == group_id]
-            devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
-            alerts_group_id = [alert["id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
-
-        assert response.json() == [x for x in ALERT_TABLE if x["is_acknowledged"] is False
-                                   and x["id"] in alerts_group_id]
-
-
-@pytest.mark.parametrize(
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
         [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None,
@@ -240,8 +206,7 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
 
     if response.status_code // 100 == 2:
         json_response = response.json()
-        test_response = {"id": len(ALERT_TABLE) + 1, **payload,
-                         "media_id": None, "is_acknowledged": False}
+        test_response = {"id": len(ALERT_TABLE) + 1, **payload, "media_id": None}
         if isinstance(expected_event_id, int):
             test_response['event_id'] = expected_event_id
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
@@ -282,9 +247,8 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
                 device_id = entry['id']
                 break
         # Device_id is 99 because it is the identified device
-        test_response = {"id": len(ALERT_TABLE) + 1,
-                         "device_id": device_id, **payload,
-                         "media_id": None, "is_acknowledged": False, "azimuth": None}
+        test_response = {"id": len(ALERT_TABLE) + 1, "device_id": device_id, **payload,
+                         "media_id": None, "azimuth": None}
         if isinstance(expected_event_id, int):
             test_response['event_id'] = expected_event_id
         assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
@@ -300,18 +264,11 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
         [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
         [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
         [1, {}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 999,
-         404, "Entry not found"],
-        [1, {"device_id": 2, "lat": 10., "is_acknowledged": True}, 1,
-         422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True}, 0,
-         422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True,
-             "azimuth": "north"}, 1,
-         422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "is_acknowledged": True,
-             "azimuth": -5.}, 1,
-         422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 999, 404, "Entry not found"],
+        [1, {"device_id": 2, "lat": 10.}, 1, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 0, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "north"}, 1, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, 1, 422, None],
         [4, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "You can't specify another group"],
 
     ],
@@ -332,32 +289,6 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
         updated_alert = await get_entry(test_db, db.alerts, alert_id)
         updated_alert = dict(**updated_alert)
         assert all(updated_alert[k] == v for k, v in payload.items())
-
-
-@pytest.mark.parametrize(
-    "access_idx, alert_id, status_code, status_details",
-    [
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-    ],
-)
-@pytest.mark.asyncio
-async def test_acknowledge_alert(test_app_asyncio, init_test_db, test_db,
-                                 access_idx, alert_id, status_code, status_details):
-
-    # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
-
-    response = await test_app_asyncio.put(f"/alerts/{alert_id}/acknowledge", headers=auth)
-    assert response.status_code == status_code
-    if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
-
-    if response.status_code // 100 == 2:
-        updated_alert = await get_entry(test_db, db.alerts, alert_id)
-        updated_alert = dict(**updated_alert)
-        assert updated_alert['is_acknowledged']
 
 
 @pytest.mark.parametrize(

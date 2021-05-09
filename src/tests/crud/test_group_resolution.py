@@ -50,20 +50,20 @@ MEDIA_TABLE = [
 
 EVENT_TABLE = [
     {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": "2021-03-13T10:18:45.447773",
-     "created_at": "2020-10-13T08:18:45.447773"},
+     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
-     "created_at": "2020-09-13T08:18:45.447773"},
+     "is_acknowledged": True, "created_at": "2020-09-13T08:18:45.447773"},
     {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": "2021-03-13T10:18:45.447773", "created_at": "2020-09-13T08:18:45.447773"},
+     "end_ts": "2021-03-13T10:18:45.447773", "is_acknowledged": False, "created_at": "2020-09-13T08:18:45.447773"},
 ]
 
 ALERT_TABLE = [
     {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": None, "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
+     "azimuth": None, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "is_acknowledged": True, "created_at": "2020-10-13T09:18:45.447773"},
+     "azimuth": 47., "created_at": "2020-10-13T09:18:45.447773"},
     {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
-     "azimuth": 123., "is_acknowledged": False, "created_at": "2020-11-03T11:18:45.447773"},
+     "azimuth": 123., "created_at": "2020-11-03T11:18:45.447773"},
 ]
 SITE_TABLE = [
     {"id": 1, "name": "my_first_tower", "group_id": 1,

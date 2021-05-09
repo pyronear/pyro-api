@@ -92,7 +92,7 @@ def main(args):
     alert_id = api_request('post', f"{api_url}/alerts/from-device", device_auth, payload)['id']
 
     # Acknowledge it
-    api_request('put', f"{api_url}/alerts/{alert_id}/acknowledge", superuser_auth)
+    api_request('put', f"{api_url}/events/{event_id}/acknowledge", superuser_auth)
 
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request('delete', f"{api_url}/alerts/{alert_id}/", superuser_auth)

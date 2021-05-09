@@ -149,6 +149,7 @@ class EventIn(_FlatLocation):
     type: EventType = EventType.wildfire
     end_ts: datetime = None
     start_ts: datetime = None
+    is_acknowledged: bool = Field(False)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -236,7 +237,6 @@ class AlertMediaId(BaseModel):
 
 class AlertBase(_FlatLocation, AlertMediaId):
     event_id: int = Field(None, gt=0)
-    is_acknowledged: bool = Field(False)
     azimuth: float = Field(default=None, gt=0, lt=360)
 
 
@@ -248,11 +248,11 @@ class AlertOut(AlertIn, _CreatedAt, _Id):
     pass
 
 
-class Ackowledgement(BaseModel):
+class Acknowledgement(BaseModel):
     is_acknowledged: bool = Field(False)
 
 
-class AcknowledgementOut(Ackowledgement, _Id):
+class AcknowledgementOut(Acknowledgement, _Id):
     pass
 
 

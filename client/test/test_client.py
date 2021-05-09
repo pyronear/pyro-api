@@ -33,17 +33,17 @@ class ClientTester(unittest.TestCase):
         self._test_route_return(api_client.get_sites(), list)
         self._test_route_return(api_client.get_all_alerts(), list)
         self._test_route_return(api_client.get_ongoing_alerts(), list)
-        self._test_route_return(api_client.get_unacknowledged_alerts(), list)
+        self._test_route_return(api_client.get_unacknowledged_events(), list)
         self._test_route_return(api_client.get_past_events(), list)
 
         if len(all_devices) > 0:
             # Create event
             event_id = self._test_route_return(api_client.create_event(0., 0.), dict)['id']
             # Create an alert
-            alert = self._test_route_return(api_client.send_alert(0., 0., event_id, all_devices[0]['id']), dict)
+            _ = self._test_route_return(api_client.send_alert(0., 0., event_id, all_devices[0]['id']), dict)
             # Acknowledge it
-            updated_alert = self._test_route_return(api_client.acknowledge_alert(alert['id']), dict)
-            self.assertTrue(updated_alert['is_acknowledged'])
+            updated_event = self._test_route_return(api_client.acknowledge_event(event_id), dict)
+            self.assertTrue(updated_event['is_acknowledged'])
 
 
 if __name__ == '__main__':
