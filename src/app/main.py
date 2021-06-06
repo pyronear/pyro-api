@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import time
+import logging
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
@@ -13,6 +14,8 @@ from app.api.routes import (
     login, users, groups, sites, events, devices, media, installations, alerts, accesses, webhooks
 )
 from app.db import engine, metadata, database, init_db
+
+logger = logging.getLogger("uvicorn.error")
 
 metadata.create_all(bind=engine)
 
@@ -25,6 +28,7 @@ if isinstance(cfg.SENTRY_DSN, str):
         environment="production" if isinstance(cfg.SERVER_NAME, str) else None,
         traces_sample_rate=1.0,
     )
+    logger.info(f"Sentry middleware enabled on server {cfg.SERVER_NAME}")
 
 
 app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION)

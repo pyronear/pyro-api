@@ -182,8 +182,7 @@ class Client:
         Example::
             >>> from pyroclient import client
             >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> event = api_client.create_event(lat=10., lon=-5.45).json()
-            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'], device_id=3, azimuth=2.)
+            >>> response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)
 
         Args:
             lat: the latitude of the alert
@@ -221,8 +220,7 @@ class Client:
         Example::
             >>> from pyroclient import client
             >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-            >>> event = api_client.create_event(lat=10., lon=-5.45).json()
-            >>> response = api_client.send_alert(lat=10., lon=-5.45, event_id=event['id'])
+            >>> response = api_client.send_alert_from_device(lat=10., lon=-5.45)
 
         Args:
             lat: the latitude of the alert
