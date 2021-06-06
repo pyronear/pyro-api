@@ -351,8 +351,7 @@
 <span class="sd">        Example::</span>
 <span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; event = api_client.create_event(lat=10., lon=-5.45).json()</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert(lat=10., lon=-5.45, event_id=event[&#39;id&#39;], device_id=3, azimuth=2.)</span>
+<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
@@ -390,8 +389,7 @@
 <span class="sd">        Example::</span>
 <span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; event = api_client.create_event(lat=10., lon=-5.45).json()</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert(lat=10., lon=-5.45, event_id=event[&#39;id&#39;])</span>
+<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert_from_device(lat=10., lon=-5.45)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
