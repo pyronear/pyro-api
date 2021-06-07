@@ -35,8 +35,6 @@ You can clone and install the project dependencies as follows:
 git clone https://github.com/pyronear/pyro-api.git
 ```
 
-
-
 ## Usage
 
 If you wish to deploy this project on a server hosted remotely, you might want to be using [Docker](https://www.docker.com/) containers. Beforehand, you will need to set a few environment variables either manually or by writing an `.env` file in the root directory of this project, like in the example below:
