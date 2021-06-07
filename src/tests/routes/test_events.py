@@ -10,7 +10,7 @@ from datetime import datetime
 from app import db
 from app.api import crud
 from tests.db_utils import get_entry, fill_table, TestSessionLocal
-from tests.utils import update_only_datetime, parse_time, ts_to_string
+from tests.utils import update_only_datetime, ts_to_string
 
 
 USER_TABLE = [

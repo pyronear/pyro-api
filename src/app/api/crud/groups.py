@@ -4,16 +4,10 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 
-from typing import List, Dict, Mapping, Any
 from sqlalchemy import Table
-from fastapi import HTTPException, status
 
 from app.api import crud
-from app.api.schemas import AccessType
-from app.db import (
-    accesses, users, groups,
-    sites, events, devices, media,
-    installations, alerts)
+from app.db import accesses, users, sites, events, devices, media, installations, alerts
 
 
 async def get_entity_group_id(table: Table, entry_id: int) -> int:

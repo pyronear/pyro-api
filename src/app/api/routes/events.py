@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, status, HTTPException, Depends
+from fastapi import APIRouter, Path, Security, Depends
 from sqlalchemy import and_
 from app.api import crud
 from app.db import events, get_session, models
