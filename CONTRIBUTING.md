@@ -9,6 +9,9 @@ Everything you need to know to contribute efficiently to the project.
 - [src](https://github.com/pyronear/pyro-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
 - [src/app](https://github.com/pyronear/pyro-api/blob/master/src/app) - The source code of the API
 - [src/tests](https://github.com/pyronear/pyro-api/blob/master/src/tests) - The unittests for the app
+- [client](https://github.com/pyronear/pyro-api/blob/master/client/pyroclient) - The source code of the API client
+- [scripts](https://github.com/pyronear/pyro-api/blob/master/scripts) - Example scripts
+- [nginx](https://github.com/pyronear/pyro-api/blob/master/nginx) - [Nginx](https://www.nginx.com/) config
 
 
 
@@ -46,9 +49,9 @@ Use Github [issues](https://github.com/pyronear/pyro-api/issues) for feature req
 In order to run the same unit tests as the CI workflows, you can run the dockerized version of the server locally and run the tests over there:
 
 ```bash
-PORT=8002 docker-compose up -d --build
-PORT=8002 docker-compose exec -T web pip install -r requirements-dev.txt
-PORT=8002 docker-compose exec -T web coverage run -m pytest .
+docker-compose up -d --build
+docker-compose exec -T pyroapi pip install -r requirements-dev.txt
+docker-compose exec -T pyroapi coverage run -m pytest .
 ```
 Please note that you can pick another port number, it only has to be consistent once you have started your containers.
 

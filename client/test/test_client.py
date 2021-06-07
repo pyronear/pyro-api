@@ -21,12 +21,12 @@ class ClientTester(unittest.TestCase):
     def test_client(self):
 
         # Wrong credentials
-        self.assertRaises(HTTPRequestException, client.Client, "http://localhost:8002", "invalid_login", "invalid_pwd")
+        self.assertRaises(HTTPRequestException, client.Client, "http://localhost:8080", "invalid_login", "invalid_pwd")
 
         # Incorrect URL port
         self.assertRaises(ConnectionError, client.Client, "http://localhost:8003", "superuser", "superuser")
 
-        api_client = client.Client("http://localhost:8002", "superuser", "superuser")
+        api_client = client.Client("http://localhost:8080", "dummy_login", "dummy_pwd")
 
         # Read routes
         all_devices = self._test_route_return(api_client.get_my_devices(), list)

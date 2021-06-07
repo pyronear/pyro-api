@@ -5,7 +5,6 @@
 
 import json
 import pytest
-from datetime import datetime
 
 from app import db
 from app.api import crud

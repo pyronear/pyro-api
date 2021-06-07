@@ -5,9 +5,8 @@
 
 from typing import List
 from fastapi import APIRouter, Path, Security, HTTPException, status, BackgroundTasks, Depends
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from functools import partial
-from datetime import datetime, timedelta
 
 from app.api import crud
 from app.db import alerts, events, media, get_session, models

@@ -3,14 +3,12 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-import json
 import pytest
-from datetime import datetime
 
 from app import db
 from app.api import crud
-from tests.db_utils import get_entry, fill_table
-from tests.utils import update_only_datetime, parse_time
+from tests.db_utils import fill_table
+from tests.utils import update_only_datetime
 
 
 USER_TABLE = [

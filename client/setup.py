@@ -26,7 +26,7 @@ try:
     )
 except Exception as e:
     print(e)
-    pass
+
 
 if os.getenv("BUILD_VERSION"):
     version = os.getenv("BUILD_VERSION")

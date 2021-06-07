@@ -31,12 +31,9 @@ The building blocks of our wildfire detection & monitoring API.
 
 You can clone and install the project dependencies as follows:
 
-```bash
+```shell
 git clone https://github.com/pyronear/pyro-api.git
-pip install -r pyro-api/requirements.txt
 ```
-
-
 
 ## Usage
 
@@ -52,8 +49,8 @@ BUCKET_MEDIA_FOLDER=my/media/subfolder
 Those values will allow your API server to connect to our cloud service provider [Qarnot Computing](https://qarnot.com/), which is mandatory for your local server to be fully operational.
 Then you can run the API containers using this command:
 
-```bash
-PORT=8002 docker-compose up -d --build
+```shell
+docker-compose up -d --build
 ```
 
 Once completed, you will notice that you have a docker container running on the port you selected, which can process requests just like any django server.

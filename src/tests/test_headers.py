@@ -30,8 +30,9 @@ def excluded_files():
 
 
 def test_headers(header_options, excluded_files):
+    incorrect_files = []
     # For every python file in the repository
-    for source_path in Path(__file__).parent.parent.parent.rglob('*.py'):
+    for source_path in Path(__file__).parent.parent.rglob('*.py'):
         if source_path.name not in excluded_files:
             # Parse header
             header_length = max(len(option) for option in header_options)
@@ -43,5 +44,8 @@ def test_headers(header_options, excluded_files):
                         break
 
             # Compare it
-            assert any("".join(current_header[:min(len(option), len(current_header))]) == "".join(option)
-                       for option in header_options)
+            if not any("".join(current_header[:min(len(option), len(current_header))]) == "".join(option)
+                       for option in header_options):
+                incorrect_files.append(source_path)
+
+    assert len(incorrect_files) == 0, print(f"Files with incorrect headers: {incorrect_files}")
