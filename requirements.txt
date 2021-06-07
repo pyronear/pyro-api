@@ -1,0 +1,2 @@
+# Mirrors prod
+-r src/app/requirements.txt
