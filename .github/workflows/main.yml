@@ -67,7 +67,7 @@ jobs:
           docker-compose exec -T pyroapi coverage --version
           docker-compose exec -T pyroapi coverage run -m pytest .
           docker-compose exec -T pyroapi coverage xml
-          docker cp pyro-api_web_1:/usr/src/app/coverage.xml .
+          docker cp pyro-api_pyroapi_1:/app/coverage.xml .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
