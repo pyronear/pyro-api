@@ -46,9 +46,9 @@ Use Github [issues](https://github.com/pyronear/pyro-api/issues) for feature req
 In order to run the same unit tests as the CI workflows, you can run the dockerized version of the server locally and run the tests over there:
 
 ```bash
-PORT=8002 docker-compose up -d --build
-PORT=8002 docker-compose exec -T web pip install -r requirements-dev.txt
-PORT=8002 docker-compose exec -T web coverage run -m pytest .
+docker-compose up -d --build
+docker-compose exec -T pyroapi pip install -r requirements-dev.txt
+docker-compose exec -T pyroapi coverage run -m pytest .
 ```
 Please note that you can pick another port number, it only has to be consistent once you have started your containers.
 
