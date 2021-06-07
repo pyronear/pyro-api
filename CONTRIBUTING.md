@@ -9,6 +9,9 @@ Everything you need to know to contribute efficiently to the project.
 - [src](https://github.com/pyronear/pyro-api/blob/master/src) - The actual [FastAPI](https://fastapi.tiangolo.com/) project
 - [src/app](https://github.com/pyronear/pyro-api/blob/master/src/app) - The source code of the API
 - [src/tests](https://github.com/pyronear/pyro-api/blob/master/src/tests) - The unittests for the app
+- [client](https://github.com/pyronear/pyro-api/blob/master/client/pyroclient) - The source code of the API client
+- [scripts](https://github.com/pyronear/pyro-api/blob/master/scripts) - Example scripts
+- [nginx](https://github.com/pyronear/pyro-api/blob/master/nginx) - [Nginx](https://www.nginx.com/) config
 
 
 
