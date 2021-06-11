@@ -36,11 +36,11 @@ class ClientTester(unittest.TestCase):
             dict
         )['id']
         sites = self._test_route_return(api_client.get_sites(), list)
-        assert sites[-1]['id'] = site_id
+        assert sites[-1]['id'] == site_id
 
         # Devices
         all_devices = self._test_route_return(api_client.get_my_devices(), list)
-        site_devices = self._test_route_return(api_client.get_site_devices(site_id), list)
+        self._test_route_return(api_client.get_site_devices(site_id), list)
 
         # Alerts
         self._test_route_return(api_client.get_all_alerts(), list)
