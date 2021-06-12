@@ -12,8 +12,8 @@ from pyroclient.exceptions import HTTPRequestException
 
 class ClientTester(unittest.TestCase):
 
-    def _test_route_return(self, response, return_type):
-        self.assertEqual(response.status_code, 200)
+    def _test_route_return(self, response, return_type, status_code=200):
+        self.assertEqual(response.status_code, status_code)
         self.assertIsInstance(response.json(), return_type)
 
         return response.json()
@@ -33,7 +33,8 @@ class ClientTester(unittest.TestCase):
             api_client.create_no_alert_site(
                 lat=44.870959, lon=4.395387, name="dummy_tower", country="FR", geocode="07"
             ),
-            dict
+            dict,
+            201
         )['id']
         sites = self._test_route_return(api_client.get_sites(), list)
         assert sites[-1]['id'] == site_id
@@ -51,13 +52,14 @@ class ClientTester(unittest.TestCase):
 
         if len(all_devices) > 0:
             # Media
-            media_id = self._test_route_return(api_client.create_media(all_devices[0]['id']), dict)['id']
+            media_id = self._test_route_return(api_client.create_media(all_devices[0]['id']), dict, 201)['id']
             # Create event
-            event_id = self._test_route_return(api_client.create_event(0., 0.), dict)['id']
+            event_id = self._test_route_return(api_client.create_event(0., 0.), dict, 201)['id']
             # Create an alert
             _ = self._test_route_return(
                 api_client.send_alert(0., 0., event_id, all_devices[0]['id'], media_id=media_id),
-                dict
+                dict,
+                201
             )
             # Acknowledge it
             updated_event = self._test_route_return(api_client.acknowledge_event(event_id), dict)
