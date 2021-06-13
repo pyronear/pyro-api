@@ -3,7 +3,7 @@ version: '3.7'
 services:
   pyroapi:
     build: src
-    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
+    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080 --timeout-keep-alive 30
     volumes:
       - ./src/:/app/
     ports:
