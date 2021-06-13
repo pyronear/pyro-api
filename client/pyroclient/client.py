@@ -19,26 +19,46 @@ logging.basicConfig()
 
 ROUTES: Dict[str, str] = {
     "token": "/login/access-token",
+    #################
+    # DEVICES
+    #################
+    # Device-logged
     "heartbeat": "/devices/heartbeat",
     "update-my-location": "/devices/update-my-location",
-    "create-event": "/events",
+    "get-my-device": "/devices/me",
+    "update-my-hash": "/devices/hash",
+    # User-logged
+    "get-my-devices": "/devices/my-devices",
+    #################
+    # SITES
+    #################
+    "get-sites": "/sites",
     "no-alert-site": "/sites/no-alert",
-    "send-alert": "/alerts",
-    "send-alert-from-device": "/alerts/from-device",
+    #################
+    # EVENTS
+    #################
+    "create-event": "/events",
+    "get-unacknowledged-events": "/events/unacknowledged",
+    "get-past-events": "/events/past",
+    "acknowledge-event": "/events/{event_id}/acknowledge",
+    #################
+    # INSTALLATIONS
+    #################
+    "get-site-devices": "/installations/site-devices/{site_id}",
+    #################
+    # MEDIA
+    #################
     "create-media": "/media",
     "create-media-from-device": "/media/from-device",
     "upload-media": "/media/{media_id}/upload",
-    "get-my-devices": "/devices/my-devices",
-    "get-sites": "/sites",
+    "get-media-url": "/media/{media_id}/url",
+    #################
+    # ALERTS
+    #################
+    "send-alert": "/alerts",
+    "send-alert-from-device": "/alerts/from-device",
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
-    "get-unacknowledged-events": "/events/unacknowledged",
-    "acknowledge-event": "/events/{event_id}/acknowledge",
-    "get-site-devices": "/installations/site-devices/{site_id}",
-    "get-media-url": "/media/{media_id}/url",
-    "get-past-events": "/events/past",
-    "get-my-device": "/devices/me",
-    "update-my-hash": "/devices/hash",
 }
 
 
