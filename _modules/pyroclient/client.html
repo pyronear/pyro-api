@@ -188,26 +188,46 @@
 
 <span class="n">ROUTES</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="s2">&quot;/login/access-token&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># DEVICES</span>
+    <span class="c1">#################</span>
+    <span class="c1"># Device-logged</span>
     <span class="s2">&quot;heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/heartbeat&quot;</span><span class="p">,</span>
     <span class="s2">&quot;update-my-location&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/update-my-location&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;create-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-my-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/me&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;update-my-hash&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/hash&quot;</span><span class="p">,</span>
+    <span class="c1"># User-logged</span>
+    <span class="s2">&quot;get-my-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/my-devices&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># SITES</span>
+    <span class="c1">#################</span>
+    <span class="s2">&quot;get-sites&quot;</span><span class="p">:</span> <span class="s2">&quot;/sites&quot;</span><span class="p">,</span>
     <span class="s2">&quot;no-alert-site&quot;</span><span class="p">:</span> <span class="s2">&quot;/sites/no-alert&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;send-alert&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;send-alert-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/from-device&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># EVENTS</span>
+    <span class="c1">#################</span>
+    <span class="s2">&quot;create-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-unacknowledged-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/unacknowledged&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-past-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/past&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;acknowledge-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/acknowledge&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># INSTALLATIONS</span>
+    <span class="c1">#################</span>
+    <span class="s2">&quot;get-site-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/installations/site-devices/</span><span class="si">{site_id}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># MEDIA</span>
+    <span class="c1">#################</span>
     <span class="s2">&quot;create-media&quot;</span><span class="p">:</span> <span class="s2">&quot;/media&quot;</span><span class="p">,</span>
     <span class="s2">&quot;create-media-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/from-device&quot;</span><span class="p">,</span>
     <span class="s2">&quot;upload-media&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/upload&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-my-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/my-devices&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-sites&quot;</span><span class="p">:</span> <span class="s2">&quot;/sites&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-media-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># ALERTS</span>
+    <span class="c1">#################</span>
+    <span class="s2">&quot;send-alert&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;send-alert-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/from-device&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-ongoing-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/ongoing&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-unacknowledged-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/unacknowledged&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;acknowledge-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/acknowledge&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-site-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/installations/site-devices/</span><span class="si">{site_id}</span><span class="s2">&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-media-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-past-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/past&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-my-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/me&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;update-my-hash&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/hash&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 
