@@ -37,10 +37,8 @@ async def test_verify_password():
 def test_hash_content_file():
 
     # Download a small file
-    file_url1 = ("https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/"
-                 "Davies-Meyer_hash.svg/230px-Davies-Meyer_hash.svg.png")
-    file_url2 = ("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/"
-                 "Matyas-Meyer-Oseas_hash.svg/230px-Matyas-Meyer-Oseas_hash.svg.png")
+    file_url1 = "https://github.com/pyronear/pyro-api/releases/download/v0.1.1/pyronear_logo.png"
+    file_url2 = "https://github.com/pyronear/pyro-api/releases/download/v0.1.1/pyronear_logo_mini.png"
 
     # Hash it
     hash1 = security.hash_content_file(requests.get(file_url1).content)
