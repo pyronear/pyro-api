@@ -1,6 +1,6 @@
 # API Client
 
-![Build Status](https://github.com/pyronear/pyro-api/workflows/client-package/badge.svg)  [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear.org/pyro-api)
+![Build Status](https://github.com/pyronear/pyro-api/workflows/client/badge.svg)  [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear.org/pyro-api)
 
 Client for the [Pyronear API](https://github.com/pyronear/pyro-api)
 
