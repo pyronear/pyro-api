@@ -70,7 +70,7 @@ class QarnotBucket:
         # Generate a public URL for it using boto3 presign URL generation
         return self._conn._s3client.generate_presigned_url('get_object', Params=file_params, ExpiresIn=url_expiration)
 
-    async def upload_file(self, bucket_key: str, file_binary: bin) -> bool:
+    async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         try:
             self.bucket.add_file(file_binary, bucket_key)

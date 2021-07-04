@@ -12,7 +12,7 @@ from app.db.tables import SiteType, EventType, MediaType, AccessType
 
 # Template classes
 class _CreatedAt(BaseModel):
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
 
     @staticmethod
     @validator('created_at', pre=True, always=True)
@@ -109,9 +109,9 @@ class Location(_FlatLocation):
 
 
 class DefaultLocation(BaseModel):
-    lat: float = Field(None, gt=-90, lt=90, example=44.765181)
-    lon: float = Field(None, gt=-180, lt=180, example=4.514880)
-    elevation: float = Field(None, gt=0., lt=10000, example=1582)
+    lat: Optional[float] = Field(None, gt=-90, lt=90, example=44.765181)
+    lon: Optional[float] = Field(None, gt=-180, lt=180, example=4.514880)
+    elevation: Optional[float] = Field(None, gt=0., lt=10000, example=1582)
 
 
 class _Rotation(BaseModel):
@@ -120,8 +120,8 @@ class _Rotation(BaseModel):
 
 
 class _DefaultRotation(BaseModel):
-    yaw: float = Field(None, gt=-180, lt=180, example=110)
-    pitch: float = Field(None, gt=-90, lt=90, example=-5)
+    yaw: Optional[float] = Field(None, gt=-180, lt=180, example=110)
+    pitch: Optional[float] = Field(None, gt=-90, lt=90, example=-5)
 
 
 class DefaultPosition(DefaultLocation, _DefaultRotation):
@@ -141,14 +141,14 @@ class SiteIn(SiteBase):
 
 
 class SiteOut(SiteIn, _CreatedAt, _Id):
-    pass
+    group_id: int = Field(..., gt=0)
 
 
 # Events
 class EventIn(_FlatLocation):
     type: EventType = EventType.wildfire
-    end_ts: datetime = None
-    start_ts: datetime = None
+    start_ts: Optional[datetime] = None
+    end_ts: Optional[datetime] = None
     is_acknowledged: bool = Field(False)
 
 
@@ -163,9 +163,9 @@ class SoftwareHash(BaseModel):
 
 class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
-    last_ping: datetime = Field(default=None, example=datetime.utcnow())
+    last_ping: Optional[datetime] = Field(default=None, example=datetime.utcnow())
     angle_of_view: float = Field(..., gt=0, lt=360, example=10)
-    software_hash: str = Field(None, min_length=8, max_length=16, example="0123456789ABCDEF")
+    software_hash: Optional[str] = Field(None, min_length=8, max_length=16, example="0123456789ABCDEF")
 
 
 class DeviceIn(MyDeviceIn):
@@ -181,7 +181,7 @@ class CommonDeviceAuth(DeviceIn, Cred):
 
 
 class AdminDeviceAuth(CommonDeviceAuth):
-    group_id: int = Field(None, gt=0)  # Defined here as optionnal
+    group_id: Optional[int] = Field(None, gt=0)  # Defined here as optionnal
 
 
 class DeviceAuth(CommonDeviceAuth, _GroupId):
@@ -222,7 +222,7 @@ class InstallationIn(BaseModel):
     device_id: int = Field(..., gt=0)
     site_id: int = Field(..., gt=0)
     start_ts: datetime
-    end_ts: datetime = None
+    end_ts: Optional[datetime] = None
     is_trustworthy: bool = Field(True)
 
 
@@ -232,12 +232,12 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 
 # Alerts
 class AlertMediaId(BaseModel):
-    media_id: int = Field(None, gt=0)
+    media_id: Optional[int] = Field(None, gt=0)
 
 
 class AlertBase(_FlatLocation, AlertMediaId):
-    event_id: int = Field(None, gt=0)
-    azimuth: float = Field(default=None, gt=0, lt=360)
+    event_id: Optional[int] = Field(None, gt=0)
+    azimuth: Optional[float] = Field(None, gt=0, lt=360)
 
 
 class AlertIn(AlertBase):

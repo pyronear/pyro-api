@@ -1,31 +1,31 @@
-name: doc-deploy
+name: docs
 on:
   push:
     branches: master
 
 jobs:
-  docs-publish:
-    runs-on: ubuntu-latest
+  docs-deploy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.7]
     steps:
       - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: Set up Python 3.7
+      - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.7
+          python-version: ${{ matrix.python }}
           architecture: x64
       - name: Cache python modules
         uses: actions/cache@v2
-        env:
-          cache-name: client-reqs
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-deps-${{ env.cache-name }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
+          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
           restore-keys: |
-            ${{ runner.os }}-deps-${{ env.cache-name }}-${{ hashFiles('client/requirements.txt') }}-
-            ${{ runner.os }}-deps-${{ env.cache-name }}-
-            ${{ runner.os }}-deps-
+            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
+            ${{ runner.os }}-client-deps-${{ matrix.python }}-
+            ${{ runner.os }}-client-deps-
             ${{ runner.os }}-
       - name: Install dependencies
         run: |
@@ -46,8 +46,7 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@3.7.1
         with:
           BRANCH: gh-pages
-          FOLDER: 'client/docs/build'
+          FOLDER: 'docs/build'
           COMMIT_MESSAGE: '[skip ci] Documentation updates'
           CLEAN: true
           SSH: true
-      

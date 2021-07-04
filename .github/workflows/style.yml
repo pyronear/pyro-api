@@ -1,13 +1,13 @@
-name: client
+name: style
 
 on:
   push:
-    branches: [ master ]
+    branches: master
   pull_request:
-    branches: [ master ]
+    branches: master
 
 jobs:
-  install:
+  flake8-py3:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -20,22 +20,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Cache python modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-
-            ${{ runner.os }}-client-deps-
-            ${{ runner.os }}-
-      - name: Install package
+      - name: Run flake8
         run: |
-          python -m pip install --upgrade pip
-          pip install -e client/
+          pip install flake8
+          flake8 --version
+          flake8 src/ client/
 
-  unittest:
+  mypy-py3:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -43,14 +34,6 @@ jobs:
         python: [3.7]
     steps:
       - uses: actions/checkout@v2
-      - name: Build & run API server
-        env:
-          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-        run: |
-          docker-compose up -d --build
-          docker ps
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
@@ -60,24 +43,23 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('src/**/*.py') }}
           restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-
-            ${{ runner.os }}-client-deps-
+            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
+            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-
+            ${{ runner.os }}-pkg-deps-
             ${{ runner.os }}-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e client/
-          pip install coverage
-      - name: Run client unittests
+          pip install -r requirements.txt --upgrade
+          pip install mypy
+      - name: Run mypy
         run: |
-          coverage --version
-          sleep 5
-          cd client && coverage run -m unittest discover test/
+          mypy --version
+          mypy --config-file mypy.ini src/app
 
-  docs-build:
+  mypy-py3-client:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -104,8 +86,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e client/ --upgrade
-          pip install -r client/docs/requirements.txt
-
-      - name: Build documentation
+          pip install mypy
+      - name: Run mypy
         run: |
-          sphinx-build client/docs/source client/docs/build -a -v
+          mypy --version
+          mypy --config-file client/mypy.ini client/pyroclient/

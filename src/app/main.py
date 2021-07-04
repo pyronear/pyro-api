@@ -78,7 +78,7 @@ if isinstance(cfg.SENTRY_DSN, str):
             return response
         except Exception as e:
             with sentry_sdk.push_scope() as scope:
-                scope.set_context("request", request)
+                scope.set_context("request", request)  # type: ignore[arg-type]
                 scope.user = {
                     "ip_address": request.client.host,
                 }
@@ -101,4 +101,4 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+app.openapi = custom_openapi  # type: ignore[assignment]

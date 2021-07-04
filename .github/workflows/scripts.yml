@@ -1,0 +1,49 @@
+name: scripts
+
+on:
+  workflow_run:
+    workflows: ["api"]
+    types: [completed]
+
+jobs:
+  end-to-end:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: [3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build & run docker
+        env:
+          QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+        run: |
+          docker-compose up -d --build
+          docker ps
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Cache python modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-scripts-deps-${{ matrix.python }}-${{ hashFiles('scripts/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-scripts-deps-${{ matrix.python }}-
+            ${{ runner.os }}-scripts-deps-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements.txt
+
+      - name: End-to-End test
+        run: |
+          sleep 5
+          python scripts/api_e2e.py 8080
