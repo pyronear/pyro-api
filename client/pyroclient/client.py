@@ -84,7 +84,7 @@ class Client:
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
     def refresh_token(self, login: str, password: str) -> None:
-        self.token = self._retrieve_token(credentials_login, credentials_password)
+        self.token = self._retrieve_token(login, password)
 
     def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(self.routes["token"],
