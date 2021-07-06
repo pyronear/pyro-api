@@ -71,6 +71,11 @@ class Client:
         credentials_password (str): Password (e.g: 123456 (don't do this))
     """
 
+    api: str
+    routes: Dict[str, str]
+    token: str
+    headers: Dict[str, str]
+
     def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
         self.api = api_url
         # Prepend API url to each route
