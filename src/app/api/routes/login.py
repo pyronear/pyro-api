@@ -11,6 +11,7 @@ from app.api import crud, security
 from app.api.schemas import Token
 from app.db import accesses
 from app import config as cfg
+from app.api.schemas import AccessType
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ async def create_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     # create access token using user user_id/user_scopes
     token_data = {"sub": str(entry['id']), "scopes": entry['scope'].split()}
-    if entry["scope"] == "device":
+    if entry["scope"] in (AccessType.admin, AccessType.device):
         token = await security.create_unlimited_access_token(token_data)
     else:
         token = await security.create_access_token(token_data,
