@@ -65,6 +65,11 @@ class ClientTester(unittest.TestCase):
             updated_event = self._test_route_return(api_client.acknowledge_event(event_id), dict)
             self.assertTrue(updated_event['is_acknowledged'])
 
+        # Check token refresh
+        prev_token = api_client.token
+        api_client.refresh_token("dummy_login", "dummy_pwd")
+        self.assertNotEqual(prev_token, api_client.token)
+
 
 if __name__ == '__main__':
     unittest.main()

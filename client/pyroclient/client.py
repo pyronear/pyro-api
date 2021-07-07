@@ -71,12 +71,20 @@ class Client:
         credentials_password (str): Password (e.g: 123456 (don't do this))
     """
 
+    api: str
+    routes: Dict[str, str]
+    token: str
+    headers: Dict[str, str]
+
     def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
         self.api = api_url
         # Prepend API url to each route
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
-        self.token = self._retrieve_token(credentials_login, credentials_password)
+        self.refresh_token(credentials_login, credentials_password)
         self.headers = {"Authorization": f"Bearer {self.token}"}
+
+    def refresh_token(self, login: str, password: str) -> None:
+        self.token = self._retrieve_token(login, password)
 
     def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(self.routes["token"],
