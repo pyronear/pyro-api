@@ -82,9 +82,12 @@ class Client:
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
         self.refresh_token(credentials_login, credentials_password)
 
+    @property
+    def headers(self) -> Dict[str, str]:
+        return {"Authorization": f"Bearer {self.token}"}
+
     def refresh_token(self, login: str, password: str) -> None:
         self.token = self._retrieve_token(login, password)
-        self.headers = {"Authorization": f"Bearer {self.token}"}
 
     def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(self.routes["token"],
