@@ -5,7 +5,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, status
 
 from app.api import crud
 from app.db import webhooks
@@ -16,7 +16,7 @@ from app.api.deps import get_current_access
 router = APIRouter()
 
 
-@router.post("/", response_model=WebhookOut, status_code=201, summary="Create a new webhook")
+@router.post("/", response_model=WebhookOut, status_code=status.HTTP_201_CREATED, summary="Create a new webhook")
 async def create_webhook(payload: WebhookIn, _=Security(get_current_access, scopes=["admin"])):
     """
     Creates a new webhook with the specified information

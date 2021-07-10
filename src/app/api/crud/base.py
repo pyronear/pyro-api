@@ -6,7 +6,7 @@
 from typing import Optional, Any, List, Dict, Mapping
 from sqlalchemy import Table
 from pydantic import BaseModel
-from fastapi import HTTPException, Path
+from fastapi import HTTPException, Path, status
 
 from app.db import database
 
@@ -76,7 +76,10 @@ async def create_entry(table: Table, payload: BaseModel) -> Dict[str, Any]:
 async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     entry = await get(entry_id, table)
     if entry is None:
-        raise HTTPException(status_code=404, detail="Entry not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Table {table.name} has no entry with id={entry_id}"
+        )
 
     return dict(entry)
 
@@ -93,7 +96,10 @@ async def update_entry(
     entry_id = await put(entry_id, payload_dict, table)
 
     if not isinstance(entry_id, int):
-        raise HTTPException(status_code=404, detail="Entry not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Table {table.name} has no entry with id={entry_id}"
+        )
 
     if only_specified:
         # Retrieve complete record values

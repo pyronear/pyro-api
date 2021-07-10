@@ -23,8 +23,8 @@ async def check_media_existence(media_id):
     existing_media = await crud.get(media_id, media)
     if existing_media is None:
         raise HTTPException(
-            status_code=404,
-            detail="Media does not exist"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Unable to find media with id={media_id}."
         )
 
 
@@ -35,7 +35,7 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
 
-@router.post("/", response_model=AlertOut, status_code=201, summary="Create a new alert")
+@router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
 async def create_alert(
     payload: AlertIn,
     background_tasks: BackgroundTasks,
@@ -59,7 +59,7 @@ async def create_alert(
     return alert
 
 
-@router.post("/from-device", response_model=AlertOut, status_code=201,
+@router.post("/from-device", response_model=AlertOut, status_code=status.HTTP_201_CREATED,
              summary="Create an alert related to the authentified device")
 async def create_alert_from_device(
     payload: AlertBase,
@@ -145,8 +145,8 @@ async def link_media(
     existing_alert = await crud.fetch_one(alerts, {"id": alert_id, "device_id": current_device.id})
     if existing_alert is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Permission denied"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Unable to find alert with id={alert_id} & device_id={current_device.id}."
         )
 
     await check_media_existence(payload.media_id)

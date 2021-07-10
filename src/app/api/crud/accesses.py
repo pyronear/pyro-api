@@ -5,7 +5,7 @@
 
 from typing import Dict, Any, Union, Type
 from sqlalchemy import Table
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from app.api import security
 from app.api.crud import base
@@ -30,7 +30,7 @@ async def check_login_existence(table: Table, login: str):
     """Check that the login does not already exist, raises a 400 exception if do so."""
     if await base.fetch_one(table, {"login": login}) is not None:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_409_CONFLICT,
             detail=f"An entry with login='{login}' already exists.",
         )
 

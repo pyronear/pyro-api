@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security
+from fastapi import APIRouter, Path, Security, status
 from app.api import crud
 from app.db import groups
 from app.api.schemas import GroupIn, GroupOut, AccessType
@@ -14,7 +14,7 @@ from app.api.deps import get_current_access
 router = APIRouter()
 
 
-@router.post("/", response_model=GroupOut, status_code=201, summary="Create a new group")
+@router.post("/", response_model=GroupOut, status_code=status.HTTP_201_CREATED, summary="Create a new group")
 async def create_group(payload: GroupIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new group based on the given information
 

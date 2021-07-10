@@ -49,7 +49,7 @@ async def update_my_password(
     return entry
 
 
-@router.post("/", response_model=UserRead, status_code=201, summary="Create a new user")
+@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="Create a new user")
 async def create_user(
     payload: UserAuth,
     _=Security(get_current_user, scopes=[AccessType.admin])

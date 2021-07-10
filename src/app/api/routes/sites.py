@@ -15,7 +15,7 @@ from app.api.crud.groups import get_entity_group_id
 router = APIRouter()
 
 
-@router.post("/", response_model=SiteOut, status_code=201, summary="Create a new site")
+@router.post("/", response_model=SiteOut, status_code=status.HTTP_201_CREATED, summary="Create a new site")
 async def create_site(
     payload: SiteIn,
     _=Security(get_current_access, scopes=[AccessType.admin])
@@ -29,7 +29,7 @@ async def create_site(
     return await crud.create_entry(sites, payload)
 
 
-@router.post("/no-alert/", response_model=SiteOut, status_code=201, summary="Create a new no-alert site")
+@router.post("/no-alert/", response_model=SiteOut, status_code=status.HTTP_201_CREATED, summary="Create a new no-alert site")
 async def create_noalert_site(
     payload: SiteBase,
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
