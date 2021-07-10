@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import unittest
+from copy import deepcopy
 from requests import ConnectionError
 
 from pyroclient import client
@@ -66,9 +67,9 @@ class ClientTester(unittest.TestCase):
             self.assertTrue(updated_event['is_acknowledged'])
 
         # Check token refresh
-        prev_token = api_client.token
+        prev_headers = deepcopy(api_client.headers)
         api_client.refresh_token("dummy_login", "dummy_pwd")
-        self.assertNotEqual(prev_token, api_client.token)
+        self.assertNotEqual(prev_headers, api_client.headers)
 
 
 if __name__ == '__main__':
