@@ -21,16 +21,16 @@ router = APIRouter()
 
 async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
     """Checks whether the media is registered in the DB"""
-    filters = {"id": media_id}
-    if device_id is not None:
-        filters.update({"device_id": device_id})
-
-    existing_media = await crud.fetch_one(media, filters)
-    if existing_media is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Permission denied"
-        )
+    if device_id is None:
+        media_dict = await crud.get_entry(media, media_id)
+        existing_media = MediaOut(**media_dict)
+    else:
+        existing_media = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        if existing_media is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Unable to find media with id={media_id} & device_id={device_id}"
+            )
     return existing_media
 
 
