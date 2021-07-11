@@ -63,7 +63,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     if set(token_data.scopes).isdisjoint(security_scopes.scopes):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Your access scope is not compatible with this operation.",
+            detail="Your access scope is not compatible with this operation.",
             headers={"WWW-Authenticate": authenticate_value},
         )
 
