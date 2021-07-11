@@ -82,16 +82,19 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, event_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [1, 999, 404, "Entry not found"],
+        [1, 999, 404, "Table events has no entry with id=999"],
         [1, 0, 422, None],
-        [4, 1, 401, None],
+        [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
 async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details):
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/events/{event_id}", headers=auth)
     assert response.status_code == status_code
@@ -105,16 +108,19 @@ async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, s
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_results",
     [
+        [None, 401, "Not authenticated", None],
         [0, 200, None, [EVENT_TABLE[0], EVENT_TABLE[1]]],
         [1, 200, None, EVENT_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/events/", headers=auth)
     assert response.status_code == status_code
@@ -128,16 +134,19 @@ async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_c
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_results",
     [
+        [None, 401, "Not authenticated", None],
         [0, 200, None, [EVENT_TABLE[0]]],
         [1, 200, None, [entry for entry in EVENT_TABLE if entry["end_ts"] is not None]],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_past_events(test_app_asyncio, init_test_db,
                                  access_idx, status_code, status_details, expected_results):
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/events/past", headers=auth)
     assert response.status_code == status_code
@@ -151,7 +160,9 @@ async def test_fetch_past_events(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 401, "Permission denied"],
+        [None, {}, 401, "Not authenticated"],
+        [0, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None},
+         403, "Your access scope is not compatible with this operation."],
         [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
         [2, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
         [1, {"lat": 0., "lon": 0., "type": "lightning", "start_ts": None, "end_ts": None}, 422, None],
@@ -163,7 +174,9 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/events/", data=json.dumps(payload), headers=auth)
@@ -184,17 +197,20 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, event_id, status_code, status_details",
     [
-        [0, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 401, "Permission denied"],
+        [None, {}, 1, 401, "Not authenticated"],
+        [0, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1,
+         403, "Your access scope is not compatible with this operation."],
         [1, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
         [2, {"lat": 5., "lon": 10., "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
         [1, {}, 1, 422, None],
         [1, {"type": "wildfire"}, 1, 422, None],
-        [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 999, 404, "Entry not found"],
+        [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 999,
+         404, "Table events has no entry with id=999"],
         [1, {"lat": 0., "lon": 0., "type": "lightning", "start_ts": None, "end_ts": None}, 1, 422, None],
         [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": "now", "end_ts": None}, 1, 422, None],
         [1, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None}, 0, 422, None],
         [3, {"lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": None},
-         1, 401, "You can't specify another group"],
+         1, 403, "This access can't update resources for group_id=1"],
     ],
 )
 @pytest.mark.asyncio
@@ -202,7 +218,9 @@ async def test_update_event(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, event_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/events/{event_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -220,10 +238,11 @@ async def test_update_event(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, event_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table events has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -231,7 +250,9 @@ async def test_update_event(test_app_asyncio, init_test_db, test_db,
 async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/events/{event_id}/", headers=auth)
     assert response.status_code == status_code
@@ -247,9 +268,10 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
 @pytest.mark.parametrize(
     "access_idx, event_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
     ],
 )
 @pytest.mark.asyncio
@@ -257,7 +279,9 @@ async def test_acknowledge_event(test_app_asyncio, init_test_db, test_db,
                                  access_idx, event_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/events/{event_id}/acknowledge", headers=auth)
     assert response.status_code == status_code
@@ -273,9 +297,10 @@ async def test_acknowledge_event(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
+        [None, 401, "Not authenticated"],
         [0, 200, None],
         [1, 200, None],
-        [2, 401, "Permission denied"],
+        [2, 403, "Your access scope is not compatible with this operation."],
         [4, 200, None]
     ],
 )
@@ -283,7 +308,9 @@ async def test_acknowledge_event(test_app_asyncio, init_test_db, test_db,
 async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/events/unacknowledged", headers=auth)
     assert response.status_code == status_code

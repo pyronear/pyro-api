@@ -62,7 +62,7 @@ async def init_test_db(monkeypatch, test_db):
     "group_id, status_code, status_details",
     [
         [1, 200, None],
-        [999, 404, "Entry not found"],
+        [999, 404, "Table groups has no entry with id=999"],
         [0, 422, None],
     ],
 )
@@ -91,9 +91,10 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
+        [None, {}, 401, "Not authenticated"],
         [1, {"name": "my_group"}, 201, None],
-        [0, {"name": "my_group"}, 401, "Permission denied"],
-        [2, {"name": "my_group"}, 401, "Permission denied"],
+        [0, {"name": "my_group"}, 403, "Your access scope is not compatible with this operation."],
+        [2, {"name": "my_group"}, 403, "Your access scope is not compatible with this operation."],
         [1, {"names": "my_group"}, 422, None],
     ],
 )
@@ -102,7 +103,9 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     test_response = {"id": len(GROUP_TABLE) + 1, **payload}
 
@@ -121,12 +124,12 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, group_id, status_code, status_details",
     [
+        [None, {}, None, 401, "Not authenticated"],
         [1, {"name": "renamed_group"}, 1, 200, None],
-        [0, {"name": "renamed_group"}, 1,
-         401, "Permission denied"],
+        [0, {"name": "renamed_group"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
         [1, {"group_name": "foo"}, 1, 422, None],
-        [1, {"name": "foo"}, 999, 404, None],
+        [1, {"name": "foo"}, 999, 404, "Table groups has no entry with id=999"],
         [1, {"name": "1"}, 1, 422, None],
         [1, {"name": "foo"}, 0, 422, None],
     ],
@@ -136,7 +139,9 @@ async def test_update_group(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, group_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/groups/{group_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -155,8 +160,8 @@ async def test_update_group(test_app_asyncio, init_test_db, test_db,
     "access_idx, group_id, status_code, status_details",
     [
         [1, 1, 200, None],
-        [0, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table groups has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -164,7 +169,9 @@ async def test_update_group(test_app_asyncio, init_test_db, test_db,
 async def test_delete_group(test_app_asyncio, init_test_db, access_idx, group_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/groups/{group_id}/", headers=auth)
     assert response.status_code == status_code

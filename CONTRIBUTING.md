@@ -51,7 +51,7 @@ In order to run the same unit tests as the CI workflows, you can run the dockeri
 ```bash
 docker-compose up -d --build
 docker-compose exec -T pyroapi pip install -r requirements-dev.txt
-docker-compose exec -T pyroapi coverage run -m pytest test/
+docker-compose exec -T pyroapi pytest tests/
 ```
 Please note that you can pick another port number, it only has to be consistent once you have started your containers.
 

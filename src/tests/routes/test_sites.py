@@ -60,11 +60,12 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, site_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [1, 999, 404, "Entry not found"],
+        [1, 999, 404, "Table sites has no entry with id=999"],
         [0, 0, 422, None],
-        [4, 1, 401, "You can't access this ressource"],
+        [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
@@ -72,7 +73,9 @@ async def test_get_site(test_app_asyncio, init_test_db, access_idx,
                         site_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/sites/{site_id}", headers=auth)
     response_json = response.json()
@@ -87,15 +90,18 @@ async def test_get_site(test_app_asyncio, init_test_db, access_idx,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_sites",
     [
+        [None, 401, "Not authenticated", []],
         [0, 200, None, [SITE_TABLE[0]]],
         [1, 200, None, SITE_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_sites):
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/sites/", headers=auth)
     assert response.status_code == status_code
@@ -111,6 +117,7 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
 @pytest.mark.parametrize(
     "access_idx, payload, expected_group_id, no_alert, status_code, status_details",
     [
+        [None, {}, None, False, 401, "Not authenticated"],
         [1, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
              "type": "tower", "country": "FR", "geocode": "01"}, 1, False,
          201, None],
@@ -124,15 +131,15 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
              "country": "FR", "geocode": "01"}, 1, True, 201, None],
         [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
              "country": "FR", "geocode": "01"}, 1, False,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [0, {"name": "my_site", "group_id": 2, "lat": 0., "lon": 0.,
              "country": "FR", "geocode": "01"}, 1, True,
-         401, "You can't specify another group"],
+         403, "This access can't update resources for group_id=2"],
         [0, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
              "country": "FR", "geocode": "01"}, 1, True, 201, None],
         [2, {"name": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
              "country": "FR", "geocode": "01"}, 1, False,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"names": "my_site", "group_id": 1, "lat": 0., "lon": 0.,
              "country": "FR", "geocode": "01"}, 1, False, 422, None],
         [1, {"name": "my_site", "group_id": 1, "lat": 0.,
@@ -144,7 +151,9 @@ async def test_create_site(test_app_asyncio, init_test_db, test_db,
                            access_idx, payload, expected_group_id, no_alert, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     test_response = {"id": len(SITE_TABLE) + 1, "group_id": expected_group_id, **payload}
     subroute = ""
@@ -171,18 +180,19 @@ async def test_create_site(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, site_id, status_code, status_details",
     [
+        [None, {}, 1, 401, "Not authenticated"],
         [1, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1, 200, None],
         [0, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1,
          200, None],
         [2, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"}, 1,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
         [1, {"site_name": "foo"}, 1, 422, None],
         [1, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 999, 404, None],
         [1, {"name": "1", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 1, 422, None],
         [1, {"name": "foo", "lat": 0., "lon": 0., "type": "tower", "country": "FR", "geocode": "01"}, 0, 422, None],
         [4, {"name": "renamed_site", "lat": 0., "lon": 0., "country": "FR", "geocode": "01"},
-         1, 401, "You can't specify another group"],
+         1, 403, "This access can't update resources for group_id=1"],
     ],
 )
 @pytest.mark.asyncio
@@ -190,7 +200,9 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
                            access_idx, payload, site_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/sites/{site_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -208,9 +220,10 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, site_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [1, 1, 200, None],
-        [0, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table sites has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -218,7 +231,9 @@ async def test_update_site(test_app_asyncio, init_test_db, test_db,
 async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/sites/{site_id}/", headers=auth)
     assert response.status_code == status_code

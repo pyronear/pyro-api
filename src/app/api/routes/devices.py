@@ -30,7 +30,7 @@ from app.api.crud.authorizations import is_admin_access
 router = APIRouter()
 
 
-@router.post("/", response_model=DeviceOut, status_code=201, summary="Create a new device")
+@router.post("/", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Create a new device")
 async def register_device(
     payload: AdminDeviceAuth,
     _=Security(get_current_access, scopes=[AccessType.admin])
@@ -40,8 +40,8 @@ async def register_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    if await crud.get(payload.owner_id, users) is None:
-        raise HTTPException(status_code=404, detail=f"Unknown user for owner_id={payload.owner_id}")
+    await crud.get_entry(users, payload.owner_id)
+
     if payload.group_id is None:
         payload = payload.dict()
         payload["group_id"] = await get_entity_group_id(users, payload["owner_id"])
@@ -49,7 +49,7 @@ async def register_device(
     return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
-@router.post("/register", response_model=DeviceOut, status_code=201, summary="Reg   ister your device")
+@router.post("/register", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Register your device")
 async def register_my_device(
     payload: MyDeviceAuth,
     me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
@@ -156,7 +156,10 @@ async def update_device_location(
     # Check that device is accessible to this user
     device = await crud.get_entry(devices, device_id)
     if device["owner_id"] != user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Permission denied to modify device with id={device_id}."
+        )
     # Update only the location
     device.update(payload.dict())
     device = DeviceOut(**device)

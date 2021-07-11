@@ -62,10 +62,11 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, device_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table devices has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -73,7 +74,11 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/devices/{device_id}", headers=auth)
     assert response.status_code == status_code
@@ -86,8 +91,9 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
-        [1, 401, "Permission denied"],
+        [None, 401, "Not authenticated"],
+        [0, 403, "Your access scope is not compatible with this operation."],
+        [1, 403, "Your access scope is not compatible with this operation."],
         [2, 200, None],
         [3, 200, None],
     ],
@@ -96,7 +102,11 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
 async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/devices/me", headers=auth)
     assert response.status_code == status_code
@@ -114,17 +124,22 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_devices",
     [
+        [None, 401, "Not authenticated", None],
         [0, 200, None, [DEVICE_TABLE[0], DEVICE_TABLE[1]]],
         [5, 200, None, [DEVICE_TABLE[-1]]],
         [1, 200, None, DEVICE_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_devices):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/devices/", headers=auth)
     assert response.status_code == status_code
@@ -138,16 +153,21 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
+        [None, 401, "Not authenticated"],
         [0, 200, None],
         [1, 200, None],
-        [2, 401, "Permission denied"],
+        [2, 403, "Your access scope is not compatible with this operation."],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/devices/my-devices", headers=auth)
     assert response.status_code == status_code
@@ -167,20 +187,21 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
+        [None, {}, 401, "Not authenticated"],
         [0, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          201, None],
         [2, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         400, "An entry with login='third_login' already exists."],  # existing device
+         409, "An entry with login='third_login' already exists."],  # existing device
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
          422, None],  # password too short
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          422, None],  # missing owner
         [1, {"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         404, "Unknown user for owner_id=10"],  # unknown owner
+         404, "Table users has no entry with id=10"],  # unknown owner
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
          422, None],  # invalid angle_of_view
         [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
@@ -192,7 +213,11 @@ async def test_register_device(test_app_asyncio, init_test_db, test_db,
                                access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/devices/", data=json.dumps(payload), headers=auth)
@@ -223,14 +248,15 @@ async def test_register_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
+        [None, {}, 401, "Not authenticated"],
         [0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          201, None],
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
          201, None],
         [2, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [0, {"login": "third_login", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         400, "An entry with login='third_login' already exists."],  # existing device
+         409, "An entry with login='third_login' already exists."],  # existing device
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
          422, None],  # password too short
         [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
@@ -244,7 +270,11 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
                                   access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/devices/register", data=json.dumps(payload), headers=auth)
@@ -281,15 +311,16 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
+        [None, {}, 1, 401, "Not authenticated"],
         [0, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
          200, None],
         [2, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
         [1, {"login": "new_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 999,
-         404, "Entry not found"],
+         404, "Table devices has no entry with id=999"],
         [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
          422, None],
         [1, {"login": "renamed_device", "angle_of_view": 68.}, 1,
@@ -297,7 +328,7 @@ async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 0,
          422, None],
         [1, {"login": "fourth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
-         400, "An entry with login='fourth_login' already exists."],  # renamed to already existing login
+         409, "An entry with login='fourth_login' already exists."],  # renamed to already existing login
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"}, 1,
          422, None],  # invalid angle_of_view
         [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.}, 1,
@@ -309,7 +340,11 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
                              access_idx, payload, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -333,13 +368,15 @@ async def test_update_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
+        [None, {}, 1, 401, "Not authenticated"],
         [0, {"lon": 5.}, 1, 200, None],
-        [0, {"lon": 5.}, 2, 401, "Permission denied"],
-        [1, {"lon": 5.}, 1, 401, "Permission denied"],  # TODO: admin should have permission without being owner
+        [0, {"lon": 5.}, 2, 403, "Permission denied to modify device with id=2."],
+        # TODO: admin should have permission without being owner
+        [1, {"lon": 5.}, 1, 403, "Permission denied to modify device with id=1."],
         [1, {"lon": 5.}, 2, 200, None],
-        [2, {"lon": 5.}, 1, 401, "Permission denied"],
-        [2, {"lon": 5.}, 2, 401, "Permission denied"],
-        [1, {"lon": 5.}, 999, 404, "Entry not found"],
+        [2, {"lon": 5.}, 1, 403, "Your access scope is not compatible with this operation."],
+        [2, {"lon": 5.}, 2, 403, "Your access scope is not compatible with this operation."],
+        [1, {"lon": 5.}, 999, 404, "Table devices has no entry with id=999"],
         [1, {"lon": "position"}, 1, 422, None],
         [1, {"lon": 5.}, 0, 422, None],
     ],
@@ -349,7 +386,11 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
                                       access_idx, payload, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/location", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -367,15 +408,16 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
-        [0, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [None, {}, 1, 401, "Not authenticated"],
+        [0, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {"software_hash": "my_sha256hash"}, 1, 200, None],
-        [2, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
-        [3, {"software_hash": "my_sha256hash"}, 1, 401, "Permission denied"],
+        [2, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
+        [3, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
         [1, {"software_hash": "my_hash"}, 1, 422, None],
         [1, {"software_hash": "my_way_too_long_sha26_hash"}, 1, 422, None],
         [1, {"software_hash": "my_sha256hash"}, 0, 422, None],
-        [1, {"software_hash": "my_sha256hash"}, 999, 404, "Entry not found"],
+        [1, {"software_hash": "my_sha256hash"}, 999, 404, "Table devices has no entry with id=999"],
     ],
 )
 @pytest.mark.asyncio
@@ -383,7 +425,11 @@ async def test_update_device_hash(test_app_asyncio, init_test_db, test_db,
                                   access_idx, payload, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/hash", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -399,8 +445,9 @@ async def test_update_device_hash(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"lon": 5.}, 401, "Permission denied"],
-        [1, {"lon": 5.}, 401, "Permission denied"],
+        [None, {}, 401, "Not authenticated"],
+        [0, {"lon": 5.}, 403, "Your access scope is not compatible with this operation."],
+        [1, {"lon": 5.}, 403, "Your access scope is not compatible with this operation."],
         [2, {"lon": 5.}, 200, None],
         [2, {"lon": "position"}, 422, None],
     ],
@@ -410,7 +457,11 @@ async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
                                   access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put("/devices/my-location", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -434,11 +485,12 @@ async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
-        [0, {"password": "new_password"}, 1, 401, "Permission denied"],
+        [None, {}, 1, 401, "Not authenticated"],
+        [0, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {"password": "new_password"}, 1, 200, None],
-        [2, {"password": "new_password"}, 1, 401, "Permission denied"],
+        [2, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
-        [1, {"password": "new_password"}, 999, 404, "Entry not found"],
+        [1, {"password": "new_password"}, 999, 404, "Table devices has no entry with id=999"],
         [1, {"password": 1}, 1, 422, None],
         [1, {"password": "me"}, 1, 422, None],
         [1, {"password": "new_password"}, 0, 422, None],
@@ -449,7 +501,11 @@ async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
                                       access_idx, payload, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/pwd", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -466,8 +522,9 @@ async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
-        [1, 401, "Permission denied"],
+        [None, 401, "Not authenticated"],
+        [0, 403, "Your access scope is not compatible with this operation."],
+        [1, 403, "Your access scope is not compatible with this operation."],
         [2, 200, None],
     ],
 )
@@ -475,7 +532,11 @@ async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
 async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
 
@@ -502,11 +563,12 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
 @pytest.mark.parametrize(
     "access_idx, device_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [3, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [3, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table devices has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -514,7 +576,11 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
 async def test_delete_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/devices/{device_id}/", headers=auth)
     assert response.status_code == status_code

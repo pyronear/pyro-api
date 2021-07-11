@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security, Depends
+from fastapi import APIRouter, Path, Security, Depends, status
 from sqlalchemy import and_
 from app.api import crud
 from app.db import events, get_session, models
@@ -16,7 +16,7 @@ from app.api.crud.groups import get_entity_group_id
 router = APIRouter()
 
 
-@router.post("/", response_model=EventOut, status_code=201, summary="Create a new event")
+@router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED, summary="Create a new event")
 async def create_event(
     payload: EventIn,
     _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])

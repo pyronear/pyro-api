@@ -21,20 +21,21 @@ router = APIRouter()
 
 async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
     """Checks whether the media is registered in the DB"""
-    filters = {"id": media_id}
-    if device_id is not None:
-        filters.update({"device_id": device_id})
-
-    existing_media = await crud.fetch_one(media, filters)
-    if existing_media is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Permission denied"
-        )
+    if device_id is None:
+        media_dict = await crud.get_entry(media, media_id)
+        existing_media = MediaOut(**media_dict)
+    else:
+        existing_media = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        if existing_media is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Unable to find media with id={media_id} & device_id={device_id}"
+            )
     return existing_media
 
 
-@router.post("/", response_model=MediaOut, status_code=201, summary="Create a media related to a specific device")
+@router.post("/", response_model=MediaOut, status_code=status.HTTP_201_CREATED,
+             summary="Create a media related to a specific device")
 async def create_media(
     payload: MediaIn,
     _=Security(get_current_access, scopes=[AccessType.admin])
@@ -48,7 +49,7 @@ async def create_media(
     return await crud.create_entry(media, payload)
 
 
-@router.post("/from-device", response_model=MediaOut, status_code=201,
+@router.post("/from-device", response_model=MediaOut, status_code=status.HTTP_201_CREATED,
              summary="Create a media related to the authentified device")
 async def create_media_from_device(
     payload: BaseMedia,
@@ -148,7 +149,7 @@ async def upload_media_from_device(
         # Failed upload
         if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
             raise HTTPException(
-                status_code=500,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed upload"
             )
         # Data integrity check
@@ -156,8 +157,8 @@ async def upload_media_from_device(
         # Failed download
         if uploaded_file is None:
             raise HTTPException(
-                status_code=500,
-                detail="The data integrity check failed (unable to download media form bucket)"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="The data integrity check failed (unable to download media from bucket)"
             )
         # Remove temp local file
         background_tasks.add_task(bucket_service.flush_tmp_file, uploaded_file)
@@ -168,7 +169,7 @@ async def upload_media_from_device(
             # Delete corrupted file
             await bucket_service.delete_file(bucket_key)
             raise HTTPException(
-                status_code=500,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Data was corrupted during upload"
             )
 

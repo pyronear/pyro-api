@@ -71,19 +71,22 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, media_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table media has no entry with id=999"],
         [1, 0, 422, None],
-        [4, 1, 401, "You can't access this ressource"],
+        [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
 async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/media/{media_id}", headers=auth)
     assert response.status_code == status_code
@@ -97,16 +100,19 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_results",
     [
+        [None, 401, "Not authenticated", None],
         [0, 200, None, [MEDIA_TABLE[0]]],
         [1, 200, None, MEDIA_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/media/", headers=auth)
     assert response.status_code == status_code
@@ -120,9 +126,10 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"device_id": 1}, 401, "Permission denied"],
+        [None, {}, 401, "Not authenticated"],
+        [0, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1}, 201, None],
-        [2, {"device_id": 1}, 401, "Permission denied"],
+        [2, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": "device"}, 422, None],
         [1, {}, 422, None],
     ],
@@ -131,7 +138,9 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=auth)
@@ -154,8 +163,9 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {}, 401, "Permission denied"],
-        [1, {}, 401, "Permission denied"],
+        [None, {}, 401, "Not authenticated"],
+        [0, {}, 403, "Your access scope is not compatible with this operation."],
+        [1, {}, 403, "Your access scope is not compatible with this operation."],
         [2, {}, 201, None],
     ],
 )
@@ -164,7 +174,9 @@ async def test_create_media_from_device(test_app_asyncio, init_test_db, test_db,
                                         access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/media/from-device", data=json.dumps(payload), headers=auth)
@@ -191,12 +203,13 @@ async def test_create_media_from_device(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, media_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "type": "video"}, 1, 401, "Permission denied"],
+        [None, {}, 1, 401, "Not authenticated"],
+        [0, {"device_id": 1, "type": "video"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1, "type": "video"}, 1, 200, None],
-        [2, {"device_id": 1, "type": "video"}, 1, 401, "Permission denied"],
+        [2, {"device_id": 1, "type": "video"}, 1, 403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
         [1, {"type": "audio"}, 1, 422, None],
-        [1, {"device_id": 1, "type": "image"}, 999, 404, "Entry not found"],
+        [1, {"device_id": 1, "type": "image"}, 999, 404, "Table media has no entry with id=999"],
         [1, {"device_id": 1, "type": "audio"}, 1, 422, None],
         [1, {"device_id": "my_device", "type": "image"}, 1, 422, None],
         [1, {"device_id": 1, "type": "image"}, 0, 422, None],
@@ -207,7 +220,9 @@ async def test_update_media(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/media/{media_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -225,10 +240,11 @@ async def test_update_media(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, media_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table media has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -236,7 +252,9 @@ async def test_update_media(test_app_asyncio, init_test_db, test_db,
 async def test_delete_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
     assert response.status_code == status_code

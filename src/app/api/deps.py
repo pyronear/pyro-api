@@ -25,14 +25,6 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-def unauthorized_exception(detail: str, authenticate_value: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-        headers={"WWW-Authenticate": authenticate_value},
-    )
-
-
 async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)) -> AccessRead:
     """ Dependency to use as fastapi.security.Security with scopes.
 
@@ -48,22 +40,32 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 
     try:
         payload = jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.JWT_ENCODING_ALGORITHM])
-        access_id = payload.get("sub")
-        if access_id is None:
-            raise unauthorized_exception("Invalid credentials", authenticate_value)
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired.",
+            headers={"WWW-Authenticate": authenticate_value},
+        )
+
+    try:
+        access_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
-        token_data = TokenPayload(access_id=int(access_id), scopes=token_scopes)
+        token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
+    except (KeyError, ValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid token payload.",
+            headers={"WWW-Authenticate": authenticate_value},
+        )
 
-    except (JWTError, ValidationError, KeyError):
-        raise unauthorized_exception("Invalid credentials", authenticate_value)
-
-    entry = await crud.get(table=accesses, entry_id=int(access_id))
-
-    if entry is None:
-        raise unauthorized_exception("Invalid credentials", authenticate_value)
+    entry = await crud.get_entry(table=accesses, entry_id=int(access_id))
 
     if set(token_data.scopes).isdisjoint(security_scopes.scopes):
-        raise unauthorized_exception("Permission denied", authenticate_value)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your access scope is not compatible with this operation.",
+            headers={"WWW-Authenticate": authenticate_value},
+        )
 
     return AccessRead(**entry)
 
@@ -71,7 +73,10 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, {'access_id': access.id})
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matching user with this credentials.",
+        )
 
     return UserRead(**user)
 
@@ -79,6 +84,9 @@ async def get_current_user(access: AccessRead = Depends(get_current_access)) -> 
 async def get_current_device(access: AccessRead = Depends(get_current_access)) -> DeviceOut:
     device = await crud.fetch_one(devices, {'access_id': access.id})
     if device is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Permission denied")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matching device with this credentials.",
+        )
 
     return DeviceOut(**device)
