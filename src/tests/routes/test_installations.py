@@ -76,12 +76,13 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, installation_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table installations has no entry with id=999"],
         [1, 0, 422, None],
-        [4, 1, 401, "You can't access this ressource"],
+        [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
@@ -89,7 +90,9 @@ async def test_get_installation(test_app_asyncio, init_test_db,
                                 access_idx, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/installations/{installation_id}", headers=auth)
     assert response.status_code == status_code
@@ -102,9 +105,10 @@ async def test_get_installation(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_results",
     [
+        [None, 401, "Not authenticated", None],
         [0, 200, None, [INSTALLATION_TABLE[0]]],
         [1, 200, None, INSTALLATION_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
@@ -112,7 +116,9 @@ async def test_fetch_installations(test_app_asyncio, init_test_db,
                                    access_idx, status_code, status_details, expected_results):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/installations/", headers=auth)
     assert response.status_code == status_code
@@ -125,9 +131,12 @@ async def test_fetch_installations(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
-        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 401, "Permission denied"],
+        [None, {}, 401, "Not authenticated"],
+        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
+         403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None],
-        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 401, "Permission denied"],
+        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
+         403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1, "site_id": "my_site"}, 422, None],
         [1, {"device_id": 1}, 422, None],
     ],
@@ -137,7 +146,9 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
                                    access_idx, payload, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/installations/", data=json.dumps(payload), headers=auth)
@@ -163,14 +174,17 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, installation_id, status_code, status_details",
     [
+        [None, {}, 1, 401, "Not authenticated"],
         [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
-        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 401, "Permission denied"],
+        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1,
+         403, "Your access scope is not compatible with this operation."],
         [4, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
-         1, 401, "You can't specify another group"],
+         1, 403, "This access can't update resources for group_id=1"],
         [1, {}, 1, 422, None],
         [1, {"device_id": 1}, 1, 422, None],
-        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 999, 404, "Entry not found"],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 999,
+         404, "Table installations has no entry with id=999"],
         [1, {"device_id": 1, "site_id": "my_site", "start_ts": "2020-07-13T08:18:45.447773"}, 1, 422, None],
         [1, {"device_id": 1, "site_id": 1, "is_trustworthy": 5.}, 1, 422, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 0, 422, None],
@@ -181,7 +195,9 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
                                    access_idx, payload, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/installations/{installation_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -201,10 +217,11 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, installation_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table installations has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -213,7 +230,9 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
                                    access_idx, installation_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/installations/{installation_id}/", headers=auth)
     assert response.status_code == status_code
@@ -229,12 +248,13 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
 @pytest.mark.parametrize(
     "access_idx, installation_id, device_ids, status_code, status_details",
     [
+        [None, 1, [], 401, "Not authenticated"],
         [0, 1, [1], 200, None],
         [1, 1, [1], 200, None],
         [4, 2, [2], 200, None],
         [1, 999, [], 200, None],  # TODO: this should fail since the site doesn't exist
         [1, 0, [], 422, None],
-        [2, 1, [], 401, "Permission denied"],
+        [2, 1, [], 403, "Your access scope is not compatible with this operation."],
     ],
 )
 @pytest.mark.asyncio
@@ -245,7 +265,9 @@ async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_d
     monkeypatch.setattr(installations, "database", test_db)
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/installations/site-devices/{installation_id}", headers=auth)
     assert response.status_code == status_code

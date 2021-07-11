@@ -33,8 +33,8 @@ async def init_test_db(monkeypatch, test_db):
     [
         [{"username": "foo"}, 422, None],
         [{"password": "foo"}, 422, None],
-        [{"username": "unknown", "password": "foo"}, 400, "Invalid credentials"],  # unknown username
-        [{"username": "first", "password": "second"}, 400, "Invalid credentials"],  # wrong pwd
+        [{"username": "unknown", "password": "foo"}, 401, "Invalid credentials."],  # unknown username
+        [{"username": "first", "password": "second"}, 401, "Invalid credentials."],  # wrong pwd
         [{"username": "first_login", "password": "first_pwd"}, 200, None],  # valid
     ],
 )

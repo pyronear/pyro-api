@@ -31,11 +31,14 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, access_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
-        [0, 2, 401, "Permission denied"],
+        [None, 1, 401, "Not authenticated"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
+        [0, 2, 403, "Your access scope is not compatible with this operation."],
+        [0, 3, 403, "Your access scope is not compatible with this operation."],
+        [2, 3, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
         [1, 2, 200, None],
-        [1, 999, 404, "Entry not found"],
+        [1, 999, 404, "Table accesses has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -43,7 +46,9 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/accesses/{access_id}", headers=auth)
     assert response.status_code == status_code
@@ -63,7 +68,8 @@ async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details",
     [
-        [0, 401, "Permission denied"],
+        [None, 401, "Not authenticated"],
+        [0, 403, "Your access scope is not compatible with this operation."],
         [1, 200, None],
     ],
 )
@@ -71,7 +77,9 @@ async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id,
 async def test_fetch_accesses(init_test_db, test_app_asyncio, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/accesses/", headers=auth)
     assert response.status_code == status_code

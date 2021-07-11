@@ -91,19 +91,22 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",
     [
+        [None, 1, 401, "Not authenticated"],
         [0, 1, 200, None],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table alerts has no entry with id=999"],
         [1, 0, 422, None],
-        [4, 1, 401, "You can't access this ressource"],
+        [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
 async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get(f"/alerts/{alert_id}", headers=auth)
     assert response.status_code == status_code
@@ -121,7 +124,7 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
     [
         [0, 200, None, [ALERT_TABLE[0], ALERT_TABLE[1], ALERT_TABLE[3]]],
         [1, 200, None, ALERT_TABLE],
-        [2, 401, "Permission denied", None],
+        [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
 @pytest.mark.asyncio
@@ -129,7 +132,9 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
                             status_details, expected_results):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/alerts/", headers=auth)
     assert response.status_code == status_code
@@ -145,7 +150,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
     [
         [0, 200, None],
         [1, 200, None],
-        [2, 401, "Permission denied"],
+        [2, 403, "Your access scope is not compatible with this operation."],
         [4, 200, None]
     ],
 )
@@ -153,7 +158,9 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.get("/alerts/ongoing", headers=auth)
     assert response.status_code == status_code
@@ -180,12 +187,12 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
         [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None, 201, None],
         [1, {"device_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 4, 201, None],
         [1, {"device_id": 1, "lat": 10., "lon": 8., "azimuth": 47.5}, 3, 201, None],
         [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None,
-         401, "Permission denied"],
+         403, "Your access scope is not compatible with this operation."],
         [1, {"event_id": 2, "lat": 10., "lon": 8.}, None, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "hello"}, None, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, None, 422, None],
@@ -196,7 +203,9 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, expected_event_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
@@ -219,8 +228,10 @@ async def test_create_alert(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
-        [0, {"event_id": 2, "lat": 10., "lon": 8.}, None, 401, "Permission denied"],
-        [1, {"event_id": 2, "lat": 10., "lon": 8.}, None, 401, "Permission denied"],
+        [0, {"event_id": 2, "lat": 10., "lon": 8.}, None,
+         403, "Your access scope is not compatible with this operation."],
+        [1, {"event_id": 2, "lat": 10., "lon": 8.}, None,
+         403, "Your access scope is not compatible with this operation."],
         [2, {"event_id": 2, "lat": 10., "lon": 8.}, None, 201, None],
         [2, {"lat": 10., "lon": 8.}, 3, 201, None],
         [3, {"lat": 10., "lon": 8.}, 4, 201, None],
@@ -231,7 +242,9 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
                                       access_idx, payload, expected_event_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/from-device", data=json.dumps(payload), headers=auth)
@@ -262,14 +275,16 @@ async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
     [
         [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
         [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
-        [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "Permission denied"],
+        [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1,
+         403, "Your access scope is not compatible with this operation."],
         [1, {}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 999, 404, "Entry not found"],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 999, 404, "Table alerts has no entry with id=999"],
         [1, {"device_id": 2, "lat": 10.}, 1, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 0, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "north"}, 1, 422, None],
         [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, 1, 422, None],
-        [4, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 401, "You can't specify another group"],
+        [4, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1,
+         403, "This access can't update resources for group_id=1"],
 
     ],
 )
@@ -278,7 +293,9 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
                             access_idx, payload, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
@@ -294,10 +311,10 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",
     [
-        [0, 1, 401, "Permission denied"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
-        [2, 1, 401, "Permission denied"],
-        [1, 999, 404, "Entry not found"],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, 999, 404, "Table alerts has no entry with id=999"],
         [1, 0, 422, None],
     ],
 )
@@ -305,7 +322,9 @@ async def test_update_alert(test_app_asyncio, init_test_db, test_db,
 async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
 
     response = await test_app_asyncio.delete(f"/alerts/{alert_id}/", headers=auth)
     assert response.status_code == status_code
@@ -321,11 +340,11 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
 @pytest.mark.parametrize(
     "access_idx, payload, alert_id, status_code, status_details",
     [
-        [0, {"media_id": 1}, 1, 401, "Permission denied"],
-        [1, {"media_id": 1}, 1, 401, "Permission denied"],
+        [0, {"media_id": 1}, 1, 403, "Your access scope is not compatible with this operation."],
+        [1, {"media_id": 1}, 1, 403, "Your access scope is not compatible with this operation."],
         [2, {"media_id": 1}, 1, 200, None],
-        [2, {"media_id": 1}, 3, 401, "Permission denied"],
-        [2, {"media_id": 100}, 1, 404, "Media does not exist"],
+        [2, {"media_id": 1}, 3, 404, "Unable to find alert with id=3 & device_id=1."],
+        [2, {"media_id": 100}, 1, 404, "Unable to find media with id=100."],
     ],
 )
 @pytest.mark.asyncio
@@ -333,7 +352,9 @@ async def test_link_media(test_app_asyncio, init_test_db, test_db,
                           access_idx, payload, alert_id, status_code, status_details):
 
     # Create a custom access token
-    auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/link-media", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
