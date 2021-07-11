@@ -90,7 +90,7 @@ async def test_get_site(test_app_asyncio, init_test_db, access_idx,
 @pytest.mark.parametrize(
     "access_idx, status_code, status_details, expected_sites",
     [
-        [None, 1, 401, "Not authenticated"],
+        [None, 401, "Not authenticated", []],
         [0, 200, None, [SITE_TABLE[0]]],
         [1, 200, None, SITE_TABLE],
         [2, 403, "Your access scope is not compatible with this operation.", None],
