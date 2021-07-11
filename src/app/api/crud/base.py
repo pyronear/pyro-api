@@ -93,9 +93,9 @@ async def update_entry(
         # Dont update columns for null fields
         payload_dict = {k: v for k, v in payload_dict.items() if v is not None}
 
-    entry_id = await put(entry_id, payload_dict, table)
+    _id = await put(entry_id, payload_dict, table)
 
-    if not isinstance(entry_id, int):
+    if not isinstance(_id, int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Table {table.name} has no entry with id={entry_id}"

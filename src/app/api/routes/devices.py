@@ -49,7 +49,7 @@ async def register_device(
     return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
 
 
-@router.post("/register", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Reg   ister your device")
+@router.post("/register", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Register your device")
 async def register_my_device(
     payload: MyDeviceAuth,
     me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
@@ -158,7 +158,7 @@ async def update_device_location(
     if device["owner_id"] != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Permission denied to modify device with id={device_id}."
+            detail=f"Permission denied to modify device with id={device_id}."
         )
     # Update only the location
     device.update(payload.dict())
