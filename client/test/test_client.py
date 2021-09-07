@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import unittest
+import time
 from copy import deepcopy
 from requests import ConnectionError
 
@@ -68,6 +69,9 @@ class ClientTester(unittest.TestCase):
 
         # Check token refresh
         prev_headers = deepcopy(api_client.headers)
+        # In case the 2nd token creation request is done in the same second, since the expiration is truncated to the
+        # second, it returns the same token
+        time.sleep(1)
         api_client.refresh_token("dummy_login", "dummy_pwd")
         self.assertNotEqual(prev_headers, api_client.headers)
 
