@@ -115,13 +115,13 @@ class DefaultLocation(BaseModel):
 
 
 class _Rotation(BaseModel):
-    yaw: float = Field(..., gt=-180, lt=180, example=110)
-    pitch: float = Field(..., gt=-90, lt=90, example=-5)
+    yaw: float = Field(..., ge=0, le=360, example=110)
+    pitch: float = Field(..., ge=-90, le=90, example=-5)
 
 
 class _DefaultRotation(BaseModel):
-    yaw: Optional[float] = Field(None, gt=-180, lt=180, example=110)
-    pitch: Optional[float] = Field(None, gt=-90, lt=90, example=-5)
+    yaw: Optional[float] = Field(None, ge=0, le=360, example=110)
+    pitch: Optional[float] = Field(None, ge=-90, le=90, example=-5)
 
 
 class DefaultPosition(DefaultLocation, _DefaultRotation):
@@ -164,7 +164,7 @@ class SoftwareHash(BaseModel):
 class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
     last_ping: Optional[datetime] = Field(default=None, example=datetime.utcnow())
-    angle_of_view: float = Field(..., gt=0, lt=360, example=10)
+    angle_of_view: float = Field(..., ge=0, le=360, example=10)
     software_hash: Optional[str] = Field(None, min_length=8, max_length=16, example="0123456789ABCDEF")
 
 
