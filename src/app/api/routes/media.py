@@ -23,15 +23,14 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
     """Checks whether the media is registered in the DB"""
     if device_id is None:
         media_dict = await crud.get_entry(media, media_id)
-        existing_media = MediaOut(**media_dict)
     else:
-        existing_media = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
-        if existing_media is None:
+        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        if media_dict is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Unable to find media with id={media_id} & device_id={device_id}"
             )
-    return existing_media
+    return MediaOut(**_media)
 
 
 @router.post("/", response_model=MediaOut, status_code=status.HTTP_201_CREATED,
@@ -143,7 +142,7 @@ async def upload_media_from_device(
     bucket_key = resolve_bucket_key(file_name)
 
     # Upload if bucket_key is different (otherwise the content is the exact same)
-    if isinstance(entry['bucket_key'], str) and entry['bucket_key'] == bucket_key:
+    if isinstance(entry.bucket_key, str) and entry.bucket_key == bucket_key:
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
@@ -173,9 +172,9 @@ async def upload_media_from_device(
                 detail="Data was corrupted during upload"
             )
 
-        entry = dict(**entry)
-        entry["bucket_key"] = bucket_key
-        return await crud.update_entry(media, MediaCreation(**entry), media_id)
+        entry_dict = entry.dict()
+        entry_dict["bucket_key"] = bucket_key
+        return await crud.update_entry(media, MediaCreation(**entry_dict), media_id)
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
@@ -190,5 +189,5 @@ async def get_media_url(
     # Check in DB
     media_instance = await check_media_registration(media_id)
     # Check in bucket
-    temp_public_url = await bucket_service.get_public_url(media_instance['bucket_key'])
+    temp_public_url = await bucket_service.get_public_url(media_instance.bucket_key)
     return MediaUrl(url=temp_public_url)
