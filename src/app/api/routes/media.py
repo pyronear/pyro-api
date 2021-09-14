@@ -30,7 +30,7 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Unable to find media with id={media_id} & device_id={device_id}"
             )
-    return MediaOut(**_media)
+    return MediaOut(**media_dict)
 
 
 @router.post("/", response_model=MediaOut, status_code=status.HTTP_201_CREATED,
