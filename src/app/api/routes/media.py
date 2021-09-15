@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from fastapi import APIRouter, Path, Security, File, UploadFile, HTTPException, BackgroundTasks, status, Depends
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from app.api import crud
 from app.db import media, get_session, models
@@ -19,19 +19,18 @@ from app.api.crud.groups import get_entity_group_id
 router = APIRouter()
 
 
-async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> MediaOut:
+async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> Dict[str, Any]:
     """Checks whether the media is registered in the DB"""
     if device_id is None:
         media_dict = await crud.get_entry(media, media_id)
-        existing_media = MediaOut(**media_dict)
     else:
-        existing_media = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
-        if existing_media is None:
+        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        if media_dict is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Unable to find media with id={media_id} & device_id={device_id}"
             )
-    return existing_media
+    return media_dict
 
 
 @router.post("/", response_model=MediaOut, status_code=status.HTTP_201_CREATED,
@@ -173,9 +172,9 @@ async def upload_media_from_device(
                 detail="Data was corrupted during upload"
             )
 
-        entry = dict(**entry)
-        entry["bucket_key"] = bucket_key
-        return await crud.update_entry(media, MediaCreation(**entry), media_id)
+        entry_dict = dict(**entry)
+        entry_dict["bucket_key"] = bucket_key
+        return await crud.update_entry(media, MediaCreation(**entry_dict), media_id)
 
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
