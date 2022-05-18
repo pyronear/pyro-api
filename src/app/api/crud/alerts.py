@@ -4,33 +4,15 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Optional
 
-from sqlalchemy import Table, and_
+from sqlalchemy import and_
 
 import app.config as cfg
 from app.api import crud
 from app.api.routes.events import create_event
 from app.api.schemas import AlertIn, AlertOut, EventIn
 from app.db import alerts
-
-
-async def fetch_ongoing_alerts(
-    table: Table, query_filters: Dict[str, Any], excluded_events_filter: Dict[str, Any]
-) -> List[Mapping[str, Any]]:
-    query = table.select()
-    if isinstance(query_filters, dict):
-        for query_filter_key, query_filter_value in query_filters.items():
-            query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
-
-    #  TODO Should be performed using a sqlalchemy accessor. E.g: alert_event_end_ts is None
-    all_closed_events = table.select().with_only_columns([table.c.event_id])
-    if isinstance(excluded_events_filter, dict):
-        for query_filter_key, query_filter_value in excluded_events_filter.items():
-            all_closed_events = all_closed_events.where(getattr(table.c, query_filter_key) == query_filter_value)
-    query = query.where(~getattr(table.c, "event_id").in_(all_closed_events))
-
-    return await crud.base.database.fetch_all(query=query)
 
 
 async def resolve_previous_alert(device_id: int) -> Optional[AlertOut]:
