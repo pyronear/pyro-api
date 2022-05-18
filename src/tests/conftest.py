@@ -6,8 +6,8 @@
 import pytest
 from httpx import AsyncClient
 
-from app.main import app
 from app.api.security import create_unlimited_access_token
+from app.main import app
 from tests.db_utils import database as test_database
 from tests.db_utils import reset_test_db
 

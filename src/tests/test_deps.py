@@ -4,15 +4,14 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import pytest
-from fastapi.security import SecurityScopes
 from fastapi import HTTPException
+from fastapi.security import SecurityScopes
 
 from app import db
 from app.api import crud, deps, security
-from app.api.schemas import AccessRead, UserRead, DeviceOut
+from app.api.schemas import AccessRead, DeviceOut, UserRead
 from tests.db_utils import fill_table
 from tests.utils import update_only_datetime
-
 
 USER_TABLE = [
     {"id": 1, "login": "first_user", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},

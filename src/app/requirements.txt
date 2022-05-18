@@ -7,5 +7,5 @@ passlib[bcrypt]>=1.7.4
 python-multipart==0.0.5
 aiofiles==0.6.0
 requests>=2.22.0
-sentry_sdk>=0.19.4
+sentry-sdk>=1.5.12
 qarnot>=2.2.1

@@ -1,13 +1,15 @@
-# Copyright (C) 2021, Pyronear contributors.
+# Copyright (C) 2021-2022, Pyronear.
 
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import enum
-from .session import Base
-from sqlalchemy.sql import func
-from sqlalchemy import Column, DateTime, Integer, Float, String, Enum, Boolean, ForeignKey, MetaData
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from .session import Base
 
 
 class Users(Base):

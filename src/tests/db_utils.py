@@ -4,13 +4,14 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import contextlib
-from typing import List, Dict, Any, Mapping
-from sqlalchemy import create_engine, Table
+from typing import Any, Dict, List, Mapping
+
 from databases import Database
+from sqlalchemy import Table, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.db import metadata
 import app.config as cfg
+from app.db import metadata
 
 SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
 engine = create_engine(

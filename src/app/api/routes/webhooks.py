@@ -1,4 +1,4 @@
-# Copyright (C) 2021, Pyronear contributors.
+# Copyright (C) 2021-2022, Pyronear.
 
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
@@ -8,10 +8,9 @@ from typing import List
 from fastapi import APIRouter, Path, Security, status
 
 from app.api import crud
-from app.db import webhooks
-from app.api.schemas import WebhookIn, WebhookOut
 from app.api.deps import get_current_access
-
+from app.api.schemas import WebhookIn, WebhookOut
+from app.db import webhooks
 
 router = APIRouter()
 
@@ -32,7 +31,7 @@ async def get_webhook(webhook_id: int = Path(..., gt=0), _=Security(get_current_
     """
     Given its ID, retrieves information about the specified webhook
     """
-    return await crud.get_entry(webhooks, payload)
+    return await crud.get_entry(webhooks, webhook_id)
 
 
 @router.get("/", response_model=List[WebhookOut], summary="Get the list of all webhooks")

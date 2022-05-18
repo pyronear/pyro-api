@@ -11,7 +11,6 @@ from app.api import crud
 from tests.db_utils import fill_table
 from tests.utils import update_only_datetime
 
-
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "login": "second_login", "access_id": 2, "created_at": "2020-11-13T08:18:45.447773"},

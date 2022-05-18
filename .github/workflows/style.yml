@@ -24,7 +24,27 @@ jobs:
         run: |
           pip install flake8
           flake8 --version
-          flake8 src/ client/
+          flake8 ./
+
+  isort-py3:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.7]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Run isort
+        run: |
+          pip install isort
+          isort --version
+          isort .
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then exit 1; else echo "All clear"; fi
 
   mypy-py3:
     runs-on: ${{ matrix.os }}
@@ -47,8 +67,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
             ${{ runner.os }}-pkg-deps-${{ matrix.python }}-
-            ${{ runner.os }}-pkg-deps-
-            ${{ runner.os }}-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -76,16 +94,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
           restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-
-            ${{ runner.os }}-client-deps-
-            ${{ runner.os }}-
+            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
+            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e client/ --upgrade
+          pip install -e client/. --upgrade
           pip install mypy
       - name: Run mypy
         run: |

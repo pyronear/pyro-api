@@ -4,14 +4,14 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import json
-import pytest
 from datetime import datetime
+
+import pytest
 
 from app import db
 from app.api import crud
-from app.api.routes import installations
-from tests.db_utils import get_entry, fill_table, TestSessionLocal
-from tests.utils import update_only_datetime, parse_time
+from tests.db_utils import TestSessionLocal, fill_table, get_entry
+from tests.utils import parse_time, update_only_datetime
 
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
@@ -262,7 +262,7 @@ async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_d
                                           access_idx, installation_id, device_ids, status_code, status_details):
 
     # Custom patching for DB operations done on route
-    monkeypatch.setattr(installations, "database", test_db)
+    monkeypatch.setattr(db.session, "database", test_db)
 
     # Create a custom access token
     auth = None
