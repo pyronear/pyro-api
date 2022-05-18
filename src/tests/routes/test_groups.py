@@ -12,7 +12,6 @@ from app.api import crud
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import update_only_datetime
 
-
 # Have more groups than max request (20)
 GROUP_TABLE = [{"id": idx + 1, "name": f"group_{idx}"} for idx in range(51)]
 
