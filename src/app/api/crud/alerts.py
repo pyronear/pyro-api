@@ -16,7 +16,7 @@ from app.db import alerts
 
 
 async def fetch_ongoing_alerts(
-    table: Table, query_filters: Dict[str, Any], excluded_events_filter: Dict[str, Any], limit: int = 20,
+    table: Table, query_filters: Dict[str, Any], excluded_events_filter: Dict[str, Any], limit: int = 50,
 ) -> List[Mapping[str, Any]]:
     query = table.select().order_by(table.c.id.desc())
     if isinstance(query_filters, dict):

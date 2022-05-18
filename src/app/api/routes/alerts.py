@@ -173,7 +173,7 @@ async def fetch_ongoing_alerts(
                     .where(events.c.end_ts.is_(None))
                 ))).order_by(alerts.c.id.desc())
 
-        return await crud.base.database.fetch_all(query=query.limit(20).order_by(alerts.c.id))
+        return await crud.base.database.fetch_all(query=query.limit(50).order_by(alerts.c.id))
     else:
         retrieved_alerts = (session.query(models.Alerts)
                             .join(models.Events)

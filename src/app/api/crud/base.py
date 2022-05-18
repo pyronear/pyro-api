@@ -39,7 +39,7 @@ async def fetch_all(
     table: Table,
     query_filters: Optional[Dict[str, Any]] = None,
     exclusions: Optional[Dict[str, Any]] = None,
-    limit: int = 20,
+    limit: int = 50,
 ) -> List[Mapping[str, Any]]:
     query = table.select().order_by(table.c.id.desc())
     if isinstance(query_filters, dict):

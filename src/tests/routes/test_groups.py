@@ -14,7 +14,7 @@ from tests.utils import update_only_datetime
 
 
 # Have more groups than max request (20)
-GROUP_TABLE = [{"id": idx + 1, "name": f"group_{idx}"} for idx in range(21)]
+GROUP_TABLE = [{"id": idx + 1, "name": f"group_{idx}"} for idx in range(51)]
 
 
 USER_TABLE = [
