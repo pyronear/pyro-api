@@ -10,7 +10,6 @@ import pytest
 
 from app import db
 from app.api import crud
-from app.api.routes import installations
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, update_only_datetime
 
