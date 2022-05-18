@@ -16,9 +16,9 @@ from app.db import alerts
 
 
 async def fetch_ongoing_alerts(
-    table: Table, query_filters: Dict[str, Any], excluded_events_filter: Dict[str, Any]
+    table: Table, query_filters: Dict[str, Any], excluded_events_filter: Dict[str, Any], limit: int = 20,
 ) -> List[Mapping[str, Any]]:
-    query = table.select()
+    query = table.select().order_by(table.c.id.desc())
     if isinstance(query_filters, dict):
         for query_filter_key, query_filter_value in query_filters.items():
             query = query.where(getattr(table.c, query_filter_key) == query_filter_value)
@@ -30,7 +30,7 @@ async def fetch_ongoing_alerts(
             all_closed_events = all_closed_events.where(getattr(table.c, query_filter_key) == query_filter_value)
     query = query.where(~getattr(table.c, "event_id").in_(all_closed_events))
 
-    return await crud.base.database.fetch_all(query=query)
+    return await crud.base.database.fetch_all(query=query.limit(limit).order_by(table.c.id))
 
 
 async def resolve_previous_alert(device_id: int) -> Optional[AlertOut]:
