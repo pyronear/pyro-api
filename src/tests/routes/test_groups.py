@@ -84,7 +84,7 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
     response = await test_app_asyncio.get("/groups/")
     assert response.status_code == 200
     response_json = response.json()
-    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE[-20:]))
+    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE[-50:]))
 
 
 @pytest.mark.parametrize(
