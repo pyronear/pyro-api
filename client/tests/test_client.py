@@ -19,6 +19,7 @@ def _test_route_return(response, return_type, status_code=200):
 
     return response.json()
 
+
 def test_client():
 
     # Wrong credentials
