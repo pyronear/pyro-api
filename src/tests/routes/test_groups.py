@@ -12,10 +12,9 @@ from app.api import crud
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import update_only_datetime
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+
+# Have more groups than max request (20)
+GROUP_TABLE = [{"id": idx + 1, "name": f"group_{idx}"} for idx in range(21)]
 
 
 USER_TABLE = [
@@ -86,7 +85,7 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
     response = await test_app_asyncio.get("/groups/")
     assert response.status_code == 200
     response_json = response.json()
-    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE))
+    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE[-20:]))
 
 
 @pytest.mark.parametrize(
