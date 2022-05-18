@@ -49,7 +49,7 @@ async def fetch_all(
     if isinstance(exclusions, dict):
         for key, value in exclusions.items():
             query = query.where(getattr(table.c, key) != value)
-    return await database.fetch_all(query=query.limit(limit).order_by(table.c.id.asc()))
+    return await database.fetch_all(query=query.limit(limit))[::-1]
 
 
 async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Mapping[str, Any]:
