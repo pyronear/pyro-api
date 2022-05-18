@@ -30,7 +30,7 @@ async def fetch_ongoing_alerts(
             all_closed_events = all_closed_events.where(getattr(table.c, query_filter_key) == query_filter_value)
     query = query.where(~getattr(table.c, "event_id").in_(all_closed_events))
 
-    return await crud.base.database.fetch_all(query=query.limit(limit))[::-1]
+    return await crud.base.database.fetch_all(query=query.limit(limit))
 
 
 async def resolve_previous_alert(device_id: int) -> Optional[AlertOut]:
