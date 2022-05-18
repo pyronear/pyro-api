@@ -7,9 +7,9 @@ import logging
 import time
 
 import sentry_sdk
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from app import config as cfg
 from app.api.routes import (accesses, alerts, devices, events, groups, installations, login, media, sites, users,
