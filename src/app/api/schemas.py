@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, validator
 
-from app.db.tables import AccessType, EventType, MediaType, SiteType
+from app.db.models import AccessType, EventType, MediaType, SiteType
 
 
 # Template classes

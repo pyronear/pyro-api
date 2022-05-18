@@ -7,6 +7,7 @@ import logging
 import time
 
 import sentry_sdk
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
@@ -71,19 +72,7 @@ async def add_process_time_header(request: Request, call_next):
 
 
 if isinstance(cfg.SENTRY_DSN, str):
-    @app.middleware("http")
-    async def sentry_exception(request: Request, call_next):
-        try:
-            response = await call_next(request)
-            return response
-        except Exception as e:
-            with sentry_sdk.push_scope() as scope:
-                scope.set_context("request", request)  # type: ignore[arg-type]
-                scope.user = {
-                    "ip_address": request.client.host,
-                }
-                sentry_sdk.capture_exception(e)
-            raise e
+    app.add_middleware(SentryAsgiMiddleware)
 
 
 # Docs
