@@ -3,8 +3,9 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from datetime import datetime
 from copy import deepcopy
+from datetime import datetime
+
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 

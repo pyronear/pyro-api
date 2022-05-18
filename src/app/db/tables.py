@@ -4,9 +4,8 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 
+from .models import Accesses, Alerts, Devices, Events, Groups, Installations, Media, Sites, Users, Webhooks
 from .session import Base
-from .models import (Users, Accesses, Alerts, Devices, Events,
-                     Groups, Installations, Media, Sites, Webhooks, EventType, AccessType, SiteType, MediaType)
 
 __all__ = ['metadata', 'users', 'accesses', 'groups', 'sites', 'events',
            'devices', 'media', 'installations', 'alerts', 'webhooks']

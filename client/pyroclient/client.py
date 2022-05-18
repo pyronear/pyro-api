@@ -3,15 +3,15 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
+import io
+import logging
+from typing import Dict, Optional
+from urllib.parse import urljoin
+
 import requests
 from requests.models import Response
-import logging
-from urllib.parse import urljoin
-import io
-from typing import Dict, Any, Optional
 
 from .exceptions import HTTPRequestException
-
 
 __all__ = ['Client']
 

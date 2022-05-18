@@ -5,14 +5,13 @@
 
 from typing import List
 
-from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, Path, Security, status
 
 from app.api import crud
-from app.db import users, accesses, get_session, models
-from app.api.schemas import UserInfo, UserCreation, Cred, UserRead, UserAuth, AccessType
-from app.api.deps import get_current_user, get_current_access
 from app.api.crud.authorizations import is_admin_access
-
+from app.api.deps import get_current_access, get_current_user
+from app.api.schemas import AccessType, Cred, UserAuth, UserCreation, UserInfo, UserRead
+from app.db import accesses, get_session, models, users
 
 router = APIRouter()
 

@@ -3,29 +3,18 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Path, Security, HTTPException, status, Depends
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
 from app.api import crud
-from app.db import devices, accesses, users, get_session, models
-from app.api.schemas import (
-    DeviceOut,
-    DeviceAuth,
-    MyDeviceAuth,
-    AdminDeviceAuth,
-    DeviceCreation,
-    DeviceIn,
-    UserRead,
-    DefaultPosition,
-    Cred,
-    SoftwareHash,
-    AccessType
-)
-from app.api.deps import get_current_device, get_current_user, get_current_access
-from app.api.crud.groups import get_entity_group_id
 from app.api.crud.authorizations import is_admin_access
-
+from app.api.crud.groups import get_entity_group_id
+from app.api.deps import get_current_access, get_current_device, get_current_user
+from app.api.schemas import (AccessType, AdminDeviceAuth, Cred, DefaultPosition, DeviceAuth, DeviceCreation, DeviceIn,
+                             DeviceOut, MyDeviceAuth, SoftwareHash, UserRead)
+from app.db import accesses, devices, get_session, models, users
 
 router = APIRouter()
 

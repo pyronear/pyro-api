@@ -9,7 +9,6 @@ from app import db
 from app.api import crud
 from tests.db_utils import fill_table
 
-
 GROUP_TABLE = [
     {"id": 1, "name": "first_group"},
 ]

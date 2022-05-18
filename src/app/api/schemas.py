@@ -3,11 +3,12 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, HttpUrl
+from typing import List, Optional
 
-from app.db.tables import SiteType, EventType, MediaType, AccessType
+from pydantic import BaseModel, Field, HttpUrl, validator
+
+from app.db.tables import AccessType, EventType, MediaType, SiteType
 
 
 # Template classes

@@ -5,9 +5,9 @@
 
 from app import config as cfg
 from app.api import crud
-from app.db import accesses, users, groups
-from app.api.schemas import AccessCreation, UserCreation, AccessType, GroupIn
+from app.api.schemas import AccessCreation, AccessType, GroupIn, UserCreation
 from app.api.security import hash_password
+from app.db import accesses, groups, users
 
 
 async def init_db():

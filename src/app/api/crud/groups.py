@@ -4,11 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 
-from sqlalchemy import Table
 from typing import Optional
 
+from sqlalchemy import Table
+
 from app.api import crud
-from app.db import accesses, users, sites, events, devices, media, installations, alerts
+from app.db import accesses, alerts, devices, events, installations, media, sites, users
 
 
 async def get_entity_group_id(table: Table, entry_id: int) -> Optional[int]:

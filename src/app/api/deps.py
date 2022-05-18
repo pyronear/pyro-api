@@ -8,11 +8,10 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from pydantic import ValidationError
 
-from app.api import crud
-from app.db import accesses, users, devices
 import app.config as cfg
-from app.api.schemas import AccessRead, TokenPayload, DeviceOut, UserRead, AccessType
-
+from app.api import crud
+from app.api.schemas import AccessRead, AccessType, DeviceOut, TokenPayload, UserRead
+from app.db import accesses, devices, users
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(

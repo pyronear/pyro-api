@@ -9,7 +9,8 @@
 
 import os
 import subprocess
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 package_name = "pyroclient"
 with open(os.path.join(package_name, "version.py")) as version_file:

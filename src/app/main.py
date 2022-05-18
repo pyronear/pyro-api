@@ -3,17 +3,17 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-import time
 import logging
+import time
+
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.openapi.utils import get_openapi
 
 from app import config as cfg
-from app.api.routes import (
-    login, users, groups, sites, events, devices, media, installations, alerts, accesses, webhooks
-)
-from app.db import engine, metadata, database, init_db
+from app.api.routes import (accesses, alerts, devices, events, groups, installations, login, media, sites, users,
+                            webhooks)
+from app.db import database, engine, init_db, metadata
 
 logger = logging.getLogger("uvicorn.error")
 

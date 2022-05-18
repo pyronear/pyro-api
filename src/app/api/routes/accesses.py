@@ -4,12 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 from typing import List
-from fastapi import APIRouter, Path, Security
-from app.api import crud
-from app.db import accesses
-from app.api.schemas import AccessRead, AccessType
-from app.api.deps import get_current_access
 
+from fastapi import APIRouter, Path, Security
+
+from app.api import crud
+from app.api.deps import get_current_access
+from app.api.schemas import AccessRead, AccessType
+from app.db import accesses
 
 router = APIRouter()
 

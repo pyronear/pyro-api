@@ -3,23 +3,15 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from typing import Dict, Any, Union, Type
-from sqlalchemy import Table
+from typing import Any, Dict, Type, Union
+
 from fastapi import HTTPException, status
+from sqlalchemy import Table
 
 from app.api import security
 from app.api.crud import base
-from app.api.schemas import (
-    Login,
-    AccessCreation,
-    AccessRead,
-    Cred,
-    CredHash,
-    UserAuth,
-    UserCreation,
-    DeviceCreation,
-    DeviceAuth,
-)
+from app.api.schemas import (AccessCreation, AccessRead, Cred, CredHash, DeviceAuth, DeviceCreation, Login, UserAuth,
+                             UserCreation)
 
 
 async def get_access_group_id(table: Table, access_id: int) -> int:
