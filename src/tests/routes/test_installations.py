@@ -263,7 +263,7 @@ async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_d
                                           access_idx, installation_id, device_ids, status_code, status_details):
 
     # Custom patching for DB operations done on route
-    monkeypatch.setattr(installations, "database", test_db)
+    monkeypatch.setattr(db.session, "database", test_db)
 
     # Create a custom access token
     auth = None
