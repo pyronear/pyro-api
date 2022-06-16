@@ -25,6 +25,7 @@ stop:
 
 # Run tests for the library
 test:
+	docker build src/. -t pyroapi:latest-py3.8-alpine
 	docker-compose -f docker-compose-dev.yml up -d --build
 	docker-compose exec -T pyroapi coverage run -m pytest tests/
 	docker-compose -f docker-compose-dev.yml down

@@ -1,4 +1,4 @@
-FROM pyro-api_pyroapi:latest
+FROM pyroapi:latest-py3.8-alpine
 
 # copy requirements file
 COPY requirements-dev.txt requirements-dev.txt

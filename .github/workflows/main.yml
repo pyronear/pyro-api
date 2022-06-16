@@ -33,7 +33,9 @@ jobs:
           QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-        run: docker-compose -f docker-compose-dev.yml up -d --build
+        run: |
+          docker build src/. -t pyroapi:latest-py3.8-alpine
+          docker-compose -f docker-compose-dev.yml up -d --build
       - name: Run docker test
         run: |
           docker-compose -f docker-compose-dev.yml exec -T pyroapi coverage --version
