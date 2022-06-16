@@ -19,13 +19,13 @@ oauth2_scheme = OAuth2PasswordBearer(
     scopes={
         AccessType.user: "Read information about the current user.",
         AccessType.admin: "Admin rights on all routes.",
-        AccessType.device: "Send heartbeat signal and media to the API for only one device"
-    }
+        AccessType.device: "Send heartbeat signal and media to the API for only one device",
+    },
 )
 
 
 async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)) -> AccessRead:
-    """ Dependency to use as fastapi.security.Security with scopes.
+    """Dependency to use as fastapi.security.Security with scopes.
 
     >>> @app.get("/users/me")
     >>> async def read_users_me(current_user: User = Security(get_current_access, scopes=["me"])):
@@ -70,7 +70,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
 
 
 async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
-    user = await crud.fetch_one(users, {'access_id': access.id})
+    user = await crud.fetch_one(users, {"access_id": access.id})
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -81,7 +81,7 @@ async def get_current_user(access: AccessRead = Depends(get_current_access)) -> 
 
 
 async def get_current_device(access: AccessRead = Depends(get_current_access)) -> DeviceOut:
-    device = await crud.fetch_one(devices, {'access_id': access.id})
+    device = await crud.fetch_one(devices, {"access_id": access.id})
     if device is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -16,7 +16,7 @@ class _CreatedAt(BaseModel):
     created_at: Optional[datetime] = None
 
     @staticmethod
-    @validator('created_at', pre=True, always=True)
+    @validator("created_at", pre=True, always=True)
     def default_ts_created(v):
         return v or datetime.utcnow()
 
@@ -106,13 +106,13 @@ class _FlatLocation(BaseModel):
 
 
 class Location(_FlatLocation):
-    elevation: float = Field(..., gt=0., lt=10000, example=1582)
+    elevation: float = Field(..., gt=0.0, lt=10000, example=1582)
 
 
 class DefaultLocation(BaseModel):
     lat: Optional[float] = Field(None, gt=-90, lt=90, example=44.765181)
     lon: Optional[float] = Field(None, gt=-180, lt=180, example=4.514880)
-    elevation: Optional[float] = Field(None, gt=0., lt=10000, example=1582)
+    elevation: Optional[float] = Field(None, gt=0.0, lt=10000, example=1582)
 
 
 class _Rotation(BaseModel):

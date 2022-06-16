@@ -2,7 +2,9 @@ version: '3.7'
 
 services:
   pyroapi:
-    build: src
+    build:
+      context: src
+      dockerfile: Dockerfile-dev
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
     volumes:
       - ./src/:/app/
@@ -10,6 +12,7 @@ services:
       - 8080:8080
     environment:
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
+      - TEST_DATABASE_URL=postgresql://dummy_pg_tuser:dummy_pg_tpwd@db_test/dummy_pg_tdb
       - SUPERUSER_LOGIN=dummy_login
       - SUPERUSER_PWD=dummy_pwd
       - QARNOT_TOKEN=${QARNOT_TOKEN}
@@ -17,6 +20,13 @@ services:
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
     depends_on:
       - db
+  nginx:
+    build: nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - pyroapi
   db:
     image: postgres:12.1-alpine
     volumes:
@@ -27,13 +37,15 @@ services:
       - POSTGRES_USER=dummy_pg_user
       - POSTGRES_PASSWORD=dummy_pg_pwd
       - POSTGRES_DB=dummy_pg_db
-  nginx:
-    build: nginx
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - pyroapi
+  db_test:
+    image: postgres:12.1-alpine
+    volumes:
+      - postgres_data_test:/var/lib/postgresql/data_test/
+    environment:
+      - POSTGRES_USER=dummy_pg_tuser
+      - POSTGRES_PASSWORD=dummy_pg_tpwd
+      - POSTGRES_DB=dummy_pg_tdb
 
 volumes:
   postgres_data:
+  postgres_data_test:

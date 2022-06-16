@@ -10,13 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Push to DockerHub
-        uses: docker/build-push-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_PW }}
-          repository: pyronear/pyro-api
-          tag_with_ref: true
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: pyronear/pyro-api:latest
+          context: src
 
   pypi-publish-client:
     if: "!github.event.release.prerelease"
@@ -24,7 +28,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.7]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -36,12 +40,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('src/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
-            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-
-            ${{ runner.os }}-pkg-deps-
-            ${{ runner.os }}-
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -91,7 +90,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          python-version: 3.7
+          python-version: 3.8
       - name: Install dependencies
         run: |
           conda install -y conda-build conda-verify anaconda-client

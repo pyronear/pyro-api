@@ -11,4 +11,4 @@ API Client
 ----------
 
 .. autoclass:: Client
-   :members:
+	:members:

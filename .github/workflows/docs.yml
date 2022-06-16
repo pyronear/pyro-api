@@ -9,9 +9,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.7]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
@@ -21,21 +23,17 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-
-            ${{ runner.os }}-client-deps-
-            ${{ runner.os }}-
+          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}-docs
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e client/.
-          pip install -r client/docs/requirements.txt
+          pip install -e "client/.[docs]"
 
       - name: Build documentation
-        run: |
-          sphinx-build client/docs/source client/docs/build -a -v
+        run: sphinx-build client/docs/source client/docs/build -a -v
+
+      - name: Documentation sanity check
+        run: test -e client/docs/build/index.html || exit
 
       - name: Install SSH Client 🔑
         uses: webfactory/ssh-agent@v0.4.1

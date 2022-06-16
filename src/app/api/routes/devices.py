@@ -12,18 +12,26 @@ from app.api import crud
 from app.api.crud.authorizations import is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user
-from app.api.schemas import (AccessType, AdminDeviceAuth, Cred, DefaultPosition, DeviceAuth, DeviceCreation, DeviceIn,
-                             DeviceOut, MyDeviceAuth, SoftwareHash, UserRead)
+from app.api.schemas import (
+    AccessType,
+    AdminDeviceAuth,
+    Cred,
+    DefaultPosition,
+    DeviceAuth,
+    DeviceCreation,
+    DeviceIn,
+    DeviceOut,
+    MyDeviceAuth,
+    SoftwareHash,
+    UserRead,
+)
 from app.db import accesses, devices, get_session, models, users
 
 router = APIRouter()
 
 
 @router.post("/", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Create a new device")
-async def register_device(
-    payload: AdminDeviceAuth,
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def register_device(payload: AdminDeviceAuth, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new device based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -40,8 +48,7 @@ async def register_device(
 
 @router.post("/register", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Register your device")
 async def register_my_device(
-    payload: MyDeviceAuth,
-    me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
+    payload: MyDeviceAuth, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
     """Creates a new device with the current user being the owner based on the given information
 
@@ -53,10 +60,7 @@ async def register_my_device(
 
 
 @router.get("/{device_id}/", response_model=DeviceOut, summary="Get information about a specific device")
-async def get_device(
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def get_device(device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a device_id, retrieves information about the specified device
     """
@@ -73,8 +77,7 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
 async def fetch_devices(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of all devices and their information
@@ -82,9 +85,12 @@ async def fetch_devices(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(devices)
     else:
-        retrieved_devices = (session.query(models.Devices)
-                             .join(models.Accesses)
-                             .filter(models.Accesses.group_id == requester.group_id).all())
+        retrieved_devices = (
+            session.query(models.Devices)
+            .join(models.Accesses)
+            .filter(models.Accesses.group_id == requester.group_id)
+            .all()
+        )
         retrieved_devices = [x.__dict__ for x in retrieved_devices]
 
         return retrieved_devices
@@ -92,9 +98,7 @@ async def fetch_devices(
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
 async def update_device(
-    payload: DeviceIn,
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates information about the specified device
@@ -103,10 +107,7 @@ async def update_device(
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
-async def delete_device(
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def delete_device(device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a device_id, deletes the specified device
     """
@@ -146,8 +147,7 @@ async def update_device_location(
     device = await crud.get_entry(devices, device_id)
     if device["owner_id"] != user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Permission denied to modify device with id={device_id}."
+            status_code=status.HTTP_403_FORBIDDEN, detail=f"Permission denied to modify device with id={device_id}."
         )
     # Update only the location
     device.update(payload.dict())
@@ -158,8 +158,7 @@ async def update_device_location(
 
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
 async def update_my_location(
-    payload: DefaultPosition,
-    device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
+    payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
 ):
     """
     Updates the location of the current device
@@ -173,9 +172,7 @@ async def update_my_location(
 
 @router.put("/{device_id}/hash", response_model=DeviceOut, summary="Update the software hash of a specific device")
 async def update_device_hash(
-    payload: SoftwareHash,
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    payload: SoftwareHash, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Updates the expected software hash of the device
@@ -190,9 +187,7 @@ async def update_device_hash(
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut, summary="Update the password of a specific device")
 async def update_device_password(
-    payload: Cred,
-    device_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    payload: Cred, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates the password of the specified device

@@ -68,4 +68,4 @@ async def test_create_access_token(content, expiration, expected_delta):
     # Verify data integrity
     assert all(v == decoded_data[k] for k, v in content.items())
     # Check expiration
-    assert datetime.utcfromtimestamp(decoded_data['exp']) - timedelta(minutes=expected_delta) < after
+    assert datetime.utcfromtimestamp(decoded_data["exp"]) - timedelta(minutes=expected_delta) < after

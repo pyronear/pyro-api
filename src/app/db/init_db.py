@@ -23,8 +23,9 @@ async def init_db():
         admin_group = GroupIn(name="admins")
         group_entry = await crud.create_entry(groups, admin_group)
 
-        access = AccessCreation(login=login, hashed_password=hashed_password,
-                                scope=AccessType.admin, group_id=group_entry["id"])
+        access = AccessCreation(
+            login=login, hashed_password=hashed_password, scope=AccessType.admin, group_id=group_entry["id"]
+        )
         access_entry = await crud.create_entry(accesses, access)
 
         await crud.create_entry(users, UserCreation(login=login, access_id=access_entry["id"]))

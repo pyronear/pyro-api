@@ -18,10 +18,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=SiteOut, status_code=status.HTTP_201_CREATED, summary="Create a new site")
-async def create_site(
-    payload: SiteIn,
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new site based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -31,11 +28,11 @@ async def create_site(
     return await crud.create_entry(sites, payload)
 
 
-@router.post("/no-alert/", response_model=SiteOut, status_code=status.HTTP_201_CREATED,
-             summary="Create a new no-alert site")
+@router.post(
+    "/no-alert/", response_model=SiteOut, status_code=status.HTTP_201_CREATED, summary="Create a new no-alert site"
+)
 async def create_noalert_site(
-    payload: SiteBase,
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    payload: SiteBase, requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """Creates a new no-alert site based on the given information
 
@@ -45,7 +42,7 @@ async def create_noalert_site(
     await check_group_update(requester.id, payload.group_id)
     payload = payload.dict()
 
-    if payload['group_id'] is None:
+    if payload["group_id"] is None:
         payload["group_id"] = requester.group_id
 
     return await crud.create_entry(sites, SiteIn(**payload, type=SiteType.no_alert))
@@ -53,8 +50,7 @@ async def create_noalert_site(
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
 async def get_site(
-    site_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    site_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a site_id, retrieves information about the specified site
@@ -66,8 +62,7 @@ async def get_site(
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
 async def fetch_sites(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of all sites and their information
@@ -82,7 +77,7 @@ async def fetch_sites(
 async def update_site(
     payload: SiteIn,
     site_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
 ):
     """
     Based on a site_id, updates information about the specified site
@@ -94,10 +89,7 @@ async def update_site(
 
 
 @router.delete("/{site_id}/", response_model=SiteOut, summary="Delete a specific site")
-async def delete_site(
-    site_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def delete_site(site_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a site_id, deletes the specified site
     """

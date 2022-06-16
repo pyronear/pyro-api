@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Dict, Optional
+from typing import Dict, Union
 from urllib.parse import urljoin
 
 import requests
@@ -13,7 +13,7 @@ from requests.models import Response
 
 from .exceptions import HTTPRequestException
 
-__all__ = ['Client']
+__all__ = ["Client"]
 
 logging.basicConfig()
 
@@ -89,15 +89,15 @@ class Client:
         self.token = self._retrieve_token(login, password)
 
     def _retrieve_token(self, login: str, password: str) -> str:
-        response = requests.post(self.routes["token"],
-                                 data=f"username={login}&password={password}",
-                                 headers={"Content-Type": "application/x-www-form-urlencoded",
-                                          "accept": "application/json"
-                                          })
+        response = requests.post(
+            self.routes["token"],
+            data=f"username={login}&password={password}",
+            headers={"Content-Type": "application/x-www-form-urlencoded", "accept": "application/json"},
+        )
         if response.status_code == 200:
             return response.json()["access_token"]
         else:
-            # Anyone has a better suggestion?
+            # Anyone has a better suggestion?
             raise HTTPRequestException(response.status_code, response.text)
 
     # Device functions
@@ -116,11 +116,11 @@ class Client:
 
     def update_my_location(
         self,
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
-        elevation: Optional[float] = None,
-        yaw: Optional[float] = None,
-        pitch: Optional[float] = None
+        lat: Union[float, None] = None,
+        lon: Union[float, None] = None,
+        elevation: Union[float, None] = None,
+        yaw: Union[float, None] = None,
+        pitch: Union[float, None] = None,
     ) -> Response:
         """Updates the location of the device
 
@@ -146,8 +146,7 @@ class Client:
             payload["pitch"] = pitch
 
         if len(payload) == 0:
-            raise ValueError("At least one location information"
-                             + "(lat, lon, elevation, yaw, pitch) must be filled")
+            raise ValueError("At least one location information" + "(lat, lon, elevation, yaw, pitch) must be filled")
 
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
@@ -166,12 +165,12 @@ class Client:
         Returns:
             HTTP response containing the created event
         """
-        payload = {"lat": lat,
-                   "lon": lon}
+        payload = {"lat": lat, "lon": lon}
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
 
-    def create_no_alert_site(self, lat: float, lon: float, name: str, country: str,
-                             geocode: str, group_id: int = None) -> Response:
+    def create_no_alert_site(
+        self, lat: float, lon: float, name: str, country: str, geocode: str, group_id: Union[int, None] = None
+    ) -> Response:
         """Create a site that is not supposed to generate alerts.
 
         Example::
@@ -189,11 +188,7 @@ class Client:
         Returns:
             HTTP response containing the created site
         """
-        payload = {"lat": lat,
-                   "lon": lon,
-                   "name": name,
-                   "country": country,
-                   "geocode": geocode}
+        payload = {"lat": lat, "lon": lon, "name": name, "country": country, "geocode": geocode}
         if group_id is not None:
             payload["group_id"] = group_id
         return requests.post(self.routes["no-alert-site"], headers=self.headers, json=payload)
@@ -203,9 +198,9 @@ class Client:
         lat: float,
         lon: float,
         device_id: int,
-        azimuth: Optional[float] = None,
-        event_id: Optional[int] = None,
-        media_id: Optional[int] = None
+        azimuth: Union[float, None] = None,
+        event_id: Union[int, None] = None,
+        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API.
 
@@ -225,11 +220,7 @@ class Client:
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat,
-                   "lon": lon,
-                   "event_id": event_id,
-                   "device_id": device_id
-                   }
+        payload = {"lat": lat, "lon": lon, "event_id": event_id, "device_id": device_id}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
         if isinstance(azimuth, float):
@@ -241,9 +232,9 @@ class Client:
         self,
         lat: float,
         lon: float,
-        azimuth: Optional[float] = None,
-        event_id: Optional[int] = None,
-        media_id: Optional[int] = None
+        azimuth: Union[float, None] = None,
+        event_id: Union[int, None] = None,
+        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
 
@@ -262,10 +253,7 @@ class Client:
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat,
-                   "lon": lon,
-                   "event_id": event_id
-                   }
+        payload = {"lat": lat, "lon": lon, "event_id": event_id}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 
@@ -322,8 +310,11 @@ class Client:
             HTTP response containing the updated media
         """
 
-        return requests.post(self.routes["upload-media"].format(media_id=media_id), headers=self.headers,
-                             files={'file': io.BytesIO(media_data)})
+        return requests.post(
+            self.routes["upload-media"].format(media_id=media_id),
+            headers=self.headers,
+            files={"file": io.BytesIO(media_data)},
+        )
 
     # User functions
     def get_my_devices(self) -> Response:
@@ -457,7 +448,7 @@ class Client:
             HTTP response containing the media content
         """
         image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
-        return requests.get(image_url.json()['url'])
+        return requests.get(image_url.json()["url"])
 
     def get_past_events(self) -> Response:
         """Get all past events

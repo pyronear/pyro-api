@@ -24,12 +24,36 @@ USER_TABLE = [
 
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fourth_login", "owner_id": 3, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "third_login",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68.0,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "fourth_login",
+        "owner_id": 3,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
 
@@ -73,7 +97,7 @@ async def test_get_group(test_app_asyncio, init_test_db, group_id, status_code, 
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code == 200:
         assert response_json == GROUP_TABLE[group_id - 1]
 
@@ -98,13 +122,12 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
     ],
 )
 @pytest.mark.asyncio
-async def test_create_group(test_app_asyncio, init_test_db, test_db,
-                            access_idx, payload, status_code, status_details):
+async def test_create_group(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     test_response = {"id": len(GROUP_TABLE) + 1, **payload}
 
@@ -113,11 +136,11 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         json_response = response.json()
-        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
 
 
 @pytest.mark.parametrize(
@@ -134,19 +157,20 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_update_group(test_app_asyncio, init_test_db, test_db,
-                            access_idx, payload, group_id, status_code, status_details):
+async def test_update_group(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, group_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/groups/{group_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_group_in_db = await get_entry(test_db, db.groups, group_id)
@@ -170,15 +194,15 @@ async def test_delete_group(test_app_asyncio, init_test_db, access_idx, group_id
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.delete(f"/groups/{group_id}/", headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         assert response.json() == GROUP_TABLE[group_id - 1]
         remaining_groups = await test_app_asyncio.get("/groups/")
-        assert all(entry['id'] != group_id for entry in remaining_groups.json())
+        assert all(entry["id"] != group_id for entry in remaining_groups.json())

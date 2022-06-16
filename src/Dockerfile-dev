@@ -1,0 +1,12 @@
+FROM pyroapi:latest-py3.8-alpine
+
+# copy requirements file
+COPY requirements-dev.txt requirements-dev.txt
+
+# install dependencies
+RUN pip install -r requirements-dev.txt \
+    && rm -rf /root/.cache/pip
+
+# copy project
+COPY .coveragerc /app/.coveragerc
+COPY tests /app/tests

@@ -14,9 +14,7 @@ import app.config as cfg
 from app.db import metadata
 
 SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 metadata.create_all(bind=engine)
 database = Database(SQLALCHEMY_DATABASE_URL)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

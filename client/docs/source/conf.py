@@ -1,4 +1,4 @@
-# Copyright (C) 2021, Pyronear contributors.
+# Copyright (C) 2020-2022, Pyronear.
 
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
@@ -11,29 +11,29 @@
 
 # -- Path setup --------------------------------------------------------------
 
-from datetime import datetime
-
-import sphinx_rtd_theme
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../.."))
+from datetime import datetime
+
 import pyroclient
 
 # -- Project information -----------------------------------------------------
 
-master_doc = 'index'
-project = 'pyroclient'
-copyright = f"{datetime.now().year}, Pyronear Contributors"
-author = 'Pyronear'
+master_doc = "index"
+project = "pyroclient"
+_copyright_str = f"-{datetime.now().year}" if datetime.now().year > 2020 else ""
+copyright = f"2020{_copyright_str}, Pyronear"
+author = "Pyronear"
 
 # The full version, including alpha/beta/rc tags
 version = pyroclient.__version__
-release = pyroclient.__version__ + '-git'
+release = pyroclient.__version__ + "-git"
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,110 +42,92 @@ release = pyroclient.__version__ + '-git'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-	'sphinx.ext.autodoc',
-	'sphinx.ext.napoleon',
-	'sphinx.ext.viewcode',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax'
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.mathjax",
+    "sphinxemoji.sphinxemoji",  # cf. https://sphinxemojicodes.readthedocs.io/en/stable/
+    "sphinx_copybutton",
 ]
 
 napoleon_use_ivar = True
-source_suffix = '.rst'
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-highlight_language = 'python3'
+pygments_style = "friendly"
+pygments_dark_style = "monokai"
+highlight_language = "python3"
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = "furo"
+
+html_title = "Pyro-client"
+language = "en"
+html_logo = "_static/images/logo.png"
+html_favicon = "_static/images/favicon.ico"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'collapse_navigation': False,
-    'display_version': True,
-    'logo_only': True,
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pyronear/pyro-api",
+            "html": """
+                <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            """,
+            "class": "",
+        },
+    ],
+    "source_repository": "https://github.com/pyronear/pyro-api/",
+    "source_branch": "master",
+    "sidebar_hide_name": True,
 }
 
-html_logo = '_static/img/pyronear-logo-dark.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
-html_css_files = [
-    'https://fonts.googleapis.com/css?family=Lato',
-    'css/my_theme.css'
-]
+# Add googleanalytics id
+# ref: https://github.com/orenhecht/googleanalytics/blob/master/sphinxcontrib/googleanalytics.py
+def add_ga_javascript(app, pagename, templatename, context, doctree):
 
-
-# -- A patch that prevents Sphinx from cross-referencing ivar tags -------
-# See http://stackoverflow.com/a/41184353/3343043
-
-# from docutils import nodes
-# from sphinx.util.docfields import TypedField
-# from sphinx import addnodes
-
-
-# def patched_make_field(self, types, domain, items, **kw):
-#     # `kw` catches `env=None` needed for newer sphinx while maintaining
-#     #  backwards compatibility when passed along further down!
-
-#     # type: (list, unicode, tuple) -> nodes.field
-#     def handle_item(fieldarg, content):
-#         par = nodes.paragraph()
-#         par += addnodes.literal_strong('', fieldarg)  # Patch: this line added
-#         # par.extend(self.make_xrefs(self.rolename, domain, fieldarg,
-#         #                           addnodes.literal_strong))
-#         if fieldarg in types:
-#             par += nodes.Text(' (')
-#             # NOTE: using .pop() here to prevent a single type node to be
-#             # inserted twice into the doctree, which leads to
-#             # inconsistencies later when references are resolved
-#             fieldtype = types.pop(fieldarg)
-#             if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
-#                 typename = u''.join(n.astext() for n in fieldtype)
-#                 typename = typename.replace('int', 'python:int')
-#                 typename = typename.replace('long', 'python:long')
-#                 typename = typename.replace('float', 'python:float')
-#                 typename = typename.replace('type', 'python:type')
-#                 par.extend(self.make_xrefs(self.typerolename, domain, typename,
-#                                            addnodes.literal_emphasis, **kw))
-#             else:
-#                 par += fieldtype
-#             par += nodes.Text(')')
-#         par += nodes.Text(' -- ')
-#         par += content
-#         return par
-
-#     fieldname = nodes.field_name('', self.label)
-#     if len(items) == 1 and self.can_collapse:
-#         fieldarg, content = items[0]
-#         bodynode = handle_item(fieldarg, content)
-#     else:
-#         bodynode = self.list_type()
-#         for fieldarg, content in items:
-#             bodynode += nodes.list_item('', handle_item(fieldarg, content))
-#     fieldbody = nodes.field_body('', bodynode)
-#     return nodes.field('', fieldname, fieldbody)
+    metatags = context.get("metatags", "")
+    metatags += """
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={0}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{0}');
+</script>
+    """.format(
+        app.config.googleanalytics_id
+    )
+    context["metatags"] = metatags
 
 
-# TypedField.make_field = patched_make_field
+def setup(app):
+    # app.add_config_value("googleanalytics_id", "", "html")
+    app.add_css_file("css/custom.css")
+    app.add_js_file("js/custom.js")
+    # app.connect("html-page-context", add_ga_javascript)

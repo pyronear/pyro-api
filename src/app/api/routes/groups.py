@@ -43,9 +43,7 @@ async def fetch_groups():
 
 @router.put("/{group_id}/", response_model=GroupOut, summary="Update information about a specific group")
 async def update_group(
-    payload: GroupIn,
-    group_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
+    payload: GroupIn, group_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a group_id, updates information about the specified group

@@ -29,19 +29,18 @@ async def is_admin_access(access_id: int) -> bool:
 async def check_group_read(access_id: int, group_id: int) -> bool:
     if (not await is_admin_access(access_id)) and not (await is_access_in_group(access_id, group_id)):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"This access can't read resources from group_id={group_id}"
+            status_code=status.HTTP_403_FORBIDDEN, detail=f"This access can't read resources from group_id={group_id}"
         )
     return True
 
 
 async def check_group_update(access_id: int, group_id: int) -> bool:
     if (
-            (group_id is not None)
-            and (not await is_admin_access(access_id))
-            and (not await is_access_in_group(access_id, group_id))):
+        (group_id is not None)
+        and (not await is_admin_access(access_id))
+        and (not await is_access_in_group(access_id, group_id))
+    ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"This access can't update resources for group_id={group_id}"
+            status_code=status.HTTP_403_FORBIDDEN, detail=f"This access can't update resources for group_id={group_id}"
         )
     return True

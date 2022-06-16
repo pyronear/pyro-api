@@ -19,21 +19,54 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "connected_device", "owner_id": 1, "access_id": 3,
-     "specs": "raspberry", "elevation": None, "lat": None, "angle_of_view": 68,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "second_device", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "third_device", "owner_id": 1, "access_id": 5, "specs": "v0.1", "elevation": None,
-     "lat": None, "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "connected_device",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "raspberry",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "second_device",
+        "owner_id": 2,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "login": "third_device",
+        "owner_id": 1,
+        "access_id": 5,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+GROUP_TABLE = [{"id": 1, "name": "first_group"}, {"id": 2, "name": "second_group"}]
 
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_user", "hashed_password": "first_pwd_hashed", "scope": "user"},
@@ -60,10 +93,10 @@ async def init_test_db(monkeypatch, test_db):
 @pytest.mark.parametrize(
     "token_data, scope, expected_access, exception",
     [
-        [ACCESS_TABLE[3], 'admin', None, True],  # Unsufficient scope
-        ['my_false_token', 'admin', None, True],  # Decoding failure
-        [{"id": 100, "scope": "admin"}, 'admin', None, True],  # Unable to find access in table
-        [ACCESS_TABLE[3], 'device', 3, False],  # Correct
+        [ACCESS_TABLE[3], "admin", None, True],  # Unsufficient scope
+        ["my_false_token", "admin", None, True],  # Decoding failure
+        [{"id": 100, "scope": "admin"}, "admin", None, True],  # Unable to find access in table
+        [ACCESS_TABLE[3], "device", 3, False],  # Correct
     ],
 )
 @pytest.mark.asyncio
@@ -73,7 +106,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     if isinstance(token_data, str):
         token = token_data
     else:
-        _data = {"sub": str(token_data['id']), "scopes": token_data['scope'].split()}
+        _data = {"sub": str(token_data["id"]), "scopes": token_data["scope"].split()}
         token = await security.create_access_token(_data)
     # Check that we retrieve the correct access
     if exception:

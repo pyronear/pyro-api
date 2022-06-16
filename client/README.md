@@ -1,22 +1,26 @@
 # API Client
 
-![Build Status](https://github.com/pyronear/pyro-api/workflows/client/badge.svg)  [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear.org/pyro-api)
+<p align="center">
+  <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Aclient">
+    <img alt="CI Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/client?label=CI&logo=github&style=flat-square">
+  </a>
+  <a href="https://pyronear.org/pyro-api">
+    <img src="https://img.shields.io/readthedocs/deezer-python.svg?logo=read-the-docs&style=flat-square" alt="Documentation Status">
+  </a>
+  <a href="https://github.com/ambv/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" alt="black">
+  </a>
+</p>
+<p align="center">
+  <a href="https://pypi.org/project/pyroclient/">
+    <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
+  </a>
+  <a href="https://anaconda.org/pyronear/pyroclient"> <img src="https://anaconda.org/pyronear/pyroclient/badges/version.svg" /> </a>
+  <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
+  <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
+</p>
 
 Client for the [Pyronear API](https://github.com/pyronear/pyro-api)
-
-
-
-## Table of Contents
-
-- [API Client](#api-client)
-  - [Table of Contents](#table-of-contents)
-  - [Getting started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-  - [Usage](#usage)
-  - [License](#license)
-  - [Documentation](#documentation)
-
 
 
 ## Getting started
@@ -87,5 +91,5 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 ## Documentation
 
-The full project documentation is available [here](http://pyronear.org/pyro-api) for detailed specifications. The documentation was built with [Sphinx](https://www.sphinx-doc.org/) using a [theme](https://github.com/readthedocs/sphinx_rtd_theme) provided by [Read the Docs](https://readthedocs.org/).
+The full project documentation is available [here](http://pyronear.org/pyro-api) for detailed specifications. The documentation was built with [Sphinx](https://www.sphinx-doc.org/) using a [theme](https://github.com/pradyunsg/furo) provided by [Pradyun Gedam](https://github.com/pradyunsg).
 

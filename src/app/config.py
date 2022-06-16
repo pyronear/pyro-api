@@ -7,11 +7,11 @@ import os
 import secrets
 from typing import Optional
 
-PROJECT_NAME: str = 'Pyronear API'
-PROJECT_DESCRIPTION: str = 'API for wildfire prevention, detection and monitoring'
-API_BASE: str = 'api/'
+PROJECT_NAME: str = "Pyronear API"
+PROJECT_DESCRIPTION: str = "API for wildfire prevention, detection and monitoring"
+API_BASE: str = "api/"
 VERSION: str = "0.1.2a0"
-DEBUG: bool = os.environ.get('DEBUG', '') != 'False'
+DEBUG: bool = os.environ.get("DEBUG", "") != "False"
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 # Fix for SqlAlchemy 1.4+
 if DATABASE_URL.startswith("postgres://"):
@@ -38,15 +38,18 @@ SUPERUSER_PWD: str = os.getenv("SUPERUSER_PWD", "")
 
 if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
     raise ValueError(
-        "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables")
+        "Missing Credentials. Please set 'SUPERUSER_LOGIN' and 'SUPERUSER_PWD' in your environment variables"
+    )
 
 QARNOT_TOKEN: str = os.getenv("QARNOT_TOKEN", "")
 BUCKET_NAME: str = os.getenv("BUCKET_NAME", "")
 BUCKET_MEDIA_FOLDER: Optional[str] = os.getenv("BUCKET_MEDIA_FOLDER")
-DUMMY_BUCKET_FILE = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
-                    + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
+DUMMY_BUCKET_FILE = (
+    "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/"
+    + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
+)
 
 
-# Sentry
+# Sentry
 SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
 SERVER_NAME: Optional[str] = os.getenv("SERVER_NAME")

@@ -20,18 +20,41 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "third_login",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "fourth_login",
+        "owner_id": 2,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+GROUP_TABLE = [{"id": 1, "name": "first_group"}, {"id": 2, "name": "second_group"}]
 
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
@@ -42,17 +65,49 @@ ACCESS_TABLE = [
 ]
 
 SITE_TABLE = [
-    {"id": 1, "name": "my_first_tower", "lat": 44.1, "lon": -0.7, "type": "tower", "country": "FR", "geocode": "40",
-     "created_at": "2020-10-13T08:18:45.447773", "group_id": 1},
-    {"id": 2, "name": "my_first_station", "lat": 44.1, "lon": 3.9, "type": "station", "country": "FR", "geocode": "30",
-     "created_at": "2020-09-13T08:18:45.447773", "group_id": 2},
+    {
+        "id": 1,
+        "name": "my_first_tower",
+        "lat": 44.1,
+        "lon": -0.7,
+        "type": "tower",
+        "country": "FR",
+        "geocode": "40",
+        "created_at": "2020-10-13T08:18:45.447773",
+        "group_id": 1,
+    },
+    {
+        "id": 2,
+        "name": "my_first_station",
+        "lat": 44.1,
+        "lon": 3.9,
+        "type": "station",
+        "country": "FR",
+        "geocode": "30",
+        "created_at": "2020-09-13T08:18:45.447773",
+        "group_id": 2,
+    },
 ]
 
 INSTALLATION_TABLE = [
-    {"id": 1, "device_id": 1, "site_id": 1, "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None,
-     "is_trustworthy": True, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 2, "site_id": 2, "start_ts": "2019-10-13T08:18:45.447773", "end_ts": None,
-     "is_trustworthy": False, "created_at": "2020-11-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "device_id": 1,
+        "site_id": 1,
+        "start_ts": "2019-10-13T08:18:45.447773",
+        "end_ts": None,
+        "is_trustworthy": True,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "device_id": 2,
+        "site_id": 2,
+        "start_ts": "2019-10-13T08:18:45.447773",
+        "end_ts": None,
+        "is_trustworthy": False,
+        "created_at": "2020-11-13T08:18:45.447773",
+    },
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -86,18 +141,19 @@ async def init_test_db(monkeypatch, test_db):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_installation(test_app_asyncio, init_test_db,
-                                access_idx, installation_id, status_code, status_details):
+async def test_get_installation(
+    test_app_asyncio, init_test_db, access_idx, installation_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get(f"/installations/{installation_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         assert response.json() == INSTALLATION_TABLE[installation_id - 1]
 
@@ -112,18 +168,19 @@ async def test_get_installation(test_app_asyncio, init_test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_installations(test_app_asyncio, init_test_db,
-                                   access_idx, status_code, status_details, expected_results):
+async def test_fetch_installations(
+    test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/installations/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         assert response.json() == expected_results
 
@@ -132,43 +189,52 @@ async def test_fetch_installations(test_app_asyncio, init_test_db,
     "access_idx, payload, status_code, status_details",
     [
         [None, {}, 401, "Not authenticated"],
-        [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
-         403, "Your access scope is not compatible with this operation."],
+        [
+            0,
+            {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None],
-        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
-         403, "Your access scope is not compatible with this operation."],
+        [
+            2,
+            {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
         [1, {"device_id": 1, "site_id": "my_site"}, 422, None],
         [1, {"device_id": 1}, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_create_installation(test_app_asyncio, init_test_db, test_db,
-                                   access_idx, payload, status_code, status_details):
+async def test_create_installation(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/installations/", data=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         json_response = response.json()
         test_response = {"id": len(INSTALLATION_TABLE) + 1, **payload, "end_ts": None, "is_trustworthy": True}
-        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
 
         new_installation = await get_entry(test_db, db.installations, json_response["id"])
         new_installation = dict(**new_installation)
 
         # Timestamp consistency
-        assert new_installation['created_at'] > utc_dt and new_installation['created_at'] < datetime.utcnow()
+        assert new_installation["created_at"] > utc_dt and new_installation["created_at"] < datetime.utcnow()
         # Check default value of is_trustworthy
-        assert new_installation['is_trustworthy']
+        assert new_installation["is_trustworthy"]
 
 
 @pytest.mark.parametrize(
@@ -177,38 +243,54 @@ async def test_create_installation(test_app_asyncio, init_test_db, test_db,
         [None, {}, 1, 401, "Not authenticated"],
         [0, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1, 200, None],
-        [2, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 1,
-         403, "Your access scope is not compatible with this operation."],
-        [4, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
-         1, 403, "This access can't update resources for group_id=1"],
+        [
+            2,
+            {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
+            1,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [
+            4,
+            {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
+            1,
+            403,
+            "This access can't update resources for group_id=1",
+        ],
         [1, {}, 1, 422, None],
         [1, {"device_id": 1}, 1, 422, None],
-        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 999,
-         404, "Table installations has no entry with id=999"],
+        [
+            1,
+            {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"},
+            999,
+            404,
+            "Table installations has no entry with id=999",
+        ],
         [1, {"device_id": 1, "site_id": "my_site", "start_ts": "2020-07-13T08:18:45.447773"}, 1, 422, None],
-        [1, {"device_id": 1, "site_id": 1, "is_trustworthy": 5.}, 1, 422, None],
+        [1, {"device_id": 1, "site_id": 1, "is_trustworthy": 5.0}, 1, 422, None],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-07-13T08:18:45.447773"}, 0, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_update_installation(test_app_asyncio, init_test_db, test_db,
-                                   access_idx, payload, installation_id, status_code, status_details):
+async def test_update_installation(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, installation_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/installations/{installation_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_installation = await get_entry(test_db, db.installations, installation_id)
         updated_installation = dict(**updated_installation)
         for k, v in updated_installation.items():
-            if k == 'start_ts':
+            if k == "start_ts":
                 assert v == parse_time(payload[k])
             else:
                 assert v == payload.get(k, INSTALLATION_TABLE_FOR_DB[installation_id - 1][k])
@@ -226,23 +308,24 @@ async def test_update_installation(test_app_asyncio, init_test_db, test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_delete_installation(test_app_asyncio, init_test_db,
-                                   access_idx, installation_id, status_code, status_details):
+async def test_delete_installation(
+    test_app_asyncio, init_test_db, access_idx, installation_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.delete(f"/installations/{installation_id}/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         assert response.json() == INSTALLATION_TABLE[installation_id - 1]
         remaining_installations = await test_app_asyncio.get("/installations/", headers=auth)
-        assert all(entry['id'] != installation_id for entry in remaining_installations.json())
+        assert all(entry["id"] != installation_id for entry in remaining_installations.json())
 
 
 @pytest.mark.parametrize(
@@ -258,8 +341,17 @@ async def test_delete_installation(test_app_asyncio, init_test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_db, monkeypatch,
-                                          access_idx, installation_id, device_ids, status_code, status_details):
+async def test_get_active_devices_on_site(
+    test_app_asyncio,
+    init_test_db,
+    test_db,
+    monkeypatch,
+    access_idx,
+    installation_id,
+    device_ids,
+    status_code,
+    status_details,
+):
 
     # Custom patching for DB operations done on route
     monkeypatch.setattr(db.session, "database", test_db)
@@ -267,12 +359,12 @@ async def test_get_active_devices_on_site(test_app_asyncio, init_test_db, test_d
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get(f"/installations/site-devices/{installation_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == [DEVICE_TABLE[_id - 1]['id'] for _id in device_ids]
+        assert response.json() == [DEVICE_TABLE[_id - 1]["id"] for _id in device_ids]

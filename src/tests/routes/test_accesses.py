@@ -47,18 +47,18 @@ async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id,
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get(f"/accesses/{access_id}", headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code == 200:
         access = None
         for _access in ACCESS_TABLE:
-            if _access['id'] == access_id:
+            if _access["id"] == access_id:
                 access = _access
                 break
         assert response.json() == {k: v for k, v in access.items() if k != "hashed_password"}
@@ -78,13 +78,12 @@ async def test_fetch_accesses(init_test_db, test_app_asyncio, access_idx, status
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/accesses/", headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code == 200:
-        assert response.json() == [{k: v for k, v in entry.items() if k != "hashed_password"}
-                                   for entry in ACCESS_TABLE]
+        assert response.json() == [{k: v for k, v in entry.items() if k != "hashed_password"} for entry in ACCESS_TABLE]

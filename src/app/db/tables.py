@@ -7,8 +7,19 @@
 from .models import Accesses, Alerts, Devices, Events, Groups, Installations, Media, Sites, Users, Webhooks
 from .session import Base
 
-__all__ = ['metadata', 'users', 'accesses', 'groups', 'sites', 'events',
-           'devices', 'media', 'installations', 'alerts', 'webhooks']
+__all__ = [
+    "metadata",
+    "users",
+    "accesses",
+    "groups",
+    "sites",
+    "events",
+    "devices",
+    "media",
+    "installations",
+    "alerts",
+    "webhooks",
+]
 
 users = Users.__table__
 accesses = Accesses.__table__

@@ -34,10 +34,6 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-scripts-deps-${{ matrix.python }}-${{ hashFiles('scripts/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-scripts-deps-${{ matrix.python }}-
-            ${{ runner.os }}-scripts-deps-
-            ${{ runner.os }}-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

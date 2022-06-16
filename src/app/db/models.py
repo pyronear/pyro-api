@@ -28,9 +28,9 @@ class Users(Base):
 
 
 class AccessType(str, enum.Enum):
-    user: str = 'user'
-    admin: str = 'admin'
-    device: str = 'device'
+    user: str = "user"
+    admin: str = "admin"
+    device: str = "device"
 
 
 class Accesses(Base):
@@ -64,9 +64,9 @@ class Groups(Base):
 
 
 class SiteType(str, enum.Enum):
-    tower: str = 'tower'
-    station: str = 'station'
-    no_alert: str = 'no_alert'
+    tower: str = "tower"
+    station: str = "station"
+    no_alert: str = "no_alert"
 
 
 class Sites(Base):
@@ -86,12 +86,14 @@ class Sites(Base):
     group = relationship("Groups", uselist=False, back_populates="sites")
 
     def __repr__(self):
-        return (f"<Site(name='{self.name}', group_id='{self.group_id}', lat='{self.lat}', lon='{self.lon}', "
-                f"country='{self.country}', geocode='{self.geocode}', type='{self.type}')>")
+        return (
+            f"<Site(name='{self.name}', group_id='{self.group_id}', lat='{self.lat}', lon='{self.lon}', "
+            f"country='{self.country}', geocode='{self.geocode}', type='{self.type}')>"
+        )
 
 
 class EventType(str, enum.Enum):
-    wildfire: str = 'wildfire'
+    wildfire: str = "wildfire"
 
 
 class Events(Base):
@@ -109,8 +111,10 @@ class Events(Base):
     alerts = relationship("Alerts", back_populates="event")
 
     def __repr__(self):
-        return (f"<Event(lat='{self.lat}', lon='{self.lon}', type='{self.type}', "
-                f"is_acknowledged='{self.is_acknowledged}')>")
+        return (
+            f"<Event(lat='{self.lat}', lon='{self.lon}', type='{self.type}', "
+            f"is_acknowledged='{self.is_acknowledged}')>"
+        )
 
 
 # Linked tables
@@ -139,13 +143,15 @@ class Devices(Base):
     installation = relationship("Installations", back_populates="device")
 
     def __repr__(self):
-        return (f"<Device(login='{self.login}', owner_id='{self.owner_id}', access_id='{self.access_id}', "
-                f"specs='{self.specs}', software_hash='{self.software_hash}', last_ping='{self.last_ping}')>")
+        return (
+            f"<Device(login='{self.login}', owner_id='{self.owner_id}', access_id='{self.access_id}', "
+            f"specs='{self.specs}', software_hash='{self.software_hash}', last_ping='{self.last_ping}')>"
+        )
 
 
 class MediaType(str, enum.Enum):
-    image: str = 'image'
-    video: str = 'video'
+    image: str = "image"
+    video: str = "video"
 
 
 class Media(Base):
@@ -179,8 +185,10 @@ class Installations(Base):
     site = relationship("Sites", back_populates="installations")
 
     def __repr__(self):
-        return (f"<Installation(device_id='{self.device_id}', site_id='{self.site_id}', "
-                f"is_trustworthy='{self.is_trustworthy}'>")
+        return (
+            f"<Installation(device_id='{self.device_id}', site_id='{self.site_id}', "
+            f"is_trustworthy='{self.is_trustworthy}'>"
+        )
 
 
 class Alerts(Base):

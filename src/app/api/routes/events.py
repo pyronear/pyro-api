@@ -19,10 +19,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED, summary="Create a new event")
-async def create_event(
-    payload: EventIn,
-    _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
-):
+async def create_event(payload: EventIn, _=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])):
     """Creates a new event based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
@@ -33,8 +30,7 @@ async def create_event(
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
 async def get_event(
-    event_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    event_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a event_id, retrieves information about the specified event
@@ -46,8 +42,7 @@ async def get_event(
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
 async def fetch_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of all events and their information
@@ -55,19 +50,20 @@ async def fetch_events(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(events)
     else:
-        retrieved_events = (session.query(models.Events)
-                            .join(models.Alerts)
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(models.Accesses.group_id == requester.group_id))
+        retrieved_events = (
+            session.query(models.Events)
+            .join(models.Alerts)
+            .join(models.Devices)
+            .join(models.Accesses)
+            .filter(models.Accesses.group_id == requester.group_id)
+        )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
 
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
 async def fetch_past_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of all events and their information
@@ -75,12 +71,13 @@ async def fetch_past_events(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(events, exclusions={"end_ts": None})
     else:
-        retrieved_events = (session.query(models.Events)
-                            .join(models.Alerts)
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(and_(models.Accesses.group_id == requester.group_id,
-                                         models.Events.end_ts.isnot(None))))
+        retrieved_events = (
+            session.query(models.Events)
+            .join(models.Alerts)
+            .join(models.Devices)
+            .join(models.Accesses)
+            .filter(and_(models.Accesses.group_id == requester.group_id, models.Events.end_ts.isnot(None)))
+        )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
 
@@ -89,7 +86,7 @@ async def fetch_past_events(
 async def update_event(
     payload: EventIn,
     event_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device]),
 ):
     """
     Based on a event_id, updates information about the specified event
@@ -101,8 +98,7 @@ async def update_event(
 
 @router.put("/{event_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing event")
 async def acknowledge_event(
-    event_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    event_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a event_id, acknowledge the specified event
@@ -116,7 +112,7 @@ async def acknowledge_event(
 async def delete_event(
     event_id: int = Path(..., gt=0),
     _=Security(get_current_access, scopes=[AccessType.admin]),
-    session=Depends(get_session)
+    session=Depends(get_session),
 ):
     """
     Based on a event_id, deletes the specified event
@@ -124,11 +120,11 @@ async def delete_event(
     return await crud.delete_entry(events, event_id)
 
 
-@router.get("/unacknowledged", response_model=List[EventOut],
-            summary="Get the list of events that haven't been acknowledged")
+@router.get(
+    "/unacknowledged", response_model=List[EventOut], summary="Get the list of events that haven't been acknowledged"
+)
 async def fetch_unacknowledged_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of non confirmed alerts and their information
@@ -136,11 +132,12 @@ async def fetch_unacknowledged_events(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(events, {"is_acknowledged": False})
     else:
-        retrieved_events = (session.query(models.Events)
-                            .join(models.Alerts)
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(and_(models.Accesses.group_id == requester.group_id,
-                                         models.Events.is_acknowledged.is_(False))))
+        retrieved_events = (
+            session.query(models.Events)
+            .join(models.Alerts)
+            .join(models.Devices)
+            .join(models.Accesses)
+            .filter(and_(models.Accesses.group_id == requester.group_id, models.Events.is_acknowledged.is_(False)))
+        )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
