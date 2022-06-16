@@ -10,13 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Push to DockerHub
-        uses: docker/build-push-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_PW }}
-          repository: pyronear/pyro-api
-          tag_with_ref: true
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: pyronear/pyro-api:latest
+          context: src
 
   pypi-publish-client:
     if: "!github.event.release.prerelease"
