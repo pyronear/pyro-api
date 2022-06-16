@@ -17,4 +17,6 @@ RUN set -eux \
     && rm -rf /root/.cache/pip
 
 # copy project
-COPY . /app
+COPY app /app/app
+COPY alembic.ini /app/alembic.ini
+COPY alembic /app/alembic
