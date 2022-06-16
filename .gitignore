@@ -141,6 +141,7 @@ dmypy.json
 client/docs/build
 client/build
 client/conda-dist
+client/pyroclient/version.py
 
 # Test DB
 *.db
