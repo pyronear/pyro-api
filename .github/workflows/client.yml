@@ -10,9 +10,10 @@ jobs:
   install:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python: [3.7]
+        os: [ubuntu-latest, macos-latest]
+        python: [3.7, 3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -24,20 +25,18 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
-      - name: Install package
+          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
+      - name: Install project
         run: |
           python -m pip install --upgrade pip
-          pip install -e client/
+          pip install -e client/.
 
   pytest:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.7]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Build & run API server
@@ -45,6 +44,7 @@ jobs:
           QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+          BUCKET_ANNOT_FOLDER: ${{ secrets.BUCKET_ANNOT_FOLDER }}
         run: |
           docker-compose up -d --build
           docker ps
@@ -57,25 +57,74 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
+          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e "client/.[testing]"
+          pip install -e "client/.[test]"
       - name: Run client unittests
         run: |
           coverage --version
           sleep 5
           cd client && coverage run -m pytest tests/
 
-  docs-build:
+  docs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.7]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Cache python modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}-docs
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "client/.[docs]"
+
+      - name: Build documentation
+        run: sphinx-build client/docs/source client/docs/build -a -v
+
+      - name: Documentation sanity check
+        run: test -e client/docs/build/index.html || exit
+
+  isort:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Run isort
+        run: |
+          pip install isort
+          isort --version
+          cd client && isort .
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then exit 1; else echo "All clear"; fi
+
+  mypy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -87,17 +136,13 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/docs/requirements.txt') }}-${{ hashFiles('client/**/*.py') }}
-          restore-keys: |
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-${{ hashFiles('client/docs/requirements.txt') }}-
-            ${{ runner.os }}-client-deps-${{ matrix.python }}-${{ hashFiles('client/requirements.txt') }}-
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e "client/.[docs]" --upgrade
-
-      - name: Build documentation
-        run: sphinx-build client/docs/source client/docs/build -a -v
-
-      - name: Documentation sanity check
-        run: test -e client/docs/build/index.html || exit
+          pip install -e client/. --upgrade
+          pip install mypy
+      - name: Run mypy
+        run: |
+          mypy --version
+          cd client && mypy

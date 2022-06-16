@@ -33,16 +33,12 @@ jobs:
           QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-        run: docker-compose up -d --build
-      - name: Install dependencies in docker
-        run: |
-          docker-compose exec -T pyroapi python -m pip install --upgrade pip
-          docker-compose exec -T pyroapi pip install -r requirements-dev.txt
+        run: docker-compose -f docker-compose-dev.yml up -d --build
       - name: Run docker test
         run: |
-          docker-compose exec -T pyroapi coverage --version
-          docker-compose exec -T pyroapi coverage run -m pytest tests/
-          docker-compose exec -T pyroapi coverage xml
+          docker-compose -f docker-compose-dev.yml exec -T pyroapi coverage --version
+          docker-compose -f docker-compose-dev.yml exec -T pyroapi coverage run -m pytest tests/
+          docker-compose -f docker-compose-dev.yml exec -T pyroapi coverage xml
           docker cp pyro-api_pyroapi_1:/app/coverage.xml .
 
       - name: Upload coverage to Codecov
@@ -69,25 +65,3 @@ jobs:
           architecture: x64
       - name: Run unittests
         run: python .github/validate_headers.py
-
-  dependencies:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.7]
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python }}
-          architecture: x64
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requirements-parser==0.2.0
-      - name: Run unittests
-        run: python .github/validate_deps.py
