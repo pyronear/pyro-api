@@ -1,0 +1,39 @@
+[tool.mypy]
+mypy_path = "src/"
+files = "src/app"
+show_error_codes = true
+pretty = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+implicit_reexport = false
+
+[[tool.mypy.overrides]]
+module = [
+    "jose.*",
+    "passlib.*",
+    "requests.*",
+    "qarnot.*",
+    "sqlalchemy.*",
+    "app.*",
+]
+ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+line_length = 120
+src_paths = ["src/"]
+skip_glob = ["client/*", "**/__init__.py"]
+known_third_party = ["fastapi"]
+
+[tool.pydocstyle]
+select = "D300,D301,D417"
+match = ".*\\.py"
+
+[tool.coverage.run]
+source = ["src/app"]
+
+[tool.black]
+line-length = 120
+target-version = ['py38']
