@@ -91,5 +91,5 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 ## Documentation
 
-The full project documentation is available [here](http://pyronear.org/pyro-api) for detailed specifications. The documentation was built with [Sphinx](https://www.sphinx-doc.org/) using a [theme](https://github.com/readthedocs/sphinx_rtd_theme) provided by [Read the Docs](https://readthedocs.org/).
+The full project documentation is available [here](http://pyronear.org/pyro-api) for detailed specifications. The documentation was built with [Sphinx](https://www.sphinx-doc.org/) using a [theme](https://github.com/pradyunsg/furo) provided by [Pradyun Gedam](https://github.com/pradyunsg).
 
