@@ -1,23 +1,31 @@
 # Pyronear API
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) ![Build Status](https://github.com/pyronear/pyro-api/workflows/api/badge.svg) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478)](https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade) [![codecov](https://codecov.io/gh/pyronear/pyro-api/branch/master/graph/badge.svg)](https://codecov.io/gh/pyronear/pyro-api) [![Docs](https://img.shields.io/badge/docs-available-blue.svg)](http://pyronear-api.herokuapp.com/redoc)
+<p align="center">
+  <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Abuilds">
+    <img alt="CI Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/builds?label=CI&logo=github&style=flat-square">
+  </a>
+  <a href="http://pyronear-api.herokuapp.com/redoc">
+    <img src="https://img.shields.io/readthedocs/deezer-python.svg?logo=read-the-docs&style=flat-square" alt="Documentation Status">
+  </a>
+  <a href="https://codecov.io/gh/pyronear/pyro-api">
+    <img src="https://img.shields.io/codecov/c/github/pyronear/pyro-api.svg?logo=codecov&style=flat-square" alt="Test coverage percentage">
+  </a>
+  <a href="https://github.com/ambv/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" alt="black">
+  </a>
+  <a href="https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478"/></a>
+</p>
+<p align="center">
+  <a href="https://pypi.org/project/pyroclient/">
+    <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
+  </a>
+  <a href="https://anaconda.org/pyronear/pyroclient"> <img src="https://anaconda.org/pyronear/pyroclient/badges/version.svg" /> </a>
+  <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
+  <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
+</p>
+
 
 The building blocks of our wildfire detection & monitoring API.
-
-
-
-## Table of Contents
-
-- [Pyronear API](#pyronear-api)
-  - [Table of Contents](#table-of-contents)
-  - [Getting started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-  - [Usage](#usage)
-  - [Documentation](#documentation)
-  - [Contributing](#contributing)
-  - [License](#license)
-
 
 
 ## Getting started
@@ -65,10 +73,10 @@ The full project documentation is available [here](http://pyronear-api.herokuapp
 
 ## Contributing
 
-Please refer to `CONTRIBUTING` if you wish to contribute to this project.
+Please refer to [`CONTRIBUTING`](CONTRIBUTING) if you wish to contribute to this project.
 
 
 
 ## License
 
-Distributed under the Apache 2.0 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See [`LICENSE`](LICENSE) for more information.
