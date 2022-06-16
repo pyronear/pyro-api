@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyrostorage"
+name = "pyroclient"
 description = "Python Client for Pyronear wildfire alert API"
 authors = [
     {email = "contact@pyronear.org"},
