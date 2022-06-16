@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Dict, Optional
+from typing import Dict, Union
 from urllib.parse import urljoin
 
 import requests
@@ -116,11 +116,11 @@ class Client:
 
     def update_my_location(
         self,
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
-        elevation: Optional[float] = None,
-        yaw: Optional[float] = None,
-        pitch: Optional[float] = None,
+        lat: Union[float, None] = None,
+        lon: Union[float, None] = None,
+        elevation: Union[float, None] = None,
+        yaw: Union[float, None] = None,
+        pitch: Union[float, None] = None,
     ) -> Response:
         """Updates the location of the device
 
@@ -169,7 +169,7 @@ class Client:
         return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
 
     def create_no_alert_site(
-        self, lat: float, lon: float, name: str, country: str, geocode: str, group_id: int = None
+        self, lat: float, lon: float, name: str, country: str, geocode: str, group_id: Union[int, None] = None
     ) -> Response:
         """Create a site that is not supposed to generate alerts.
 
@@ -198,9 +198,9 @@ class Client:
         lat: float,
         lon: float,
         device_id: int,
-        azimuth: Optional[float] = None,
-        event_id: Optional[int] = None,
-        media_id: Optional[int] = None,
+        azimuth: Union[float, None] = None,
+        event_id: Union[int, None] = None,
+        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API.
 
@@ -232,9 +232,9 @@ class Client:
         self,
         lat: float,
         lon: float,
-        azimuth: Optional[float] = None,
-        event_id: Optional[int] = None,
-        media_id: Optional[int] = None,
+        azimuth: Union[float, None] = None,
+        event_id: Union[int, None] = None,
+        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
 
