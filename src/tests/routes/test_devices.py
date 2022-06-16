@@ -20,21 +20,57 @@ USER_TABLE = [
 ]
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 3, "login": "fifth_login", "owner_id": 3, "access_id": 6, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "third_login",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "fourth_login",
+        "owner_id": 2,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "login": "fifth_login",
+        "owner_id": 3,
+        "access_id": 6,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+GROUP_TABLE = [{"id": 1, "name": "first_group"}, {"id": 2, "name": "second_group"}]
 
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
@@ -79,12 +115,12 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get(f"/devices/{device_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != "access_id"}
 
@@ -107,16 +143,16 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/devices/me", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         entry = None
         for device in DEVICE_TABLE:
-            if device['access_id'] == ACCESS_TABLE[access_idx]['id']:
+            if device["access_id"] == ACCESS_TABLE[access_idx]["id"]:
                 entry = device
                 break
         assert response.json() == {k: v for k, v in entry.items() if k != "access_id"}
@@ -140,12 +176,12 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/devices/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"} for entry in expected_devices]
@@ -168,235 +204,335 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/devices/my-devices", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         owner_id = None
         for entry in USER_TABLE:
-            if entry['access_id'] == ACCESS_TABLE[access_idx]['id']:
-                owner_id = entry['id']
+            if entry["access_id"] == ACCESS_TABLE[access_idx]["id"]:
+                owner_id = entry["id"]
                 break
-        assert response.json() == [{k: v for k, v in entry.items() if k != "access_id"}
-                                   for entry in DEVICE_TABLE if entry['owner_id'] == owner_id]
+        assert response.json() == [
+            {k: v for k, v in entry.items() if k != "access_id"}
+            for entry in DEVICE_TABLE
+            if entry["owner_id"] == owner_id
+        ]
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
         [None, {}, 401, "Not authenticated"],
-        [0, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         201, None],
-        [2, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         409, "An entry with login='third_login' already exists."],  # existing device
-        [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
-         422, None],  # password too short
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         422, None],  # missing owner
-        [1, {"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         404, "Table users has no entry with id=10"],  # unknown owner
-        [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
-         422, None],  # invalid angle_of_view
-        [1, {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
-         422, None],  # invalid angle_of_view
+        [
+            0,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [
+            1,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            201,
+            None,
+        ],
+        [
+            2,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [
+            1,
+            {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            409,
+            "An entry with login='third_login' already exists.",
+        ],  # existing device
+        [
+            1,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "pw"},
+            422,
+            None,
+        ],  # password too short
+        [
+            1,
+            {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            422,
+            None,
+        ],  # missing owner
+        [
+            1,
+            {"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            404,
+            "Table users has no entry with id=10",
+        ],  # unknown owner
+        [
+            1,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
+            422,
+            None,
+        ],  # invalid angle_of_view
+        [
+            1,
+            {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45.0, "password": "my_pwd"},
+            422,
+            None,
+        ],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
-async def test_register_device(test_app_asyncio, init_test_db, test_db,
-                               access_idx, payload, status_code, status_details):
+async def test_register_device(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/devices/", data=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     # Response content
     if response.status_code // 100 == 2:
-        test_response = {"id": len(DEVICE_TABLE) + 1, "login": payload['login'],
-                         "owner_id": payload['owner_id'], "specs": payload['specs']}
+        test_response = {
+            "id": len(DEVICE_TABLE) + 1,
+            "login": payload["login"],
+            "owner_id": payload["owner_id"],
+            "specs": payload["specs"],
+        }
         json_response = response.json()
         assert all(v == json_response[k] for k, v in test_response.items())
 
         # Timestamp consistency
         new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
-        assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
+        assert new_device_in_db["created_at"] > utc_dt and new_device_in_db["created_at"] < datetime.utcnow()
 
         # Access table updated
         new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
         new_access_in_db = dict(**new_access_in_db)
-        assert new_access_in_db['login'] == payload['login']
-        assert new_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
+        assert new_access_in_db["login"] == payload["login"]
+        assert new_access_in_db["hashed_password"] == f"hashed_{payload['password']}"
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
         [None, {}, 401, "Not authenticated"],
-        [0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         201, None],
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         201, None],
-        [2, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         403, "Your access scope is not compatible with this operation."],
-        [0, {"login": "third_login", "specs": "v0.2", "angle_of_view": 68., "password": "my_pwd"},
-         409, "An entry with login='third_login' already exists."],  # existing device
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68., "password": "pw"},
-         422, None],  # password too short
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
-         422, None],  # invalid angle_of_view
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": -45., "password": "my_pwd"},
-         422, None],  # invalid angle_of_view
+        [0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None],
+        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None],
+        [
+            2,
+            {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [
+            0,
+            {"login": "third_login", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
+            409,
+            "An entry with login='third_login' already exists.",
+        ],  # existing device
+        [
+            1,
+            {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "pw"},
+            422,
+            None,
+        ],  # password too short
+        [
+            1,
+            {"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
+            422,
+            None,
+        ],  # invalid angle_of_view
+        [
+            1,
+            {"login": "third_device", "specs": "v0.2", "angle_of_view": -45.0, "password": "my_pwd"},
+            422,
+            None,
+        ],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
-async def test_register_my_device(test_app_asyncio, init_test_db, test_db,
-                                  access_idx, payload, status_code, status_details):
+async def test_register_my_device(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/devices/register", data=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     # Response content
     if response.status_code // 100 == 2:
         owner_id = None
         for entry in USER_TABLE:
-            if entry['access_id'] == ACCESS_TABLE[access_idx]['id']:
-                owner_id = entry['id']
+            if entry["access_id"] == ACCESS_TABLE[access_idx]["id"]:
+                owner_id = entry["id"]
                 break
 
-        test_response = {"id": len(DEVICE_TABLE) + 1, "login": payload['login'],
-                         "owner_id": owner_id, "specs": payload['specs']}
+        test_response = {
+            "id": len(DEVICE_TABLE) + 1,
+            "login": payload["login"],
+            "owner_id": owner_id,
+            "specs": payload["specs"],
+        }
         json_response = response.json()
         assert all(v == json_response[k] for k, v in test_response.items())
 
         # Timestamp consistency
         new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
-        assert new_device_in_db['created_at'] > utc_dt and new_device_in_db['created_at'] < datetime.utcnow()
+        assert new_device_in_db["created_at"] > utc_dt and new_device_in_db["created_at"] < datetime.utcnow()
 
         # Access table updated
         new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
         new_access_in_db = dict(**new_access_in_db)
-        assert new_access_in_db['login'] == payload['login']
-        assert new_access_in_db['hashed_password'] == f"hashed_{payload['password']}"
+        assert new_access_in_db["login"] == payload["login"]
+        assert new_access_in_db["hashed_password"] == f"hashed_{payload['password']}"
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
         [None, {}, 1, 401, "Not authenticated"],
-        [0, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         200, None],
-        [2, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 1,
-         403, "Your access scope is not compatible with this operation."],
+        [
+            0,
+            {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0},
+            1,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [1, {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0}, 1, 200, None],
+        [
+            2,
+            {"login": "renamed_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0},
+            1,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
         [1, {}, 1, 422, None],
-        [1, {"login": "new_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.}, 999,
-         404, "Table devices has no entry with id=999"],
-        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
-         422, None],
-        [1, {"login": "renamed_device", "angle_of_view": 68.}, 1,
-         422, None],
-        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 0,
-         422, None],
-        [1, {"login": "fourth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.}, 1,
-         409, "An entry with login='fourth_login' already exists."],  # renamed to already existing login
-        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"}, 1,
-         422, None],  # invalid angle_of_view
-        [1, {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.}, 1,
-         422, None],  # invalid angle_of_view
+        [
+            1,
+            {"login": "new_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0},
+            999,
+            404,
+            "Table devices has no entry with id=999",
+        ],
+        [1, {"login": 1, "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.0}, 1, 422, None],
+        [1, {"login": "renamed_device", "angle_of_view": 68.0}, 1, 422, None],
+        [
+            1,
+            {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.0},
+            0,
+            422,
+            None,
+        ],
+        [
+            1,
+            {"login": "fourth_login", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": 68.0},
+            1,
+            409,
+            "An entry with login='fourth_login' already exists.",
+        ],  # renamed to already existing login
+        [
+            1,
+            {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": "alpha"},
+            1,
+            422,
+            None,
+        ],  # invalid angle_of_view
+        [
+            1,
+            {"login": "renamed_device", "owner_id": 1, "access_id": 1, "specs": "v0.1", "angle_of_view": -45.0},
+            1,
+            422,
+            None,
+        ],  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio
-async def test_update_device(test_app_asyncio, init_test_db, test_db,
-                             access_idx, payload, device_id, status_code, status_details):
+async def test_update_device(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_device_in_db = await get_entry(test_db, db.devices, device_id)
         updated_device_in_db = dict(**updated_device_in_db)
 
-        assert all(v == payload.get(k, DEVICE_TABLE_FOR_DB[device_id - 1][k])
-                   for k, v in updated_device_in_db.items())
+        assert all(v == payload.get(k, DEVICE_TABLE_FOR_DB[device_id - 1][k]) for k, v in updated_device_in_db.items())
 
         # Access table updated
-        access_id = DEVICE_TABLE[response.json()['id'] - 1]["access_id"]
+        access_id = DEVICE_TABLE[response.json()["id"] - 1]["access_id"]
         updated_access = await get_entry(test_db, db.accesses, access_id)
         updated_access = dict(**updated_access)
-        assert updated_access['login'] == payload['login']
+        assert updated_access["login"] == payload["login"]
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, device_id, status_code, status_details",
     [
         [None, {}, 1, 401, "Not authenticated"],
-        [0, {"lon": 5.}, 1, 200, None],
-        [0, {"lon": 5.}, 2, 403, "Permission denied to modify device with id=2."],
+        [0, {"lon": 5.0}, 1, 200, None],
+        [0, {"lon": 5.0}, 2, 403, "Permission denied to modify device with id=2."],
         # TODO: admin should have permission without being owner
-        [1, {"lon": 5.}, 1, 403, "Permission denied to modify device with id=1."],
-        [1, {"lon": 5.}, 2, 200, None],
-        [2, {"lon": 5.}, 1, 403, "Your access scope is not compatible with this operation."],
-        [2, {"lon": 5.}, 2, 403, "Your access scope is not compatible with this operation."],
-        [1, {"lon": 5.}, 999, 404, "Table devices has no entry with id=999"],
+        [1, {"lon": 5.0}, 1, 403, "Permission denied to modify device with id=1."],
+        [1, {"lon": 5.0}, 2, 200, None],
+        [2, {"lon": 5.0}, 1, 403, "Your access scope is not compatible with this operation."],
+        [2, {"lon": 5.0}, 2, 403, "Your access scope is not compatible with this operation."],
+        [1, {"lon": 5.0}, 999, 404, "Table devices has no entry with id=999"],
         [1, {"lon": "position"}, 1, 422, None],
-        [1, {"lon": 5.}, 0, 422, None],
+        [1, {"lon": 5.0}, 0, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
-                                      access_idx, payload, device_id, status_code, status_details):
+async def test_update_device_location(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/location", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_device = await get_entry(test_db, db.devices, device_id)
@@ -422,58 +558,60 @@ async def test_update_device_location(test_app_asyncio, init_test_db, test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_update_device_hash(test_app_asyncio, init_test_db, test_db,
-                                  access_idx, payload, device_id, status_code, status_details):
+async def test_update_device_hash(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/hash", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_device = await get_entry(test_db, db.devices, device_id)
         updated_device = dict(**updated_device)
-        assert updated_device['software_hash'] == payload['software_hash']
+        assert updated_device["software_hash"] == payload["software_hash"]
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
     [
         [None, {}, 401, "Not authenticated"],
-        [0, {"lon": 5.}, 403, "Your access scope is not compatible with this operation."],
-        [1, {"lon": 5.}, 403, "Your access scope is not compatible with this operation."],
-        [2, {"lon": 5.}, 200, None],
+        [0, {"lon": 5.0}, 403, "Your access scope is not compatible with this operation."],
+        [1, {"lon": 5.0}, 403, "Your access scope is not compatible with this operation."],
+        [2, {"lon": 5.0}, 200, None],
         [2, {"lon": "position"}, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
-                                  access_idx, payload, status_code, status_details):
+async def test_update_my_location(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put("/devices/my-location", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         device_id = None
         for entry in DEVICE_TABLE:
-            if entry['access_id'] == ACCESS_TABLE[access_idx]['id']:
-                device_id = entry['id']
+            if entry["access_id"] == ACCESS_TABLE[access_idx]["id"]:
+                device_id = entry["id"]
                 break
 
         updated_device = await get_entry(test_db, db.devices, device_id)
@@ -498,26 +636,27 @@ async def test_update_my_location(test_app_asyncio, init_test_db, test_db,
     ],
 )
 @pytest.mark.asyncio
-async def test_update_device_password(test_app_asyncio, init_test_db, test_db,
-                                      access_idx, payload, device_id, status_code, status_details):
+async def test_update_device_password(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/devices/{device_id}/pwd", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != 'access_id'}
+        assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != "access_id"}
         updated_access = await get_entry(test_db, db.accesses, DEVICE_TABLE[device_id - 1]["access_id"])
         updated_access = dict(**updated_access)
-        assert updated_access['hashed_password'] == f"hashed_{payload['password']}"
+        assert updated_access["hashed_password"] == f"hashed_{payload['password']}"
 
 
 @pytest.mark.parametrize(
@@ -537,28 +676,28 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
 
     response = await test_app_asyncio.put("/devices/heartbeat", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         json_response = response.json()
         # Everything should be identical apart from ping
-        assert datetime.utcnow() > datetime.fromisoformat(json_response['last_ping'])
-        assert utc_dt < datetime.fromisoformat(json_response['last_ping'])
+        assert datetime.utcnow() > datetime.fromisoformat(json_response["last_ping"])
+        assert utc_dt < datetime.fromisoformat(json_response["last_ping"])
 
         updated_device = await get_entry(test_db, db.devices, json_response["id"])
         updated_device = dict(**updated_device)
 
-        assert updated_device['last_ping'] > utc_dt
-        if DEVICE_TABLE[json_response["id"] - 1]['last_ping'] is not None:
-            assert updated_device['last_ping'] > DEVICE_TABLE[json_response["id"] - 1]['last_ping']
-        assert updated_device['created_at'] == parse_time(DEVICE_TABLE[json_response["id"] - 1]['created_at'])
+        assert updated_device["last_ping"] > utc_dt
+        if DEVICE_TABLE[json_response["id"] - 1]["last_ping"] is not None:
+            assert updated_device["last_ping"] > DEVICE_TABLE[json_response["id"] - 1]["last_ping"]
+        assert updated_device["created_at"] == parse_time(DEVICE_TABLE[json_response["id"] - 1]["created_at"])
 
 
 @pytest.mark.parametrize(
@@ -581,18 +720,18 @@ async def test_delete_device(test_app_asyncio, init_test_db, access_idx, device_
     if isinstance(access_idx, int):
         auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.delete(f"/devices/{device_id}/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != 'access_id'}
+        assert response.json() == {k: v for k, v in DEVICE_TABLE[device_id - 1].items() if k != "access_id"}
         remaining_devices = await test_app_asyncio.get("/devices/", headers=auth)
-        assert all(entry['id'] != device_id for entry in remaining_devices.json())
+        assert all(entry["id"] != device_id for entry in remaining_devices.json())
 
         # Check that the access was deleted as well
         remaining_accesses = await test_app_asyncio.get("/accesses/", headers=auth)
-        assert all(entry['login'] != response.json()['login'] for entry in remaining_accesses.json())
+        assert all(entry["login"] != response.json()["login"] for entry in remaining_accesses.json())

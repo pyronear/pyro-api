@@ -21,18 +21,41 @@ USER_TABLE = [
 
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68., "software_hash": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68., "software_hash": None,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "third_login",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "fourth_login",
+        "owner_id": 2,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+GROUP_TABLE = [{"id": 1, "name": "first_group"}, {"id": 2, "name": "second_group"}]
 
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_pwd", "scope": "user"},
@@ -49,23 +72,79 @@ MEDIA_TABLE = [
 
 
 EVENT_TABLE = [
-    {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": "2021-03-13T10:18:45.447773",
-     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
-     "is_acknowledged": True, "created_at": "2020-09-13T08:18:45.447773"},
-    {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": None, "is_acknowledged": False, "created_at": "2020-09-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "lat": 0.0,
+        "lon": 0.0,
+        "type": "wildfire",
+        "start_ts": None,
+        "end_ts": "2021-03-13T10:18:45.447773",
+        "is_acknowledged": True,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "lat": 6.0,
+        "lon": 8.0,
+        "type": "wildfire",
+        "start_ts": None,
+        "end_ts": None,
+        "is_acknowledged": True,
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "lat": -5.0,
+        "lon": 3.0,
+        "type": "wildfire",
+        "start_ts": "2021-03-13T08:18:45.447773",
+        "end_ts": None,
+        "is_acknowledged": False,
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
 ]
 
 ALERT_TABLE = [
-    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
-     "azimuth": 123., "created_at": "2020-11-03T11:18:45.447773"},
-    {"id": 4, "device_id": 1, "event_id": 3, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "created_at": ts_to_string(datetime.utcnow())},
+    {
+        "id": 1,
+        "device_id": 1,
+        "event_id": 1,
+        "media_id": None,
+        "lat": 0.0,
+        "lon": 0.0,
+        "azimuth": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "device_id": 1,
+        "event_id": 1,
+        "media_id": None,
+        "lat": 0.0,
+        "lon": 0.0,
+        "azimuth": 47.0,
+        "created_at": "2020-10-13T09:18:45.447773",
+    },
+    {
+        "id": 3,
+        "device_id": 2,
+        "event_id": 2,
+        "media_id": None,
+        "lat": 10.0,
+        "lon": 8.0,
+        "azimuth": 123.0,
+        "created_at": "2020-11-03T11:18:45.447773",
+    },
+    {
+        "id": 4,
+        "device_id": 1,
+        "event_id": 3,
+        "media_id": None,
+        "lat": 0.0,
+        "lon": 0.0,
+        "azimuth": 47.0,
+        "created_at": ts_to_string(datetime.utcnow()),
+    },
 ]
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
@@ -106,12 +185,12 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get(f"/alerts/{alert_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         response_json = response.json()
@@ -128,18 +207,17 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code,
-                            status_details, expected_results):
+async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/alerts/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         assert response.json() == expected_results
@@ -151,7 +229,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         [0, 200, None],
         [1, 200, None],
         [2, 403, "Your access scope is not compatible with this operation."],
-        [4, 200, None]
+        [4, 200, None],
     ],
 )
 @pytest.mark.asyncio
@@ -160,15 +238,15 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/alerts/ongoing", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        event_ids = [entry['id'] for entry in EVENT_TABLE if entry['end_ts'] is None]
+        event_ids = [entry["id"] for entry in EVENT_TABLE if entry["end_ts"] is None]
 
         alerts_group_id = [entry["id"] for entry in ALERT_TABLE]
 
@@ -179,128 +257,172 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
             alerts_group_id = [alert["id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
 
-        assert response.json() == [entry for entry in ALERT_TABLE if (
-            entry['event_id'] in event_ids and entry["id"] in alerts_group_id)]
+        assert response.json() == [
+            entry for entry in ALERT_TABLE if (entry["event_id"] in event_ids and entry["id"] in alerts_group_id)
+        ]
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
-        [0, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None,
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None, 201, None],
-        [1, {"device_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, 4, 201, None],
-        [1, {"device_id": 1, "lat": 10., "lon": 8., "azimuth": 47.5}, 3, 201, None],
-        [2, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": 47.5}, None,
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"event_id": 2, "lat": 10., "lon": 8.}, None, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "hello"}, None, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, None, 422, None],
+        [
+            0,
+            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, None, 201, None],
+        [1, {"device_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 4, 201, None],
+        [1, {"device_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 3, 201, None],
+        [
+            2,
+            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [1, {"event_id": 2, "lat": 10.0, "lon": 8.0}, None, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "hello"}, None, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, None, 422, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_create_alert(test_app_asyncio, init_test_db, test_db,
-                            access_idx, payload, expected_event_id, status_code, status_details):
+async def test_create_alert(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         json_response = response.json()
         test_response = {"id": len(ALERT_TABLE) + 1, **payload, "media_id": None}
         if isinstance(expected_event_id, int):
-            test_response['event_id'] = expected_event_id
-        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+            test_response["event_id"] = expected_event_id
+        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
 
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
-        assert new_alert['created_at'] > utc_dt and new_alert['created_at'] < datetime.utcnow()
+        assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
-        [0, {"event_id": 2, "lat": 10., "lon": 8.}, None,
-         403, "Your access scope is not compatible with this operation."],
-        [1, {"event_id": 2, "lat": 10., "lon": 8.}, None,
-         403, "Your access scope is not compatible with this operation."],
-        [2, {"event_id": 2, "lat": 10., "lon": 8.}, None, 201, None],
-        [2, {"lat": 10., "lon": 8.}, 3, 201, None],
-        [3, {"lat": 10., "lon": 8.}, 4, 201, None],
+        [
+            0,
+            {"event_id": 2, "lat": 10.0, "lon": 8.0},
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [
+            1,
+            {"event_id": 2, "lat": 10.0, "lon": 8.0},
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [2, {"event_id": 2, "lat": 10.0, "lon": 8.0}, None, 201, None],
+        [2, {"lat": 10.0, "lon": 8.0}, 3, 201, None],
+        [3, {"lat": 10.0, "lon": 8.0}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
-async def test_create_alert_by_device(test_app_asyncio, init_test_db, test_db,
-                                      access_idx, payload, expected_event_id, status_code, status_details):
+async def test_create_alert_by_device(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
     response = await test_app_asyncio.post("/alerts/from-device", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         json_response = response.json()
         device_id = None
         for entry in DEVICE_TABLE:
-            if entry['access_id'] == ACCESS_TABLE[access_idx]['id']:
-                device_id = entry['id']
+            if entry["access_id"] == ACCESS_TABLE[access_idx]["id"]:
+                device_id = entry["id"]
                 break
-        # Device_id is 99 because it is the identified device
-        test_response = {"id": len(ALERT_TABLE) + 1, "device_id": device_id, **payload,
-                         "media_id": None, "azimuth": None}
+        # Device_id is 99 because it is the identified device
+        test_response = {
+            "id": len(ALERT_TABLE) + 1,
+            "device_id": device_id,
+            **payload,
+            "media_id": None,
+            "azimuth": None,
+        }
         if isinstance(expected_event_id, int):
-            test_response['event_id'] = expected_event_id
-        assert {k: v for k, v in json_response.items() if k != 'created_at'} == test_response
+            test_response["event_id"] = expected_event_id
+        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
-        assert new_alert['created_at'] > utc_dt and new_alert['created_at'] < datetime.utcnow()
+        assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
     "access_idx, payload, alert_id, status_code, status_details",
     [
-        [0, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
-        [1, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1, 200, None],
-        [2, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1,
-         403, "Your access scope is not compatible with this operation."],
+        [0, {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0}, 1, 200, None],
+        [1, {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0}, 1, 200, None],
+        [
+            2,
+            {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0},
+            1,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
         [1, {}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 999, 404, "Table alerts has no entry with id=999"],
-        [1, {"device_id": 2, "lat": 10.}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8.}, 0, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": "north"}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10., "lon": 8., "azimuth": -5.}, 1, 422, None],
-        [4, {"device_id": 1, "event_id": 1, "lat": 10., "lon": 8.}, 1,
-         403, "This access can't update resources for group_id=1"],
-
+        [
+            1,
+            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0},
+            999,
+            404,
+            "Table alerts has no entry with id=999",
+        ],
+        [1, {"device_id": 2, "lat": 10.0}, 1, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0}, 0, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "north"}, 1, 422, None],
+        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, 1, 422, None],
+        [
+            4,
+            {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0},
+            1,
+            403,
+            "This access can't update resources for group_id=1",
+        ],
     ],
 )
 @pytest.mark.asyncio
-async def test_update_alert(test_app_asyncio, init_test_db, test_db,
-                            access_idx, payload, alert_id, status_code, status_details):
+async def test_update_alert(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, alert_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_alert = await get_entry(test_db, db.alerts, alert_id)
@@ -324,17 +446,17 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.delete(f"/alerts/{alert_id}/", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
-        assert all(entry['id'] != alert_id for entry in remaining_alerts.json())
+        assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
 
 
 @pytest.mark.parametrize(
@@ -348,19 +470,20 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
     ],
 )
 @pytest.mark.asyncio
-async def test_link_media(test_app_asyncio, init_test_db, test_db,
-                          access_idx, payload, alert_id, status_code, status_details):
+async def test_link_media(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, alert_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]['id'], ACCESS_TABLE[access_idx]['scope'].split())
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
     response = await test_app_asyncio.put(f"/alerts/{alert_id}/link-media", data=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
-        assert response.json()['detail'] == status_details
+        assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
         updated_entry = await get_entry(test_db, db.alerts, alert_id)
         updated_entry = dict(**updated_entry)
-        assert updated_entry['media_id'] == payload['media_id'], print(payload, updated_entry)
+        assert updated_entry["media_id"] == payload["media_id"], print(payload, updated_entry)

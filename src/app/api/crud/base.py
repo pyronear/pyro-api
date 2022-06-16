@@ -78,8 +78,7 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
     entry = await get(entry_id, table)
     if entry is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Table {table.name} has no entry with id={entry_id}"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Table {table.name} has no entry with id={entry_id}"
         )
 
     return dict(entry)
@@ -98,8 +97,7 @@ async def update_entry(
 
     if not isinstance(_id, int):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Table {table.name} has no entry with id={entry_id}"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Table {table.name} has no entry with id={entry_id}"
         )
 
     if only_specified:

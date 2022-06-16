@@ -13,7 +13,7 @@ from qarnot.connection import Connection
 
 from app import config as cfg
 
-__all__ = ['QarnotBucket']
+__all__ = ["QarnotBucket"]
 
 
 logger = logging.getLogger("uvicorn.warning")
@@ -53,9 +53,9 @@ class QarnotBucket:
         """Check whether a file exists on the bucket"""
         try:
             # Use boto3 head_object method using the Qarnot private connection attribute
-            # cf. https://github.com/qarnot/qarnot-sdk-python/blob/master/qarnot/connection.py#L188
+            # cf. https://github.com/qarnot/qarnot-sdk-python/blob/master/qarnot/connection.py#L188
             head_object = self._conn._s3client.head_object(Bucket=cfg.BUCKET_NAME, Key=bucket_key)
-            return head_object['ResponseMetadata']['HTTPStatusCode'] == 200
+            return head_object["ResponseMetadata"]["HTTPStatusCode"] == 200
         except Exception as e:
             logger.warning(e)
             return False
@@ -66,9 +66,9 @@ class QarnotBucket:
             raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
 
         # Point to the bucket file
-        file_params = {'Bucket': cfg.BUCKET_NAME, 'Key': bucket_key}
+        file_params = {"Bucket": cfg.BUCKET_NAME, "Key": bucket_key}
         # Generate a public URL for it using boto3 presign URL generation
-        return self._conn._s3client.generate_presigned_url('get_object', Params=file_params, ExpiresIn=url_expiration)
+        return self._conn._s3client.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
 
     async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""

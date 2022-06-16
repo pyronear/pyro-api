@@ -34,14 +34,12 @@ def test_client():
 
     # Sites
     site_id = _test_route_return(
-        api_client.create_no_alert_site(
-            lat=44.870959, lon=4.395387, name="dummy_tower", country="FR", geocode="07"
-        ),
+        api_client.create_no_alert_site(lat=44.870959, lon=4.395387, name="dummy_tower", country="FR", geocode="07"),
         dict,
-        201
-    )['id']
+        201,
+    )["id"]
     sites = _test_route_return(api_client.get_sites(), list)
-    assert sites[-1]['id'] == site_id
+    assert sites[-1]["id"] == site_id
 
     # Devices
     all_devices = _test_route_return(api_client.get_my_devices(), list)
@@ -56,18 +54,16 @@ def test_client():
 
     if len(all_devices) > 0:
         # Media
-        media_id = _test_route_return(api_client.create_media(all_devices[0]['id']), dict, 201)['id']
+        media_id = _test_route_return(api_client.create_media(all_devices[0]["id"]), dict, 201)["id"]
         # Create event
-        event_id = _test_route_return(api_client.create_event(0., 0.), dict, 201)['id']
+        event_id = _test_route_return(api_client.create_event(0.0, 0.0), dict, 201)["id"]
         # Create an alert
         _ = _test_route_return(
-            api_client.send_alert(0., 0., event_id, all_devices[0]['id'], media_id=media_id),
-            dict,
-            201
+            api_client.send_alert(0.0, 0.0, event_id, all_devices[0]["id"], media_id=media_id), dict, 201
         )
         # Acknowledge it
         updated_event = _test_route_return(api_client.acknowledge_event(event_id), dict)
-        assert updated_event['is_acknowledged']
+        assert updated_event["is_acknowledged"]
 
     # Check token refresh
     prev_headers = deepcopy(api_client.headers)

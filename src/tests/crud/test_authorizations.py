@@ -20,17 +20,41 @@ GROUP_TABLE = [
     {"id": 1, "name": "first_group"},
     {"id": 2, "name": "second_group"},
     {"id": 3, "name": "third_groupd"},
-    {"id": 4, "name": "gourth_group"}
+    {"id": 4, "name": "gourth_group"},
 ]
 
 
 DEVICE_TABLE = [
-    {"id": 1, "login": "third_login", "owner_id": 1,
-     "access_id": 3, "specs": "v0.1", "elevation": None, "lat": None, "angle_of_view": 68.,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "login": "fourth_login", "owner_id": 2, "access_id": 4, "specs": "v0.1", "elevation": None, "lat": None,
-     "lon": None, "yaw": None, "pitch": None, "last_ping": None, "angle_of_view": 68.,
-     "created_at": "2020-10-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "login": "third_login",
+        "owner_id": 1,
+        "access_id": 3,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "angle_of_view": 68.0,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "login": "fourth_login",
+        "owner_id": 2,
+        "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "yaw": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
 ]
 
 ACCESS_TABLE = [
@@ -47,29 +71,93 @@ MEDIA_TABLE = [
 
 
 EVENT_TABLE = [
-    {"id": 1, "lat": 0., "lon": 0., "type": "wildfire", "start_ts": None, "end_ts": "2021-03-13T10:18:45.447773",
-     "is_acknowledged": True, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "lat": 6., "lon": 8., "type": "wildfire", "start_ts": None, "end_ts": None,
-     "is_acknowledged": True, "created_at": "2020-09-13T08:18:45.447773"},
-    {"id": 3, "lat": -5., "lon": 3., "type": "wildfire", "start_ts": "2021-03-13T08:18:45.447773",
-     "end_ts": "2021-03-13T10:18:45.447773", "is_acknowledged": False, "created_at": "2020-09-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "lat": 0.0,
+        "lon": 0.0,
+        "type": "wildfire",
+        "start_ts": None,
+        "end_ts": "2021-03-13T10:18:45.447773",
+        "is_acknowledged": True,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "lat": 6.0,
+        "lon": 8.0,
+        "type": "wildfire",
+        "start_ts": None,
+        "end_ts": None,
+        "is_acknowledged": True,
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "lat": -5.0,
+        "lon": 3.0,
+        "type": "wildfire",
+        "start_ts": "2021-03-13T08:18:45.447773",
+        "end_ts": "2021-03-13T10:18:45.447773",
+        "is_acknowledged": False,
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
 ]
 
 ALERT_TABLE = [
-    {"id": 1, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": None, "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "event_id": 1, "media_id": None, "lat": 0., "lon": 0.,
-     "azimuth": 47., "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 2, "event_id": 2, "media_id": None, "lat": 10., "lon": 8.,
-     "azimuth": 123., "created_at": "2020-11-03T11:18:45.447773"},
+    {
+        "id": 1,
+        "device_id": 1,
+        "event_id": 1,
+        "media_id": None,
+        "lat": 0.0,
+        "lon": 0.0,
+        "azimuth": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "device_id": 1,
+        "event_id": 1,
+        "media_id": None,
+        "lat": 0.0,
+        "lon": 0.0,
+        "azimuth": 47.0,
+        "created_at": "2020-10-13T09:18:45.447773",
+    },
+    {
+        "id": 3,
+        "device_id": 2,
+        "event_id": 2,
+        "media_id": None,
+        "lat": 10.0,
+        "lon": 8.0,
+        "azimuth": 123.0,
+        "created_at": "2020-11-03T11:18:45.447773",
+    },
 ]
 SITE_TABLE = [
-    {"id": 1, "name": "my_first_tower", "group_id": 1,
-     "lat": 44.1, "lon": -0.7, "type": "tower", "country": "FR", "geocode": "40",
-     "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "name": "my_first_station", "group_id": 2,
-     "lat": 44.1, "lon": 3.9, "type": "station", "country": "FR", "geocode": "30",
-     "created_at": "2020-09-13T08:18:45.447773"},
+    {
+        "id": 1,
+        "name": "my_first_tower",
+        "group_id": 1,
+        "lat": 44.1,
+        "lon": -0.7,
+        "type": "tower",
+        "country": "FR",
+        "geocode": "40",
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "name": "my_first_station",
+        "group_id": 2,
+        "lat": 44.1,
+        "lon": 3.9,
+        "type": "station",
+        "country": "FR",
+        "geocode": "30",
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
 ]
 
 
@@ -144,12 +232,7 @@ async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_
 
 @pytest.mark.parametrize(
     "access_id, group_id, should_raise",
-    [
-        [1, 1, False],
-        [1, 2, True],
-        [2, 1, False],  # Because Admin
-        [2, 2, False]
-    ],
+    [[1, 1, False], [1, 2, True], [2, 1, False], [2, 2, False]],  # Because Admin
 )
 @pytest.mark.asyncio
 async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
@@ -162,15 +245,7 @@ async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group
 
 @pytest.mark.parametrize(
     "access_id, group_id, should_raise",
-    [
-        [1, 1, False],
-        [1, None, False],
-        [1, 2, True],
-        [2, 1, False],  # Because Admin
-        [2, 2, False],
-        [2, None, False]
-
-    ],
+    [[1, 1, False], [1, None, False], [1, 2, True], [2, 1, False], [2, 2, False], [2, None, False]],  # Because Admin
 )
 @pytest.mark.asyncio
 async def test_check_group_update(test_app_asyncio, init_test_db, access_id, group_id, should_raise):

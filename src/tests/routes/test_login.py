@@ -9,10 +9,7 @@ from app import db
 from app.api import crud, security
 from tests.db_utils import fill_table
 
-GROUP_TABLE = [
-    {"id": 1, "name": "first_group"},
-    {"id": 2, "name": "second_group"}
-]
+GROUP_TABLE = [{"id": 1, "name": "first_group"}, {"id": 2, "name": "second_group"}]
 
 ACCESS_TABLE = [
     {"id": 1, "group_id": 1, "login": "first_login", "hashed_password": "hashed_first_pwd", "scope": "user"},
@@ -45,4 +42,4 @@ async def test_create_access_token(test_app_asyncio, init_test_db, payload, stat
 
     assert response.status_code == status_code, print(payload)
     if isinstance(status_detail, str):
-        assert response.json()['detail'] == status_detail
+        assert response.json()["detail"] == status_detail

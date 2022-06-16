@@ -20,12 +20,7 @@ async def resolve_previous_alert(device_id: int) -> Optional[AlertOut]:
     max_ts = datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS)
     query = (
         alerts.select()
-        .where(
-            and_(
-                alerts.c.device_id == device_id,
-                alerts.c.created_at >= max_ts
-            )
-        )
+        .where(and_(alerts.c.device_id == device_id, alerts.c.created_at >= max_ts))
         .order_by(alerts.c.created_at.desc())
         .limit(1)
     )
@@ -41,8 +36,8 @@ async def create_event_if_inexistant(payload: AlertIn) -> int:
     if previous_alert is None:
         # Create an event & get the ID
         event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
-        event_id = event['id']
+        event_id = event["id"]
     # Get event ref
     else:
-        event_id = previous_alert['event_id']
+        event_id = previous_alert["event_id"]
     return event_id

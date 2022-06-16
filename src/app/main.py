@@ -12,15 +12,26 @@ from fastapi.openapi.utils import get_openapi
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from app import config as cfg
-from app.api.routes import (accesses, alerts, devices, events, groups, installations, login, media, sites, users,
-                            webhooks)
+from app.api.routes import (
+    accesses,
+    alerts,
+    devices,
+    events,
+    groups,
+    installations,
+    login,
+    media,
+    sites,
+    users,
+    webhooks,
+)
 from app.db import database, engine, init_db, metadata
 
 logger = logging.getLogger("uvicorn.error")
 
 metadata.create_all(bind=engine)
 
-# Sentry
+# Sentry
 if isinstance(cfg.SENTRY_DSN, str):
     sentry_sdk.init(
         cfg.SENTRY_DSN,

@@ -23,10 +23,7 @@ router = APIRouter()
 async def check_media_existence(media_id):
     existing_media = await crud.get(media_id, media)
     if existing_media is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unable to find media with id={media_id}."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unable to find media with id={media_id}.")
 
 
 async def alert_notification(payload: AlertOut):
@@ -60,8 +57,12 @@ async def create_alert(
     return alert
 
 
-@router.post("/from-device", response_model=AlertOut, status_code=status.HTTP_201_CREATED,
-             summary="Create an alert related to the authentified device")
+@router.post(
+    "/from-device",
+    response_model=AlertOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an alert related to the authentified device",
+)
 async def create_alert_from_device(
     payload: AlertBase,
     background_tasks: BackgroundTasks,
@@ -78,8 +79,7 @@ async def create_alert_from_device(
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
 async def get_alert(
-    alert_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    alert_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Based on a alert_id, retrieves information about the specified alert
@@ -91,8 +91,7 @@ async def get_alert(
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
 async def fetch_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of all alerts and their information
@@ -100,10 +99,13 @@ async def fetch_alerts(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(alerts)
     else:
-        retrieved_alerts = (session.query(models.Alerts)
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(models.Accesses.group_id == requester.group_id).all())
+        retrieved_alerts = (
+            session.query(models.Alerts)
+            .join(models.Devices)
+            .join(models.Accesses)
+            .filter(models.Accesses.group_id == requester.group_id)
+            .all()
+        )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
         return retrieved_alerts
 
@@ -112,7 +114,7 @@ async def fetch_alerts(
 async def update_alert(
     payload: AlertIn,
     alert_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
 ):
     """
     Based on a alert_id, updates information about the specified alert
@@ -123,10 +125,7 @@ async def update_alert(
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(
-    alert_id: int = Path(..., gt=0),
-    _=Security(get_current_access, scopes=[AccessType.admin])
-):
+async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
@@ -137,7 +136,7 @@ async def delete_alert(
 async def link_media(
     payload: AlertMediaId,
     alert_id: int = Path(..., gt=0),
-    current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
+    current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
 ):
     """
     Based on a alert_id, and media information as arguments, link the specified alert to a media
@@ -147,7 +146,7 @@ async def link_media(
     if existing_alert is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unable to find alert with id={alert_id} & device_id={current_device.id}."
+            detail=f"Unable to find alert with id={alert_id} & device_id={current_device.id}.",
         )
 
     await check_media_existence(payload.media_id)
@@ -158,8 +157,7 @@ async def link_media(
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
 async def fetch_ongoing_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
 ):
     """
     Retrieves the list of ongoing alerts and their information
@@ -167,19 +165,18 @@ async def fetch_ongoing_alerts(
 
     if await is_admin_access(requester.id):
         query = (
-            alerts.select().where(
-                alerts.c.event_id.in_(
-                    select([events.c.id])
-                    .where(events.c.end_ts.is_(None))
-                ))).order_by(alerts.c.id.desc())
+            alerts.select().where(alerts.c.event_id.in_(select([events.c.id]).where(events.c.end_ts.is_(None))))
+        ).order_by(alerts.c.id.desc())
 
         return (await crud.base.database.fetch_all(query=query.limit(50)))[::-1]
     else:
-        retrieved_alerts = (session.query(models.Alerts)
-                            .join(models.Events)
-                            .filter(models.Events.end_ts.is_(None))
-                            .join(models.Devices)
-                            .join(models.Accesses)
-                            .filter(models.Accesses.group_id == requester.group_id))
+        retrieved_alerts = (
+            session.query(models.Alerts)
+            .join(models.Events)
+            .filter(models.Events.end_ts.is_(None))
+            .join(models.Devices)
+            .join(models.Accesses)
+            .filter(models.Accesses.group_id == requester.group_id)
+        )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts
