@@ -6,8 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pyroclient"
 description = "Python Client for Pyronear wildfire alert API"
 authors = [
-    {email = "contact@pyronear.org"},
-    {name = "Pyronear"}
+    {name = "Pyronear", email = "contact@pyronear.org"}
 ]
 readme = "README.md"
 requires-python = ">=3.6,<4"
