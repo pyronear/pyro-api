@@ -146,7 +146,7 @@ async def upload_media_from_device(
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
-        if not await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file):
+        if not (await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file)):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
         uploaded_file = await bucket_service.get_file(bucket_key=bucket_key)

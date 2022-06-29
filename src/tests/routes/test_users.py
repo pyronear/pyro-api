@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 
 import pytest
+import pytest_asyncio
 
 from app import db
 from app.api import crud, security
@@ -33,7 +34,7 @@ ACCESS_TABLE = [
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
     monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)

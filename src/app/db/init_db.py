@@ -7,7 +7,8 @@ from app import config as cfg
 from app.api import crud
 from app.api.schemas import AccessCreation, AccessType, GroupIn, UserCreation
 from app.api.security import hash_password
-from app.db import accesses, groups, users
+
+from .tables import accesses, groups, users
 
 
 async def init_db():

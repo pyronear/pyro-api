@@ -25,7 +25,6 @@ jobs:
 
   pytest:
     runs-on: ubuntu-latest
-    needs: docker-ready
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
@@ -34,7 +33,7 @@ jobs:
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
         run: |
-          docker build src/. -t pyroapi:latest-py3.8-alpine
+          docker build src/. -t pyroapi:python3.8-alpine3.10
           docker-compose -f docker-compose-dev.yml up -d --build
       - name: Run docker test
         run: |
