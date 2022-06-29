@@ -29,6 +29,10 @@ run:
 stop:
 	docker-compose down
 
+run-dev:
+	docker build src/. -t pyroapi:python3.8-alpine3.10
+	docker-compose -f docker-compose-dev.yml up -d --build
+
 # Run tests for the library
 test:
 	docker build src/. -t pyroapi:python3.8-alpine3.10
