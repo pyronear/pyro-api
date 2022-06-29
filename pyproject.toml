@@ -32,11 +32,11 @@ pydocstyle = { version = "^6.0.0", extras = ["toml"], optional = true }
 [tool.poetry.dev-dependencies]
 pytest = ">=5.3.2,<8.0.0"
 pytest-asyncio = ">=0.17.0,<1.0.0"
-asyncpg = "^0.20.0"
 coverage = ">=4.5.4,<7.0.0"
-aiosqlite = "^0.16.0"
+aiosqlite = ">=0.16.0,<1.0.0"
 httpx = ">=0.23.0"
 alembic = "==1.5.4"
+asyncpg = ">=0.20.0,<1.0.0"
 
 [tool.poetry.extras]
 quality = ["flake8", "isort", "mypy", "pydocstyle", "black"]
