@@ -149,4 +149,4 @@ _build/
 
 # Poetry
 src/app/requirements.txt
-src/requirements-dev/txt
+src/requirements-dev.txt
