@@ -146,7 +146,3 @@ client/pyroclient/version.py
 # Test DB
 *.db
 _build/
-
-# Poetry
-src/app/requirements.txt
-src/requirements-dev.txt
