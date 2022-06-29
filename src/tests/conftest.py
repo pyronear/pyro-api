@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 
 from app.api.security import create_unlimited_access_token
@@ -35,13 +36,14 @@ def pytest_configure():
     pytest.get_token = get_token
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_app_asyncio():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    # for httpx>=20, follow_redirects=True (cf. https://github.com/encode/httpx/releases/tag/0.20.0)
+    async with AsyncClient(app=app, base_url="http://test", follow_redirects=True) as ac:
         yield ac  # testing happens here
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def test_db():
     try:
         await test_database.connect()

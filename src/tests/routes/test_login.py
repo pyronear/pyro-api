@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import pytest
+import pytest_asyncio
 
 from app import db
 from app.api import crud, security
@@ -17,7 +18,7 @@ ACCESS_TABLE = [
 ]
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "verify_password", pytest.mock_verify_password)
     monkeypatch.setattr(crud.base, "database", test_db)
