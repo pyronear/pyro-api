@@ -1,7 +1,0 @@
-pytest>=5.3.2
-pytest-asyncio>=0.14.0
-asyncpg>=0.20.0
-coverage>=4.5.4
-aiosqlite>=0.16.0
-httpx>=0.16.1,<0.19.0
-alembic==1.5.4
