@@ -17,7 +17,6 @@ from app.api.schemas import (
     Cred,
     DeviceAuth,
     DeviceCreation,
-    DeviceIn,
     DeviceOut,
     DeviceUpdate,
     MyDeviceAuth,

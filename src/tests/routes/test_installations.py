@@ -324,7 +324,7 @@ async def test_create_installation(
         ],
         [
             1,
-            {"device_id": 1, "site_id": 1, "is_trustworthy": 5.0, "end_ts": None, "is_trustworthy": True},
+            {"device_id": 1, "site_id": 1, "is_trustworthy": 5.0, "end_ts": None},
             1,
             422,
             None,

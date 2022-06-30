@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, validator
 
 __all__ = ["Cred", "CredHash", "Login", "Position"]
 
-# Template classes
+
 class _CreatedAt(BaseModel):
     created_at: Optional[datetime] = None
 

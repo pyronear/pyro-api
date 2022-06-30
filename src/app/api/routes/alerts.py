@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Se
 from sqlalchemy import select
 
 from app.api import crud
-from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
+from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device
 from app.api.external import post_request

@@ -12,7 +12,7 @@ import pytest_asyncio
 from app import db
 from app.api import crud
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
-from tests.utils import ts_to_string, update_only_datetime, parse_time
+from tests.utils import ts_to_string, update_only_datetime
 
 USER_TABLE = [
     {"id": 1, "login": "first_login", "access_id": 1, "created_at": "2020-10-13T08:18:45.447773"},
