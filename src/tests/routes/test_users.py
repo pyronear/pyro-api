@@ -312,7 +312,8 @@ async def test_update_user_password(
         assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == {"login": USER_TABLE_FOR_DB[user_id - 1]["login"]}
+        json_response = response.json()
+        assert all(v == USER_TABLE_FOR_DB[user_id - 1][k] for k, v in json_response.items() if k != "created_at")
         # Access update
         access_id = USER_TABLE[user_id - 1]["access_id"]
         updated_access = await get_entry(test_db, db.accesses, access_id)

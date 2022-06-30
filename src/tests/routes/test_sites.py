@@ -273,8 +273,20 @@ async def test_create_site(
     "access_idx, payload, site_id, status_code, status_details",
     [
         [None, {}, 1, 401, "Not authenticated"],
-        [1, {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"}, 1, 200, None],
-        [0, {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"}, 1, 200, None],
+        [
+            1,
+            {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
+            1,
+            200,
+            None,
+        ],
+        [
+            0,
+            {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
+            1,
+            200,
+            None,
+        ],
         [
             2,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
@@ -284,9 +296,27 @@ async def test_create_site(
         ],
         [1, {}, 1, 422, None],
         [1, {"site_name": "foo"}, 1, 422, None],
-        [1, {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"}, 999, 404, None],
-        [1, {"name": "1", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"}, 1, 422, None],
-        [1, {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"}, 0, 422, None],
+        [
+            1,
+            {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
+            999,
+            404,
+            None,
+        ],
+        [
+            1,
+            {"name": "1", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
+            1,
+            422,
+            None,
+        ],
+        [
+            1,
+            {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
+            0,
+            422,
+            None,
+        ],
         [
             4,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
