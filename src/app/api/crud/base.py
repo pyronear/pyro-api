@@ -84,14 +84,8 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
     return dict(entry)
 
 
-async def update_entry(
-    table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0), only_specified: bool = True
-) -> Dict[str, Any]:
+async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
     payload_dict = payload.dict()
-
-    if only_specified:
-        # Dont update columns for null fields
-        payload_dict = {k: v for k, v in payload_dict.items() if v is not None}
 
     _id = await put(entry_id, payload_dict, table)
 
@@ -100,11 +94,7 @@ async def update_entry(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Table {table.name} has no entry with id={entry_id}"
         )
 
-    if only_specified:
-        # Retrieve complete record values
-        return dict(await get(entry_id, table))
-    else:
-        return {**payload.dict(), "id": entry_id}
+    return {**payload.dict(), "id": entry_id}
 
 
 async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
