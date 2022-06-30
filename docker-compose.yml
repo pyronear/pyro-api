@@ -3,12 +3,14 @@ version: '3.7'
 services:
   pyroapi:
     build: src
+    restart: always
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
     volumes:
       - ./src/:/app/
     ports:
       - 8080:8080
     environment:
+      - DEBUG=false
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SUPERUSER_LOGIN=dummy_login
       - SUPERUSER_PWD=dummy_pwd
