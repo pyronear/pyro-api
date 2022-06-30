@@ -8,7 +8,7 @@ from pydantic import Field
 
 from app.db.models import AccessType
 
-from .base import Login, _Id, _GroupId, _CreatedAt, Cred
+from .base import Cred, Login, _CreatedAt, _GroupId, _Id
 
 __all__ = ["UserRead", "UserAuth", "UserCreation"]
 

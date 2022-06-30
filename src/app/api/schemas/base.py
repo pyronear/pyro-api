@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
-__all__ = ["Cred", "CredHash", "Login", "DefaultPosition"]
+__all__ = ["Cred", "CredHash", "Login", "Position"]
 
 # Template classes
 class _CreatedAt(BaseModel):
@@ -68,4 +68,8 @@ class _DefaultRotation(BaseModel):
 
 
 class DefaultPosition(_DefaultLocation, _DefaultRotation):
+    pass
+
+
+class Position(_Location, _Rotation):
     pass

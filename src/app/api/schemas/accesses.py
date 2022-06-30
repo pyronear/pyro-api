@@ -3,9 +3,9 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from .base import Login, _GroupId, _Id, CredHash
 from app.db.models import AccessType
 
+from .base import CredHash, Login, _GroupId, _Id
 
 __all__ = ["AccessRead", "AccessCreation"]
 

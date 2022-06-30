@@ -7,9 +7,9 @@ from pydantic import Field
 
 from app.db.models import SiteType
 
-from .base import _FlatLocation, _CreatedAt, _Id
+from .base import _CreatedAt, _FlatLocation, _Id
 
-__all__ = ["SiteBase", "SiteIn", "SiteOut"]
+__all__ = ["SiteBase", "SiteIn", "SiteOut", "SiteUpdate"]
 
 
 # Sites
@@ -25,4 +25,8 @@ class SiteIn(SiteBase):
 
 
 class SiteOut(SiteIn, _CreatedAt, _Id):
+    group_id: int = Field(..., gt=0)
+
+
+class SiteUpdate(SiteBase):
     group_id: int = Field(..., gt=0)

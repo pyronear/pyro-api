@@ -9,14 +9,24 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.db.models import AccessType
-from .base import Login, DefaultPosition, Cred, _GroupId, _CreatedAt, _Id
 
-__all__ = ["DeviceIn", "DeviceOut", "DeviceCreation", "DeviceAuth", "SoftwareHash", "AdminDeviceAuth", "MyDeviceAuth"]
+from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id
+
+__all__ = [
+    "DeviceIn",
+    "DeviceOut",
+    "DeviceCreation",
+    "DeviceAuth",
+    "SoftwareHash",
+    "AdminDeviceAuth",
+    "MyDeviceAuth",
+    "DeviceUpdate",
+]
 
 
 # Device
 class SoftwareHash(BaseModel):
-    software_hash: str = Field(..., min_length=8, max_length=16)
+    software_hash: str = Field(..., min_length=8, max_length=16, example="0123456789ABCDEF")
 
 
 class MyDeviceIn(Login, DefaultPosition):
@@ -52,3 +62,16 @@ class DeviceCreation(DeviceIn):
 
 class DeviceOut(DeviceIn, _CreatedAt, _Id):
     pass
+
+
+class DeviceUpdate(Login):
+    lat: Optional[float] = Field(..., gt=-90, lt=90, example=44.765181)
+    lon: Optional[float] = Field(..., gt=-180, lt=180, example=4.514880)
+    elevation: Optional[float] = Field(..., gt=0.0, lt=10000, example=1582)
+    yaw: Optional[float] = Field(..., ge=0, le=360, example=110)
+    pitch: Optional[float] = Field(..., ge=-90, le=90, example=-5)
+    specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1")
+    last_ping: Optional[datetime] = Field(..., example=datetime.utcnow())
+    angle_of_view: float = Field(..., ge=0, le=360, example=10)
+    owner_id: int = Field(..., gt=0)
+    software_hash: Optional[str] = Field(..., min_length=8, max_length=16, example="0123456789ABCDEF")

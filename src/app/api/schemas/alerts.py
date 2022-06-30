@@ -7,7 +7,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .base import _FlatLocation, _CreatedAt, _Id
+from .base import _CreatedAt, _FlatLocation, _Id
 
 __all__ = ["AlertIn", "AlertOut", "AlertBase"]
 

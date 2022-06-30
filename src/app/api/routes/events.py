@@ -12,9 +12,9 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut
-from app.db.models import AccessType
+from app.api.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut, EventUpdate
 from app.db import events, get_session, models
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -85,7 +85,7 @@ async def fetch_past_events(
 
 @router.put("/{event_id}/", response_model=EventOut, summary="Update information about a specific event")
 async def update_event(
-    payload: EventIn,
+    payload: EventUpdate,
     event_id: int = Path(..., gt=0),
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.device]),
 ):

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from .base import _CreatedAt, _Id
 
-__all__ = ["InstallationIn", "InstallationOut"]
+__all__ = ["InstallationIn", "InstallationOut", "InstallationUpdate"]
 
 
 # Installations
@@ -24,3 +24,8 @@ class InstallationIn(BaseModel):
 
 class InstallationOut(InstallationIn, _CreatedAt, _Id):
     pass
+
+
+class InstallationUpdate(InstallationIn):
+    end_ts: Optional[datetime]
+    is_trustworthy: bool

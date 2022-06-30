@@ -15,8 +15,8 @@ from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device
 from app.api.external import post_request
 from app.api.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
-from app.db.models import AccessType
 from app.db import alerts, events, get_session, media, models
+from app.db.models import AccessType
 
 router = APIRouter()
 

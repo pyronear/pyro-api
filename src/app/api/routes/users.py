@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, Path, Security, status
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
 from app.api.deps import get_current_access, get_current_user
-from app.api.schemas import Cred, UserAuth, UserCreation, Login, UserRead
-from app.db.models import AccessType
+from app.api.schemas import Cred, Login, UserAuth, UserCreation, UserRead
 from app.db import accesses, get_session, models, users
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -87,7 +87,7 @@ async def fetch_users(
 
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")
-async def update_user(
+async def update_user_login(
     payload: Login, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
@@ -96,7 +96,7 @@ async def update_user(
     return await crud.accesses.update_accessed_entry(users, accesses, user_id, payload)
 
 
-@router.put("/{user_id}/pwd", response_model=Login, summary="Update the password of a specific user")
+@router.put("/{user_id}/pwd", response_model=UserRead, summary="Update the password of a specific user")
 async def update_user_password(
     payload: Cred, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):

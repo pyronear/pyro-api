@@ -13,9 +13,9 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import InstallationIn, InstallationOut
-from app.db.models import AccessType
+from app.api.schemas import InstallationIn, InstallationOut, InstallationUpdate
 from app.db import get_session, installations, models
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ async def fetch_installations(
     "/{installation_id}/", response_model=InstallationOut, summary="Update information about a specific installation"
 )
 async def update_installation(
-    payload: InstallationIn,
+    payload: InstallationUpdate,
     installation_id: int = Path(..., gt=0),
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
 ):

@@ -6,12 +6,13 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from app.db.models import EventType
-from .base import _FlatLocation, _CreatedAt, _Id
 
-__all__ = ["EventIn", "EventOut", "Acknowledgement", "AcknowledgementOut"]
+from .base import _CreatedAt, _FlatLocation, _Id
+
+__all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "AcknowledgementOut"]
 
 
 # Events
@@ -20,6 +21,11 @@ class EventIn(_FlatLocation):
     start_ts: Optional[datetime] = None
     end_ts: Optional[datetime] = None
     is_acknowledged: bool = Field(False)
+
+    @staticmethod
+    @validator("start_ts", pre=True, always=True)
+    def default_ts_created(v):
+        return v or datetime.utcnow()
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -32,3 +38,10 @@ class Acknowledgement(BaseModel):
 
 class AcknowledgementOut(Acknowledgement, _Id):
     pass
+
+
+class EventUpdate(_FlatLocation):
+    type: EventType
+    start_ts: datetime
+    end_ts: Optional[datetime]
+    is_acknowledged: bool

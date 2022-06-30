@@ -11,9 +11,9 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import SiteBase, SiteIn, SiteOut
-from app.db.models import AccessType
+from app.api.schemas import SiteBase, SiteIn, SiteOut, SiteUpdate
 from app.db import SiteType, get_session, sites
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -76,7 +76,7 @@ async def fetch_sites(
 
 @router.put("/{site_id}/", response_model=SiteOut, summary="Update information about a specific site")
 async def update_site(
-    payload: SiteIn,
+    payload: SiteUpdate,
     site_id: int = Path(..., gt=0),
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
 ):

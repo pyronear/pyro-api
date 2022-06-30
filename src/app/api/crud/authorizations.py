@@ -7,8 +7,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import Table
 
 from app.api import crud
-from app.db.models import AccessType
 from app.db import accesses
+from app.db.models import AccessType
 
 
 async def is_in_same_group(table: Table, entry_id: int, group_id: int) -> bool:
