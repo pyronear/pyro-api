@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import Table
 
 from app.api import crud
-from app.api.schemas import AccessType
+from app.db.models import AccessType
 from app.db import accesses
 
 

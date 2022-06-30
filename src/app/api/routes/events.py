@@ -12,7 +12,8 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import AccessType, Acknowledgement, AcknowledgementOut, EventIn, EventOut
+from app.api.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut
+from app.db.models import AccessType
 from app.db import events, get_session, models
 
 router = APIRouter()

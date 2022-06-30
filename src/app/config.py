@@ -11,7 +11,7 @@ PROJECT_NAME: str = "Pyronear API"
 PROJECT_DESCRIPTION: str = "API for wildfire prevention, detection and monitoring"
 API_BASE: str = "api/"
 VERSION: str = "0.1.2a0"
-DEBUG: bool = os.environ.get("DEBUG", "") != "False"
+DEBUG: bool = os.environ.get("DEBUG", "").lower() != "false"
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 # Fix for SqlAlchemy 1.4+
 if DATABASE_URL.startswith("postgres://"):

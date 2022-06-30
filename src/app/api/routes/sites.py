@@ -11,7 +11,8 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import AccessType, SiteBase, SiteIn, SiteOut
+from app.api.schemas import SiteBase, SiteIn, SiteOut
+from app.db.models import AccessType
 from app.db import SiteType, get_session, sites
 
 router = APIRouter()

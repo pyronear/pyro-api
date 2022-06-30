@@ -14,9 +14,10 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user
-from app.api.schemas import AccessType, BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
+from app.api.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
 from app.api.security import hash_content_file
 from app.db import get_session, media, models
+from app.db.models import AccessType
 from app.services import bucket_service, resolve_bucket_key
 
 router = APIRouter()

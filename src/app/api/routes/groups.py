@@ -9,7 +9,8 @@ from fastapi import APIRouter, Path, Security, status
 
 from app.api import crud
 from app.api.deps import get_current_access
-from app.api.schemas import AccessType, GroupIn, GroupOut
+from app.api.schemas import GroupIn, GroupOut
+from app.db.models import AccessType
 from app.db import groups
 
 router = APIRouter()

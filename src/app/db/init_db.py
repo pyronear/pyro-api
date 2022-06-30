@@ -5,9 +5,10 @@
 
 from app import config as cfg
 from app.api import crud
-from app.api.schemas import AccessCreation, AccessType, GroupIn, UserCreation
+from app.api.schemas import AccessCreation, GroupIn, UserCreation
 from app.api.security import hash_password
 
+from .models import AccessType
 from .tables import accesses, groups, users
 
 

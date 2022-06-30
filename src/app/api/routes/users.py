@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends, Path, Security, status
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
 from app.api.deps import get_current_access, get_current_user
-from app.api.schemas import AccessType, Cred, UserAuth, UserCreation, UserInfo, UserRead
+from app.api.schemas import Cred, UserAuth, UserCreation, Login, UserRead
+from app.db.models import AccessType
 from app.db import accesses, get_session, models, users
 
 router = APIRouter()
@@ -26,7 +27,7 @@ async def get_my_user(me: UserRead = Security(get_current_user, scopes=[AccessTy
 
 @router.put("/update-info", response_model=UserRead, summary="Update information of the current user")
 async def update_my_info(
-    payload: UserInfo, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
+    payload: Login, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
     """
     Updates information of the current user
@@ -34,7 +35,7 @@ async def update_my_info(
     return await crud.accesses.update_accessed_entry(users, accesses, me.id, payload)
 
 
-@router.put("/update-pwd", response_model=UserInfo, summary="Update password of the current user")
+@router.put("/update-pwd", response_model=Login, summary="Update password of the current user")
 async def update_my_password(
     payload: Cred, me: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
@@ -87,7 +88,7 @@ async def fetch_users(
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")
 async def update_user(
-    payload: UserInfo, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
+    payload: Login, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):
     """
     Based on a user_id, updates information about the specified user
@@ -95,7 +96,7 @@ async def update_user(
     return await crud.accesses.update_accessed_entry(users, accesses, user_id, payload)
 
 
-@router.put("/{user_id}/pwd", response_model=UserInfo, summary="Update the password of a specific user")
+@router.put("/{user_id}/pwd", response_model=Login, summary="Update the password of a specific user")
 async def update_user_password(
     payload: Cred, user_id: int = Path(..., gt=0), _=Security(get_current_user, scopes=[AccessType.admin])
 ):

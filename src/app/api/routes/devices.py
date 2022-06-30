@@ -13,7 +13,6 @@ from app.api.crud.authorizations import is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user
 from app.api.schemas import (
-    AccessType,
     AdminDeviceAuth,
     Cred,
     DefaultPosition,
@@ -25,6 +24,7 @@ from app.api.schemas import (
     SoftwareHash,
     UserRead,
 )
+from app.db.models import AccessType
 from app.db import accesses, devices, get_session, models, users
 
 router = APIRouter()
@@ -103,7 +103,7 @@ async def update_device(
     """
     Based on a device_id, updates information about the specified device
     """
-    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload, only_specified=True)
+    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
