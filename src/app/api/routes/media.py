@@ -105,16 +105,6 @@ async def fetch_media(
         return retrieved_media
 
 
-@router.put("/{media_id}/", response_model=MediaOut, summary="Update information about a specific media")
-async def update_media(
-    payload: MediaIn, media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
-):
-    """
-    Based on a media_id, updates information about the specified media
-    """
-    return await crud.update_entry(media, payload, media_id)
-
-
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
 async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
