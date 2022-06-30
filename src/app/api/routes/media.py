@@ -3,8 +3,11 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
+from datetime import datetime
+from mimetypes import guess_extension
 from typing import Any, Dict, List, Optional
 
+import magic
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
 
 from app.api import crud
@@ -116,7 +119,11 @@ async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_a
     """
     Based on a media_id, deletes the specified media
     """
-    return await crud.delete_entry(media, media_id)
+    # Delete entry
+    entry = await crud.delete_entry(media, media_id)
+    # Delete media file
+    await bucket_service.delete_file(entry["bucket_key"])
+    return entry
 
 
 @router.post("/{media_id}/upload", response_model=MediaOut, status_code=200)
@@ -133,9 +140,13 @@ async def upload_media_from_device(
     # Check in DB
     entry = await check_media_registration(media_id, current_device.id)
 
-    # Concatenate the first 32 chars (to avoid system interactions issues) of SHA256 hash with file extension
+    # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     file_hash = hash_content_file(file.file.read())
-    file_name = f"{file_hash[:32]}.{file.filename.rpartition('.')[-1]}"
+    await file.seek(0)
+    # guess_extension will return none if this fails
+    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
+    # Concatenate timestamp & hash
+    file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{file_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     # If files are in a subfolder of the bucket, prepend the folder path
@@ -167,6 +178,9 @@ async def upload_media_from_device(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Data was corrupted during upload"
             )
+        # If a file was previously uploaded, delete it
+        if isinstance(entry["bucket_key"], str):
+            await bucket_service.delete_file(entry["bucket_key"])
 
         entry_dict = dict(**entry)
         entry_dict["bucket_key"] = bucket_key

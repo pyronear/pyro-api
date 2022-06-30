@@ -274,12 +274,19 @@ async def test_update_media(
     ],
 )
 @pytest.mark.asyncio
-async def test_delete_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
+async def test_delete_media(
+    test_app_asyncio, init_test_db, monkeypatch, access_idx, media_id, status_code, status_details
+):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
+
+    async def mock_delete_file(filename):
+        return True
+
+    monkeypatch.setattr(bucket_service, "delete_file", mock_delete_file)
 
     response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
     assert response.status_code == status_code
