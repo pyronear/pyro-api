@@ -2,8 +2,8 @@ aiofiles==0.6.0
 anyio==3.6.1; python_version >= "3.6" and python_full_version >= "3.6.2"
 asyncpg==0.25.0; python_full_version >= "3.6.0"
 bcrypt==3.2.2; python_version >= "3.6"
-boto3==1.24.19; python_version >= "3.7"
-botocore==1.27.19; python_version >= "3.7"
+boto3==1.24.20; python_version >= "3.7"
+botocore==1.27.20; python_version >= "3.7"
 certifi==2022.6.15; python_version >= "3.7" and python_version < "4"
 cffi==1.15.0; python_version >= "3.6"
 charset-normalizer==2.1.0; python_version >= "3.7" and python_version < "4" and python_full_version >= "3.6.0"
@@ -26,6 +26,7 @@ pydantic==1.9.1; python_full_version >= "3.6.1"
 pyparsing==3.0.9; python_full_version >= "3.6.8" and python_version >= "3.6"
 python-dateutil==2.8.2; python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.7"
 python-jose==3.3.0
+python-magic==0.4.27; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
 python-multipart==0.0.5
 qarnot==2.10.0; python_version >= "3.6"
 requests==2.28.1; python_version >= "3.7" and python_version < "4"
