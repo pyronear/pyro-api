@@ -67,6 +67,7 @@ ACCESS_TABLE = [
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
 
@@ -108,7 +109,7 @@ ALERT_TABLE = [
         "id": 1,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
@@ -118,7 +119,7 @@ ALERT_TABLE = [
         "id": 2,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 2,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -128,7 +129,7 @@ ALERT_TABLE = [
         "id": 3,
         "device_id": 2,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 3,
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,

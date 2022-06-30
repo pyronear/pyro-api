@@ -90,12 +90,19 @@ DEVICE_TABLE = [
     },
 ]
 
+MEDIA_TABLE = [
+    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+]
+
 ALERT_TABLE = [
     {
         "id": 1,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
@@ -105,7 +112,7 @@ ALERT_TABLE = [
         "id": 2,
         "device_id": 1,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 2,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -115,7 +122,7 @@ ALERT_TABLE = [
         "id": 3,
         "device_id": 2,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 3,
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
@@ -125,7 +132,7 @@ ALERT_TABLE = [
         "id": 4,
         "device_id": 2,
         "event_id": 3,
-        "media_id": None,
+        "media_id": 4,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -143,6 +150,7 @@ ACCESS_TABLE = [
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
+MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 
@@ -156,6 +164,7 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
+    await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
 
 
