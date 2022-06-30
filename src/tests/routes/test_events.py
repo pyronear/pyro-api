@@ -36,7 +36,7 @@ EVENT_TABLE = [
         "lat": 6.0,
         "lon": 8.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
         "created_at": "2020-09-13T08:18:45.447773",
@@ -253,14 +253,14 @@ async def test_fetch_past_events(
         [None, {}, 401, "Not authenticated"],
         [
             0,
-            {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None},
+            {"lat": 0.0, "lon": 0.0, "type": "wildfire"},
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
-        [2, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning", "start_ts": None, "end_ts": None}, 422, None],
-        [2, {"lat": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 422, None],
+        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
+        [2, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
+        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning"}, 422, None],
+        [2, {"lat": 0.0, "type": "wildfire"}, 422, None],
     ],
 )
 @pytest.mark.asyncio
