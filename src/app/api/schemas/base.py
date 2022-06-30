@@ -14,7 +14,6 @@ __all__ = ["Cred", "CredHash", "Login", "Position"]
 class _CreatedAt(BaseModel):
     created_at: Optional[datetime] = None
 
-    @staticmethod
     @validator("created_at", pre=True, always=True)
     def default_ts_created(v):
         return v or datetime.utcnow()
@@ -30,7 +29,7 @@ class _GroupId(BaseModel):
 
 # Accesses
 class Login(BaseModel):
-    login: str = Field(..., min_length=3, max_length=50, example="JohnDoe")
+    login: str = Field(..., min_length=3, max_length=50, regex="^[a-zA-Z0-9_-]+$", example="JohnDoe")
 
 
 class Cred(BaseModel):

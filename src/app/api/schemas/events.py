@@ -22,7 +22,6 @@ class EventIn(_FlatLocation):
     end_ts: Optional[datetime] = None
     is_acknowledged: bool = Field(False)
 
-    @staticmethod
     @validator("start_ts", pre=True, always=True)
     def default_ts_created(v):
         return v or datetime.utcnow()

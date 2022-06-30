@@ -103,7 +103,7 @@ class Events(Base):
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))
     type = Column(Enum(EventType), default=EventType.wildfire)
-    start_ts = Column(DateTime, default=func.now(), nullable=False)
+    start_ts = Column(DateTime, default=func.now())
     end_ts = Column(DateTime, default=None, nullable=True)
     is_acknowledged = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
