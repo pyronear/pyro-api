@@ -280,8 +280,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         json_response = response.json()
-        test_response = {"id": len(EVENT_TABLE) + 1, **payload, "is_acknowledged": False}
-        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
+        test_response = {"id": len(EVENT_TABLE) + 1, **payload, "end_ts": None, "is_acknowledged": False}
+        assert {k: v for k, v in json_response.items() if k not in ("created_at", "start_ts")} == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
         assert new_event_in_db["created_at"] > utc_dt and new_event_in_db["created_at"] < datetime.utcnow()
