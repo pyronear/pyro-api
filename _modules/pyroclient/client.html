@@ -320,11 +320,11 @@
 
 <div class="viewcode-block" id="Client.update_my_location"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_my_location">[docs]</a>    <span class="k">def</span> <span class="nf">update_my_location</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">lat</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">lon</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">elevation</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">yaw</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">pitch</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">elevation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">yaw</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">pitch</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Updates the location of the device</span>
 
@@ -336,22 +336,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="k">if</span> <span class="n">lat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lat</span>
-        <span class="k">if</span> <span class="n">lon</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lon</span>
-        <span class="k">if</span> <span class="n">elevation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;elevation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">elevation</span>
-        <span class="k">if</span> <span class="n">yaw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;yaw&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">yaw</span>
-        <span class="k">if</span> <span class="n">pitch</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;pitch&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pitch</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one location information&quot;</span> <span class="o">+</span> <span class="s2">&quot;(lat, lon, elevation, yaw, pitch) must be filled&quot;</span><span class="p">)</span>
-
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span> <span class="s2">&quot;elevation&quot;</span><span class="p">:</span> <span class="n">elevation</span><span class="p">,</span> <span class="s2">&quot;yaw&quot;</span><span class="p">:</span> <span class="n">yaw</span><span class="p">,</span> <span class="s2">&quot;pitch&quot;</span><span class="p">:</span> <span class="n">pitch</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;update-my-location&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.create_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_event">[docs]</a>    <span class="k">def</span> <span class="nf">create_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
@@ -402,9 +387,9 @@
         <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">device_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">event_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">media_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Raise an alert to the API.</span>
 
@@ -416,10 +401,10 @@
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
 <span class="sd">            lon: the longitude of the alert</span>
+<span class="sd">            device_id: ID of the device that sent this alert</span>
+<span class="sd">            media_id: media ID linked to this alert</span>
 <span class="sd">            azimuth: the azimuth of the alert</span>
 <span class="sd">            event_id: the ID of the event this alerts relates to</span>
-<span class="sd">            device_id: the ID of the device that raised this alert</span>
-<span class="sd">            media_id: optional media ID linked to this alert</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the created alert</span>
@@ -436,9 +421,9 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">event_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">media_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Raise an alert to the API from a device (no need to specify device ID).</span>
 
@@ -450,9 +435,9 @@
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
 <span class="sd">            lon: the longitude of the alert</span>
+<span class="sd">            media_id: media ID linked to this alert</span>
 <span class="sd">            azimuth: the azimuth of the alert</span>
 <span class="sd">            event_id: the ID of the event this alerts relates to</span>
-<span class="sd">            media_id: optional media ID linked to this alert</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the created alert</span>
