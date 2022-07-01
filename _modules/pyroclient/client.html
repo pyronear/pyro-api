@@ -308,10 +308,9 @@
 <div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span> <span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Updates the last ping of the device</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.heartbeat()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.heartbeat()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
@@ -328,10 +327,9 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Updates the location of the device</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.update_my_location(lat=10., lon=-5.45)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.update_my_location(lat=10., lon=-5.45)</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
@@ -342,10 +340,9 @@
 <div class="viewcode-block" id="Client.create_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_event">[docs]</a>    <span class="k">def</span> <span class="nf">create_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Register an event (e.g wildfire).</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.create_event(lat=10., lon=-5.45)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_event(lat=10., lon=-5.45)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the event</span>
@@ -362,10 +359,9 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Create a site that is not supposed to generate alerts.</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.create_no_alert_site(lat=10., lon=-5.45, name=&quot;farm&quot;, country=&quot;FR&quot;, geocode=&quot;01&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_no_alert_site(lat=10., lon=-5.45, name=&quot;farm&quot;, country=&quot;FR&quot;, geocode=&quot;01&quot;)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the site</span>
@@ -393,10 +389,9 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Raise an alert to the API.</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
@@ -427,10 +422,9 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Raise an alert to the API from a device (no need to specify device ID).</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.send_alert_from_device(lat=10., lon=-5.45)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.send_alert_from_device(lat=10., lon=-5.45)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            lat: the latitude of the alert</span>
@@ -454,10 +448,9 @@
 <div class="viewcode-block" id="Client.create_media"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_media">[docs]</a>    <span class="k">def</span> <span class="nf">create_media</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Create a media entry</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.create_media(device_id=3)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_media(device_id=3)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            device_id: ID of the device that created that media</span>
@@ -471,10 +464,9 @@
 <div class="viewcode-block" id="Client.create_media_from_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_media_from_device">[docs]</a>    <span class="k">def</span> <span class="nf">create_media_from_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a media entry from a device (no need to specify device ID).</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.create_media_from_device()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_media_from_device()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the created media</span>
@@ -485,11 +477,10 @@
 <div class="viewcode-block" id="Client.upload_media"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.upload_media">[docs]</a>    <span class="k">def</span> <span class="nf">upload_media</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">media_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Upload the media content</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.upload_media(media_id=1, media_data=data)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.upload_media(media_id=1, media_data=data)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            media_id: ID of the associated media entry</span>
@@ -509,10 +500,9 @@
 <div class="viewcode-block" id="Client.get_my_devices"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_my_devices">[docs]</a>    <span class="k">def</span> <span class="nf">get_my_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get the devices who are owned by the logged user</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_my_devices()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_my_devices()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of owned devices</span>
@@ -522,10 +512,9 @@
 <div class="viewcode-block" id="Client.get_sites"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_sites">[docs]</a>    <span class="k">def</span> <span class="nf">get_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get all the existing sites in the DB</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_sites()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_sites()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of sites</span>
@@ -535,10 +524,9 @@
 <div class="viewcode-block" id="Client.get_all_alerts"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_all_alerts">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_alerts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get all the existing alerts in the DB</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_all_alerts()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_all_alerts()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of all alerts</span>
@@ -548,10 +536,9 @@
 <div class="viewcode-block" id="Client.get_ongoing_alerts"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_ongoing_alerts">[docs]</a>    <span class="k">def</span> <span class="nf">get_ongoing_alerts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get all the existing alerts in the DB that have the status &#39;start&#39;</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_ongoing_alerts()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_ongoing_alerts()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of all ongoing alerts</span>
@@ -562,10 +549,9 @@
 <div class="viewcode-block" id="Client.get_unacknowledged_events"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_unacknowledged_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_unacknowledged_events</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get all the existing events in the DB that have the field &quot;is_acknowledged&quot; set to `False`</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_unacknowledged_events()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_unacknowledged_events()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of all events that haven&#39;t been acknowledged</span>
@@ -575,10 +561,9 @@
 <div class="viewcode-block" id="Client.acknowledge_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.acknowledge_event">[docs]</a>    <span class="k">def</span> <span class="nf">acknowledge_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Switch the `is_acknowledged` field value of the event to `True`</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.acknowledge_event(event_id=1)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.acknowledge_event(event_id=1)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            event_id: ID of the associated event entry</span>
@@ -592,10 +577,9 @@
 <div class="viewcode-block" id="Client.get_site_devices"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_site_devices">[docs]</a>    <span class="k">def</span> <span class="nf">get_site_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Fetch the devices that are installed on a specific site</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_site_devices(1)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_site_devices(1)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            site_id: the identifier of the site</span>
@@ -608,10 +592,9 @@
 <div class="viewcode-block" id="Client.get_media_url"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_media_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_media_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get the image as a URL</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_media_url(1)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_media_url(1)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            media_id: the identifier of the media entry</span>
@@ -625,10 +608,9 @@
 <div class="viewcode-block" id="Client.get_media_url_and_read"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_media_url_and_read">[docs]</a>    <span class="k">def</span> <span class="nf">get_media_url_and_read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get the image as a url and read it</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_media_url_and_read(1)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_media_url_and_read(1)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            media_id: the identifier of the media entry</span>
@@ -642,10 +624,9 @@
 <div class="viewcode-block" id="Client.get_past_events"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_past_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_past_events</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get all past events</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_past_events()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_past_events()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the list of past events</span>
@@ -655,10 +636,9 @@
 <div class="viewcode-block" id="Client.get_my_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_my_device">[docs]</a>    <span class="k">def</span> <span class="nf">get_my_device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Get information about the current device</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.get_my_device()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_my_device()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the device information</span>
@@ -668,10 +648,9 @@
 <div class="viewcode-block" id="Client.update_my_hash"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_my_hash">[docs]</a>    <span class="k">def</span> <span class="nf">update_my_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">software_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Updates the software hash of the current device</span>
 
-<span class="sd">        Example::</span>
-<span class="sd">            &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">            &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">            &gt;&gt;&gt; response = api_client.update_my_hash()</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.update_my_hash()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the updated device information</span>
