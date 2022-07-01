@@ -15,7 +15,9 @@
   <a href="https://pypi.org/project/pyroclient/">
     <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
   </a>
-  <a href="https://anaconda.org/pyronear/pyroclient"> <img src="https://anaconda.org/pyronear/pyroclient/badges/version.svg" /> </a>
+  <a href="https://anaconda.org/pyronear/pyroclient">
+    <img alt="Anaconda" src="https://img.shields.io/conda/vn/pyronear/pyroclient?style=flat-square?style=flat-square&logo=Anaconda&logoColor=white&label=conda">
+  </a>
   <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
   <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
 </p>
