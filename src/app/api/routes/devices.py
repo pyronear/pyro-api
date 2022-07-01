@@ -13,19 +13,19 @@ from app.api.crud.authorizations import is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user
 from app.api.schemas import (
-    AccessType,
     AdminDeviceAuth,
     Cred,
-    DefaultPosition,
     DeviceAuth,
     DeviceCreation,
-    DeviceIn,
     DeviceOut,
+    DeviceUpdate,
     MyDeviceAuth,
+    Position,
     SoftwareHash,
     UserRead,
 )
 from app.db import accesses, devices, get_session, models, users
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -98,12 +98,12 @@ async def fetch_devices(
 
 @router.put("/{device_id}/", response_model=DeviceOut, summary="Update information about a specific device")
 async def update_device(
-    payload: DeviceIn, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
+    payload: DeviceUpdate, device_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a device_id, updates information about the specified device
     """
-    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload, only_specified=True)
+    return await crud.accesses.update_accessed_entry(devices, accesses, device_id, payload)
 
 
 @router.delete("/{device_id}/", response_model=DeviceOut, summary="Delete a specific device")
@@ -136,7 +136,7 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=[Acc
 
 @router.put("/{device_id}/location", response_model=DeviceOut, summary="Update the location of a specific device")
 async def update_device_location(
-    payload: DefaultPosition,
+    payload: Position,
     device_id: int = Path(..., gt=0),
     user: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user]),
 ):
@@ -158,7 +158,7 @@ async def update_device_location(
 
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
 async def update_my_location(
-    payload: DefaultPosition, device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
+    payload: Position, device: DeviceOut = Security(get_current_device, scopes=[AccessType.device])
 ):
     """
     Updates the location of the current device

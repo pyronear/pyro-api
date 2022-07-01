@@ -103,7 +103,7 @@ class Events(Base):
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))
     type = Column(Enum(EventType), default=EventType.wildfire)
-    start_ts = Column(DateTime, default=None, nullable=True)
+    start_ts = Column(DateTime, default=func.now())
     end_ts = Column(DateTime, default=None, nullable=True)
     is_acknowledged = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
@@ -195,9 +195,9 @@ class Alerts(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True)
-    device_id = Column(Integer, ForeignKey("devices.id"))
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
     event_id = Column(Integer, ForeignKey("events.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
-    media_id = Column(Integer, ForeignKey("media.id"), default=None)
+    media_id = Column(Integer, ForeignKey("media.id"), nullable=False)
     azimuth = Column(Float(4, asdecimal=True), default=None)
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))

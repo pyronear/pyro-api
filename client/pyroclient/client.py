@@ -116,11 +116,11 @@ class Client:
 
     def update_my_location(
         self,
-        lat: Union[float, None] = None,
-        lon: Union[float, None] = None,
-        elevation: Union[float, None] = None,
-        yaw: Union[float, None] = None,
-        pitch: Union[float, None] = None,
+        lat: float,
+        lon: float,
+        elevation: float,
+        yaw: float,
+        pitch: float,
     ) -> Response:
         """Updates the location of the device
 
@@ -132,22 +132,7 @@ class Client:
         Returns:
             HTTP response containing the update device info
         """
-        payload = {}
-
-        if lat is not None:
-            payload["lat"] = lat
-        if lon is not None:
-            payload["lon"] = lon
-        if elevation is not None:
-            payload["elevation"] = elevation
-        if yaw is not None:
-            payload["yaw"] = yaw
-        if pitch is not None:
-            payload["pitch"] = pitch
-
-        if len(payload) == 0:
-            raise ValueError("At least one location information" + "(lat, lon, elevation, yaw, pitch) must be filled")
-
+        payload = {"lat": lat, "lon": lon, "elevation": elevation, "yaw": yaw, "pitch": pitch}
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
     def create_event(self, lat: float, lon: float) -> Response:
@@ -198,9 +183,9 @@ class Client:
         lat: float,
         lon: float,
         device_id: int,
+        media_id: int,
         azimuth: Union[float, None] = None,
         event_id: Union[int, None] = None,
-        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API.
 
@@ -212,10 +197,10 @@ class Client:
         Args:
             lat: the latitude of the alert
             lon: the longitude of the alert
+            device_id: ID of the device that sent this alert
+            media_id: media ID linked to this alert
             azimuth: the azimuth of the alert
             event_id: the ID of the event this alerts relates to
-            device_id: the ID of the device that raised this alert
-            media_id: optional media ID linked to this alert
 
         Returns:
             HTTP response containing the created alert
@@ -232,9 +217,9 @@ class Client:
         self,
         lat: float,
         lon: float,
+        media_id: int,
         azimuth: Union[float, None] = None,
         event_id: Union[int, None] = None,
-        media_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
 
@@ -246,9 +231,9 @@ class Client:
         Args:
             lat: the latitude of the alert
             lon: the longitude of the alert
+            media_id: media ID linked to this alert
             azimuth: the azimuth of the alert
             event_id: the ID of the event this alerts relates to
-            media_id: optional media ID linked to this alert
 
         Returns:
             HTTP response containing the created alert

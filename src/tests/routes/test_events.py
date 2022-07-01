@@ -36,7 +36,7 @@ EVENT_TABLE = [
         "lat": 6.0,
         "lon": 8.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
         "created_at": "2020-09-13T08:18:45.447773",
@@ -90,12 +90,19 @@ DEVICE_TABLE = [
     },
 ]
 
+MEDIA_TABLE = [
+    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
+    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+]
+
 ALERT_TABLE = [
     {
         "id": 1,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
@@ -105,7 +112,7 @@ ALERT_TABLE = [
         "id": 2,
         "device_id": 1,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 2,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -115,7 +122,7 @@ ALERT_TABLE = [
         "id": 3,
         "device_id": 2,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 3,
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
@@ -125,7 +132,7 @@ ALERT_TABLE = [
         "id": 4,
         "device_id": 2,
         "event_id": 3,
-        "media_id": None,
+        "media_id": 4,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -143,6 +150,7 @@ ACCESS_TABLE = [
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
+MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 
@@ -156,6 +164,7 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
+    await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
 
 
@@ -244,14 +253,14 @@ async def test_fetch_past_events(
         [None, {}, 401, "Not authenticated"],
         [
             0,
-            {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None},
+            {"lat": 0.0, "lon": 0.0, "type": "wildfire"},
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
-        [2, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 201, None],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning", "start_ts": None, "end_ts": None}, 422, None],
-        [2, {"lat": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 422, None],
+        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
+        [2, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
+        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning"}, 422, None],
+        [2, {"lat": 0.0, "type": "wildfire"}, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -271,8 +280,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         assert response.json()["detail"] == status_details
     if response.status_code // 100 == 2:
         json_response = response.json()
-        test_response = {"id": len(EVENT_TABLE) + 1, **payload, "is_acknowledged": False}
-        assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
+        test_response = {"id": len(EVENT_TABLE) + 1, **payload, "end_ts": None, "is_acknowledged": False}
+        assert {k: v for k, v in json_response.items() if k not in ("created_at", "start_ts")} == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
         assert new_event_in_db["created_at"] > utc_dt and new_event_in_db["created_at"] < datetime.utcnow()
@@ -284,28 +293,114 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         [None, {}, 1, 401, "Not authenticated"],
         [
             0,
-            {"lat": 5.0, "lon": 10.0, "type": "wildfire", "is_acknowledged": True},
+            {
+                "lat": 5.0,
+                "lon": 10.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
             1,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"lat": 5.0, "lon": 10.0, "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
-        [2, {"lat": 5.0, "lon": 10.0, "type": "wildfire", "is_acknowledged": True}, 1, 200, None],
+        [
+            1,
+            {
+                "lat": 5.0,
+                "lon": 10.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
+            1,
+            200,
+            None,
+        ],
+        [
+            2,
+            {
+                "lat": 5.0,
+                "lon": 10.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
+            1,
+            200,
+            None,
+        ],
         [1, {}, 1, 422, None],
         [1, {"type": "wildfire"}, 1, 422, None],
         [
             1,
-            {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None},
+            {
+                "lat": 0.0,
+                "lon": 0.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
             999,
             404,
             "Table events has no entry with id=999",
         ],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning", "start_ts": None, "end_ts": None}, 1, 422, None],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": "now", "end_ts": None}, 1, 422, None],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None}, 0, 422, None],
+        [
+            1,
+            {
+                "lat": 0.0,
+                "lon": 0.0,
+                "type": "lightning",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
+            1,
+            422,
+            None,
+        ],
+        [
+            1,
+            {
+                "lat": 0.0,
+                "lon": 0.0,
+                "type": "wildfire",
+                "start_ts": "now",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
+            1,
+            422,
+            None,
+        ],
+        [
+            1,
+            {
+                "lat": 0.0,
+                "lon": 0.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
+            0,
+            422,
+            None,
+        ],
         [
             3,
-            {"lat": 0.0, "lon": 0.0, "type": "wildfire", "start_ts": None, "end_ts": None},
+            {
+                "lat": 0.0,
+                "lon": 0.0,
+                "type": "wildfire",
+                "start_ts": "2020-09-13T08:18:45.447773",
+                "end_ts": None,
+                "is_acknowledged": True,
+            },
             1,
             403,
             "This access can't update resources for group_id=1",
@@ -332,7 +427,12 @@ async def test_update_event(
         updated_event_in_db = await get_entry(test_db, db.events, event_id)
         updated_event_in_db = dict(**updated_event_in_db)
         for k, v in updated_event_in_db.items():
-            assert v == payload.get(k, EVENT_TABLE_FOR_DB[event_id - 1][k])
+            expected = payload.get(k, EVENT_TABLE_FOR_DB[event_id - 1][k])
+            if isinstance(expected, datetime):
+                expected = ts_to_string(expected)
+            if isinstance(v, datetime):
+                v = ts_to_string(v)
+            assert v == expected, print(k)
 
 
 @pytest.mark.parametrize(

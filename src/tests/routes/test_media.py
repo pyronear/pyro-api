@@ -225,44 +225,6 @@ async def test_create_media_from_device(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, media_id, status_code, status_details",
-    [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"device_id": 1, "type": "video"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"device_id": 1, "type": "video"}, 1, 200, None],
-        [2, {"device_id": 1, "type": "video"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 1, 422, None],
-        [1, {"type": "audio"}, 1, 422, None],
-        [1, {"device_id": 1, "type": "image"}, 999, 404, "Table media has no entry with id=999"],
-        [1, {"device_id": 1, "type": "audio"}, 1, 422, None],
-        [1, {"device_id": "my_device", "type": "image"}, 1, 422, None],
-        [1, {"device_id": 1, "type": "image"}, 0, 422, None],
-    ],
-)
-@pytest.mark.asyncio
-async def test_update_media(
-    test_app_asyncio, init_test_db, test_db, access_idx, payload, media_id, status_code, status_details
-):
-
-    # Create a custom access token
-    auth = None
-    if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
-
-    response = await test_app_asyncio.put(f"/media/{media_id}/", data=json.dumps(payload), headers=auth)
-    assert response.status_code == status_code
-    if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details
-
-    if response.status_code // 100 == 2:
-        updated_media = await get_entry(test_db, db.media, media_id)
-        updated_media = dict(**updated_media)
-        for k, v in updated_media.items():
-            if k != "bucket_key":
-                assert v == payload.get(k, MEDIA_TABLE_FOR_DB[media_id - 1][k])
-
-
-@pytest.mark.parametrize(
     "access_idx, media_id, status_code, status_details",
     [
         [None, 1, 401, "Not authenticated"],

@@ -66,6 +66,7 @@ ACCESS_TABLE = [
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
 
@@ -75,7 +76,7 @@ EVENT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-10-13T08:18:45.447773",
         "end_ts": "2021-03-13T10:18:45.447773",
         "is_acknowledged": True,
         "created_at": "2020-10-13T08:18:45.447773",
@@ -85,7 +86,7 @@ EVENT_TABLE = [
         "lat": 6.0,
         "lon": 8.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-10-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
         "created_at": "2020-09-13T08:18:45.447773",
@@ -107,7 +108,7 @@ ALERT_TABLE = [
         "id": 1,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
@@ -117,7 +118,7 @@ ALERT_TABLE = [
         "id": 2,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 2,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -127,7 +128,7 @@ ALERT_TABLE = [
         "id": 3,
         "device_id": 2,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 3,
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,

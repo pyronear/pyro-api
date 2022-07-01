@@ -10,12 +10,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Se
 from sqlalchemy import select
 
 from app.api import crud
-from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
+from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device
 from app.api.external import post_request
-from app.api.schemas import AccessType, AlertBase, AlertIn, AlertMediaId, AlertOut, DeviceOut
+from app.api.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 from app.db import alerts, events, get_session, media, models
+from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -110,49 +111,12 @@ async def fetch_alerts(
         return retrieved_alerts
 
 
-@router.put("/{alert_id}/", response_model=AlertOut, summary="Update information about a specific alert")
-async def update_alert(
-    payload: AlertIn,
-    alert_id: int = Path(..., gt=0),
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-):
-    """
-    Based on a alert_id, updates information about the specified alert
-    """
-    requested_group_id = await get_entity_group_id(alerts, alert_id)
-    await check_group_update(requester.id, requested_group_id)
-    return await crud.update_entry(alerts, payload, alert_id)
-
-
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
 async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
     return await crud.delete_entry(alerts, alert_id)
-
-
-@router.put("/{alert_id}/link-media", response_model=AlertOut, summary="Link an alert to a media")
-async def link_media(
-    payload: AlertMediaId,
-    alert_id: int = Path(..., gt=0),
-    current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
-):
-    """
-    Based on a alert_id, and media information as arguments, link the specified alert to a media
-    """
-    # Check that alert is linked to this device
-    existing_alert = await crud.fetch_one(alerts, {"id": alert_id, "device_id": current_device.id})
-    if existing_alert is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unable to find alert with id={alert_id} & device_id={current_device.id}.",
-        )
-
-    await check_media_existence(payload.media_id)
-    existing_alert = dict(**existing_alert)
-    existing_alert["media_id"] = payload.media_id
-    return await crud.update_entry(alerts, AlertIn(**existing_alert), alert_id)
 
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")

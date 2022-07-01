@@ -10,8 +10,9 @@ from pydantic import ValidationError
 
 import app.config as cfg
 from app.api import crud
-from app.api.schemas import AccessRead, AccessType, DeviceOut, TokenPayload, UserRead
+from app.api.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
 from app.db import accesses, devices, users
+from app.db.models import AccessType
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(

@@ -69,6 +69,8 @@ ACCESS_TABLE = [
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
 
@@ -78,7 +80,7 @@ EVENT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-10-13T08:18:45.447773",
         "end_ts": "2021-03-13T10:18:45.447773",
         "is_acknowledged": True,
         "created_at": "2020-10-13T08:18:45.447773",
@@ -88,7 +90,7 @@ EVENT_TABLE = [
         "lat": 6.0,
         "lon": 8.0,
         "type": "wildfire",
-        "start_ts": None,
+        "start_ts": "2020-10-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
         "created_at": "2020-09-13T08:18:45.447773",
@@ -110,7 +112,7 @@ ALERT_TABLE = [
         "id": 1,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
@@ -120,7 +122,7 @@ ALERT_TABLE = [
         "id": 2,
         "device_id": 1,
         "event_id": 1,
-        "media_id": None,
+        "media_id": 2,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -130,7 +132,7 @@ ALERT_TABLE = [
         "id": 3,
         "device_id": 2,
         "event_id": 2,
-        "media_id": None,
+        "media_id": 3,
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
@@ -140,7 +142,7 @@ ALERT_TABLE = [
         "id": 4,
         "device_id": 1,
         "event_id": 3,
-        "media_id": None,
+        "media_id": 4,
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
@@ -268,24 +270,30 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
     [
         [
             0,
-            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, None, 201, None],
-        [1, {"device_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 4, 201, None],
-        [1, {"device_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 3, 201, None],
+        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, None, 201, None],
+        [1, {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 4, 201, None],
+        [1, {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 3, 201, None],
         [
             2,
-            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"event_id": 2, "lat": 10.0, "lon": 8.0}, None, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "hello"}, None, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, None, 422, None],
+        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0}, None, 422, None],
+        [
+            1,
+            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "hello"},
+            None,
+            422,
+            None,
+        ],
+        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, None, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -306,7 +314,7 @@ async def test_create_alert(
 
     if response.status_code // 100 == 2:
         json_response = response.json()
-        test_response = {"id": len(ALERT_TABLE) + 1, **payload, "media_id": None}
+        test_response = {"id": len(ALERT_TABLE) + 1, **payload}
         if isinstance(expected_event_id, int):
             test_response["event_id"] = expected_event_id
         assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
@@ -321,21 +329,21 @@ async def test_create_alert(
     [
         [
             0,
-            {"event_id": 2, "lat": 10.0, "lon": 8.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
         [
             1,
-            {"event_id": 2, "lat": 10.0, "lon": 8.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [2, {"event_id": 2, "lat": 10.0, "lon": 8.0}, None, 201, None],
-        [2, {"lat": 10.0, "lon": 8.0}, 3, 201, None],
-        [3, {"lat": 10.0, "lon": 8.0}, 4, 201, None],
+        [2, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0}, None, 201, None],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 3, 201, None],
+        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
@@ -366,7 +374,6 @@ async def test_create_alert_by_device(
             "id": len(ALERT_TABLE) + 1,
             "device_id": device_id,
             **payload,
-            "media_id": None,
             "azimuth": None,
         }
         if isinstance(expected_event_id, int):
@@ -375,60 +382,6 @@ async def test_create_alert_by_device(
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
         assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
-
-
-@pytest.mark.parametrize(
-    "access_idx, payload, alert_id, status_code, status_details",
-    [
-        [0, {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0}, 1, 200, None],
-        [1, {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0}, 1, 200, None],
-        [
-            2,
-            {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0},
-            1,
-            403,
-            "Your access scope is not compatible with this operation.",
-        ],
-        [1, {}, 1, 422, None],
-        [
-            1,
-            {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0},
-            999,
-            404,
-            "Table alerts has no entry with id=999",
-        ],
-        [1, {"device_id": 2, "lat": 10.0}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0}, 0, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "north"}, 1, 422, None],
-        [1, {"device_id": 2, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, 1, 422, None],
-        [
-            4,
-            {"device_id": 1, "event_id": 1, "lat": 10.0, "lon": 8.0},
-            1,
-            403,
-            "This access can't update resources for group_id=1",
-        ],
-    ],
-)
-@pytest.mark.asyncio
-async def test_update_alert(
-    test_app_asyncio, init_test_db, test_db, access_idx, payload, alert_id, status_code, status_details
-):
-
-    # Create a custom access token
-    auth = None
-    if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
-
-    response = await test_app_asyncio.put(f"/alerts/{alert_id}/", data=json.dumps(payload), headers=auth)
-    assert response.status_code == status_code
-    if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details
-
-    if response.status_code // 100 == 2:
-        updated_alert = await get_entry(test_db, db.alerts, alert_id)
-        updated_alert = dict(**updated_alert)
-        assert all(updated_alert[k] == v for k, v in payload.items())
 
 
 @pytest.mark.parametrize(
@@ -458,33 +411,3 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
-
-
-@pytest.mark.parametrize(
-    "access_idx, payload, alert_id, status_code, status_details",
-    [
-        [0, {"media_id": 1}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"media_id": 1}, 1, 403, "Your access scope is not compatible with this operation."],
-        [2, {"media_id": 1}, 1, 200, None],
-        [2, {"media_id": 1}, 3, 404, "Unable to find alert with id=3 & device_id=1."],
-        [2, {"media_id": 100}, 1, 404, "Unable to find media with id=100."],
-    ],
-)
-@pytest.mark.asyncio
-async def test_link_media(
-    test_app_asyncio, init_test_db, test_db, access_idx, payload, alert_id, status_code, status_details
-):
-
-    # Create a custom access token
-    auth = None
-    if isinstance(access_idx, int):
-        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
-    response = await test_app_asyncio.put(f"/alerts/{alert_id}/link-media", data=json.dumps(payload), headers=auth)
-    assert response.status_code == status_code
-    if isinstance(status_details, str):
-        assert response.json()["detail"] == status_details
-
-    if response.status_code // 100 == 2:
-        updated_entry = await get_entry(test_db, db.alerts, alert_id)
-        updated_entry = dict(**updated_entry)
-        assert updated_entry["media_id"] == payload["media_id"], print(payload, updated_entry)
