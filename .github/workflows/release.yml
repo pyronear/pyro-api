@@ -53,10 +53,9 @@ jobs:
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-          VERSION: ${{ steps.release_tag.outputs.VERSION }}
+          BUILD_VERSION: ${{ steps.release_tag.outputs.VERSION }}
         run: |
-          VERSION="${VERSION:1}"
-          cd client && BUILD_VERSION=$VERSION python setup.py sdist bdist_wheel && cd ..
+          cd client && python setup.py sdist bdist_wheel && cd ..
           twine check client/dist/*
           twine upload client/dist/*
 
@@ -101,12 +100,11 @@ jobs:
       - name: Build and publish
         env:
           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
-          VERSION: ${{ steps.release_tag.outputs.VERSION }}
+          BUILD_VERSION: ${{ steps.release_tag.outputs.VERSION }}
         run: |
-          VERSION="${VERSION:1}"
-          cd client && BUILD_VERSION=$VERSION python setup.py sdist && cd ..
+          cd client && python setup.py sdist && cd ..
           mkdir client/conda-dist
-          cd client && BUILD_VERSION=$VERSION conda-build .conda/ --output-folder conda-dist && cd ..
+          cd client && conda-build .conda/ --output-folder conda-dist && cd ..
           ls -l client/conda-dist/noarch/*tar.bz2
           anaconda upload client/conda-dist/noarch/*tar.bz2 -u pyronear
 
