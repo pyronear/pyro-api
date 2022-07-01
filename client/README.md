@@ -4,7 +4,7 @@
   <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Aclient">
     <img alt="CI Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/client?label=CI&logo=github&style=flat-square">
   </a>
-  <a href="http://pyronear-api.herokuapp.com/redoc">
+  <a href="http://pyronear.org/pyro-api">
     <img alt="Documentation Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/docs?label=docs&logo=read-the-docs&style=flat-square">
   </a>
   <a href="https://github.com/ambv/black">
