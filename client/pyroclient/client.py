@@ -104,10 +104,9 @@ class Client:
     def heartbeat(self) -> Response:
         """Updates the last ping of the device
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-            >>> response = api_client.heartbeat()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+        >>> response = api_client.heartbeat()
 
         Returns:
             HTTP response containing the update device info
@@ -124,10 +123,9 @@ class Client:
     ) -> Response:
         """Updates the location of the device
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-            >>> response = api_client.update_my_location(lat=10., lon=-5.45)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+        >>> response = api_client.update_my_location(lat=10., lon=-5.45)
 
         Returns:
             HTTP response containing the update device info
@@ -138,10 +136,9 @@ class Client:
     def create_event(self, lat: float, lon: float) -> Response:
         """Register an event (e.g wildfire).
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.create_event(lat=10., lon=-5.45)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.create_event(lat=10., lon=-5.45)
 
         Args:
             lat: the latitude of the event
@@ -158,10 +155,9 @@ class Client:
     ) -> Response:
         """Create a site that is not supposed to generate alerts.
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.create_no_alert_site(lat=10., lon=-5.45, name="farm", country="FR", geocode="01")
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.create_no_alert_site(lat=10., lon=-5.45, name="farm", country="FR", geocode="01")
 
         Args:
             lat: the latitude of the site
@@ -189,10 +185,9 @@ class Client:
     ) -> Response:
         """Raise an alert to the API.
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)
 
         Args:
             lat: the latitude of the alert
@@ -223,10 +218,9 @@ class Client:
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-            >>> response = api_client.send_alert_from_device(lat=10., lon=-5.45)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+        >>> response = api_client.send_alert_from_device(lat=10., lon=-5.45)
 
         Args:
             lat: the latitude of the alert
@@ -250,10 +244,9 @@ class Client:
     def create_media(self, device_id: int) -> Response:
         """Create a media entry
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.create_media(device_id=3)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.create_media(device_id=3)
 
         Args:
             device_id: ID of the device that created that media
@@ -267,10 +260,9 @@ class Client:
     def create_media_from_device(self):
         """Create a media entry from a device (no need to specify device ID).
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-            >>> response = api_client.create_media_from_device()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+        >>> response = api_client.create_media_from_device()
 
         Returns:
             HTTP response containing the created media
@@ -281,11 +273,10 @@ class Client:
     def upload_media(self, media_id: int, media_data: bytes) -> Response:
         """Upload the media content
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-            >>> response = api_client.upload_media(media_id=1, media_data=data)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
+        >>> response = api_client.upload_media(media_id=1, media_data=data)
 
         Args:
             media_id: ID of the associated media entry
@@ -305,10 +296,9 @@ class Client:
     def get_my_devices(self) -> Response:
         """Get the devices who are owned by the logged user
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_my_devices()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_my_devices()
 
         Returns:
             HTTP response containing the list of owned devices
@@ -318,10 +308,9 @@ class Client:
     def get_sites(self) -> Response:
         """Get all the existing sites in the DB
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_sites()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_sites()
 
         Returns:
             HTTP response containing the list of sites
@@ -331,10 +320,9 @@ class Client:
     def get_all_alerts(self) -> Response:
         """Get all the existing alerts in the DB
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_all_alerts()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_all_alerts()
 
         Returns:
             HTTP response containing the list of all alerts
@@ -344,10 +332,9 @@ class Client:
     def get_ongoing_alerts(self) -> Response:
         """Get all the existing alerts in the DB that have the status 'start'
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_ongoing_alerts()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_ongoing_alerts()
 
         Returns:
             HTTP response containing the list of all ongoing alerts
@@ -358,10 +345,9 @@ class Client:
     def get_unacknowledged_events(self) -> Response:
         """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_unacknowledged_events()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_unacknowledged_events()
 
         Returns:
             HTTP response containing the list of all events that haven't been acknowledged
@@ -371,10 +357,9 @@ class Client:
     def acknowledge_event(self, event_id: int) -> Response:
         """Switch the `is_acknowledged` field value of the event to `True`
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.acknowledge_event(event_id=1)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.acknowledge_event(event_id=1)
 
         Args:
             event_id: ID of the associated event entry
@@ -388,10 +373,9 @@ class Client:
     def get_site_devices(self, site_id: int) -> Response:
         """Fetch the devices that are installed on a specific site
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_site_devices(1)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_site_devices(1)
 
         Args:
             site_id: the identifier of the site
@@ -404,10 +388,9 @@ class Client:
     def get_media_url(self, media_id: int) -> Response:
         """Get the image as a URL
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_media_url(1)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_media_url(1)
 
         Args:
             media_id: the identifier of the media entry
@@ -421,10 +404,9 @@ class Client:
     def get_media_url_and_read(self, media_id: int) -> Response:
         """Get the image as a url and read it
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_media_url_and_read(1)
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_media_url_and_read(1)
 
         Args:
             media_id: the identifier of the media entry
@@ -438,10 +420,9 @@ class Client:
     def get_past_events(self) -> Response:
         """Get all past events
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_past_events()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_past_events()
 
         Returns:
             HTTP response containing the list of past events
@@ -451,10 +432,9 @@ class Client:
     def get_my_device(self) -> Response:
         """Get information about the current device
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.get_my_device()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_my_device()
 
         Returns:
             HTTP response containing the device information
@@ -464,10 +444,9 @@ class Client:
     def update_my_hash(self, software_hash: str) -> Response:
         """Updates the software hash of the current device
 
-        Example::
-            >>> from pyroclient import client
-            >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-            >>> response = api_client.update_my_hash()
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.update_my_hash()
 
         Returns:
             HTTP response containing the updated device information
