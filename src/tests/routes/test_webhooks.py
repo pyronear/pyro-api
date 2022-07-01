@@ -40,10 +40,11 @@ async def init_test_db(monkeypatch, test_db):
     "access_idx, webhook_id, status_code, status_details",
     [
         [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "This access can't read resources from group_id=1"],
+        [0, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 1, 200, None],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
         [1, 999, 404, "Table webhooks has no entry with id=999"],
-        [0, 0, 422, None],
+        [1, 0, 422, None],
     ],
 )
 @pytest.mark.asyncio
@@ -68,7 +69,7 @@ async def test_get_webhook(test_app_asyncio, init_test_db, access_idx, webhook_i
     "access_idx, status_code, status_details, expected_webhooks",
     [
         [None, 401, "Not authenticated", []],
-        [0, 200, None, [WEBHOOK_TABLE[0]]],
+        [0, 403, "Your access scope is not compatible with this operation.", None],
         [1, 200, None, WEBHOOK_TABLE],
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
@@ -151,7 +152,7 @@ async def test_create_wedbhook(
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"callback": "create_alert", "url": "https://www.pyronear.org"}, 1, 201, None],
+        [1, {"callback": "create_alert", "url": "https://www.pyronear.org"}, 1, 200, None],
         [
             2,
             {"callback": "create_alert", "url": "https://www.pyronear.org"},
