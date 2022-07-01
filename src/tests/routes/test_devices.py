@@ -751,23 +751,6 @@ async def test_update_device_hash(
         updated_device = dict(**updated_device)
         assert updated_device["software_hash"] == payload["software_hash"]
 
-    {
-        "id": 3,
-        "login": "fifth_login",
-        "owner_id": 3,
-        "access_id": 6,
-        "specs": "v0.1",
-        "elevation": None,
-        "lat": None,
-        "lon": None,
-        "yaw": None,
-        "pitch": None,
-        "last_ping": None,
-        "angle_of_view": 68.0,
-        "software_hash": None,
-        "created_at": "2020-10-13T08:18:45.447773",
-    },
-
 
 @pytest.mark.parametrize(
     "access_idx, payload, status_code, status_details",
