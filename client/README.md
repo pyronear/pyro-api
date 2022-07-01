@@ -4,8 +4,8 @@
   <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Aclient">
     <img alt="CI Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/client?label=CI&logo=github&style=flat-square">
   </a>
-  <a href="https://pyronear.org/pyro-api">
-    <img src="https://img.shields.io/readthedocs/deezer-python.svg?logo=read-the-docs&style=flat-square" alt="Documentation Status">
+  <a href="http://pyronear-api.herokuapp.com/redoc">
+    <img alt="Documentation Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/docs?label=docs&logo=read-the-docs&style=flat-square">
   </a>
   <a href="https://github.com/ambv/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" alt="black">
@@ -85,7 +85,7 @@ api_client.update_my_location(lat=1, lon=2, pitch=3)
 
 ## License
 
-Distributed under the Apache 2.0 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See [`LICENSE`](LICENSE) for more information.
 
 
 
