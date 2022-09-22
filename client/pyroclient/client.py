@@ -91,8 +91,7 @@ class Client:
     def _retrieve_token(self, login: str, password: str) -> str:
         response = requests.post(
             self.routes["token"],
-            data=f"username={login}&password={password}",
-            headers={"Content-Type": "application/x-www-form-urlencoded", "accept": "application/json"},
+            data={"username": login, "password": password}
         )
         if response.status_code == 200:
             return response.json()["access_token"]
