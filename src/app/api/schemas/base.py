@@ -57,12 +57,12 @@ class _DefaultLocation(BaseModel):
 
 
 class _Rotation(BaseModel):
-    yaw: float = Field(..., ge=0, le=360, example=110)
+    azimuth: float = Field(..., ge=0, le=360, example=110)
     pitch: float = Field(..., ge=-90, le=90, example=-5)
 
 
 class _DefaultRotation(BaseModel):
-    yaw: Optional[float] = Field(None, ge=0, le=360, example=110)
+    azimuth: Optional[float] = Field(None, ge=0, le=360, example=110)
     pitch: Optional[float] = Field(None, ge=-90, le=90, example=-5)
 
 

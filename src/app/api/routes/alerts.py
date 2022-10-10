@@ -75,7 +75,10 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    return await create_alert(AlertIn(**payload.dict(), device_id=device.id), background_tasks)
+    payload_dict = payload.dict()
+    # If no azimuth is specified, use the one from the device
+    payload_dict["azimuth"] = payload_dict["azimuth"] or device.azimuth
+    return await create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
