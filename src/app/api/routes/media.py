@@ -156,7 +156,7 @@ async def upload_media_from_device(
         # Data integrity check
         file_meta = await bucket_service.get_file_metadata(bucket_key)
         # Corrupted file
-        if md5_hash != file_meta["ETag"].replace('"', ''):
+        if md5_hash != file_meta["ETag"].replace('"', ""):
             # Delete the corrupted upload
             await bucket_service.delete_file(bucket_key)
             # Raise the exception
