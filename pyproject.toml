@@ -61,6 +61,7 @@ module = [
     "qarnot.*",
     "sqlalchemy.*",
     "app.*",
+    "boto3.*",
 ]
 ignore_missing_imports = true
 

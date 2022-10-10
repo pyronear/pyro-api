@@ -4,11 +4,10 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
 import logging
-import os
-from typing import List, Optional
+from typing import Any, Dict, Optional
 
-from fastapi import HTTPException
 import boto3
+from fastapi import HTTPException
 
 from app import config as cfg
 

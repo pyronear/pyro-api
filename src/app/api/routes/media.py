@@ -161,7 +161,8 @@ async def upload_media_from_device(
             await bucket_service.delete_file(bucket_key)
             # Raise the exception
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Data was corrupted during upload",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Data was corrupted during upload",
             )
         # If a file was previously uploaded, delete it
         if isinstance(entry["bucket_key"], str):

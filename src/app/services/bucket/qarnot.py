@@ -8,6 +8,7 @@ import logging
 from qarnot.connection import Connection
 
 from app import config as cfg
+
 from .s3 import S3Bucket
 
 __all__ = ["QarnotBucket"]
