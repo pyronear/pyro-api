@@ -7,6 +7,7 @@ import logging
 from typing import Any, Dict, Optional
 
 import boto3
+import botocore
 from fastapi import HTTPException
 
 from app import config as cfg
@@ -20,7 +21,7 @@ logger = logging.getLogger("uvicorn.warning")
 class S3Bucket:
     """Storage bucket manipulation object on S3 storage"""
 
-    _s3: Optional[boto3.client.S3] = None
+    _s3: Optional[botocore.client.BaseClient] = None
     _media_folder: Optional[str] = None
 
     def __init__(self) -> None:
@@ -34,7 +35,7 @@ class S3Bucket:
             self._media_folder = cfg.BUCKET_MEDIA_FOLDER
 
     @property
-    def s3(self) -> boto3.client.S3:
+    def s3(self) -> botocore.client.BaseClient:
         if self._s3 is None:
             self._connect_to_storage()
         return self._s3

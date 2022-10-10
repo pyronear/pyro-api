@@ -154,9 +154,9 @@ async def upload_media_from_device(
         if not (await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file)):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        file_meta = bucket_service.get_file_metadata(bucket_key)
+        file_meta = await bucket_service.get_file_metadata(bucket_key)
         # Corrupted file
-        if md5_hash != file_meta["ETag"]:
+        if md5_hash != file_meta["ETag"].replace('"', ''):
             # Delete the corrupted upload
             await bucket_service.delete_file(bucket_key)
             # Raise the exception
