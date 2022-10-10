@@ -1,7 +1,7 @@
 version: '3.7'
 
 services:
-  pyroapi:
+  backend:
     build: src
     restart: always
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
@@ -29,13 +29,13 @@ services:
       - POSTGRES_USER=dummy_pg_user
       - POSTGRES_PASSWORD=dummy_pg_pwd
       - POSTGRES_DB=dummy_pg_db
-  nginx:
+  proxy:
     build: nginx
     ports:
       - 80:80
       - 443:443
     depends_on:
-      - pyroapi
+      - backend
 
 volumes:
   postgres_data:
