@@ -299,7 +299,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     async def mock_get_file_metadata(bucket_key):
         return {"ETag": md5_hash}
 
-    monkeypatch.setattr(bucket_service, "mock_get_file_metadata", mock_get_file_metadata)
+    monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_file_metadata)
 
     async def mock_delete_file(filename):
         return True
@@ -326,7 +326,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     async def mock_get_wrong_metadata(bucket_key):
         return {"ETag": "wronghash"}
 
-    monkeypatch.setattr(bucket_service, "mock_get_file_metadata", mock_get_wrong_metadata)
+    monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_wrong_metadata)
     response = await test_app_asyncio.post(
         f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
     )
