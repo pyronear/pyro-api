@@ -40,7 +40,7 @@ jobs:
           docker-compose -f docker-compose-dev.yml exec -T backend coverage --version
           docker-compose -f docker-compose-dev.yml exec -T backend coverage run -m pytest tests/
           docker-compose -f docker-compose-dev.yml exec -T backend coverage xml
-          docker cp pyro-api_pyroapi_1:/app/coverage.xml .
+          docker cp pyro-api_backend_1:/app/coverage.xml .
 
       - uses: actions/upload-artifact@v2
         with:
