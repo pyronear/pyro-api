@@ -321,7 +321,19 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     assert {k: v for k, v in updated_media.items() if k not in ("created_at", "bucket_key")} == response_json
     assert updated_media["bucket_key"] is not None
 
+    # Same file
+    response = await test_app_asyncio.post(
+        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+    )
+    assert response.status_code == 200, print(response.json()["detail"])
+
     # Broken test
+    # Take a different file to avoid the shortcut
+    img_content = requests.get("https://pyronear.org/pyro-vision/_static/logo.png").content
+    with open(local_tmp_path, "wb") as f:
+        f.write(img_content)
+
+    md5_hash = hash_content_file(img_content, use_md5=True)
     # Corrupted payload
     async def mock_get_wrong_metadata(bucket_key):
         return {"ETag": "wronghash"}
