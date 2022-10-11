@@ -34,7 +34,7 @@ test:
     - python
 
 about:
-  home: https://github.com/frgfm/pyro-api/client
+  home: https://github.com/pyronear/pyro-api/client
   license: Apache 2.0
   license_file: LICENSE
   summary: 'Python Client for Pyronear wildfire alert API'
