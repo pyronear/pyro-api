@@ -23,7 +23,7 @@ def _test_route_return(response, return_type, status_code=200):
 def test_client():
 
     # Wrong credentials
-    with pytest.raises(HTTPRequestException):
+    with pytest.raises(ConnectionError):
         client.Client("http://localhost:8080", "invalid_login", "invalid_pwd")
 
     # Incorrect URL port
