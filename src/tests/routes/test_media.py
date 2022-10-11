@@ -335,6 +335,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     md5_hash = hash_content_file(img_content, use_md5=True)
     # Corrupted payload
+
     async def mock_get_wrong_metadata(bucket_key):
         return {"ETag": "wronghash"}
 
