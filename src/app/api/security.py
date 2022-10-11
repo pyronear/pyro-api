@@ -36,5 +36,6 @@ async def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def hash_content_file(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
+def hash_content_file(content: bytes, use_md5: bool = False) -> str:
+    hash_fn = hashlib.md5 if use_md5 else hashlib.sha256
+    return hash_fn(content).hexdigest()

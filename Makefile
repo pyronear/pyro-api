@@ -40,7 +40,7 @@ stop-dev:
 test:
 	docker build src/. -t pyroapi:python3.8-alpine3.10
 	docker-compose -f docker-compose-dev.yml up -d --build
-	docker-compose exec -T pyroapi coverage run -m pytest tests/
+	docker-compose exec -T backend coverage run -m pytest tests/
 	docker-compose -f docker-compose-dev.yml down
 
 # Run tests for the Python client
