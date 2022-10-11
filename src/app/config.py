@@ -44,6 +44,10 @@ if SUPERUSER_LOGIN is None or SUPERUSER_PWD is None:
 QARNOT_TOKEN: str = os.getenv("QARNOT_TOKEN", "")
 BUCKET_NAME: str = os.getenv("BUCKET_NAME", "")
 BUCKET_MEDIA_FOLDER: Optional[str] = os.getenv("BUCKET_MEDIA_FOLDER")
+S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY", "")
+S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY", "")
+S3_REGION: str = os.getenv("S3_REGION", "")
+S3_ENDPOINT_URL: str = os.getenv("S3_ENDPOINT_URL", "")
 DUMMY_BUCKET_FILE = (
     "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/"
     + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"

@@ -14,6 +14,7 @@ import requests
 
 from app import db
 from app.api import crud
+from app.api.security import hash_content_file
 from app.services import bucket_service
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import update_only_datetime
@@ -293,10 +294,12 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 
-    async def mock_get_file(bucket_key):
-        return local_tmp_path
+    md5_hash = hash_content_file(img_content, use_md5=True)
 
-    monkeypatch.setattr(bucket_service, "get_file", mock_get_file)
+    async def mock_get_file_metadata(bucket_key):
+        return {"ETag": md5_hash}
+
+    monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_file_metadata)
 
     async def mock_delete_file(filename):
         return True
@@ -318,22 +321,76 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     assert {k: v for k, v in updated_media.items() if k not in ("created_at", "bucket_key")} == response_json
     assert updated_media["bucket_key"] is not None
 
-    # Broken test
-    # # 2b - Upload failing
-    # async def failing_upload(bucket_key: str, file_binary: bytes) -> bool:
-    #     return False
+    # Same file
+    response = await test_app_asyncio.post(
+        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+    )
+    assert response.status_code == 200, print(response.json()["detail"])
 
-    # monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
-    # # If you take the same image, the bucket key will be the same, so the upload won't even occur
-    # img_content = requests.get("https://pyronear.org/pyro-vision/_static/logo.png").content
-    # with open(local_tmp_path, "wb") as f:
-    #     f.write(img_content)
 
-    # async def mock_get_file(bucket_key):
-    #     return local_tmp_path
+@pytest.mark.asyncio
+async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
+    device_idx = 2
+    admin_idx = 1
+    device_id = None
+    for entry in DEVICE_TABLE:
+        if entry["access_id"] == ACCESS_TABLE[device_idx]["id"]:
+            device_id = entry["id"]
+            break
+    # Create a custom access token
+    device_auth = await pytest.get_token(ACCESS_TABLE[device_idx]["id"], ACCESS_TABLE[device_idx]["scope"].split())
+    admin_auth = await pytest.get_token(ACCESS_TABLE[admin_idx]["id"], ACCESS_TABLE[admin_idx]["scope"].split())
 
-    # monkeypatch.setattr(bucket_service, "get_file", mock_get_file)
-    # response = await test_app_asyncio.post(
-    #     f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
-    # )
-    # assert response.status_code == 500
+    # Create a media that will have an upload
+    payload = {"device_id": device_id}
+    new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
+    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
+    assert response.status_code == 201
+
+    # Sanitize bucket actions
+    async def mock_upload_file(bucket_key, file_binary):
+        return True
+
+    monkeypatch.setattr(bucket_service, "upload_file", mock_upload_file)
+
+    # Take a file
+    local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    with open(local_tmp_path, "wb") as f:
+        f.write(img_content)
+
+    md5_hash = hash_content_file(img_content, use_md5=True)
+
+    async def mock_get_file_metadata(bucket_key):
+        return {"ETag": md5_hash}
+
+    monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_file_metadata)
+
+    async def mock_delete_file(filename):
+        return True
+
+    monkeypatch.setattr(bucket_service, "delete_file", mock_delete_file)
+
+    # Switch content-type from JSON to multipart
+    del device_auth["Content-Type"]
+
+    # Upload failing
+    async def failing_upload(bucket_key: str, file_binary: bytes) -> bool:
+        return False
+
+    monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
+    response = await test_app_asyncio.post(
+        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+    )
+    assert response.status_code == 500, print(response.json()["detail"])
+
+    # Corrupted payload
+
+    async def mock_get_wrong_metadata(bucket_key):
+        return {"ETag": "wronghash"}
+
+    monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_wrong_metadata)
+    response = await test_app_asyncio.post(
+        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+    )
+    assert response.status_code == 500, print(response.json()["detail"])

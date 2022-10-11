@@ -78,7 +78,7 @@ The full project documentation is available [here](http://pyronear-api.herokuapp
 
 ## Contributing
 
-Please refer to [`CONTRIBUTING`](CONTRIBUTING) if you wish to contribute to this project.
+Please refer to [`CONTRIBUTING`](CONTRIBUTING.md) if you wish to contribute to this project.
 
 
 
