@@ -294,7 +294,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 
-    md5_hash = await hash_content_file(img_content, use_md5=True)
+    md5_hash = hash_content_file(img_content, use_md5=True)
 
     async def mock_get_file_metadata(bucket_key):
         return {"ETag": md5_hash}
