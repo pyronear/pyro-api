@@ -77,7 +77,7 @@ async def create_alert_from_device(
     """
     payload_dict = payload.dict()
     # If no azimuth is specified, use the one from the device
-    payload_dict["azimuth"] = payload_dict["azimuth"] or device.azimuth
+    payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
     return await create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
 
 
