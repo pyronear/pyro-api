@@ -118,7 +118,7 @@ class Client:
         lat: float,
         lon: float,
         elevation: float,
-        yaw: float,
+        azimuth: float,
         pitch: float,
     ) -> Response:
         """Updates the location of the device
@@ -130,7 +130,7 @@ class Client:
         Returns:
             HTTP response containing the update device info
         """
-        payload = {"lat": lat, "lon": lon, "elevation": elevation, "yaw": yaw, "pitch": pitch}
+        payload = {"lat": lat, "lon": lon, "elevation": elevation, "azimuth": azimuth, "pitch": pitch}
         return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
 
     def create_event(self, lat: float, lon: float) -> Response:
