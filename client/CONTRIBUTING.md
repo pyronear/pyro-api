@@ -1,17 +1,16 @@
-# Contributing to pyro-api
+# Contributing to pyro-client
 
 Everything you need to know to contribute efficiently to the project!
 
-Whatever the way you wish to contribute to the project, please respect the [code of conduct](CODE_OF_CONDUCT.md).
+Whatever the way you wish to contribute to the project, please respect the [code of conduct](../CODE_OF_CONDUCT.md).
 
 
 
 ## Codebase structure
 
-- [src/app](src/app) - The actual API codebase
-- [src/tests](src/tests) - The APi unit tests
-- [nginx](nginx) - NGINX configuration
-- [client](client) - The API Python client
+- [pyroclient](pyroclient) - The actual codebase of the API client
+- [tests](tests) - Unittests of the client
+- [docs](docs) - Documentation of the Python client
 
 
 ## Continuous Integration
@@ -21,10 +20,9 @@ This project uses the following integrations to ensure proper codebase maintenan
 - [Github Worklow](https://help.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow) - run jobs for package build and coverage
 - [Codacy](https://www.codacy.com/) - analyzes commits for code quality
 - [Codecov](https://codecov.io/) - reports back coverage results
-- [Heroku](https://www.heroku.com/) - where the app is deployed from the master branch
+- [Github Pages](https://pages.github.com/) - where the package documentation is hosted
 
 As a contributor, you will only have to ensure coverage of your code by adding appropriate unit testing of your code.
-
 
 
 ## Feedback
@@ -95,8 +93,3 @@ git push -u origin a-short-description
 ```
 
 Then [open a Pull Request](https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) from your fork's branch. Follow the instructions of the Pull Request template and then click on "Create a pull request".
-
-
-## Database migration
-
-See [Alembic](https://github.com/pyronear/pyro-api/blob/master/src/alembic) guide to create revision and run it locally.
