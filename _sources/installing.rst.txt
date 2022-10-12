@@ -3,7 +3,7 @@
 Installation
 ************
 
-This library requires Python 3.6 or newer.
+Python 3.6 (or higher) and [pip](https://pip.pypa.io/en/stable/)/[conda](https://docs.conda.io/en/latest/miniconda.html) are required to install the client of the alert API.
 
 Via Python Package
 ==================
