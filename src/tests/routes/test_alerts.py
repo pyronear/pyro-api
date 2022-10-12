@@ -33,7 +33,7 @@ DEVICE_TABLE = [
         "angle_of_view": 68.0,
         "software_hash": None,
         "lon": None,
-        "yaw": None,
+        "azimuth": 0.0,
         "pitch": None,
         "last_ping": None,
         "created_at": "2020-10-13T08:18:45.447773",
@@ -47,7 +47,7 @@ DEVICE_TABLE = [
         "elevation": None,
         "lat": None,
         "lon": None,
-        "yaw": None,
+        "azimuth": None,
         "pitch": None,
         "last_ping": None,
         "angle_of_view": 68.0,
@@ -115,7 +115,7 @@ ALERT_TABLE = [
         "media_id": 1,
         "lat": 0.0,
         "lon": 0.0,
-        "azimuth": None,
+        "azimuth": 0.0,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -329,21 +329,22 @@ async def test_create_alert(
     [
         [
             0,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
         [
             1,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [2, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0}, None, 201, None],
+        [2, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, None, 201, None],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 3, 201, None],
         [2, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 3, 201, None],
-        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 4, 201, None],
+        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
@@ -374,7 +375,7 @@ async def test_create_alert_by_device(
             "id": len(ALERT_TABLE) + 1,
             "device_id": device_id,
             **payload,
-            "azimuth": None,
+            "azimuth": 0.0,
         }
         if isinstance(expected_event_id, int):
             test_response["event_id"] = expected_event_id
