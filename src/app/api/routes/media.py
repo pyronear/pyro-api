@@ -132,12 +132,15 @@ async def upload_media_from_device(
     entry = await check_media_registration(media_id, current_device.id)
 
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    file_hash = hash_content_file(file.file.read())
+    sha_hash = hash_content_file(file.file.read())
+    await file.seek(0)
+    # Use MD5 to verify upload
+    md5_hash = hash_content_file(file.file.read(), use_md5=True)
     await file.seek(0)
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash
-    file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{file_hash[:8]}{extension}"
+    file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     # If files are in a subfolder of the bucket, prepend the folder path
@@ -151,23 +154,15 @@ async def upload_media_from_device(
         if not (await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file)):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        uploaded_file = await bucket_service.get_file(bucket_key=bucket_key)
-        # Failed download
-        if uploaded_file is None:
+        file_meta = await bucket_service.get_file_metadata(bucket_key)
+        # Corrupted file
+        if md5_hash != file_meta["ETag"].replace('"', ""):
+            # Delete the corrupted upload
+            await bucket_service.delete_file(bucket_key)
+            # Raise the exception
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="The data integrity check failed (unable to download media from bucket)",
-            )
-        # Remove temp local file
-        background_tasks.add_task(bucket_service.flush_tmp_file, uploaded_file)
-        # Check the hash
-        with open(uploaded_file, "rb") as f:
-            upload_hash = hash_content_file(f.read())
-        if upload_hash != file_hash:
-            # Delete corrupted file
-            await bucket_service.delete_file(bucket_key)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Data was corrupted during upload"
+                detail="Data was corrupted during upload",
             )
         # If a file was previously uploaded, delete it
         if isinstance(entry["bucket_key"], str):
