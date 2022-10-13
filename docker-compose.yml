@@ -13,7 +13,7 @@ services:
       - DEBUG=false
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SUPERUSER_LOGIN=dummy_login
-      - SUPERUSER_PWD=dummy_P@$$w0rd!
+      - SUPERUSER_PWD=dummy&P@ssw0rd!
       - QARNOT_TOKEN=${QARNOT_TOKEN}
       - BUCKET_NAME=${BUCKET_NAME}
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}

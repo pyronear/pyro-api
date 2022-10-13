@@ -38,7 +38,7 @@ def main(args):
 
     # Log as superuser
     superuser_login = getpass("Login: ") if args.creds else "dummy_login"
-    superuser_pwd = getpass() if args.creds else "dummy_P@$$w0rd!"
+    superuser_pwd = getpass() if args.creds else "dummy&P@ssw0rd!"
 
     start_ts = time.time()
     # Retrieve superuser token
