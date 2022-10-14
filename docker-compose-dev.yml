@@ -16,7 +16,7 @@ services:
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - TEST_DATABASE_URL=postgresql://dummy_pg_tuser:dummy_pg_tpwd@db_test/dummy_pg_tdb
       - SUPERUSER_LOGIN=dummy_login
-      - SUPERUSER_PWD=dummy_pwd
+      - SUPERUSER_PWD=dummy&P@ssw0rd!
       - QARNOT_TOKEN=${QARNOT_TOKEN}
       - BUCKET_NAME=${BUCKET_NAME}
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}

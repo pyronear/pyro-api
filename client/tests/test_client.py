@@ -28,9 +28,9 @@ def test_client():
 
     # Incorrect URL port
     with pytest.raises(ConnectionError):
-        client.Client("http://localhost:8003", "dummy_login", "dummy_pwd")
+        client.Client("http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!")
 
-    api_client = client.Client("http://localhost:8080", "dummy_login", "dummy_pwd")
+    api_client = client.Client("http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!")
 
     # Sites
     site_id = _test_route_return(
@@ -70,5 +70,5 @@ def test_client():
     # In case the 2nd token creation request is done in the same second, since the expiration is truncated to the
     # second, it returns the same token
     time.sleep(1)
-    api_client.refresh_token("dummy_login", "dummy_pwd")
+    api_client.refresh_token("dummy_login", "dummy&P@ssw0rd!")
     assert prev_headers != api_client.headers
