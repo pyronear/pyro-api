@@ -11,7 +11,7 @@ Whatever the way you wish to contribute to the project, please respect the [code
 - [src/app](src/app) - The actual API codebase
 - [src/tests](src/tests) - The APi unit tests
 - [nginx](nginx) - NGINX configuration
-- [client](client) - The API Python client
+- [client](client) - The API Python client (please refer to its specific [contribution guidelines](client/CONTRIBUTING.md))
 
 
 ## Continuous Integration
@@ -22,9 +22,12 @@ This project uses the following integrations to ensure proper codebase maintenan
 - [Codacy](https://www.codacy.com/) - analyzes commits for code quality
 - [Codecov](https://codecov.io/) - reports back coverage results
 - [Heroku](https://www.heroku.com/) - where the app is deployed from the master branch
+- [Sentry](https://docs.sentry.io/platforms/python/) - automatically reports errors back to us
+- [LogTail](https://betterstack.com/logtail) - manage logs
+- [PostgreSQL](https://www.postgresql.org/) - storing and interacting with the metadata database
+- [S3 storage](https://aws.amazon.com/s3/) - the file system for media storage (not necessarily AWS, but requires S3 interface)
 
 As a contributor, you will only have to ensure coverage of your code by adding appropriate unit testing of your code.
-
 
 
 ## Feedback
@@ -59,11 +62,6 @@ git remote add upstream https://github.com/pyronear/pyro-api.git
 git checkout -b a-short-description
 ```
 
-4 - You only have to set your development environment now. First uninstall any existing installation of the library with `pip uninstall pyroclient`, then:
-```shell
-pip install -e "client/.[dev]"
-```
-
 ### Developing your feature
 
 #### Commits
@@ -79,12 +77,24 @@ In order to run the same unit tests as the CI workflows, you can run unittests l
 make test
 ```
 
+This will run the full suite of core API unittests. However, if you're trying to run some specific unittests, you can do as follows:
+```shell
+make run-dev
+docker-compose exec -T backend pytest tests/routes/test_XYZ.py
+```
+
 #### Code quality
 
 To run all quality checks together
 
 ```shell
 make quality
+```
+
+The previous command won't modify anything in your codebase. Some fixes (import ordering and code formatting) can be done automatically using the following command:
+
+```shell
+make style
 ```
 
 ### Submit your modifications
