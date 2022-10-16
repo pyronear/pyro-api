@@ -32,53 +32,114 @@
 
 The building blocks of our wildfire detection & monitoring API.
 
+## Quick Tour
 
-## Getting started
+### Running/stopping the service
+
+You can run the API containers using this command:
+
+```shell
+make run
+```
+
+You can now navigate to `http://localhost:8080/docs` to interact with the API (or do it through HTTP requests) and explore the documentation.
+
+![Swagger](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/swagger_interface.png)
+
+In order to stop the service, run:
+```shell
+make stop
+```
+
+### How is the database organized
+
+The back-end core feature is to interact with the metadata tables. For the service to be useful for wildfire detection, multiple tables/object types are introduced and described as follows:
+
+#### Access-related tables
+
+- Groups: defines collections of credentials that share a similar scope (e.g. you won't be able to access the same data as the local firefighters).
+- Accesses: stores the hashed credentials and access level for users & devices.
+- Users: actual humans registered in the database.
+- Devices: the registered cameras.
+
+#### Setup-specific tables
+
+- Sites: specific locations (firefighter watchtowers, fire stations, etc.).
+- Installations: association linking a device & a site over a given timespan.
+
+#### Core detection worklow tables
+
+- Events: wildfire events.
+- Media: metadata of a picture and its storage bucket key.
+- Alerts: association of a picture, a device, and an event.
+
+#### Advanced tables
+
+- Webhooks: advanced mechanisms to introduce callbacks on specific routes.
+
+
+### What is the full detection workflow through the API
+
+The API has been designed to provide, for each wildfire detection, the alert metadata:
+- timestamp
+- the picture that was used for detection
+- the location is was taken at, and the direction it was taken from
+
+With the previously described tables, here are all the steps to send a wildfire alert:
+- Prerequisites (ask the instance administrator): register user
+- Register a device: declare your device on the API, using your new user credentials.
+- Create a media object & upload content: using the device credentials, save the picture metadata and upload the image content.
+- Create an alert: using the device credentials, send all the wildfire metadata.
+
+## Installation
 
 ### Prerequisites
 
-- Python 3.7 (or more recent)
-- [pip](https://pip.pypa.io/en/stable/)
+- [Docker](https://docs.docker.com/engine/install/)
+- [Docker compose](https://docs.docker.com/compose/)
+- [Make](https://www.gnu.org/software/make/) (optional)
 
-### Installation
+The project was designed so that everything runs with Docker orchestration (standalone virtual environment), so you won't need to install any additional libraries.
 
-You can clone and install the project dependencies as follows:
+## Configuration
 
-```shell
-git clone https://github.com/pyronear/pyro-api.git
-```
+In order to run the project, you will need to specific some information, which can be done using a `.env` file.
+This file will have to hold the following information:
+- `QARNOT_TOKEN`: this will enable the back-end access to the storage service of [Qarnot Computing](https://qarnot.com/)
+- `BUCKET_NAME`: the name of the storage bucket
+- `BUCKET_MEDIA_FOLDER`: the folder to place media content in
 
-## Usage
+Optionally, the following information can be added:
+- `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
+- `SENTRY_SERVER_NAME`: the server tag to apply to events.
 
-If you wish to deploy this project on a server hosted remotely, you might want to be using [Docker](https://www.docker.com/) containers. Beforehand, you will need to set a few environment variables either manually or by writing an `.env` file in the root directory of this project, like in the example below:
-
+So your `.env` file should look like something similar to:
 ```
 QARNOT_TOKEN=my_very_secret_token
 BUCKET_NAME=my_storage_bucket_name
 BUCKET_MEDIA_FOLDER=my/media/subfolder
-
+SENTRY_DSN='https://b4000144be7d4463a7849df8355ede77@o630060.ingest.sentry.io/4503994807353344'
+SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
 
-Those values will allow your API server to connect to our cloud service provider [Qarnot Computing](https://qarnot.com/), which is mandatory for your local server to be fully operational.
-Then you can run the API containers using this command:
+The file should be placed at the root folder of your local copy of the project.
 
-```shell
-docker-compose up -d --build
-```
+## More goodies
 
-Once completed, you will notice that you have a docker container running on the port you selected, which can process requests just like any django server.
+### Documentation
 
+The full package documentation is available [here](http://pyronear-api.herokuapp.com/docs) for detailed specifications.
 
+### Python client
 
-## Documentation
-
-The full project documentation is available [here](http://pyronear-api.herokuapp.com/redoc) for detailed specifications. The documentation was built with [ReDoc](https://redocly.github.io/redoc/).
-
+This project is a REST-API, and you can interact with the service through HTTP requests. However, if you want to ease the integration into a Python project, take a look at our [Python client](client).
 
 
 ## Contributing
 
-Please refer to [`CONTRIBUTING`](CONTRIBUTING.md) if you wish to contribute to this project.
+Any sort of contribution is greatly appreciated!
+
+You can find a short guide in [`CONTRIBUTING`](CONTRIBUTING) to help grow this project!
 
 
 
