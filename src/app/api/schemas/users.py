@@ -20,9 +20,9 @@ class UserRead(Login, _CreatedAt, _Id):
 
 class UserAuth(Login, Cred, _GroupId):
     # Authentication request
-    scope: AccessType = AccessType.user
+    scope: AccessType = Field(AccessType.user, description="access level")
 
 
 class UserCreation(Login):
     # Creation payload
-    access_id: int = Field(..., gt=0)
+    access_id: int = Field(..., gt=0, description="linked access entry")

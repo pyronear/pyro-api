@@ -13,14 +13,14 @@ __all__ = ["AlertIn", "AlertOut", "AlertBase"]
 
 
 class AlertBase(_FlatLocation):
-    media_id: int = Field(..., gt=0)
-    event_id: Optional[int] = Field(None, gt=0)
-    azimuth: Optional[float] = Field(None, ge=0, le=360)
+    media_id: int = Field(..., gt=0, description="linked media entry")
+    event_id: Optional[int] = Field(None, gt=0, description="linked event entry")
+    azimuth: Optional[float] = Field(None, ge=0, le=360, description="angle between north and direction in degrees")
 
 
 class AlertIn(AlertBase):
-    device_id: int = Field(..., gt=0)
-    azimuth: float = Field(..., ge=0, le=360)
+    device_id: int = Field(..., gt=0, description="linked device entry")
+    azimuth: float = Field(..., ge=0, le=360, description="angle between north and direction in degrees")
 
 
 class AlertOut(AlertIn, _CreatedAt, _Id):

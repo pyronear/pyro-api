@@ -17,10 +17,10 @@ __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "Acknowledge
 
 # Events
 class EventIn(_FlatLocation):
-    type: EventType = EventType.wildfire
-    start_ts: Optional[datetime] = None
-    end_ts: Optional[datetime] = None
-    is_acknowledged: bool = Field(False)
+    type: EventType = Field(EventType.wildfire, description="event type")
+    start_ts: Optional[datetime] = Field(None, description="timestamp of event start")
+    end_ts: Optional[datetime] = Field(None, description="timestamp of event end")
+    is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
     @validator("start_ts", pre=True, always=True)
     def default_ts_created(v):
@@ -32,7 +32,7 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 
 class Acknowledgement(BaseModel):
-    is_acknowledged: bool = Field(False)
+    is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
 
 class AcknowledgementOut(Acknowledgement, _Id):
@@ -40,7 +40,7 @@ class AcknowledgementOut(Acknowledgement, _Id):
 
 
 class EventUpdate(_FlatLocation):
-    type: EventType
-    start_ts: datetime
-    end_ts: Optional[datetime]
-    is_acknowledged: bool
+    type: EventType = Field(..., description="event type")
+    start_ts: datetime = Field(..., description="timestamp of event start")
+    end_ts: Optional[datetime] = Field(..., description="timestamp of event end")
+    is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")

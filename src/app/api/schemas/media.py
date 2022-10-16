@@ -15,15 +15,15 @@ __all__ = ["MediaIn", "MediaCreation", "MediaOut", "MediaUrl", "BaseMedia"]
 
 # Media
 class BaseMedia(BaseModel):
-    type: MediaType = MediaType.image
+    type: MediaType = Field(MediaType.image, description="media type")
 
 
 class MediaIn(BaseMedia):
-    device_id: int = Field(..., gt=0)
+    device_id: int = Field(..., gt=0, description="linked device entry")
 
 
 class MediaCreation(MediaIn):
-    bucket_key: str = Field(...)
+    bucket_key: str = Field(..., description="file location on the storage bucket")
 
 
 class MediaOut(MediaIn, _CreatedAt, _Id):
@@ -31,4 +31,4 @@ class MediaOut(MediaIn, _CreatedAt, _Id):
 
 
 class MediaUrl(BaseModel):
-    url: str
+    url: str = Field(..., description="temporary URL to access the media content")

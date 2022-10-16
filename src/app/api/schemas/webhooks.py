@@ -13,8 +13,8 @@ __all__ = ["WebhookIn", "WebhookOut"]
 
 # Webhooks
 class WebhookIn(BaseModel):
-    callback: str = Field(..., max_length=50)
-    url: HttpUrl
+    callback: str = Field(..., max_length=50, description="name of the route that triggers the callback")
+    url: HttpUrl = Field(..., description="URL to post to in the callback")
 
 
 class WebhookOut(WebhookIn, _Id):
