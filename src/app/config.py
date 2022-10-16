@@ -56,4 +56,4 @@ DUMMY_BUCKET_FILE = (
 
 # Sentry
 SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
-SERVER_NAME: Optional[str] = os.getenv("SERVER_NAME")
+SENTRY_SERVER_NAME: Optional[str] = os.getenv("SENTRY_SERVER_NAME")
