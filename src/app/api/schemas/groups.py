@@ -13,7 +13,7 @@ __all__ = ["GroupIn", "GroupOut"]
 
 # Groups
 class GroupIn(BaseModel):
-    name: str = Field(..., min_length=3, max_length=50, example="Fireman85")
+    name: str = Field(..., min_length=3, max_length=50, example="Fireman85", description="name of the group")
 
 
 class GroupOut(GroupIn, _Id):

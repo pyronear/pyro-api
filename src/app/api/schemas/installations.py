@@ -15,11 +15,11 @@ __all__ = ["InstallationIn", "InstallationOut", "InstallationUpdate"]
 
 # Installations
 class InstallationIn(BaseModel):
-    device_id: int = Field(..., gt=0)
-    site_id: int = Field(..., gt=0)
-    start_ts: datetime
-    end_ts: Optional[datetime] = None
-    is_trustworthy: bool = Field(True)
+    device_id: int = Field(..., gt=0, description="linked device entry")
+    site_id: int = Field(..., gt=0, description="linked site entry")
+    start_ts: datetime = Field(..., description="timestamp of event start")
+    end_ts: Optional[datetime] = Field(None, description="timestamp of event end")
+    is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
 
 class InstallationOut(InstallationIn, _CreatedAt, _Id):
@@ -27,5 +27,5 @@ class InstallationOut(InstallationIn, _CreatedAt, _Id):
 
 
 class InstallationUpdate(InstallationIn):
-    end_ts: Optional[datetime]
-    is_trustworthy: bool
+    end_ts: Optional[datetime] = Field(..., description="timestamp of event end")
+    is_trustworthy: bool = Field(..., description="whether alerts from this installation can be trusted")

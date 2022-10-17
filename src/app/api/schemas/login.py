@@ -14,10 +14,14 @@ __all__ = ["Token", "TokenPayload"]
 
 # Token
 class Token(BaseModel):
-    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E")
-    token_type: str = Field(..., example="bearer")
+    access_token: str = Field(
+        ...,
+        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E",
+        description="access token",
+    )
+    token_type: str = Field(..., example="bearer", description="type of token")
 
 
 class TokenPayload(BaseModel):
-    user_id: Optional[str] = None  # token sub
-    scopes: List[AccessType] = []
+    user_id: Optional[str] = Field(None, description="linked user entry")
+    scopes: List[AccessType] = Field([], description="scopes of the token")
