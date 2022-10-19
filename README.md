@@ -55,8 +55,6 @@ make stop
 
 The back-end core feature is to interact with the metadata tables. For the service to be useful for wildfire detection, multiple tables/object types are introduced and described as follows:
 
-![UML diagram](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/table_diagram.png)
-
 #### Access-related tables
 
 - Groups: defines collections of credentials that share a similar scope (e.g. you won't be able to access the same data as the local firefighters).
@@ -79,6 +77,7 @@ The back-end core feature is to interact with the metadata tables. For the servi
 
 - Webhooks: advanced mechanisms to introduce callbacks on specific routes.
 
+![UML diagram](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/table_diagram.png)
 
 ### What is the full detection workflow through the API
 
