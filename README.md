@@ -118,7 +118,7 @@ So your `.env` file should look like something similar to:
 QARNOT_TOKEN=my_very_secret_token
 BUCKET_NAME=my_storage_bucket_name
 BUCKET_MEDIA_FOLDER=my/media/subfolder
-SENTRY_DSN='https://b4000144be7d4463a7849df8355ede77@o630060.ingest.sentry.io/4503994807353344'
+SENTRY_DSN='https://replace.with.you.sentry.dsn/'
 SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
 
