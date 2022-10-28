@@ -140,7 +140,7 @@ This project is a REST-API, and you can interact with the service through HTTP r
 
 Any sort of contribution is greatly appreciated!
 
-You can find a short guide in [`CONTRIBUTING`](CONTRIBUTING) to help grow this project!
+You can find a short guide in [`CONTRIBUTING`](CONTRIBUTING.md) to help grow this project!
 
 
 
