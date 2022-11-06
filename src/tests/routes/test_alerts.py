@@ -424,7 +424,6 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         [1, 1, 201, True],
     ],
 )
-@pytest.mark.asyncio
 def test_websocket_endpoint(test_app, init_test_db, access_idx, access_idx_ws, status_code, ws_connected):
 
     # Create a custom access token for posting an alert (http)
