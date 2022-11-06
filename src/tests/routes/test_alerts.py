@@ -11,6 +11,7 @@ import pytest_asyncio
 
 from app import db
 from app.api import crud
+from app.api.routes.alerts import get_ws_clients
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
 
@@ -412,3 +413,28 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
+
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint(
+    test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
+):
+
+    # Create a custom access token
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
+
+    # Try to connect without credentials
+    with test_app_asyncio.websocket_connect("/alerts/ws") as ws:
+        assert not get_ws_clients()
+
+    # Connect to websocket and send alert
+    with test_app_asyncio.websocket_connect("/alerts/ws", headers=auth) as ws:
+        assert get_ws_clients() == [ws]
+        response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
+        assert response.status_code == status_code
+
+        if response.status_code // 100 == 2:
+            data = await ws.receive_json()
+            assert data == payload
