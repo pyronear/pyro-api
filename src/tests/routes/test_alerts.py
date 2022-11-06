@@ -435,9 +435,7 @@ def test_websocket_endpoint(test_app, init_test_db, access_idx, access_idx_ws, s
     # Create a custom access token for listening to new alerts (websocket)
     auth_ws = None
     if isinstance(access_idx_ws, int):
-        auth_ws = pytest.get_token(
-            ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split()
-        )
+        auth_ws = pytest.get_token(ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split())
 
     # Connect to websocket and send alert
     # N.B.: connecting to websocket requires a TestClient, does not work with AsyncClient
