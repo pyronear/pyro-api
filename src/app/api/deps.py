@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License version 2.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, WebSocket, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from jose import JWTError, jwt
 from pydantic import ValidationError
@@ -68,6 +68,24 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
         )
 
     return AccessRead(**entry)
+
+
+async def get_current_access_ws(
+    websocket: WebSocket, security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)
+) -> AccessRead:
+    """Dependency to use as fastapi.security.Security with scopes for websockets:
+    the same way get_current_access is used for HTTP routes but closes the connection if authentication fails.
+
+    >>> @app.websocket("/ws")
+    >>> async def websocket_endpoint(websocket: Websocket = Security(get_current_access, scopes=["me"])):
+    >>>     ...
+    """
+    access = None
+    try:
+        access = get_current_access(security_scopes, token)
+    except HTTPException:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    return access
 
 
 async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:

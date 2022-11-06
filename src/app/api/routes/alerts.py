@@ -6,7 +6,17 @@
 from functools import partial
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Path,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 
 from app.api import crud
@@ -19,6 +29,11 @@ from app.db import alerts, events, get_session, media, models
 from app.db.models import AccessType
 
 router = APIRouter()
+ws_clients = []
+
+
+def get_ws_clients():
+    return ws_clients
 
 
 async def check_media_existence(media_id):
@@ -32,6 +47,9 @@ async def alert_notification(payload: AlertOut):
     webhook_urls = await crud.webhooks.fetch_webhook_urls("create_alert")
     # Post the payload to each URL
     map(partial(post_request, payload=payload), webhook_urls)
+    # Send the payload to all websocket clients
+    for ws in ws_clients:
+        await ws.send_json(payload.__dict__)
 
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
@@ -147,3 +165,18 @@ async def fetch_ongoing_alerts(
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket, clients=Depends(get_ws_clients), _=Security(get_current_access, scopes=[AccessType.user])
+):
+    await websocket.accept()
+    clients.append(websocket)
+    try:
+        while True:
+            _ = await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        ws_clients.remove(websocket)
