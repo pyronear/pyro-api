@@ -80,7 +80,7 @@ async def get_current_access_ws(
     >>> async def websocket_endpoint(websocket: Websocket = Security(get_current_access, scopes=["me"])):
     >>>     ...
     """
-    access = None
+    access = {}
     try:
         access = get_current_access(security_scopes, token)
     except HTTPException:

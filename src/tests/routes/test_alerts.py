@@ -427,12 +427,12 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
 def test_websocket_endpoint(test_app, init_test_db, access_idx, access_idx_ws, status_code, ws_connected):
 
     # Create a custom access token for posting an alert (http)
-    auth = None
+    auth = {}
     if isinstance(access_idx, int):
         auth = pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     # Create a custom access token for listening to new alerts (websocket)
-    auth_ws = None
+    auth_ws = {}
     if isinstance(access_idx_ws, int):
         auth_ws = pytest.get_token(ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split())
 
