@@ -5,6 +5,7 @@
 
 import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from app.api.security import create_unlimited_access_token
@@ -41,6 +42,13 @@ async def test_app_asyncio():
     # for httpx>=20, follow_redirects=True (cf. https://github.com/encode/httpx/releases/tag/0.20.0)
     async with AsyncClient(app=app, base_url="http://test", follow_redirects=True) as ac:
         yield ac  # testing happens here
+
+
+@pytest.fixture(scope="function")
+def test_app():
+    # For sync tests such as websocket
+    with TestClient(app=app, base_url="http://test", follow_redirects=True) as tc:
+        yield tc  # testing happens here
 
 
 @pytest_asyncio.fixture(scope="function")

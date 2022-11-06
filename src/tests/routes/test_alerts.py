@@ -184,14 +184,14 @@ async def init_test_db(monkeypatch, test_db):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
+async def test_get_alert(test_app, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.get(f"/alerts/{alert_id}", headers=auth)
+    response = await test_app.get(f"/alerts/{alert_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -425,7 +425,7 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
     ],
 )
 @pytest.mark.asyncio
-async def test_websocket_endpoint(test_app_asyncio, init_test_db, access_idx, access_idx_ws, status_code, ws_connected):
+async def test_websocket_endpoint(test_app, init_test_db, access_idx, access_idx_ws, status_code, ws_connected):
 
     # Create a custom access token for posting an alert (http)
     auth = None
@@ -440,10 +440,11 @@ async def test_websocket_endpoint(test_app_asyncio, init_test_db, access_idx, ac
         )
 
     # Connect to websocket and send alert
+    # N.B.: connecting to websocket requires a TestClient, does not work with AsyncClient
     payload = {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}
-    with test_app_asyncio.websocket_connect("/alerts/ws", headers=auth_ws) as ws:
+    with test_app.websocket_connect("/alerts/ws", headers=auth_ws) as ws:
         assert bool(get_ws_clients()) == ws_connected
-        response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
+        response = await test_app.post("/alerts/", data=json.dumps(payload), headers=auth)
         assert response.status_code == status_code
 
         if ws_connected and response.status_code // 100 == 2:
