@@ -415,26 +415,37 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
 
 
+@pytest.mark.parametrize(
+    "access_idx, access_idx_ws, status_code, ws_connected",
+    [
+        [0, None, 403, False],
+        [0, 0, 403, True],
+        [1, 0, 201, True],
+        [1, 1, 201, True],
+    ],
+)
 @pytest.mark.asyncio
-async def test_websocket_endpoint(
-    test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
-):
+async def test_websocket_endpoint(test_app_asyncio, init_test_db, access_idx, access_idx_ws, status_code, ws_connected):
 
-    # Create a custom access token
+    # Create a custom access token for posting an alert (http)
     auth = None
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    # Try to connect without credentials
-    with test_app_asyncio.websocket_connect("/alerts/ws") as ws:
-        assert not get_ws_clients()
+    # Create a custom access token for listening to new alerts (websocket)
+    auth_ws = None
+    if isinstance(access_idx_ws, int):
+        auth_ws = await pytest.get_token(
+            ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split()
+        )
 
     # Connect to websocket and send alert
-    with test_app_asyncio.websocket_connect("/alerts/ws", headers=auth) as ws:
-        assert get_ws_clients() == [ws]
+    payload = {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}
+    with test_app_asyncio.websocket_connect("/alerts/ws", headers=auth_ws) as ws:
+        assert bool(get_ws_clients()) == ws_connected
         response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
         assert response.status_code == status_code
 
-        if response.status_code // 100 == 2:
+        if ws_connected and response.status_code // 100 == 2:
             data = await ws.receive_json()
             assert data == payload
