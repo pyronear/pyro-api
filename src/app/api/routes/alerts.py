@@ -22,7 +22,7 @@ from sqlalchemy import select
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device
+from app.api.deps import get_current_access, get_current_access_ws, get_current_device
 from app.api.external import post_request
 from app.api.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 from app.db import alerts, events, get_session, media, models
@@ -170,7 +170,7 @@ async def fetch_ongoing_alerts(
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    # _=Security(get_current_access_ws, scopes=[AccessType.admin, AccessType.user]),
+    _=Security(get_current_access_ws, scopes=[AccessType.admin, AccessType.user]),
 ):
     await websocket.accept()
     ws_clients.append(websocket)
