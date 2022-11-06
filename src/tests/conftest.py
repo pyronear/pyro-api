@@ -47,7 +47,7 @@ async def test_app_asyncio():
 @pytest.fixture(scope="function")
 def test_app():
     # For sync tests such as websocket
-    with TestClient(app=app, base_url="http://test", follow_redirects=True) as tc:
+    with TestClient(app=app, base_url="http://test") as tc:
         yield tc  # testing happens here
 
 
