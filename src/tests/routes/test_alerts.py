@@ -418,7 +418,7 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
 @pytest.mark.parametrize(
     "access_idx, access_idx_ws, status_code, ws_connected",
     [
-        [0, None, 403, False],
+        # [0, None, 403, False],
         [0, 0, 403, True],
         [1, 0, 201, True],
         [1, 1, 201, True],
@@ -432,16 +432,16 @@ def test_websocket_endpoint(test_app, init_test_db, access_idx, access_idx_ws, s
         auth = pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     # Create a custom access token for listening to new alerts (websocket)
-    auth_ws = {}
-    if isinstance(access_idx_ws, int):
-        auth_ws = pytest.get_token(ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split())
+    # auth_ws = {}
+    # if isinstance(access_idx_ws, int):
+    #     auth_ws = pytest.get_token(ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split())
 
     # Connect to websocket and send alert
     # N.B.: connecting to websocket requires a TestClient, does not work with AsyncClient
     payload = {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}
-    with test_app.websocket_connect("/alerts/ws", headers=auth_ws) as ws:
+    with test_app.websocket_connect("/alerts/ws") as ws:
         assert bool(get_ws_clients()) == ws_connected
-        response = test_app.post("/alerts/", data=json.dumps(payload), headers=auth)
+        response = test_app.post("/alerts", data=json.dumps(payload), headers=auth)
         assert response.status_code == status_code
 
         if ws_connected and response.status_code // 100 == 2:
