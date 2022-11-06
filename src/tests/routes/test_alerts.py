@@ -184,14 +184,14 @@ async def init_test_db(monkeypatch, test_db):
     ],
 )
 @pytest.mark.asyncio
-async def test_get_alert(test_app, init_test_db, access_idx, alert_id, status_code, status_details):
+async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
 
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app.get(f"/alerts/{alert_id}", headers=auth)
+    response = await test_app_asyncio.get(f"/alerts/{alert_id}", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
