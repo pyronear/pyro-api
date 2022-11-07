@@ -451,5 +451,6 @@ async def test_websocket_endpoint(
         assert response.status_code == status_code
 
         if ws_connected and response.status_code // 100 == 2:
-            data = ws.receive_json().pop('id')
+            data = ws.receive_json()
+            data.pop("id")
             assert data == payload
