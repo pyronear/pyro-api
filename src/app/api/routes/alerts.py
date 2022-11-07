@@ -49,7 +49,7 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
     # Send the payload to all websocket clients
     for ws in ws_clients:
-        await ws.send_json(payload.__dict__)
+        await ws.send_json(payload)
 
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
