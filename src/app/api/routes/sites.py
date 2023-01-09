@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, Path, Security, status
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access
-from app.db import get_session, sites
+from app.api.deps import get_current_access, get_db
+from app.db import sites
 from app.models import AccessType, SiteType
 from app.schemas import SiteBase, SiteIn, SiteOut, SiteUpdate
 
@@ -63,7 +63,7 @@ async def get_site(
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
 async def fetch_sites(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all sites and their information

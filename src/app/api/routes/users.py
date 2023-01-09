@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, Path, Security, status
 
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
-from app.api.deps import get_current_access, get_current_user
-from app.db import accesses, get_session, users
+from app.api.deps import get_current_access, get_current_user, get_db
+from app.db import accesses, users
 from app.models import Access, AccessType, User
 from app.schemas import Cred, Login, UserAuth, UserCreation, UserRead
 
@@ -68,7 +68,7 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
 async def fetch_users(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all users and their information

@@ -11,8 +11,8 @@ from sqlalchemy import and_
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access
-from app.db import events, get_session
+from app.api.deps import get_current_access, get_db
+from app.db import events
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut, EventUpdate
 
@@ -43,7 +43,7 @@ async def get_event(
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
 async def fetch_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all events and their information
@@ -60,7 +60,7 @@ async def fetch_events(
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
 async def fetch_past_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all events and their information
@@ -109,7 +109,7 @@ async def acknowledge_event(
 async def delete_event(
     event_id: int = Path(..., gt=0),
     _=Security(get_current_access, scopes=[AccessType.admin]),
-    session=Depends(get_session),
+    session=Depends(get_db),
 ):
     """
     Based on a event_id, deletes the specified event
@@ -121,7 +121,7 @@ async def delete_event(
     "/unacknowledged", response_model=List[EventOut], summary="Get the list of events that haven't been acknowledged"
 )
 async def fetch_unacknowledged_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of non confirmed alerts and their information

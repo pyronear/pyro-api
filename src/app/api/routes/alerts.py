@@ -12,9 +12,9 @@ from sqlalchemy import select
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device
+from app.api.deps import get_current_access, get_current_device, get_db
 from app.api.external import post_request
-from app.db import alerts, events, get_session, media
+from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 
@@ -95,7 +95,7 @@ async def get_alert(
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
 async def fetch_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all alerts and their information
@@ -120,7 +120,7 @@ async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_a
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
 async def fetch_ongoing_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of ongoing alerts and their information

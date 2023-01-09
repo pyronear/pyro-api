@@ -12,8 +12,8 @@ from sqlalchemy import and_, or_
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access
-from app.db import get_session, installations
+from app.api.deps import get_current_access, get_db
+from app.db import installations
 from app.models import AccessType, Installation, Site
 from app.schemas import InstallationIn, InstallationOut, InstallationUpdate
 
@@ -49,7 +49,7 @@ async def get_installation(
 
 @router.get("/", response_model=List[InstallationOut], summary="Get the list of all installations")
 async def fetch_installations(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all installations and their information
@@ -94,7 +94,7 @@ async def delete_installation(
 async def get_active_devices_on_site(
     site_id: int = Path(..., gt=0),
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
-    session=Depends(get_session),
+    session=Depends(get_db),
 ):
     """
     Based on a site_id, retrieves the list of all the related devices and their information

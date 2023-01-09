@@ -13,9 +13,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Pa
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_current_user
+from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
 from app.api.security import hash_content_file
-from app.db import get_session, media
+from app.db import media
 from app.models import Access, AccessType, Device, Media
 from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
 from app.services import bucket_service, resolve_bucket_key
@@ -86,7 +86,7 @@ async def get_media(
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
 async def fetch_media(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all media and their information
