@@ -56,6 +56,7 @@ warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = true
 implicit_reexport = false
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
