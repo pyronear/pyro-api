@@ -46,7 +46,7 @@ jobs:
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
         run: |
-          docker volume prune -y
+          docker volume prune -f
           docker-compose up -d --build
           docker ps
       - name: Set up Python
