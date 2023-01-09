@@ -12,9 +12,9 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut, EventUpdate
-from app.db import events, get_session, models
-from app.db.models import AccessType
+from app.db import events, get_session
+from app.models import Access, AccessType, Alert, Device, Event
+from app.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut, EventUpdate
 
 router = APIRouter()
 
@@ -52,11 +52,7 @@ async def fetch_events(
         return await crud.fetch_all(events)
     else:
         retrieved_events = (
-            session.query(models.Events)
-            .join(models.Alerts)
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(models.Accesses.group_id == requester.group_id)
+            session.query(Event).join(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id)
         )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
@@ -73,11 +69,11 @@ async def fetch_past_events(
         return await crud.fetch_all(events, exclusions={"end_ts": None})
     else:
         retrieved_events = (
-            session.query(models.Events)
-            .join(models.Alerts)
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(and_(models.Accesses.group_id == requester.group_id, models.Events.end_ts.isnot(None)))
+            session.query(Event)
+            .join(Alert)
+            .join(Device)
+            .join(Access)
+            .filter(and_(Access.group_id == requester.group_id, Event.end_ts.isnot(None)))
         )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
@@ -134,11 +130,11 @@ async def fetch_unacknowledged_events(
         return await crud.fetch_all(events, {"is_acknowledged": False})
     else:
         retrieved_events = (
-            session.query(models.Events)
-            .join(models.Alerts)
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(and_(models.Accesses.group_id == requester.group_id, models.Events.is_acknowledged.is_(False)))
+            session.query(Event)
+            .join(Alert)
+            .join(Device)
+            .join(Access)
+            .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
         )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events

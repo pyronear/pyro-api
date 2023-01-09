@@ -9,9 +9,9 @@ from fastapi import APIRouter, Path, Security
 
 from app.api import crud
 from app.api.deps import get_current_access
-from app.api.schemas.accesses import AccessRead
 from app.db import accesses
-from app.db.models import AccessType
+from app.models import AccessType
+from app.schemas.accesses import AccessRead
 
 router = APIRouter()
 

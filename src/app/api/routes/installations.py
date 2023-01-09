@@ -13,9 +13,9 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access
-from app.api.schemas import InstallationIn, InstallationOut, InstallationUpdate
-from app.db import get_session, installations, models
-from app.db.models import AccessType
+from app.db import get_session, installations
+from app.models import AccessType, Installation, Site
+from app.schemas import InstallationIn, InstallationOut, InstallationUpdate
 
 router = APIRouter()
 
@@ -58,10 +58,7 @@ async def fetch_installations(
         return await crud.fetch_all(installations)
     else:
         retrieved_installations = (
-            session.query(models.Installations)
-            .join(models.Sites)
-            .filter(models.Sites.group_id == requester.group_id)
-            .all()
+            session.query(Installation).join(Site).filter(Site.group_id == requester.group_id).all()
         )
         retrieved_installations = [x.__dict__ for x in retrieved_installations]
         return retrieved_installations
@@ -105,20 +102,20 @@ async def get_active_devices_on_site(
     current_ts = datetime.utcnow()
 
     query = (
-        session.query(models.Installations)
-        .join(models.Sites)
+        session.query(Installation)
+        .join(Site)
         .filter(
             and_(
-                models.Sites.id == site_id,
-                models.Installations.start_ts <= current_ts,
-                or_(models.Installations.end_ts.is_(None), models.Installations.end_ts >= current_ts),
+                Site.id == site_id,
+                Installation.start_ts <= current_ts,
+                or_(Installation.end_ts.is_(None), Installation.end_ts >= current_ts),
             )
         )
     )
 
     if not await is_admin_access(requester.id):
         # Restrict on the group_id of the requester
-        query = query.filter(models.Sites.group_id == requester.group_id)
+        query = query.filter(Site.group_id == requester.group_id)
 
     retrieved_device_ids = [x.__dict__["device_id"] for x in query.all()]
     return retrieved_device_ids

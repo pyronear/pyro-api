@@ -14,9 +14,9 @@ from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device
 from app.api.external import post_request
-from app.api.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
-from app.db import alerts, events, get_session, media, models
-from app.db.models import AccessType
+from app.db import alerts, events, get_session, media
+from app.models import Access, AccessType, Alert, Device, Event
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 
 router = APIRouter()
 
@@ -104,11 +104,7 @@ async def fetch_alerts(
         return await crud.fetch_all(alerts)
     else:
         retrieved_alerts = (
-            session.query(models.Alerts)
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(models.Accesses.group_id == requester.group_id)
-            .all()
+            session.query(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
         return retrieved_alerts
@@ -138,12 +134,12 @@ async def fetch_ongoing_alerts(
         return (await crud.base.database.fetch_all(query=query.limit(50)))[::-1]
     else:
         retrieved_alerts = (
-            session.query(models.Alerts)
-            .join(models.Events)
-            .filter(models.Events.end_ts.is_(None))
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(models.Accesses.group_id == requester.group_id)
+            session.query(Alert)
+            .join(Event)
+            .filter(Event.end_ts.is_(None))
+            .join(Device)
+            .join(Access)
+            .filter(Access.group_id == requester.group_id)
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts

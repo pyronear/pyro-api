@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.db.models import AccessType
+from app.models import AccessType
 
 __all__ = ["Token", "TokenPayload"]
 

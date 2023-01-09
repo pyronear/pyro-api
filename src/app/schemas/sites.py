@@ -5,7 +5,7 @@
 
 from pydantic import Field
 
-from app.db.models import SiteType
+from app.models import SiteType
 
 from .base import _CreatedAt, _FlatLocation, _Id
 

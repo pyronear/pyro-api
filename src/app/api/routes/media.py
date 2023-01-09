@@ -14,10 +14,10 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user
-from app.api.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
 from app.api.security import hash_content_file
-from app.db import get_session, media, models
-from app.db.models import AccessType
+from app.db import get_session, media
+from app.models import Access, AccessType, Device, Media
+from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
 from app.services import bucket_service, resolve_bucket_key
 
 router = APIRouter()
@@ -95,11 +95,7 @@ async def fetch_media(
         return await crud.fetch_all(media)
     else:
         retrieved_media = (
-            session.query(models.Media)
-            .join(models.Devices)
-            .join(models.Accesses)
-            .filter(models.Accesses.group_id == requester.group_id)
-            .all()
+            session.query(Media).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
         )
         retrieved_media = [x.__dict__ for x in retrieved_media]
         return retrieved_media

@@ -9,8 +9,8 @@ from fastapi import APIRouter, Path, Security, status
 
 from app.api import crud
 from app.api.deps import get_current_access
-from app.api.schemas import WebhookIn, WebhookOut
 from app.db import webhooks
+from app.schemas import WebhookIn, WebhookOut
 
 router = APIRouter()
 

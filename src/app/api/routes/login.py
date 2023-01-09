@@ -10,8 +10,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app import config as cfg
 from app.api import crud, security
-from app.api.schemas import Token
 from app.db import accesses
+from app.schemas import Token
 
 router = APIRouter()
 
