@@ -54,7 +54,7 @@ async def create_alert(
         payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
     alert = await crud.create_entry(alerts, payload)
     # Send notification
-    background_tasks.add_task(alert_notification, alert)
+    background_tasks.add_task(alert_notification, alert)  # type: ignore[arg-type]
     return alert
 
 

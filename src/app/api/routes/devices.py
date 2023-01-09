@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
@@ -40,10 +40,10 @@ async def register_device(payload: AdminDeviceAuth, _=Security(get_current_acces
     await crud.get_entry(users, payload.owner_id)
 
     if payload.group_id is None:
-        payload = payload.dict()
-        payload["group_id"] = await get_entity_group_id(users, payload["owner_id"])
-        payload = DeviceAuth(**payload)
-    return await crud.accesses.create_accessed_entry(devices, accesses, payload, DeviceCreation)
+        _payload = payload.dict()
+        _payload["group_id"] = await get_entity_group_id(users, _payload["owner_id"])
+        payload = DeviceAuth(**_payload)  # type: ignore[assignment]
+    return await crud.accesses.create_accessed_entry(devices, accesses, cast(DeviceAuth, payload), DeviceCreation)
 
 
 @router.post("/register", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Register your device")
@@ -151,9 +151,9 @@ async def update_device_location(
         )
     # Update only the location
     device.update(payload.dict())
-    device = DeviceOut(**device)
-    await crud.update_entry(devices, device, device.id)
-    return device
+    _device = DeviceOut(**device)
+    await crud.update_entry(devices, _device, _device.id)
+    return _device
 
 
 @router.put("/my-location", response_model=DeviceOut, summary="Update the location of the current device")
@@ -180,9 +180,9 @@ async def update_device_hash(
     device = await crud.get_entry(devices, device_id)
     # Update only the corresponding field
     device.update(payload.dict())
-    device = DeviceOut(**device)
-    await crud.update_entry(devices, device, device_id)
-    return device
+    _device = DeviceOut(**device)
+    await crud.update_entry(devices, _device, device_id)
+    return _device
 
 
 @router.put("/{device_id}/pwd", response_model=DeviceOut, summary="Update the password of a specific device")

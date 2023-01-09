@@ -28,7 +28,7 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
     if device_id is None:
         media_dict = await crud.get_entry(media, media_id)
     else:
-        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})  # type: ignore[assignment]
         if media_dict is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -151,7 +151,7 @@ async def upload_media_from_device(
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
-        if not (await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file)):
+        if not (await bucket_service.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
         file_meta = await bucket_service.get_file_metadata(bucket_key)

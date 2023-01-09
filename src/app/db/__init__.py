@@ -6,7 +6,7 @@ from .tables import *
 
 # Dependency
 def get_session():
-    db = SessionLocal()
+    db = SessionLocal()  # noqa: F405
     try:
         yield db
     finally:

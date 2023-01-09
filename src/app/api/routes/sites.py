@@ -41,12 +41,12 @@ async def create_noalert_site(
     or "Example Value" to get a concrete idea of arguments
     """
     await check_group_update(requester.id, payload.group_id)
-    payload = payload.dict()
+    _payload = payload.dict()
 
-    if payload["group_id"] is None:
-        payload["group_id"] = requester.group_id
+    if _payload["group_id"] is None:
+        _payload["group_id"] = requester.group_id
 
-    return await crud.create_entry(sites, SiteIn(**payload, type=SiteType.no_alert))
+    return await crud.create_entry(sites, SiteIn(**_payload, type=SiteType.no_alert))
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")

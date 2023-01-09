@@ -12,6 +12,7 @@ from sqlalchemy import Table
 from app.db import database
 
 __all__ = [
+    "database",
     "post",
     "get",
     "fetch_all",
@@ -52,7 +53,7 @@ async def fetch_all(
     return (await database.fetch_all(query=query.limit(limit)))[::-1]
 
 
-async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Mapping[str, Any]:
+async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Optional[Mapping[str, Any]]:
     query = table.select()
     for query_filter_key, query_filter_value in query_filters.items():
         query = query.where(getattr(table.c, query_filter_key) == query_filter_value)

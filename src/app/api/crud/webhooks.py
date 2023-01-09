@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, cast
 
 from sqlalchemy import select
 
@@ -15,4 +15,4 @@ async def fetch_webhook_urls(route: str) -> List[str]:
 
     query = select([webhooks.c.url]).where(webhooks.c.callback == route)
 
-    return await crud.base.database.fetch_all(query=query)
+    return cast(List[str], await crud.base.database.fetch_all(query=query))
