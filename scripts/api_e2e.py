@@ -48,7 +48,7 @@ def main(args):
     }
 
     user_login = "my_user"
-    user_pwd = "my_pwd"
+    user_pwd = "my_pwd"  # nosec B105
     user_group = 1
 
     # create a user
@@ -64,12 +64,12 @@ def main(args):
     site_id = api_request("post", f"{api_url}/sites/", superuser_auth, payload)["id"]
 
     # Update the user password
-    payload = dict(password="my_second_pwd")
+    payload = dict(password="my_second_pwd")  # nosec B106
     api_request("put", f"{api_url}/users/update-pwd", user_auth, payload)
 
     # Create a device (as admin until #79 is closed)
     device_login = "my_device"
-    device_pwd = "my_third_password"
+    device_pwd = "my_third_password"  # nosec B105
     payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi", angle_of_view=0.68)
     device_id = api_request("post", f"{api_url}/devices/register", user_auth, payload)["id"]
 
