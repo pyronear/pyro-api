@@ -8,10 +8,10 @@ Whatever the way you wish to contribute to the project, please respect the [code
 
 ## Codebase structure
 
-- [src/app](src/app) - The actual API codebase
-- [src/tests](src/tests) - The APi unit tests
-- [nginx](nginx) - NGINX configuration
-- [client](client) - The API Python client (please refer to its specific [contribution guidelines](client/CONTRIBUTING.md))
+- [`./src/app`](src/app) - The actual API codebase
+- [`./src/tests`](src/tests) - The APi unit tests
+- [`./nginx`](nginx) - NGINX configuration
+- [`./client`](client) - The API Python client (please refer to its specific [contribution guidelines](client/CONTRIBUTING.md))
 
 
 ## Continuous Integration
@@ -21,7 +21,6 @@ This project uses the following integrations to ensure proper codebase maintenan
 - [Github Worklow](https://help.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow) - run jobs for package build and coverage
 - [Codacy](https://www.codacy.com/) - analyzes commits for code quality
 - [Codecov](https://codecov.io/) - reports back coverage results
-- [Heroku](https://www.heroku.com/) - where the app is deployed from the master branch
 - [Sentry](https://docs.sentry.io/platforms/python/) - automatically reports errors back to us
 - [LogTail](https://betterstack.com/logtail) - manage logs
 - [PostgreSQL](https://www.postgresql.org/) - storing and interacting with the metadata database
@@ -34,7 +33,7 @@ As a contributor, you will only have to ensure coverage of your code by adding a
 
 ### Feature requests & bug report
 
-Whether you encountered a problem, or you have a feature suggestion, your input has value and can be used by contributors to reference it in their developments. For this purpose, we advise you to use Github [issues](https://github.com/pyronear/pyro-api/issues). 
+Whether you encountered a problem, or you have a feature suggestion, your input has value and can be used by contributors to reference it in their developments. For this purpose, we advise you to use Github [issues](https://github.com/pyronear/pyro-api/issues).
 
 First, check whether the topic wasn't already covered in an open / closed issue. If not, feel free to open a new one! When doing so, use issue templates whenever possible and provide enough information for other contributors to jump in.
 
@@ -60,6 +59,12 @@ git remote add upstream https://github.com/pyronear/pyro-api.git
 3 - You should not work on the `main` branch, so let's create a new one
 ```shell
 git checkout -b a-short-description
+```
+
+4 - You only have to set your development environment now. First uninstall any existing installation of the library with `pip uninstall pyroclient`, then:
+```shell
+pip install -e "client/.[dev]"
+pre-commit install
 ```
 
 ### Developing your feature
@@ -109,4 +114,4 @@ Then [open a Pull Request](https://docs.github.com/en/github/collaborating-with-
 
 ## Database migration
 
-See [Alembic](https://github.com/pyronear/pyro-api/blob/master/src/alembic) guide to create revision and run it locally.
+See [Alembic](https://github.com/pyronear/pyro-api/blob/main/src/alembic) guide to create revision and run it locally.
