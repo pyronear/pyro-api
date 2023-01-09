@@ -1,9 +1,9 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from sqlalchemy import and_
@@ -37,7 +37,7 @@ async def get_event(
     Based on a event_id, retrieves information about the specified event
     """
     requested_group_id = await get_entity_group_id(events, event_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(events, event_id)
 
 
@@ -93,7 +93,7 @@ async def update_event(
     Based on a event_id, updates information about the specified event
     """
     requested_group_id = await get_entity_group_id(events, event_id)
-    await check_group_update(requester.id, requested_group_id)
+    await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(events, payload, event_id)
 
 
@@ -105,7 +105,7 @@ async def acknowledge_event(
     Based on a event_id, acknowledge the specified event
     """
     requested_group_id = await get_entity_group_id(events, event_id)
-    await check_group_update(requester.id, requested_group_id)
+    await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(events, Acknowledgement(is_acknowledged=True), event_id)
 
 

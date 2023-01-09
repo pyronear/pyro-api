@@ -1,9 +1,9 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 
@@ -41,12 +41,12 @@ async def create_noalert_site(
     or "Example Value" to get a concrete idea of arguments
     """
     await check_group_update(requester.id, payload.group_id)
-    payload = payload.dict()
+    _payload = payload.dict()
 
-    if payload["group_id"] is None:
-        payload["group_id"] = requester.group_id
+    if _payload["group_id"] is None:
+        _payload["group_id"] = requester.group_id
 
-    return await crud.create_entry(sites, SiteIn(**payload, type=SiteType.no_alert))
+    return await crud.create_entry(sites, SiteIn(**_payload, type=SiteType.no_alert))
 
 
 @router.get("/{site_id}/", response_model=SiteOut, summary="Get information about a specific site")
@@ -57,7 +57,7 @@ async def get_site(
     Based on a site_id, retrieves information about the specified site
     """
     requested_group_id = await get_entity_group_id(sites, site_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(sites, site_id)
 
 
@@ -85,7 +85,7 @@ async def update_site(
     """
     # TODO: validate this one
     requested_group_id = await get_entity_group_id(sites, site_id)
-    await check_group_update(requester.id, requested_group_id)
+    await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(sites, payload, site_id)
 
 

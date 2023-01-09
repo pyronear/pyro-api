@@ -130,7 +130,7 @@ async def test_create_wedbhook(
 
     test_response = {"id": len(WEBHOOK_TABLE) + 1, **payload}
 
-    response = await test_app_asyncio.post("/webhooks/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/webhooks/", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
 
@@ -180,7 +180,7 @@ async def test_update_webhook(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/webhooks/{webhook_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/webhooks/{webhook_id}/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):

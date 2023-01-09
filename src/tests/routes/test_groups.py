@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 
 import pytest
@@ -132,7 +127,7 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db, access_idx,
 
     test_response = {"id": len(GROUP_TABLE) + 1, **payload}
 
-    response = await test_app_asyncio.post("/groups/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/groups/", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
 
@@ -167,7 +162,7 @@ async def test_update_group(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/groups/{group_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/groups/{group_id}/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):

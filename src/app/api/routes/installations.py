@@ -1,10 +1,10 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from sqlalchemy import and_, or_
@@ -43,7 +43,7 @@ async def get_installation(
     Based on a installation_id, retrieves information about the specified installation
     """
     requested_group_id = await get_entity_group_id(installations, installation_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(installations, installation_id)
 
 
@@ -79,7 +79,7 @@ async def update_installation(
     Based on a installation_id, updates information about the specified installation
     """
     requested_group_id = await get_entity_group_id(installations, installation_id)
-    await check_group_update(requester.id, requested_group_id)
+    await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(installations, payload, installation_id)
 
 

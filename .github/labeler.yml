@@ -1,0 +1,84 @@
+'ext: client/tests':
+- client/tests/*
+
+'ext: client/docs':
+- client/docs/*
+
+'ext: client':
+- client/pyroclient/*
+
+'ext: tests':
+- src/tests/*
+
+'module: database':
+- src/app/db/*
+
+'module: services':
+- src/app/services/*
+
+'route: accesses':
+- src/app/api/routes/accesses.py
+- src/app/api/crud/accesses.py
+
+'route: alerts':
+- src/app/api/routes/alerts.py
+- src/app/api/crud/alerts.py
+
+'route: devices':
+- src/app/api/routes/devices.py
+
+'route: events':
+- src/app/api/routes/events.py
+
+'route: groups':
+- src/app/api/routes/groups.py
+- src/app/api/crud/groups.py
+
+'route: installations':
+- src/app/api/routes/installations.py
+
+'route: login':
+- src/app/api/routes/login.py
+
+'route: media':
+- src/app/api/routes/media.py
+
+'route: sites':
+- src/app/api/routes/sites.py
+
+'route: users':
+- src/app/api/routes/users.py
+
+'route: webhooks':
+- src/app/api/routes/webhooks.py
+- src/app/api/crud/webhooks.py
+
+'topic: build':
+- src/app/requirements.txt
+- src/requirements-dev.txt
+- pyproject.toml
+- client/pyproject.toml
+- client/setup.py
+
+'topic: ci':
+- .github/*
+
+'topic: docker':
+- docker-compose.yml
+- docker-compose-dev.yml
+- src/Dockerfile
+- src/Dockerfile-dev
+
+'topic: documentation':
+- README.md
+- CONTRIBUTING.md
+- CODE_OF_CONDUCT.md
+- client/README.md
+- client/CONTRIBUTING.md
+
+'topic: nginx':
+- nginx/*
+
+'topic: security':
+- src/app/api/deps.py
+- src/app/api/security.py

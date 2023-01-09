@@ -1,10 +1,11 @@
-name: docs
+name: pull_requests
+
 on:
-  push:
+  pull_request:
     branches: main
 
 jobs:
-  docs-deploy:
+  docs-client:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -35,16 +36,12 @@ jobs:
       - name: Documentation sanity check
         run: test -e client/docs/build/index.html || exit
 
-      - name: Install SSH Client 🔑
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_DEPLOY_KEY }}
-
-      - name: Deploy to Github Pages
-        uses: JamesIves/github-pages-deploy-action@3.7.1
-        with:
-          BRANCH: gh-pages
-          FOLDER: 'client/docs/build'
-          COMMIT_MESSAGE: '[skip ci] Documentation updates'
-          CLEAN: true
-          SSH: true
+  triage:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/labeler@v4
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"

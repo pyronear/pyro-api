@@ -1,7 +1,7 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2021-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from typing import Optional
 
@@ -19,4 +19,4 @@ def post_request(url: str, payload: Optional[BaseModel] = None) -> requests.Resp
         HTTP response
     """
     kwargs = {} if payload is None else {"json": payload}
-    return requests.post(url, headers={"Content-Type": "application/json"}, **kwargs)
+    return requests.post(url, headers={"Content-Type": "application/json"}, **kwargs)  # type: ignore[arg-type]

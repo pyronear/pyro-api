@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 from datetime import datetime
 
@@ -272,7 +267,7 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/events/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/events/", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
 
@@ -417,7 +412,7 @@ async def test_update_event(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/events/{event_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/events/{event_id}/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):

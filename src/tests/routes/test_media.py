@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 import os
 import tempfile
@@ -167,7 +162,7 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -204,7 +199,7 @@ async def test_create_media_from_device(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/media/from-device", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/media/from-device", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -279,7 +274,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     # 1 - Create a media that will have an upload
     payload = {"device_id": device_id}
     new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=admin_auth)
     assert response.status_code == 201
 
     # 2 - Upload something
@@ -344,7 +339,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
     # Create a media that will have an upload
     payload = {"device_id": device_id}
     new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=admin_auth)
     assert response.status_code == 201
 
     # Sanitize bucket actions

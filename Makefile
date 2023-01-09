@@ -3,19 +3,22 @@ quality:
 	isort . -c
 	flake8
 	mypy
-	pydocstyle client/pyroclient
+	pydocstyle
 	black --check .
+	bandit -r . -c pyproject.toml
+	autoflake -r .
 
 # this target runs checks on all files and potentially modifies some of them
 style:
 	isort .
 	black .
+	autoflake --in-place -r .
 
 # Pin the dependencies
 lock:
 	poetry lock
 	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	poetry export -f requirements.txt --without-hashes --dev --output src/requirements-dev.txt
+	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 
 # Build the docker
 build:

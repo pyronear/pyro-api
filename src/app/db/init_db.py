@@ -1,7 +1,7 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from app import config as cfg
 from app.api import crud
@@ -10,6 +10,8 @@ from app.api.security import hash_password
 
 from .models import AccessType
 from .tables import accesses, groups, users
+
+__all__ = ["init_db"]
 
 
 async def init_db():

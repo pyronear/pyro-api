@@ -1,11 +1,11 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import magic
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
@@ -28,7 +28,7 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
     if device_id is None:
         media_dict = await crud.get_entry(media, media_id)
     else:
-        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})
+        media_dict = await crud.fetch_one(media, {"id": media_id, "device_id": device_id})  # type: ignore[assignment]
         if media_dict is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -80,7 +80,7 @@ async def get_media(
     """
     # TODO: confirm this one
     requested_group_id = await get_entity_group_id(media, media_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(media, media_id)
 
 
@@ -151,7 +151,7 @@ async def upload_media_from_device(
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
-        if not (await bucket_service.upload_file(bucket_key=bucket_key, file_binary=file.file)):
+        if not (await bucket_service.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
         file_meta = await bucket_service.get_file_metadata(bucket_key)
@@ -179,7 +179,7 @@ async def get_media_url(
 ):
     """Resolve the temporary media image URL"""
     requested_group_id = await get_entity_group_id(media, media_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
 
     # Check in DB
     media_instance = await check_media_registration(media_id)

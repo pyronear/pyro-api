@@ -1,7 +1,7 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2021-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import enum
 
@@ -10,6 +10,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from .session import Base
+
+__all__ = ["AccessType", "EventType", "MediaType", "SiteType"]
 
 
 class Users(Base):

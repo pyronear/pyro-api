@@ -1,10 +1,10 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from functools import partial
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
 from sqlalchemy import select
@@ -54,7 +54,7 @@ async def create_alert(
         payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
     alert = await crud.create_entry(alerts, payload)
     # Send notification
-    background_tasks.add_task(alert_notification, alert)
+    background_tasks.add_task(alert_notification, alert)  # type: ignore[arg-type]
     return alert
 
 
@@ -89,7 +89,7 @@ async def get_alert(
     Based on a alert_id, retrieves information about the specified alert
     """
     requested_group_id = await get_entity_group_id(alerts, alert_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(alerts, alert_id)
 
 

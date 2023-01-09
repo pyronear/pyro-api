@@ -2,7 +2,7 @@ name: scripts
 
 on:
   workflow_run:
-    workflows: ["api"]
+    workflows: ["tests"]
     types: [completed]
 
 jobs:
