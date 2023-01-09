@@ -65,7 +65,7 @@ jobs:
       - name: Run client unittests
         run: |
           coverage --version
-          sleep 10
+          sleep 15
           cd client && coverage run -m pytest tests/ && coverage xml -o coverage-client.xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
