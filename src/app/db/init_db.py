@@ -11,6 +11,8 @@ from app.api.security import hash_password
 from .models import AccessType
 from .tables import accesses, groups, users
 
+__all__ = ["init_db"]
+
 
 async def init_db():
 

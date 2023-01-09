@@ -30,7 +30,7 @@ async def post(payload: BaseModel, table: Table) -> int:
     return await database.execute(query=query)
 
 
-async def get(entry_id: int, table: Table) -> Mapping[str, Any]:
+async def get(entry_id: int, table: Table) -> Optional[Mapping[str, Any]]:
     query = table.select().where(entry_id == table.c.id)
     return await database.fetch_one(query=query)
 

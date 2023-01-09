@@ -24,7 +24,7 @@ from app.api.schemas import (
 
 
 async def get_access_group_id(table: Table, access_id: int) -> int:
-    return await base.get_entry(table, access_id)["group_id"]
+    return (await base.get_entry(table, access_id))["group_id"]
 
 
 async def check_login_existence(table: Table, login: str):

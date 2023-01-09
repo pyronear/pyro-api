@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from functools import partial
-from typing import List
+from typing import List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
 from sqlalchemy import select
@@ -89,7 +89,7 @@ async def get_alert(
     Based on a alert_id, retrieves information about the specified alert
     """
     requested_group_id = await get_entity_group_id(alerts, alert_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(alerts, alert_id)
 
 

@@ -5,7 +5,7 @@
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import magic
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
@@ -80,7 +80,7 @@ async def get_media(
     """
     # TODO: confirm this one
     requested_group_id = await get_entity_group_id(media, media_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(media, media_id)
 
 
@@ -179,7 +179,7 @@ async def get_media_url(
 ):
     """Resolve the temporary media image URL"""
     requested_group_id = await get_entity_group_id(media, media_id)
-    await check_group_read(requester.id, requested_group_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
 
     # Check in DB
     media_instance = await check_media_registration(media_id)
