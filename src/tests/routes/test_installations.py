@@ -213,7 +213,7 @@ async def test_create_installation(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/installations/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/installations/", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
@@ -349,7 +349,9 @@ async def test_update_installation(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/installations/{installation_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(
+        f"/installations/{installation_id}/", content=json.dumps(payload), headers=auth
+    )
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details

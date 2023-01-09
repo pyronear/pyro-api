@@ -302,7 +302,7 @@ async def test_create_alert(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/alerts/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/alerts/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -353,7 +353,7 @@ async def test_create_alert_by_device(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/alerts/from-device", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/alerts/from-device", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
