@@ -22,6 +22,8 @@ jobs:
         run: docker-compose up -d --build
       - name: Docker sanity check
         run: sleep 20 && nc -vz localhost 8080
+      - name: Debug
+        run: docker-compose logs
       - name: Ping server
         run: curl http://localhost:8080/docs
 
