@@ -36,13 +36,6 @@ services:
       - POSTGRES_USER=dummy_pg_user
       - POSTGRES_PASSWORD=dummy_pg_pwd
       - POSTGRES_DB=dummy_pg_db
-  proxy:
-    build: nginx
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:
