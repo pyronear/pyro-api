@@ -21,7 +21,7 @@ jobs:
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
         run: docker-compose up -d --build
       - name: Docker sanity check
-        run: sleep 10 && nc -vz localhost 8080
+        run: sleep 20 && nc -vz localhost 8080
       - name: Ping server
         run: curl http://localhost:8080/docs
 
