@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 from fastapi import HTTPException
 
 from app import db
@@ -165,7 +166,7 @@ ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
     await fill_table(test_db, db.groups, GROUP_TABLE)
