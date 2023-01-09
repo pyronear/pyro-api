@@ -21,8 +21,8 @@ class User(Base):
     access_id = Column(Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True)
     created_at = Column(DateTime, default=func.now())
 
-    access = relationship("Accesses", uselist=False, back_populates="user")
-    device = relationship("Devices", uselist=False, back_populates="owner")
+    access = relationship("Access", uselist=False, back_populates="user")
+    device = relationship("Device", uselist=False, back_populates="owner")
 
     def __repr__(self):
         return f"<User(login='{self.login}', created_at='{self.created_at}'>"

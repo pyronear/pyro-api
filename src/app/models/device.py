@@ -31,11 +31,11 @@ class Device(Base):
     last_ping = Column(DateTime, default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
-    access = relationship("Accesses", uselist=False, back_populates="device")
-    owner = relationship("Users", uselist=False, back_populates="device")
+    access = relationship("Access", uselist=False, back_populates="device")
+    owner = relationship("User", uselist=False, back_populates="device")
     media = relationship("Media", back_populates="device")
-    alerts = relationship("Alerts", back_populates="device")
-    installation = relationship("Installations", back_populates="device")
+    alerts = relationship("Alert", back_populates="device")
+    installation = relationship("Installation", back_populates="device")
 
     def __repr__(self):
         return (

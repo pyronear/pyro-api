@@ -33,8 +33,8 @@ class Site(Base):
     type = Column(Enum(SiteType), default=SiteType.tower)
     created_at = Column(DateTime, default=func.now())
 
-    installations = relationship("Installations", back_populates="site")
-    group = relationship("Groups", uselist=False, back_populates="sites")
+    installations = relationship("Installation", back_populates="site")
+    group = relationship("Group", uselist=False, back_populates="sites")
 
     def __repr__(self):
         return (

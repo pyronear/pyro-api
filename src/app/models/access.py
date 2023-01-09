@@ -28,9 +28,9 @@ class Access(Base):
     scope = Column(Enum(AccessType), default=AccessType.user, nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
 
-    user = relationship("Users", uselist=False, back_populates="access")
-    device = relationship("Devices", uselist=False, back_populates="access")
-    group = relationship("Groups", uselist=False, back_populates="accesses")
+    user = relationship("User", uselist=False, back_populates="access")
+    device = relationship("Device", uselist=False, back_populates="access")
+    group = relationship("Group", uselist=False, back_populates="accesses")
 
     def __repr__(self):
         return f"<Access(login='{self.login}', scope='{self.scope}', group_id='{self.group_id}')>"

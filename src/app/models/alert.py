@@ -25,8 +25,8 @@ class Alert(Base):
     lon = Column(Float(4, asdecimal=True))
     created_at = Column(DateTime, default=func.now())
 
-    device = relationship("Devices", back_populates="alerts")
-    event = relationship("Events", back_populates="alerts")
+    device = relationship("Device", back_populates="alerts")
+    event = relationship("Event", back_populates="alerts")
     media = relationship("Media", back_populates="alerts")
 
     def __repr__(self):

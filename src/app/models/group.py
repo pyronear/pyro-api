@@ -18,8 +18,8 @@ class Group(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True)
 
-    accesses = relationship("Accesses", back_populates="group")
-    sites = relationship("Sites", back_populates="group")
+    accesses = relationship("Access", back_populates="group")
+    sites = relationship("Site", back_populates="group")
 
     def __repr__(self):
         return f"<Group(name='{self.name}')>"

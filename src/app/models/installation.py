@@ -24,8 +24,8 @@ class Installation(Base):
     is_trustworthy = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
 
-    device = relationship("Devices", back_populates="installation")
-    site = relationship("Sites", back_populates="installations")
+    device = relationship("Device", back_populates="installation")
+    site = relationship("Site", back_populates="installations")
 
     def __repr__(self):
         return (

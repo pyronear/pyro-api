@@ -30,7 +30,7 @@ class Event(Base):
     is_acknowledged = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
 
-    alerts = relationship("Alerts", back_populates="event")
+    alerts = relationship("Alert", back_populates="event")
 
     def __repr__(self):
         return (
