@@ -10,7 +10,7 @@ from sqlalchemy import and_
 
 import app.config as cfg
 from app.api import crud
-from app.api.routes.events import create_event
+from app.api.endpoints.events import create_event
 from app.db import alerts
 from app.schemas import AlertIn, AlertOut, EventIn
 

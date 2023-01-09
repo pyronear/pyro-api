@@ -12,7 +12,7 @@ from fastapi.openapi.utils import get_openapi
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from app import config as cfg
-from app.api.routes import (
+from app.api.endpoints import (
     accesses,
     alerts,
     devices,
