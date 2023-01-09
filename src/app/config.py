@@ -26,7 +26,7 @@ ALERT_RELAXATION_SECONDS: int = 5 * 60
 SECRET_KEY: str = secrets.token_urlsafe(32)
 if DEBUG:
     # To keep the same Auth at every app loading in debug mode and not having to redo the auth.
-    debug_secret_key = "000000000000000000000000000000000000"
+    debug_secret_key = "000000000000000000000000000000000000"  # nosec B105
     SECRET_KEY = debug_secret_key
 
 ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
