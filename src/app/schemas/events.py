@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, validator
 
-from app.db.models import EventType
+from app.models import EventType
 
 from .base import _CreatedAt, _FlatLocation, _Id
 

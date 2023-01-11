@@ -4,8 +4,9 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
-from .models import Accesses, Alerts, Devices, Events, Groups, Installations, Media, Sites, Users, Webhooks
-from .session import Base
+from app.models import Access, Alert, Device, Event, Group, Installation, Media, Site, User, Webhook
+
+from .base_class import Base
 
 __all__ = [
     "metadata",
@@ -21,15 +22,15 @@ __all__ = [
     "webhooks",
 ]
 
-users = Users.__table__
-accesses = Accesses.__table__
-groups = Groups.__table__
-sites = Sites.__table__
-events = Events.__table__
-devices = Devices.__table__
+users = User.__table__
+accesses = Access.__table__
+groups = Group.__table__
+sites = Site.__table__
+events = Event.__table__
+devices = Device.__table__
 media = Media.__table__
-installations = Installations.__table__
-alerts = Alerts.__table__
-webhooks = Webhooks.__table__
+installations = Installation.__table__
+alerts = Alert.__table__
+webhooks = Webhook.__table__
 
 metadata = Base.metadata

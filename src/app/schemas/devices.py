@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.db.models import AccessType
+from app.models import AccessType
 
 from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id
 

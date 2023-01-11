@@ -2,10 +2,10 @@
 
 <p align="center">
   <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Abuilds">
-    <img alt="CI Status" src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/builds?label=CI&logo=github&style=flat-square">
+    <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/pyronear/pyro-api/builds.yml?branch=main&label=CI&logo=github&style=flat-square">
   </a>
   <a href="http://pyronear-api.herokuapp.com/redoc">
-    <img src="https://img.shields.io/github/workflow/status/pyronear/pyro-api/builds?label=docs&logo=read-the-docs&style=flat-square" alt="Documentation Status">
+    <img src="https://img.shields.io/github/actions/workflow/status/pyronear/pyro-api/builds.yml?brain=main&label=docs&logo=read-the-docs&style=flat-square" alt="Documentation Status">
   </a>
   <a href="https://codecov.io/gh/pyronear/pyro-api">
     <img src="https://img.shields.io/codecov/c/github/pyronear/pyro-api.svg?logo=codecov&style=flat-square" alt="Test coverage percentage">

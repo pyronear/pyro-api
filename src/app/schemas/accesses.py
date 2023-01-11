@@ -5,7 +5,7 @@
 
 from pydantic import Field
 
-from app.db.models import AccessType
+from app.models import AccessType
 
 from .base import CredHash, Login, _GroupId, _Id
 

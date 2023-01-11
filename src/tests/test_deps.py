@@ -5,7 +5,7 @@ from fastapi.security import SecurityScopes
 
 from app import db
 from app.api import crud, deps, security
-from app.api.schemas import AccessRead, DeviceOut, UserRead
+from app.schemas import AccessRead, DeviceOut, UserRead
 from tests.db_utils import fill_table
 from tests.utils import update_only_datetime
 

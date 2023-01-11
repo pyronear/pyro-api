@@ -11,8 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_current_user
-from app.api.schemas import (
+from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
+from app.db import accesses, devices, users
+from app.models import Access, AccessType, Device
+from app.schemas import (
     AdminDeviceAuth,
     Cred,
     DeviceAuth,
@@ -24,8 +26,6 @@ from app.api.schemas import (
     SoftwareHash,
     UserRead,
 )
-from app.db import accesses, devices, get_session, models, users
-from app.db.models import AccessType
 
 router = APIRouter()
 
@@ -77,7 +77,7 @@ async def get_my_device(me: DeviceOut = Security(get_current_device, scopes=["de
 
 @router.get("/", response_model=List[DeviceOut], summary="Get the list of all devices")
 async def fetch_devices(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_session)
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
     Retrieves the list of all devices and their information
@@ -85,12 +85,7 @@ async def fetch_devices(
     if await is_admin_access(requester.id):
         return await crud.fetch_all(devices)
     else:
-        retrieved_devices = (
-            session.query(models.Devices)
-            .join(models.Accesses)
-            .filter(models.Accesses.group_id == requester.group_id)
-            .all()
-        )
+        retrieved_devices = session.query(Device).join(Access).filter(Access.group_id == requester.group_id).all()
         retrieved_devices = [x.__dict__ for x in retrieved_devices]
 
         return retrieved_devices

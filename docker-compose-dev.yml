@@ -27,13 +27,6 @@ services:
       - S3_REGION=${S3_REGION}
     depends_on:
       - db
-  proxy:
-    build: nginx
-    ports:
-      - 80:80
-      - 443:443
-    depends_on:
-      - backend
   db:
     image: postgres:12.1-alpine
     volumes:

@@ -6,7 +6,7 @@
 
 from pydantic import Field
 
-from app.db.models import AccessType
+from app.models import AccessType
 
 from .base import Cred, Login, _CreatedAt, _GroupId, _Id
 

@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 
 from app import db
-from app.api import crud, security
+from app.api import crud, deps, security
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, update_only_datetime
 
@@ -32,7 +32,7 @@ USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 @pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(deps, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)

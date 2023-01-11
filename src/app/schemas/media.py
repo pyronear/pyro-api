@@ -6,7 +6,7 @@
 
 from pydantic import BaseModel, Field
 
-from app.db.models import MediaType
+from app.models import MediaType
 
 from .base import _CreatedAt, _Id
 

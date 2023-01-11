@@ -10,9 +10,10 @@ from pydantic import ValidationError
 
 import app.config as cfg
 from app.api import crud
-from app.api.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
 from app.db import accesses, devices, users
-from app.db.models import AccessType
+from app.db.session import SessionLocal
+from app.models import AccessType
+from app.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
@@ -23,6 +24,14 @@ oauth2_scheme = OAuth2PasswordBearer(
         AccessType.device: "Send heartbeat signal and media to the API for only one device",
     },
 )
+
+
+def get_db():
+    db = SessionLocal()  # noqa: F405
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)) -> AccessRead:

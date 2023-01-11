@@ -10,7 +10,7 @@ from sqlalchemy import Table
 
 from app.api import security
 from app.api.crud import base
-from app.api.schemas import (
+from app.schemas import (
     AccessCreation,
     AccessRead,
     Cred,
