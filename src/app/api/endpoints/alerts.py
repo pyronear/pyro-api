@@ -78,6 +78,11 @@ async def create_alert_from_device(
     payload_dict = payload.dict()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
+    if payload_dict["azimuth"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please specify a value for 'azimuth' in the payload, since this device's azimuth is not set.",
+        )
     return await create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
 
 
