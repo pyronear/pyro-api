@@ -24,20 +24,16 @@ ROUTES: Dict[str, str] = {
     #################
     # Device-logged
     "heartbeat": "/devices/heartbeat",
-    "update-my-location": "/devices/update-my-location",
-    "get-my-device": "/devices/me",
-    "update-my-hash": "/devices/hash",
+    "get-self-device": "/devices/me",
     # User-logged
-    "get-my-devices": "/devices/my-devices",
+    "get-user-devices": "/devices/my-devices",
     #################
     # SITES
     #################
     "get-sites": "/sites",
-    "no-alert-site": "/sites/no-alert",
     #################
     # EVENTS
     #################
-    "create-event": "/events",
     "get-unacknowledged-events": "/events/unacknowledged",
     "get-past-events": "/events/past",
     "acknowledge-event": "/events/{event_id}/acknowledge",
@@ -48,14 +44,12 @@ ROUTES: Dict[str, str] = {
     #################
     # MEDIA
     #################
-    "create-media": "/media",
     "create-media-from-device": "/media/from-device",
     "upload-media": "/media/{media_id}/upload",
     "get-media-url": "/media/{media_id}/url",
     #################
     # ALERTS
     #################
-    "send-alert": "/alerts",
     "send-alert-from-device": "/alerts/from-device",
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
@@ -188,7 +182,7 @@ class Client:
         Returns:
             HTTP response containing the list of owned devices
         """
-        return requests.get(self.routes["get-my-devices"], headers=self.headers)
+        return requests.get(self.routes["get-user-devices"], headers=self.headers)
 
     def get_sites(self) -> Response:
         """Get all the existing sites in the DB
@@ -305,9 +299,9 @@ class Client:
 
         >>> from pyroclient import client
         >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_my_device()
+        >>> response = api_client.get_self_device()
 
         Returns:
             HTTP response containing the device information
         """
-        return requests.get(self.routes["get-my-device"], headers=self.headers)
+        return requests.get(self.routes["get-self-device"], headers=self.headers)
