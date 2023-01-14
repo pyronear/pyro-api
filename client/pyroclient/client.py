@@ -109,101 +109,6 @@ class Client:
         """
         return requests.put(self.routes["heartbeat"], headers=self.headers)
 
-    def update_my_location(
-        self,
-        lat: float,
-        lon: float,
-        elevation: float,
-        azimuth: float,
-        pitch: float,
-    ) -> Response:
-        """Updates the location of the device
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-        >>> response = api_client.update_my_location(lat=10., lon=-5.45)
-
-        Returns:
-            HTTP response containing the update device info
-        """
-        payload = {"lat": lat, "lon": lon, "elevation": elevation, "azimuth": azimuth, "pitch": pitch}
-        return requests.put(self.routes["update-my-location"], headers=self.headers, json=payload)
-
-    def create_event(self, lat: float, lon: float) -> Response:
-        """Register an event (e.g wildfire).
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.create_event(lat=10., lon=-5.45)
-
-        Args:
-            lat: the latitude of the event
-            lon: the longitude of the event
-
-        Returns:
-            HTTP response containing the created event
-        """
-        payload = {"lat": lat, "lon": lon}
-        return requests.post(self.routes["create-event"], headers=self.headers, json=payload)
-
-    def create_no_alert_site(
-        self, lat: float, lon: float, name: str, country: str, geocode: str, group_id: Union[int, None] = None
-    ) -> Response:
-        """Create a site that is not supposed to generate alerts.
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.create_no_alert_site(lat=10., lon=-5.45, name="farm", country="FR", geocode="01")
-
-        Args:
-            lat: the latitude of the site
-            lon: the longitude of the site
-            name: the name of the site
-            country: the country where the site is located
-            geocode: the geocode of the site
-
-        Returns:
-            HTTP response containing the created site
-        """
-        payload = {"lat": lat, "lon": lon, "name": name, "country": country, "geocode": geocode}
-        if group_id is not None:
-            payload["group_id"] = group_id
-        return requests.post(self.routes["no-alert-site"], headers=self.headers, json=payload)
-
-    def send_alert(
-        self,
-        lat: float,
-        lon: float,
-        device_id: int,
-        media_id: int,
-        azimuth: Union[float, None] = None,
-        event_id: Union[int, None] = None,
-    ) -> Response:
-        """Raise an alert to the API.
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.send_alert(lat=10., lon=-5.45, device_id=3, azimuth=2.)
-
-        Args:
-            lat: the latitude of the alert
-            lon: the longitude of the alert
-            device_id: ID of the device that sent this alert
-            media_id: media ID linked to this alert
-            azimuth: the azimuth of the alert
-            event_id: the ID of the event this alerts relates to
-
-        Returns:
-            HTTP response containing the created alert
-        """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id, "device_id": device_id}
-        if isinstance(media_id, int):
-            payload["media_id"] = media_id
-        if isinstance(azimuth, float):
-            payload["azimuth"] = azimuth
-
-        return requests.post(self.routes["send-alert"], headers=self.headers, json=payload)
-
     def send_alert_from_device(
         self,
         lat: float,
@@ -236,22 +141,6 @@ class Client:
             payload["azimuth"] = azimuth
 
         return requests.post(self.routes["send-alert-from-device"], headers=self.headers, json=payload)
-
-    def create_media(self, device_id: int) -> Response:
-        """Create a media entry
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.create_media(device_id=3)
-
-        Args:
-            device_id: ID of the device that created that media
-
-        Returns:
-            HTTP response containing the created media
-        """
-
-        return requests.post(self.routes["create-media"], headers=self.headers, json={"device_id": device_id})
 
     def create_media_from_device(self):
         """Create a media entry from a device (no need to specify device ID).
@@ -289,12 +178,12 @@ class Client:
         )
 
     # User functions
-    def get_my_devices(self) -> Response:
+    def get_user_devices(self) -> Response:
         """Get the devices who are owned by the logged user
 
         >>> from pyroclient import client
         >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_my_devices()
+        >>> response = api_client.get_user_devices()
 
         Returns:
             HTTP response containing the list of owned devices
@@ -384,9 +273,11 @@ class Client:
     def get_media_url(self, media_id: int) -> Response:
         """Get the image as a URL
 
+        >>> import requests
         >>> from pyroclient import client
         >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
         >>> response = api_client.get_media_url(1)
+        >>> file_response = requests.get(response.json()["url"])
 
         Args:
             media_id: the identifier of the media entry
@@ -396,22 +287,6 @@ class Client:
         """
 
         return requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
-
-    def get_media_url_and_read(self, media_id: int) -> Response:
-        """Get the image as a url and read it
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_media_url_and_read(1)
-
-        Args:
-            media_id: the identifier of the media entry
-
-        Returns:
-            HTTP response containing the media content
-        """
-        image_url = requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
-        return requests.get(image_url.json()["url"])
 
     def get_past_events(self) -> Response:
         """Get all past events
@@ -425,7 +300,7 @@ class Client:
         """
         return requests.get(self.routes["get-past-events"], headers=self.headers)
 
-    def get_my_device(self) -> Response:
+    def get_self_device(self) -> Response:
         """Get information about the current device
 
         >>> from pyroclient import client
@@ -436,17 +311,3 @@ class Client:
             HTTP response containing the device information
         """
         return requests.get(self.routes["get-my-device"], headers=self.headers)
-
-    def update_my_hash(self, software_hash: str) -> Response:
-        """Updates the software hash of the current device
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.update_my_hash()
-
-        Returns:
-            HTTP response containing the updated device information
-        """
-        payload = {"software_hash": software_hash}
-
-        return requests.put(self.routes["update-my-hash"], headers=self.headers, json=payload)
