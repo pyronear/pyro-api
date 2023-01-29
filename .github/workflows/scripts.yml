@@ -21,6 +21,10 @@ jobs:
           QARNOT_TOKEN: ${{ secrets.QARNOT_TOKEN }}
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_REGION: ${{ secrets.S3_REGION }}
         run: |
           docker-compose up -d --build
           docker ps
