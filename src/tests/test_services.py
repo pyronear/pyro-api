@@ -1,5 +1,5 @@
 from app.services import bucket_service, resolve_bucket_key
-from app.services.bucket import QarnotBucket
+from app.services.bucket import S3Bucket
 from app.services.bucket.qarnot import cfg
 
 
@@ -22,4 +22,4 @@ def test_resolve_bucket_key(monkeypatch):
 
 
 def test_bucket_service():
-    assert isinstance(bucket_service, QarnotBucket)
+    assert isinstance(bucket_service, S3Bucket)
