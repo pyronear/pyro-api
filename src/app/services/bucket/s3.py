@@ -48,7 +48,7 @@ class S3Bucket:
         """Check whether a file exists on the bucket"""
         try:
             # Use boto3 head_object method using the Qarnot private connection attribute
-            head_object = self.s3.get_file_metadata(bucket_key)
+            head_object = await self.get_file_metadata(bucket_key)
             return head_object["ResponseMetadata"]["HTTPStatusCode"] == 200
         except Exception as e:
             logger.warning(e)
@@ -56,7 +56,7 @@ class S3Bucket:
 
     async def get_public_url(self, bucket_key: str, url_expiration: int = 3600) -> str:
         """Generate a temporary public URL for a bucket file"""
-        if not await self.check_file_existence(bucket_key):
+        if not (await self.check_file_existence(bucket_key)):
             raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
 
         # Point to the bucket file
