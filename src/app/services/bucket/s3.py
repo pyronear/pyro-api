@@ -30,7 +30,10 @@ class S3Bucket:
     def _connect_to_storage(self) -> None:
         """Connect to the CSP bucket"""
         _session = boto3.Session(cfg.S3_ACCESS_KEY, cfg.S3_SECRET_KEY, region_name=cfg.S3_REGION)
-        self._s3 = _session.client("s3", endpoint_url=cfg.S3_ENDPOINT_URL)
+        try:
+            self._s3 = _session.client("s3", endpoint_url=cfg.S3_ENDPOINT_URL)
+        except ValueError:
+            raise ValueError(f"invalid URL: '{cfg.S3_ENDPOINT_URL}'")
         if isinstance(cfg.BUCKET_MEDIA_FOLDER, str):
             self._media_folder = cfg.BUCKET_MEDIA_FOLDER
 
