@@ -15,7 +15,7 @@ from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
 from app.api.security import hash_content_file
-from app.db import media
+from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
 from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
 from app.services import bucket_service, resolve_bucket_key
@@ -50,6 +50,8 @@ async def create_media(payload: MediaIn, _=Security(get_current_access, scopes=[
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    # Check that the device exits
+    await crud.get_entry(devices, payload.device_id)
     return await crud.create_entry(media, payload)
 
 
