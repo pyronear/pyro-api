@@ -148,6 +148,7 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
         [None, {}, 401, "Not authenticated"],
         [0, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1}, 201, None],
+        [1, {"device_id": 42}, 404, "Table devices has no entry with id=42"],
         [2, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": "device"}, 422, None],
         [1, {}, 422, None],
