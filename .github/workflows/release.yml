@@ -22,7 +22,7 @@ jobs:
           tags: pyronear/pyro-api:latest
           context: src
 
-  pypi-publish-client:
+  pypi-publish:
     if: "!github.event.release.prerelease"
     runs-on: ${{ matrix.os }}
     strategy:
@@ -59,7 +59,7 @@ jobs:
           twine check client/dist/*
           twine upload client/dist/*
 
-  pypi-check-client:
+  pypi-check:
     if: "!github.event.release.prerelease"
     needs: pypi-publish-client
     runs-on: ${{ matrix.os }}
@@ -80,7 +80,7 @@ jobs:
           pip install pyroclient
           python -c "import pyroclient; print(pyroclient.__version__)"
 
-  conda-publish-client:
+  conda-publish:
     if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
     steps:
@@ -108,7 +108,7 @@ jobs:
           ls -l client/conda-dist/noarch/*tar.bz2
           anaconda upload client/conda-dist/noarch/*tar.bz2 -u pyronear
 
-  conda-check-client:
+  conda-check:
     if: "!github.event.release.prerelease"
     needs: conda-publish-client
     runs-on: ${{ matrix.os }}

@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
@@ -10,7 +5,7 @@ from fastapi.security import SecurityScopes
 
 from app import db
 from app.api import crud, deps, security
-from app.api.schemas import AccessRead, DeviceOut, UserRead
+from app.schemas import AccessRead, DeviceOut, UserRead
 from tests.db_utils import fill_table
 from tests.utils import update_only_datetime
 

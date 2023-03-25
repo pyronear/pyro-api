@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 from datetime import datetime
 
@@ -10,7 +5,7 @@ import pytest
 import pytest_asyncio
 
 from app import db
-from app.api import crud, security
+from app.api import crud, deps, security
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, update_only_datetime
 
@@ -90,7 +85,7 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(security, "hash_password", pytest.mock_hash_password)
     monkeypatch.setattr(crud.base, "database", test_db)
-    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(deps, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
@@ -298,7 +293,7 @@ async def test_register_device(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/devices/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/devices/", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
@@ -378,7 +373,7 @@ async def test_register_my_device(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/devices/register", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/devices/register", content=json.dumps(payload), headers=auth)
 
     assert response.status_code == status_code
     if isinstance(status_details, str):
@@ -625,7 +620,7 @@ async def test_update_device(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/devices/{device_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code, print(response.json()["detail"])
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -701,7 +696,7 @@ async def test_update_device_location(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/devices/{device_id}/location", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/location", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -741,7 +736,7 @@ async def test_update_device_hash(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/devices/{device_id}/hash", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/hash", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -784,7 +779,7 @@ async def test_update_my_location(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put("/devices/my-location", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/devices/my-location", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -829,7 +824,7 @@ async def test_update_device_password(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/devices/{device_id}/pwd", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/devices/{device_id}/pwd", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details

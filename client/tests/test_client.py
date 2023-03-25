@@ -1,74 +1,87 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import time
 from copy import deepcopy
+from urllib.parse import urljoin
 
 import pytest
+import requests
 from requests import ConnectionError
 
-from pyroclient import client
+from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestException
 
 
 def _test_route_return(response, return_type, status_code=200):
-    assert response.status_code == status_code
+    assert response.status_code == status_code, print(response.text)
     assert isinstance(response.json(), return_type)
 
     return response.json()
 
 
-def test_client():
+@pytest.mark.parametrize(
+    "url, login, pwd, expected_error",
+    [
+        # Wrong credentials
+        ["http://localhost:8080", "invalid_login", "invalid_pwd", HTTPRequestException],
+        # Incorrect URL port
+        ["http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!", ConnectionError],
+        # Correct
+        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", None],
+    ],
+)
+def test_client_constructor(url, login, pwd, expected_error):
+    if expected_error is None:
+        api_client = Client(url, login, pwd)
+        assert isinstance(api_client.headers, dict)
+    else:
+        with pytest.raises(expected_error):
+            Client(url, login, pwd)
 
-    # Wrong credentials
-    with pytest.raises(HTTPRequestException):
-        client.Client("http://localhost:8080", "invalid_login", "invalid_pwd")
 
-    # Incorrect URL port
-    with pytest.raises(ConnectionError):
-        client.Client("http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!")
-
-    api_client = client.Client("http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!")
-
-    # Sites
-    site_id = _test_route_return(
-        api_client.create_no_alert_site(lat=44.870959, lon=4.395387, name="dummy_tower", country="FR", geocode="07"),
-        dict,
-        201,
-    )["id"]
-    sites = _test_route_return(api_client.get_sites(), list)
-    assert sites[-1]["id"] == site_id
-
-    # Devices
-    all_devices = _test_route_return(api_client.get_my_devices(), list)
-    _test_route_return(api_client.get_site_devices(site_id), list)
-
-    # Alerts
-    _test_route_return(api_client.get_all_alerts(), list)
-    _test_route_return(api_client.get_ongoing_alerts(), list)
-    # Events
-    _test_route_return(api_client.get_unacknowledged_events(), list)
-    _test_route_return(api_client.get_past_events(), list)
-
-    if len(all_devices) > 0:
-        # Media
-        media_id = _test_route_return(api_client.create_media(all_devices[0]["id"]), dict, 201)["id"]
-        # Create event
-        event_id = _test_route_return(api_client.create_event(0.0, 0.0), dict, 201)["id"]
-        # Create an alert
-        _ = _test_route_return(
-            api_client.send_alert(0.0, 0.0, event_id, all_devices[0]["id"], media_id=media_id), dict, 201
-        )
-        # Acknowledge it
-        updated_event = _test_route_return(api_client.acknowledge_event(event_id), dict)
-        assert updated_event["is_acknowledged"]
-
+def test_client_refresh_token(admin_client):
     # Check token refresh
-    prev_headers = deepcopy(api_client.headers)
+    prev_headers = deepcopy(admin_client.headers)
     # In case the 2nd token creation request is done in the same second, since the expiration is truncated to the
     # second, it returns the same token
     time.sleep(1)
-    api_client.refresh_token("dummy_login", "dummy&P@ssw0rd!")
-    assert prev_headers != api_client.headers
+    admin_client.refresh_token("dummy_login", "dummy&P@ssw0rd!")
+    assert prev_headers != admin_client.headers
+
+
+def test_client_device(admin_client, device_client, mock_img):
+    # Every on-site interactions (critical priority)
+
+    # Get self
+    device = _test_route_return(device_client.get_self_device(), dict)
+    # Heartbeat
+    last_ping = device["last_ping"]
+    updated_device = _test_route_return(device_client.heartbeat(), dict)
+    assert isinstance(updated_device["last_ping"], str)
+    if isinstance(last_ping, str):
+        assert updated_device["last_ping"] > last_ping
+
+    # Alert
+    media_id = _test_route_return(device_client.create_media_from_device(), dict, 201)["id"]
+    _test_route_return(device_client.send_alert_from_device(1.0, 2.0, media_id, 0.0), dict, 201)
+    response = device_client.upload_media(media_id, mock_img)
+    if response.status_code == 200:
+        media = _test_route_return(response, dict)
+        assert isinstance(media["bucket_key"], str)
+        _test_route_return(admin_client.get_media_url(media_id), str)
+        # Delete media
+        response = requests.delete(urljoin("http://localhost:8080", f"media/{media_id}"), headers=admin_client.headers)
+        assert response.status_code == 200
+
+
+def test_client_user(setup, user_client, mock_img):
+    # Every platform interaction (medium priority)
+
+    _test_route_return(user_client.get_user_devices(), list)
+    sites = _test_route_return(user_client.get_sites(), list)
+    _test_route_return(user_client.get_site_devices(sites[0]["id"]), list)
+    events = _test_route_return(user_client.get_past_events(), list)
+    events = _test_route_return(user_client.get_unacknowledged_events(), list)
+    event = _test_route_return(user_client.acknowledge_event(events[0]["id"]), dict)
+    assert event["is_acknowledged"]
+    _test_route_return(user_client.get_all_alerts(), list)
+    _test_route_return(user_client.get_ongoing_alerts(), list)
+    assert user_client.get_media_url(1).status_code == 404

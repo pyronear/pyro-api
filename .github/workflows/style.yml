@@ -2,9 +2,9 @@ name: style
 
 on:
   push:
-    branches: master
+    branches: main
   pull_request:
-    branches: master
+    branches: main
 
 jobs:
   flake8:
@@ -39,11 +39,17 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Run isort
+      - name: Install deps
+        run: pip install isort
+      - name: Run on API
         run: |
-          pip install isort
           isort --version
           isort src/
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then exit 1; else echo "All clear"; fi
+      - name: Run on client
+        run: |
+          isort --version
+          cd client && isort .
           if [ -n "$(git status --porcelain --untracked-files=no)" ]; then exit 1; else echo "All clear"; fi
 
   mypy:
@@ -68,11 +74,58 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r src/app/requirements.txt --upgrade
-          pip install mypy
+          pip install mypy types-requests
       - name: Run mypy
         run: |
           mypy --version
           mypy
+
+  mypy-client:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Cache python modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e client/. --upgrade
+          pip install mypy
+      - name: Run mypy
+        run: |
+          mypy --version
+          cd client && mypy
+
+  pydocstyle:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Run pydocstyle
+        run: |
+          pip install pydocstyle[toml]
+          pydocstyle --version
+          pydocstyle
 
   black:
     runs-on: ${{ matrix.os }}
@@ -87,8 +140,28 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
+      - name: Install deps
+        run: pip install black
       - name: Run black
         run: |
-          pip install black
           black --version
           black --check --diff .
+
+  bandit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Run bandit
+        run: |
+          pip install bandit[toml]
+          bandit --version
+          bandit -r . -c pyproject.toml

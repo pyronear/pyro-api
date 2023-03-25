@@ -1,0 +1,101 @@
+name: tests
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build & run docker
+        env:
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+        run: |
+          docker build src/. -t pyroapi:python3.8-alpine3.10
+          docker-compose -f docker-compose-dev.yml up -d --build
+      - name: Run docker test
+        run: |
+          docker-compose -f docker-compose-dev.yml exec -T backend coverage --version
+          docker-compose -f docker-compose-dev.yml exec -T backend coverage run -m pytest tests/
+          docker-compose -f docker-compose-dev.yml exec -T backend coverage xml -o coverage-src.xml
+          docker cp pyro-api_backend_1:/app/coverage-src.xml .
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage-src.xml
+          flags: unittests
+          fail_ci_if_error: true
+
+  pytest-client:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build & run API server
+        env:
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+        run: |
+          docker volume prune -f
+          docker-compose up -d --build
+          docker ps
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Cache python modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "client/.[test]"
+      - name: Run client unittests
+        run: |
+          coverage --version
+          sleep 15
+          cd client && coverage run -m pytest tests/ && coverage xml -o coverage-client.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./client/coverage-client.xml
+          flags: client
+          fail_ci_if_error: true
+
+  headers:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - name: Check the headers
+        uses: frgfm/validate-python-headers@main
+        with:
+          license: 'Apache-2.0'
+          owner: 'Pyronear'
+          starting-year: 2020
+          folders: 'src,client,.github'
+          ignore-files: 'version.py,__init__.py'
+          ignore-folders: 'client/tests/,src/tests/'

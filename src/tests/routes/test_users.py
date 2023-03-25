@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 from datetime import datetime
 
@@ -10,7 +5,7 @@ import pytest
 import pytest_asyncio
 
 from app import db
-from app.api import crud, security
+from app.api import crud, deps, security
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, update_only_datetime
 
@@ -37,7 +32,7 @@ USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 @pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(deps, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
@@ -174,7 +169,7 @@ async def test_create_user(
 
     utc_dt = datetime.utcnow()
 
-    response = await test_app_asyncio.post("/users/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/users/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -222,7 +217,7 @@ async def test_update_user(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/users/{user_id}/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/users/{user_id}/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -264,7 +259,7 @@ async def test_update_my_info(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put("/users/update-info", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/users/update-info", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -305,7 +300,7 @@ async def test_update_user_password(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put(f"/users/{user_id}/pwd", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put(f"/users/{user_id}/pwd", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):
@@ -343,7 +338,7 @@ async def test_update_my_password(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.put("/users/update-pwd", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.put("/users/update-pwd", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
 
     if isinstance(status_details, str):

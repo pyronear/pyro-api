@@ -1,7 +1,7 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from typing import Any, Dict, List, Mapping, Optional
 
@@ -12,6 +12,7 @@ from sqlalchemy import Table
 from app.db import database
 
 __all__ = [
+    "database",
     "post",
     "get",
     "fetch_all",
@@ -30,7 +31,7 @@ async def post(payload: BaseModel, table: Table) -> int:
     return await database.execute(query=query)
 
 
-async def get(entry_id: int, table: Table) -> Mapping[str, Any]:
+async def get(entry_id: int, table: Table) -> Optional[Mapping[str, Any]]:
     query = table.select().where(entry_id == table.c.id)
     return await database.fetch_one(query=query)
 
@@ -52,7 +53,7 @@ async def fetch_all(
     return (await database.fetch_all(query=query.limit(limit)))[::-1]
 
 
-async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Mapping[str, Any]:
+async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Optional[Mapping[str, Any]]:
     query = table.select()
     for query_filter_key, query_filter_value in query_filters.items():
         query = query.where(getattr(table.c, query_filter_key) == query_filter_value)

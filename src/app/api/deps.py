@@ -1,7 +1,7 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2020-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from fastapi import Depends, HTTPException, WebSocket, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
@@ -10,9 +10,10 @@ from pydantic import ValidationError
 
 import app.config as cfg
 from app.api import crud
-from app.api.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
 from app.db import accesses, devices, users
-from app.db.models import AccessType
+from app.db.session import SessionLocal
+from app.models import AccessType
+from app.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
@@ -23,6 +24,14 @@ oauth2_scheme = OAuth2PasswordBearer(
         AccessType.device: "Send heartbeat signal and media to the API for only one device",
     },
 )
+
+
+def get_db():
+    db = SessionLocal()  # noqa: F405
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 async def get_current_access(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)) -> AccessRead:

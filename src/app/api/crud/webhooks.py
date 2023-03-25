@@ -1,9 +1,9 @@
-# Copyright (C) 2021-2022, Pyronear.
+# Copyright (C) 2021-2023, Pyronear.
 
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, cast
 
 from sqlalchemy import select
 
@@ -15,4 +15,4 @@ async def fetch_webhook_urls(route: str) -> List[str]:
 
     query = select([webhooks.c.url]).where(webhooks.c.callback == route)
 
-    return await crud.base.database.fetch_all(query=query)
+    return cast(List[str], await crud.base.database.fetch_all(query=query))

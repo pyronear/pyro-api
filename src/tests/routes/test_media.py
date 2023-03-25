@@ -1,8 +1,3 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 import json
 import os
 import tempfile
@@ -13,7 +8,7 @@ import pytest_asyncio
 import requests
 
 from app import db
-from app.api import crud
+from app.api import crud, deps
 from app.api.security import hash_content_file
 from app.services import bucket_service
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
@@ -84,7 +79,7 @@ MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 @pytest_asyncio.fixture(scope="function")
 async def init_test_db(monkeypatch, test_db):
     monkeypatch.setattr(crud.base, "database", test_db)
-    monkeypatch.setattr(db, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(deps, "SessionLocal", TestSessionLocal)
     await fill_table(test_db, db.groups, GROUP_TABLE)
     await fill_table(test_db, db.accesses, ACCESS_TABLE)
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
@@ -153,6 +148,7 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
         [None, {}, 401, "Not authenticated"],
         [0, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": 1}, 201, None],
+        [1, {"device_id": 42}, 404, "Table devices has no entry with id=42"],
         [2, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
         [1, {"device_id": "device"}, 422, None],
         [1, {}, 422, None],
@@ -167,7 +163,7 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -204,7 +200,7 @@ async def test_create_media_from_device(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     utc_dt = datetime.utcnow()
-    response = await test_app_asyncio.post("/media/from-device", data=json.dumps(payload), headers=auth)
+    response = await test_app_asyncio.post("/media/from-device", content=json.dumps(payload), headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -279,7 +275,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     # 1 - Create a media that will have an upload
     payload = {"device_id": device_id}
     new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=admin_auth)
     assert response.status_code == 201
 
     # 2 - Upload something
@@ -344,7 +340,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
     # Create a media that will have an upload
     payload = {"device_id": device_id}
     new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
-    response = await test_app_asyncio.post("/media/", data=json.dumps(payload), headers=admin_auth)
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=admin_auth)
     assert response.status_code == 201
 
     # Sanitize bucket actions

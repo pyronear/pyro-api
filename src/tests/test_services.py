@@ -1,11 +1,6 @@
-# Copyright (C) 2021, Pyronear contributors.
-
-# This program is licensed under the Apache License version 2.
-# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0.txt> for full license details.
-
 from app.services import bucket_service, resolve_bucket_key
-from app.services.bucket import QarnotBucket
-from app.services.bucket.qarnot import cfg
+from app.services.bucket import S3Bucket
+from app.services.utils import cfg
 
 
 def test_resolve_bucket_key(monkeypatch):
@@ -27,4 +22,4 @@ def test_resolve_bucket_key(monkeypatch):
 
 
 def test_bucket_service():
-    assert isinstance(bucket_service, QarnotBucket)
+    assert isinstance(bucket_service, S3Bucket)
