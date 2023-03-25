@@ -6,8 +6,7 @@ import pytest_asyncio
 
 from app import db
 from app.api import crud, deps
-from app.api.routes.alerts import get_ws_clients
-from app.api import crud, deps
+from app.api.endpoints.alerts import get_ws_clients
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
 
