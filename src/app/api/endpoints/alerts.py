@@ -29,7 +29,7 @@ from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 
 router = APIRouter()
-ws_clients = []
+ws_clients: List[WebSocket] = []
 
 
 def get_ws_clients():

@@ -89,9 +89,9 @@ async def get_current_access_ws(
     >>> async def websocket_endpoint(websocket: Websocket = Security(get_current_access, scopes=["me"])):
     >>>     ...
     """
-    access = {}
+    access: AccessRead = AccessRead()
     try:
-        access = get_current_access(security_scopes, token)
+        access = await get_current_access(security_scopes, token)
     except HTTPException:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
     return access
