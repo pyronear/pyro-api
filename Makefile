@@ -33,9 +33,9 @@ stop:
 	docker-compose down
 
 run-dev:
-    docker build src/. -t pyroapi:python3.8-alpine3.10
-    docker-compose -f docker-compose-dev.yml up -d --build
-    awslocal s3api create-bucket --bucket sample-bucket
+	docker build src/. -t pyroapi:python3.8-alpine3.10
+	docker-compose -f docker-compose-dev.yml up -d --build
+	awslocal s3api create-bucket --bucket sample-bucket
 
 stop-dev:
 	docker-compose -f docker-compose-dev.yml down
