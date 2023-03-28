@@ -166,9 +166,9 @@ async def fetch_ongoing_alerts(
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    # _=Security(get_current_access_ws, scopes=[AccessType.admin, AccessType.user]),
+    token: str = "",
 ):
-    await manager.connect(websocket)
+    await manager.connect(websocket, token)
     try:
         while True:
             _ = await websocket.receive_text()

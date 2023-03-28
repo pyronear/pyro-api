@@ -79,24 +79,6 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     return AccessRead(**entry)
 
 
-async def get_current_access_ws(
-    websocket: WebSocket, security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)
-) -> AccessRead:
-    """Dependency to use as fastapi.security.Security with scopes for websockets:
-    the same way get_current_access is used for HTTP routes but closes the connection if authentication fails.
-
-    >>> @app.websocket("/ws")
-    >>> async def websocket_endpoint(websocket: Websocket = Security(get_current_access, scopes=["me"])):
-    >>>     ...
-    """
-    access: AccessRead = AccessRead()
-    try:
-        access = await get_current_access(security_scopes, token)
-    except HTTPException:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-    return access
-
-
 async def get_current_user(access: AccessRead = Depends(get_current_access)) -> UserRead:
     user = await crud.fetch_one(users, {"access_id": access.id})
     if user is None:

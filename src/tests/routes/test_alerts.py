@@ -430,16 +430,16 @@ async def test_websocket_endpoint(
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     # Create a custom access token for listening to new alerts (websocket)
-    # auth_ws = {}
-    # if isinstance(access_idx_ws, int):
-    #     auth_ws = await pytest.get_token(
-    #         ACCESS_TABLE[access_idx_ws]["id"], ACCESS_TABLE[access_idx_ws]["scope"].split()
-    #     )
+    token_ws = ""
+    if isinstance(access_idx, int):
+        token_ws = await pytest.get_token(
+            ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split(), token_only=True
+        )
 
     # Connect to websocket and send alert
     # N.B.: connecting to websocket requires a TestClient, does not work with AsyncClient
     payload = {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}
-    with test_app.websocket_connect("/alerts/ws") as ws:
+    with test_app.websocket_connect(f"/alerts/ws?token={token_ws}") as ws:
         assert bool(manager.active_connections) == ws_connected
 
         response = await test_app_asyncio.post("/alerts", data=json.dumps(payload), headers=auth)

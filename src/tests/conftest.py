@@ -17,11 +17,13 @@ async def mock_verify_password(plain_password, hashed_password):
     return hashed_password == f"hashed_{plain_password}"
 
 
-async def get_token(access_id, scopes):
+async def get_token(access_id, scopes, token_only=False):
 
     token_data = {"sub": str(access_id), "scopes": scopes}
     token = await create_unlimited_access_token(token_data)
 
+    if token_only:
+        return token
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
