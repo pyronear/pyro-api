@@ -20,6 +20,7 @@ from fastapi import (
 from sqlalchemy import select
 
 from app.api import crud
+from app.api.connection_manager import manager
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_db
@@ -29,11 +30,6 @@ from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
 
 router = APIRouter()
-ws_clients: List[WebSocket] = []
-
-
-def get_ws_clients():
-    return ws_clients
 
 
 async def check_media_existence(media_id):
@@ -48,8 +44,7 @@ async def alert_notification(payload: AlertOut):
     # Post the payload to each URL
     map(partial(post_request, payload=payload), webhook_urls)
     # Send the payload to all websocket clients
-    for ws in ws_clients:
-        await ws.send_json(payload)
+    await manager.broadcast(payload)
 
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
@@ -173,12 +168,11 @@ async def websocket_endpoint(
     websocket: WebSocket,
     # _=Security(get_current_access_ws, scopes=[AccessType.admin, AccessType.user]),
 ):
-    await websocket.accept()
-    ws_clients.append(websocket)
+    await manager.connect(websocket)
     try:
         while True:
             _ = await websocket.receive_text()
     except WebSocketDisconnect:
         pass
     finally:
-        ws_clients.remove(websocket)
+        await manager.disconnect(websocket)

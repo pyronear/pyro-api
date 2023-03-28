@@ -6,7 +6,7 @@ import pytest_asyncio
 
 from app import db
 from app.api import crud, deps
-from app.api.endpoints.alerts import get_ws_clients
+from app.api.connection_manager import manager
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
 
@@ -440,7 +440,7 @@ async def test_websocket_endpoint(
     # N.B.: connecting to websocket requires a TestClient, does not work with AsyncClient
     payload = {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}
     with test_app.websocket_connect("/alerts/ws") as ws:
-        assert bool(get_ws_clients()) == ws_connected
+        assert bool(manager.active_connections) == ws_connected
 
         response = await test_app_asyncio.post("/alerts", data=json.dumps(payload), headers=auth)
         assert response.status_code == status_code
