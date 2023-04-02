@@ -117,7 +117,7 @@ We automatically create a s3 bucket called `sample-bucket`, which you can check 
 docker-compose exec localstack awslocal s3 ls
 ```
 
-NOTE: please check localstack documentation to understand how to create bucket, add/delete objects.
+NOTE: please check localstack documentation to understand how to create buckets or to add/delete objects.
 
 
 ### Submit your modifications
