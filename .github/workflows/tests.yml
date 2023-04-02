@@ -13,15 +13,17 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build & run docker
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_REGION: ${{ secrets.S3_REGION }}
+          BUCKET_NAME: sample-bucket
+          BUCKET_MEDIA_FOLDER: media-folder
+          S3_ENDPOINT_URL: http://s3.localhost.localstack.cloud:4566
+          S3_ACCESS_KEY: fake
+          S3_SECRET_KEY: fake
+          S3_REGION: us-east-1
         run: |
           docker build src/. -t pyroapi:python3.8-alpine3.10
           docker-compose -f docker-compose-dev.yml up -d --build
+          docker-compose exec localstack awslocal s3 mb s3://sample-bucket
+          docker-compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
       - name: Run docker test
         run: |
           docker-compose -f docker-compose-dev.yml exec -T backend coverage --version
