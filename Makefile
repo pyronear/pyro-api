@@ -35,8 +35,7 @@ stop:
 run-dev:
 	docker build src/. -t pyroapi:python3.8-alpine3.10
 	docker-compose -f docker-compose-dev.yml up -d --build
-	sleep 3
-	awslocal s3api create-bucket --bucket sample-bucket
+	docker-compose exec localstack awslocal s3 mb s3://sample-bucket # NOTE: should be a docker compose command.
 
 stop-dev:
 	docker-compose -f docker-compose-dev.yml down
@@ -45,6 +44,7 @@ stop-dev:
 test:
 	docker build src/. -t pyroapi:python3.8-alpine3.10
 	docker-compose -f docker-compose-dev.yml up -d --build
+	docker-compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker-compose exec -T backend coverage run -m pytest tests/
 	docker-compose -f docker-compose-dev.yml down
 
