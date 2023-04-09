@@ -28,7 +28,11 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
-    assert response.status_code // 100 == 2, print(response.json()["detail"])
+    try:
+        detail = response.json()["detail"]
+    except (requests.exceptions.JSONDecodeError, KeyError):
+        detail = response.text
+    assert response.status_code // 100 == 2, print(detail)
     return response.json()
 
 
@@ -38,7 +42,7 @@ def main(args):
 
     # Log as superuser
     superuser_login = getpass("Login: ") if args.creds else "dummy_login"
-    superuser_pwd = getpass() if args.creds else "dummy&P@ssw0rd!"
+    superuser_pwd = getpass() if args.creds else "dummy%26P%40ssw0rd%21"
 
     start_ts = time.time()
     # Retrieve superuser token
@@ -90,7 +94,7 @@ def main(args):
     payload = dict(lat=44.1, lon=3.9, type="wildfire")
     event_id = api_request("post", f"{api_url}/events/", superuser_auth, payload)["id"]
 
-    payload = dict(lat=44.1, lon=3.9, event_id=event_id, media_id=media_id)
+    payload = dict(lat=44.1, lon=3.9, azimuth=0, event_id=event_id, media_id=media_id)
     alert_id = api_request("post", f"{api_url}/alerts/from-device", device_auth, payload)["id"]
 
     # Acknowledge it
