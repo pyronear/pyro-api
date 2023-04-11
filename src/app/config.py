@@ -7,7 +7,7 @@ import os
 import secrets
 from typing import Optional
 
-PROJECT_NAME: str = "Pyronear API"
+PROJECT_NAME: str = "Pyronear - Alert API"
 PROJECT_DESCRIPTION: str = "API for wildfire prevention, detection and monitoring"
 API_BASE: str = "api/"
 VERSION: str = "0.2.0.dev0"
