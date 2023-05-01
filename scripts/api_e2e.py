@@ -15,8 +15,7 @@ def get_token(api_url: str, login: str, pwd: str) -> str:
 
     response = requests.post(
         f"{api_url}/login/access-token",
-        data=f"username={login}&password={pwd}",
-        headers={"Content-Type": "application/x-www-form-urlencoded", "accept": "application/json"},
+        data={"username": login, "password": pwd},
     )
     if response.status_code != 200:
         raise ValueError(response.json()["detail"])
@@ -42,7 +41,7 @@ def main(args):
 
     # Log as superuser
     superuser_login = getpass("Login: ") if args.creds else "dummy_login"
-    superuser_pwd = getpass() if args.creds else "dummy%26P%40ssw0rd%21"
+    superuser_pwd = getpass() if args.creds else "dummy&P@ssw0rd!"
 
     start_ts = time.time()
     # Retrieve superuser token
