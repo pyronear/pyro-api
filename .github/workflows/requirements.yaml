@@ -42,7 +42,7 @@ jobs:
           architecture: x64
       - name: Install poetry
         run: |
-          pip install poetry
+          pip install poetry==1.2.2
           poetry --version
       - name: Dump requirements
         run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
@@ -64,7 +64,7 @@ jobs:
           architecture: x64
       - name: Install poetry
         run: |
-          pip install poetry
+          pip install poetry==1.2.2
           poetry --version
       - name: Dump requirements
         run: poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
