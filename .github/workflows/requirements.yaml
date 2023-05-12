@@ -1,0 +1,72 @@
+name: requirements
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  poetry-lock:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Install poetry
+        run: |
+          pip install poetry
+          poetry --version
+      - name: Check lockfile
+        run: poetry lock --check
+
+  requirements-file:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Install poetry
+        run: |
+          pip install poetry
+          poetry --version
+      - name: Dump requirements
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+      - name: Check requirements
+        run: git diff --exit-code
+
+  requirements-dev:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Install poetry
+        run: |
+          pip install poetry
+          poetry --version
+      - name: Dump requirements
+        run: poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
+      - name: Check requirements
+        run: git diff --exit-code
