@@ -110,8 +110,9 @@ async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_a
     """
     # Delete entry
     entry = await crud.delete_entry(media, media_id)
-    # Delete media file
-    await bucket_service.delete_file(entry["bucket_key"])
+    # Delete media file if one exists
+    if isinstance(entry["bucket_key"], str) and len(entry["bucket_key"]) > 0:
+        await bucket_service.delete_file(entry["bucket_key"])
     return entry
 
 
