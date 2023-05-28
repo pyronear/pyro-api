@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 import pytest
 import requests
-from requests import ConnectionError, ConnectTimeout
+from requests.exceptions import ConnectionError, ReadTimeout
 
 from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestException
@@ -25,7 +25,7 @@ def _test_route_return(response, return_type, status_code=200):
         # Incorrect URL port
         ["http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!", 10, ConnectionError],
         # Timeout
-        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 0.01, ConnectTimeout],
+        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 0.01, ReadTimeout],
         # Correct
         ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 10, None],
     ],
