@@ -98,6 +98,7 @@ With the previously described tables, here are all the steps to send a wildfire 
 
 - [Docker](https://docs.docker.com/engine/install/)
 - [Docker compose](https://docs.docker.com/compose/)
+- [Poetry](https://python-poetry.org/)
 - [Make](https://www.gnu.org/software/make/) (optional)
 
 The project was designed so that everything runs with Docker orchestration (standalone virtual environment), so you won't need to install any additional libraries.
@@ -106,21 +107,26 @@ The project was designed so that everything runs with Docker orchestration (stan
 
 In order to run the project, you will need to specific some information, which can be done using a `.env` file.
 This file will have to hold the following information:
-- `QARNOT_TOKEN`: this will enable the back-end access to the storage service of [Qarnot Computing](https://qarnot.com/)
+- `S3_ACCESS_KEY`: public key to access to the [S3 storage service](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-appendix-sign-up.html)
+- `S3_SECRET_KEY`: private key to access the resource.
+- `S3_REGION`: your S3 bucket is geographically identified by its location's region
+- `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `BUCKET_NAME`: the name of the storage bucket
-- `BUCKET_MEDIA_FOLDER`: the folder to place media content in
 
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
+- `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
 
 So your `.env` file should look like something similar to:
 ```
-QARNOT_TOKEN=my_very_secret_token
+S3_ACCESS_KEY=YOUR_ACCESS_KEY
+S3_SECRET_KEY=YOUR_SECRET_KEY
+S3_REGION=bucket-region
+S3_ENDPOINT_URL='https://s3.mydomain.com/'
 BUCKET_NAME=my_storage_bucket_name
-BUCKET_MEDIA_FOLDER=my/media/subfolder
 SENTRY_DSN='https://replace.with.you.sentry.dsn/'
-SENTRY_SERVER_NAME=my_storage_bucket_name
+SERVER_NAME=my_storage_bucket_name
 ```
 
 The file should be placed at the root folder of your local copy of the project.
