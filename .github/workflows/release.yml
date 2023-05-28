@@ -10,6 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.3.0"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -32,15 +40,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
+      - uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.3.0"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Cache python modules
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('src/app/requirements.txt') }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -70,7 +83,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
@@ -97,6 +110,11 @@ jobs:
         id: release_tag
         run: |
           echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.3.0"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Build and publish
         env:
           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}

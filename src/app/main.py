@@ -101,4 +101,4 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi  # type: ignore[assignment]
+app.openapi = custom_openapi  # type: ignore[method-assign]
