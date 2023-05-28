@@ -126,7 +126,7 @@ S3_REGION=bucket-region
 S3_ENDPOINT_URL='https://s3.mydomain.com/'
 BUCKET_NAME=my_storage_bucket_name
 SENTRY_DSN='https://replace.with.you.sentry.dsn/'
-SERVER_NAME=my_storage_bucket_name
+SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
 
 The file should be placed at the root folder of your local copy of the project.
