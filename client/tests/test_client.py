@@ -30,13 +30,13 @@ def _test_route_return(response, return_type, status_code=200):
         ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 10, None],
     ],
 )
-def test_client_constructor(url, login, pwd, expected_error):
+def test_client_constructor(url, login, pwd, timeout, expected_error):
     if expected_error is None:
-        api_client = Client(url, login, pwd)
+        api_client = Client(url, login, pwd, timeout=timeout)
         assert isinstance(api_client.headers, dict)
     else:
         with pytest.raises(expected_error):
-            Client(url, login, pwd)
+            Client(url, login, pwd, timeout=timeout)
 
 
 def test_client_refresh_token(admin_client):
