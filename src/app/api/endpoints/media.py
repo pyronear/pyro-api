@@ -176,8 +176,9 @@ async def get_media_url(
     media_id: int = Path(..., gt=0), requester=Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
 ):
     """Resolve the temporary media image URL"""
-    requested_group_id = await get_entity_group_id(media, media_id)
-    await check_group_read(requester.id, cast(int, requested_group_id))
+    if not (await is_admin_access(requester.id)):
+        requested_group_id = await get_entity_group_id(media, media_id)
+        await check_group_read(requester.id, cast(int, requested_group_id))
 
     # Check in DB
     media_instance = await check_media_registration(media_id)
