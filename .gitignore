@@ -147,3 +147,7 @@ client/pyroclient/version.py
 *.db
 _build/
 *.sql
+
+# Poetry
+src/app/requirements.txt
+src/requirements-dev.txt
