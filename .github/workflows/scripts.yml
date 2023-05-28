@@ -1,19 +1,19 @@
 name: scripts
 
 on:
-  workflow_run:
-    workflows: ["tests"]
-    types: [completed]
+  push:
+    branches: main
+  pull_request:
+    branches: main
 
 jobs:
   end-to-end:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: [3.7, 3.8]
+        python: [3.8]
     steps:
       - uses: actions/checkout@v2
       - name: Build & run docker
