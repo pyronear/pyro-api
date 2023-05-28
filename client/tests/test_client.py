@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 import pytest
 import requests
-from requests import ConnectionError
+from requests import ConnectionError, ConnectTimeout
 
 from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestException
@@ -18,14 +18,16 @@ def _test_route_return(response, return_type, status_code=200):
 
 
 @pytest.mark.parametrize(
-    "url, login, pwd, expected_error",
+    "url, login, pwd, timeout, expected_error",
     [
         # Wrong credentials
-        ["http://localhost:8080", "invalid_login", "invalid_pwd", HTTPRequestException],
+        ["http://localhost:8080", "invalid_login", "invalid_pwd", 10, HTTPRequestException],
         # Incorrect URL port
-        ["http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!", ConnectionError],
+        ["http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!", 10, ConnectionError],
+        # Timeout
+        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 0.01, ConnectTimeout],
         # Correct
-        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", None],
+        ["http://localhost:8080", "dummy_login", "dummy&P@ssw0rd!", 10, None],
     ],
 )
 def test_client_constructor(url, login, pwd, expected_error):
