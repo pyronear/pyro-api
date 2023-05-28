@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Dict, Union
+from typing import Any, Dict, Union
 from urllib.parse import urljoin
 
 import requests
@@ -63,27 +63,32 @@ class Client:
         api_url (str): url of the pyronear API
         credentials_login (str): Login (e.g: username)
         credentials_password (str): Password (e.g: 123456 (don't do this))
+        timeout (int): number of seconds before request timeout
+        kwargs: optional parameters of `requests.post`
     """
 
     api: str
     routes: Dict[str, str]
     token: str
 
-    def __init__(self, api_url: str, credentials_login: str, credentials_password: str) -> None:
+    def __init__(
+        self, api_url: str, credentials_login: str, credentials_password: str, timeout: int = 10, **kwargs: Any
+    ) -> None:
         self.api = api_url
         # Prepend API url to each route
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
-        self.refresh_token(credentials_login, credentials_password)
+        self.timeout = timeout
+        self.refresh_token(credentials_login, credentials_password, timeout=self.timeout, **kwargs)
 
     @property
     def headers(self) -> Dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
-    def refresh_token(self, login: str, password: str) -> None:
-        self.token = self._retrieve_token(login, password)
+    def refresh_token(self, login: str, password: str, **kwargs: Any) -> None:
+        self.token = self._retrieve_token(login, password, **kwargs)
 
-    def _retrieve_token(self, login: str, password: str) -> str:
-        response = requests.post(self.routes["token"], data={"username": login, "password": password})
+    def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
+        response = requests.post(self.routes["token"], data={"username": login, "password": password}, **kwargs)
         if response.status_code == 200:
             return response.json()["access_token"]
         else:
@@ -101,7 +106,7 @@ class Client:
         Returns:
             HTTP response containing the update device info
         """
-        return requests.put(self.routes["heartbeat"], headers=self.headers)
+        return requests.put(self.routes["heartbeat"], headers=self.headers, timeout=self.timeout)
 
     def send_alert_from_device(
         self,
@@ -134,7 +139,9 @@ class Client:
         if isinstance(azimuth, float):
             payload["azimuth"] = azimuth
 
-        return requests.post(self.routes["send-alert-from-device"], headers=self.headers, json=payload)
+        return requests.post(
+            self.routes["send-alert-from-device"], headers=self.headers, json=payload, timeout=self.timeout
+        )
 
     def create_media_from_device(self):
         """Create a media entry from a device (no need to specify device ID).
@@ -147,7 +154,9 @@ class Client:
             HTTP response containing the created media
         """
 
-        return requests.post(self.routes["create-media-from-device"], headers=self.headers, json={})
+        return requests.post(
+            self.routes["create-media-from-device"], headers=self.headers, json={}, timeout=self.timeout
+        )
 
     def upload_media(self, media_id: int, media_data: bytes) -> Response:
         """Upload the media content
@@ -169,6 +178,7 @@ class Client:
             self.routes["upload-media"].format(media_id=media_id),
             headers=self.headers,
             files={"file": io.BytesIO(media_data)},
+            timeout=self.timeout,
         )
 
     # User functions
@@ -182,7 +192,7 @@ class Client:
         Returns:
             HTTP response containing the list of owned devices
         """
-        return requests.get(self.routes["get-user-devices"], headers=self.headers)
+        return requests.get(self.routes["get-user-devices"], headers=self.headers, timeout=self.timeout)
 
     def get_sites(self) -> Response:
         """Get all the existing sites in the DB
@@ -194,7 +204,7 @@ class Client:
         Returns:
             HTTP response containing the list of sites
         """
-        return requests.get(self.routes["get-sites"], headers=self.headers)
+        return requests.get(self.routes["get-sites"], headers=self.headers, timeout=self.timeout)
 
     def get_all_alerts(self) -> Response:
         """Get all the existing alerts in the DB
@@ -206,7 +216,7 @@ class Client:
         Returns:
             HTTP response containing the list of all alerts
         """
-        return requests.get(self.routes["get-alerts"], headers=self.headers)
+        return requests.get(self.routes["get-alerts"], headers=self.headers, timeout=self.timeout)
 
     def get_ongoing_alerts(self) -> Response:
         """Get all the existing alerts in the DB that have the status 'start'
@@ -219,7 +229,7 @@ class Client:
             HTTP response containing the list of all ongoing alerts
         """
 
-        return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers)
+        return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
 
     def get_unacknowledged_events(self) -> Response:
         """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
@@ -231,7 +241,7 @@ class Client:
         Returns:
             HTTP response containing the list of all events that haven't been acknowledged
         """
-        return requests.get(self.routes["get-unacknowledged-events"], headers=self.headers)
+        return requests.get(self.routes["get-unacknowledged-events"], headers=self.headers, timeout=self.timeout)
 
     def acknowledge_event(self, event_id: int) -> Response:
         """Switch the `is_acknowledged` field value of the event to `True`
@@ -247,7 +257,9 @@ class Client:
             HTTP response containing the updated event
         """
 
-        return requests.put(self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers)
+        return requests.put(
+            self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_site_devices(self, site_id: int) -> Response:
         """Fetch the devices that are installed on a specific site
@@ -262,7 +274,9 @@ class Client:
         Returns:
             HTTP response containing the list of corresponding devices
         """
-        return requests.get(self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers)
+        return requests.get(
+            self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_media_url(self, media_id: int) -> Response:
         """Get the image as a URL
@@ -280,7 +294,9 @@ class Client:
             HTTP response containing the URL to the media content
         """
 
-        return requests.get(self.routes["get-media-url"].format(media_id=media_id), headers=self.headers)
+        return requests.get(
+            self.routes["get-media-url"].format(media_id=media_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_past_events(self) -> Response:
         """Get all past events
@@ -292,7 +308,7 @@ class Client:
         Returns:
             HTTP response containing the list of past events
         """
-        return requests.get(self.routes["get-past-events"], headers=self.headers)
+        return requests.get(self.routes["get-past-events"], headers=self.headers, timeout=self.timeout)
 
     def get_self_device(self) -> Response:
         """Get information about the current device
@@ -304,4 +320,4 @@ class Client:
         Returns:
             HTTP response containing the device information
         """
-        return requests.get(self.routes["get-self-device"], headers=self.headers)
+        return requests.get(self.routes["get-self-device"], headers=self.headers, timeout=self.timeout)
