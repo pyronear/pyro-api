@@ -77,7 +77,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r src/app/requirements.txt --upgrade
-          pip install "mypy==1.2.0" types-requests
+          pip install "mypy==1.2.0" types-requests types-python-dateutil
       - name: Run mypy
         run: |
           mypy --version
