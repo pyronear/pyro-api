@@ -6,7 +6,8 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from dateutil.parser import isoparse
+from pydantic import BaseModel, Field, validator
 
 from app.models import AccessType
 
@@ -38,7 +39,9 @@ class SoftwareHash(BaseModel):
 class MyDeviceIn(Login, DefaultPosition):
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1", description="hardware setup version")
     last_ping: Optional[datetime] = Field(
-        default=None, example=datetime.utcnow(), description="timestamp of last communication with the API"
+        default=None,
+        example=datetime.utcnow().replace(tzinfo=None),
+        description="timestamp of last communication with the API",
     )
     angle_of_view: float = Field(..., ge=0, le=360, example=10, description="angle between left and right camera view")
     software_hash: Optional[str] = Field(
@@ -48,6 +51,10 @@ class MyDeviceIn(Login, DefaultPosition):
         example="0123456789ABCDEF",
         description="the unique version of the current software being run on the device",
     )
+
+    @validator("last_ping", pre=True, always=True)
+    def validate_last_ping(v):
+        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 
 class DeviceIn(MyDeviceIn):
@@ -92,7 +99,7 @@ class DeviceUpdate(Login):
     )
     specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1", description="hardware setup version")
     last_ping: Optional[datetime] = Field(
-        ..., example=datetime.utcnow(), description="timestamp of last communication with the API"
+        ..., example=datetime.utcnow().replace(tzinfo=None), description="timestamp of last communication with the API"
     )
     angle_of_view: float = Field(..., ge=0, le=360, example=10, description="angle between left and right camera view")
     owner_id: int = Field(..., gt=0, description="the user ID of the device's owner")
@@ -103,3 +110,7 @@ class DeviceUpdate(Login):
         example="0123456789ABCDEF",
         description="the unique version of the current software being run on the device",
     )
+
+    @validator("last_ping", pre=True, always=True)
+    def validate_last_ping(v):
+        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)

@@ -6,17 +6,20 @@
 from datetime import datetime
 from typing import Optional
 
+from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, validator
 
 __all__ = ["Cred", "CredHash", "Login", "Position"]
 
 
 class _CreatedAt(BaseModel):
-    created_at: Optional[datetime] = Field(None, description="timestamp of entry creation")
+    created_at: Optional[datetime] = Field(
+        None, description="timestamp of entry creation", example=datetime.utcnow().replace(tzinfo=None)
+    )
 
     @validator("created_at", pre=True, always=True)
-    def default_ts_created(v):
-        return v or datetime.utcnow()
+    def validate_created_at(v):
+        return datetime.utcnow() if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 
 class _Id(BaseModel):
