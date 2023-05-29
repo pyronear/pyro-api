@@ -193,6 +193,29 @@ async def test_fetch_installations(
         ],
         [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None],
         [
+            1,
+            {
+                "device_id": 1,
+                "site_id": 1,
+                "start_ts": "2020-10-13T08:18:45.447773",
+                "end_ts": "2020-10-13T08:18:45.447773",
+            },
+            201,
+            None,
+        ],
+        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773Z"}, 201, None],
+        [
+            1,
+            {
+                "device_id": 1,
+                "site_id": 1,
+                "start_ts": "2020-10-13T08:18:45.447773Z",
+                "end_ts": "2020-10-13T08:18:45.447773Z",
+            },
+            201,
+            None,
+        ],
+        [
             2,
             {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
             403,
@@ -221,7 +244,9 @@ async def test_create_installation(
 
     if response.status_code // 100 == 2:
         json_response = response.json()
-        test_response = {"id": len(INSTALLATION_TABLE) + 1, **payload, "end_ts": None, "is_trustworthy": True}
+        test_response = {"id": len(INSTALLATION_TABLE) + 1, **payload, "is_trustworthy": True}
+        test_response["start_ts"] = test_response["start_ts"].replace("Z", "")
+        test_response["end_ts"] = payload["end_ts"].replace("Z", "") if payload.get("end_ts") is not None else None
         assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
 
         new_installation = await get_entry(test_db, db.installations, json_response["id"])
