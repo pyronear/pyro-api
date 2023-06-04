@@ -12,7 +12,7 @@ services:
       - SERVICES=s3
     volumes:
       - ./volume:/var/lib/localstack
-    command: awslocal s3 mb s3://my-bucket
+    command: awslocal s3 mb s3://sample-bucket
   backend:
     build:
       context: src
