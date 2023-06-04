@@ -150,3 +150,7 @@ _build/
 
 # Docker Volume
 volume/
+
+# Poetry
+src/app/requirements.txt
+src/requirements-dev.txt

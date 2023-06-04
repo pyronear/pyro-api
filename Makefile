@@ -22,10 +22,12 @@ lock:
 
 # Build the docker
 build:
-	docker build src/. -t pyroapi:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
 
 # Run the docker
 run:
+	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
 	docker-compose up -d --build
 
 # Run the docker
@@ -33,7 +35,9 @@ stop:
 	docker-compose down
 
 run-dev:
-	docker build src/. -t pyroapi:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
 	# NOTE: should be docker-compose commands.
 	docker-compose exec localstack awslocal s3 mb s3://sample-bucket
@@ -44,7 +48,9 @@ stop-dev:
 
 # Run tests for the library
 test:
-	docker build src/. -t pyroapi:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
 	docker-compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker-compose exec -T backend coverage run -m pytest tests/

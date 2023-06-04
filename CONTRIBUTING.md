@@ -10,7 +10,6 @@ Whatever the way you wish to contribute to the project, please respect the [code
 
 - [`./src/app`](src/app) - The actual API codebase
 - [`./src/tests`](src/tests) - The APi unit tests
-- [`./nginx`](nginx) - NGINX configuration
 - [`./client`](client) - The API Python client (please refer to its specific [contribution guidelines](client/CONTRIBUTING.md))
 
 

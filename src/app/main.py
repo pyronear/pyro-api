@@ -38,7 +38,7 @@ if isinstance(cfg.SENTRY_DSN, str):
         release=cfg.VERSION,
         server_name=cfg.SENTRY_SERVER_NAME,
         environment="production" if isinstance(cfg.SENTRY_SERVER_NAME, str) else None,
-        traces_sample_rate=1.0,
+        traces_sample_rate=0.0,
     )
     logger.info(f"Sentry middleware enabled on server {cfg.SENTRY_SERVER_NAME}")
 
@@ -101,4 +101,4 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi  # type: ignore[assignment]
+app.openapi = custom_openapi  # type: ignore[method-assign]
