@@ -23,7 +23,6 @@ jobs:
           poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
       - name: Build & run docker
         env:
-          DOCKER_BUILDKIT: 0 # fix for docker-compose to use local pyro-api image.
           BUCKET_NAME: sample-bucket
           BUCKET_MEDIA_FOLDER: media-folder
           S3_ENDPOINT_URL: http://s3.localhost.localstack.cloud:4566
@@ -33,8 +32,6 @@ jobs:
         run: |
           docker build src/. -t pyroapi:python3.8-alpine3.10
           docker-compose -f docker-compose-dev.yml up -d --build
-      - name: Setup localstack
-        run: |
           docker-compose exec localstack awslocal s3 mb s3://sample-bucket
           docker-compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
       - name: Run docker test
