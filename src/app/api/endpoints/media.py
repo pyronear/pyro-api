@@ -13,7 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Pa
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
+from app.api.deps import get_current_access, get_current_device, get_db
 from app.api.security import hash_content_file
 from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
@@ -174,7 +174,7 @@ async def upload_media_from_device(
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
 async def get_media_url(
-    media_id: int = Path(..., gt=0), requester=Security(get_current_user, scopes=[AccessType.admin, AccessType.user])
+    media_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """Resolve the temporary media image URL"""
     requested_group_id = await get_entity_group_id(media, media_id)
