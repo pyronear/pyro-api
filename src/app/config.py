@@ -23,7 +23,7 @@ LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 ALERT_RELAXATION_SECONDS: int = 5 * 60
 
 
-SECRET_KEY: str = secrets.token_urlsafe(32)
+SECRET_KEY: str = os.environ.get("SECRET_KEY", secrets.token_urlsafe(32))
 if DEBUG:
     # To keep the same Auth at every app loading in debug mode and not having to redo the auth.
     debug_secret_key = "000000000000000000000000000000000000"  # nosec B105
