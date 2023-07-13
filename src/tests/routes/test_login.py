@@ -33,7 +33,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_create_access_token(test_app_asyncio, init_test_db, payload, status_code, status_detail):
-
     response = await test_app_asyncio.post("/login/access-token", data=payload)
 
     assert response.status_code == status_code, print(payload)

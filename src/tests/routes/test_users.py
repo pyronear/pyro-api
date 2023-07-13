@@ -52,7 +52,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, user_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -83,7 +82,6 @@ async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, use
 )
 @pytest.mark.asyncio
 async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, user_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -112,7 +110,6 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
 )
 @pytest.mark.asyncio
 async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_users):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -158,7 +155,6 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
 async def test_create_user(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -211,7 +207,6 @@ async def test_create_user(
 async def test_update_user(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, user_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -253,7 +248,6 @@ async def test_update_user(
 async def test_update_my_info(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -294,7 +288,6 @@ async def test_update_my_info(
 async def test_update_user_password(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, user_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -332,7 +325,6 @@ async def test_update_user_password(
 async def test_update_my_password(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -365,7 +357,6 @@ async def test_update_my_password(
 async def test_delete_user(
     test_app_asyncio, init_test_db, monkeypatch, access_idx, user_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

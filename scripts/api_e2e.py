@@ -12,7 +12,6 @@ import requests
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
-
     response = requests.post(
         f"{api_url}/login/access-token",
         data={"username": login, "password": pwd},
@@ -23,7 +22,6 @@ def get_token(api_url: str, login: str, pwd: str) -> str:
 
 
 def api_request(method_type: str, route: str, headers=Dict[str, str], payload: Optional[Dict[str, Any]] = None):
-
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
@@ -36,7 +34,6 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
 
 
 def main(args):
-
     api_url = f"http://localhost:{args.port}"
 
     # Log as superuser

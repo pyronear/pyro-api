@@ -13,7 +13,6 @@ from app.db import accesses, alerts, devices, events, installations, media, site
 
 
 async def get_entity_group_id(table: Table, entry_id: int) -> Optional[int]:
-
     if table == accesses:
         return await _get_access_group_id(entry_id)
     elif table == users:

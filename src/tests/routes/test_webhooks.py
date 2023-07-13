@@ -49,7 +49,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -122,7 +121,6 @@ async def test_create_wedbhook(
     status_code,
     status_details,
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -174,7 +172,6 @@ async def test_create_wedbhook(
 async def test_update_webhook(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, webhook_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -205,7 +202,6 @@ async def test_update_webhook(
 )
 @pytest.mark.asyncio
 async def test_delete_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

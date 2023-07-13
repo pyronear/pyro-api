@@ -101,7 +101,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -127,7 +126,6 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 )
 @pytest.mark.asyncio
 async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -156,7 +154,6 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 )
 @pytest.mark.asyncio
 async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -193,7 +190,6 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
 async def test_create_media_from_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -236,7 +232,6 @@ async def test_create_media_from_device(
 async def test_delete_media(
     test_app_asyncio, init_test_db, monkeypatch, access_idx, media_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -260,7 +255,6 @@ async def test_delete_media(
 
 @pytest.mark.asyncio
 async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
-
     device_idx = 2
     admin_idx = 1
     device_id = None

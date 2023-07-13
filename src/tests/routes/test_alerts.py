@@ -179,7 +179,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -206,7 +205,6 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 )
 @pytest.mark.asyncio
 async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -232,7 +230,6 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 )
 @pytest.mark.asyncio
 async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -295,7 +292,6 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 async def test_create_alert(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -346,7 +342,6 @@ async def test_create_alert(
 async def test_create_alert_by_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -392,7 +387,6 @@ async def test_create_alert_by_device(
 )
 @pytest.mark.asyncio
 async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
