@@ -11,11 +11,10 @@ services:
       - 8080:8080
     environment:
       - DEBUG=false
-      - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - SUPERUSER_LOGIN=dummy_login
-      - SUPERUSER_PWD=dummy&P@ssw0rd!
-      - QARNOT_TOKEN=${QARNOT_TOKEN}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
+      - SUPERUSER_PWD=${SUPERUSER_PWD}
       - BUCKET_NAME=${BUCKET_NAME}
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
@@ -34,11 +33,11 @@ services:
     expose:
       - 5432
     environment:
-      - POSTGRES_USER=dummy_pg_user
-      - POSTGRES_PASSWORD=dummy_pg_pwd
-      - POSTGRES_DB=dummy_pg_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_LOGIN} -d ${DB_NAME}'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
       interval: 10s
       timeout: 3s
       retries: 3
