@@ -28,20 +28,22 @@ docs = ["sphinx (==6.1.3)", "sphinx-mdinclude (==0.5.3)"]
 
 [[package]]
 name = "alembic"
-version = "1.5.4"
+version = "1.11.1"
 description = "A database migration tool for SQLAlchemy."
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+python-versions = ">=3.7"
 files = [
-    {file = "alembic-1.5.4-py2.py3-none-any.whl", hash = "sha256:422883bf429105b9b5f1fece6d79da64ed1ee648af2ef256d9b52edac236bc46"},
-    {file = "alembic-1.5.4.tar.gz", hash = "sha256:e871118b6174681f7e9a9ea67cfcae954c6d18e05b49c6b17f662d2530c76bf5"},
+    {file = "alembic-1.11.1-py3-none-any.whl", hash = "sha256:dc871798a601fab38332e38d6ddb38d5e734f60034baeb8e2db5b642fccd8ab8"},
+    {file = "alembic-1.11.1.tar.gz", hash = "sha256:6a810a6b012c88b33458fceb869aef09ac75d6ace5291915ba7fae44de372c01"},
 ]
 
 [package.dependencies]
 Mako = "*"
-python-dateutil = "*"
-python-editor = ">=0.3"
 SQLAlchemy = ">=1.3.0"
+typing-extensions = ">=4"
+
+[package.extras]
+tz = ["python-dateutil"]
 
 [[package]]
 name = "annotated-types"
@@ -53,9 +55,6 @@ files = [
     {file = "annotated_types-0.5.0-py3-none-any.whl", hash = "sha256:58da39888f92c276ad970249761ebea80ba544b77acddaa1a4d6cf78287d45fd"},
     {file = "annotated_types-0.5.0.tar.gz", hash = "sha256:47cdc3490d9ac1506ce92c7aaa76c579dc3509ff11e098fc867e5130ab7be802"},
 ]
-
-[package.dependencies]
-typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.9\""}
 
 [[package]]
 name = "anyio"
@@ -1370,18 +1369,6 @@ files = [
 six = ">=1.5"
 
 [[package]]
-name = "python-editor"
-version = "1.0.4"
-description = "Programmatically open an editor, capture the result."
-optional = false
-python-versions = "*"
-files = [
-    {file = "python-editor-1.0.4.tar.gz", hash = "sha256:51fda6bcc5ddbbb7063b2af7509e43bd84bfc32a4ff71349ec7847713882327b"},
-    {file = "python_editor-1.0.4-py2-none-any.whl", hash = "sha256:5f98b069316ea1c2ed3f67e7f5df6c0d8f10b689964a4a811ff64f0106819ec8"},
-    {file = "python_editor-1.0.4-py3-none-any.whl", hash = "sha256:1bf6e860a8ad52a14c3ee1252d5dc25b2030618ed80c022598f00176adc8367d"},
-]
-
-[[package]]
 name = "python-jose"
 version = "3.3.0"
 description = "JOSE implementation in Python"
@@ -1510,7 +1497,6 @@ files = [
 [package.dependencies]
 markdown-it-py = ">=2.2.0"
 pygments = ">=2.13.0,<3.0.0"
-typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9\""}
 
 [package.extras]
 jupyter = ["ipywidgets (>=7.5.1,<9)"]
@@ -1585,6 +1571,7 @@ files = [
 
 [package.dependencies]
 certifi = "*"
+fastapi = {version = ">=0.79.0", optional = true, markers = "extra == \"fastapi\""}
 urllib3 = {version = ">=1.26.11", markers = "python_version >= \"3.6\""}
 
 [package.extras]
@@ -1880,5 +1867,5 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.8"
-content-hash = "37de88f4047ea47d885e0f3dcbec73b6d8ca7f2851cc7e0eb926f8ee6af04028"
+python-versions = "^3.9"
+content-hash = "6afb1867c31634d3fb1f7edb2df778473c0ed0113d8606b4b79b885ea508453a"
