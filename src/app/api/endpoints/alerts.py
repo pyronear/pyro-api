@@ -6,10 +6,21 @@
 from functools import partial
 from typing import List, cast
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Path,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 
 from app.api import crud
+from app.api.connection_manager import manager
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_db
@@ -32,6 +43,8 @@ async def alert_notification(payload: AlertOut):
     webhook_urls = await crud.webhooks.fetch_webhook_urls("create_alert")
     # Post the payload to each URL
     map(partial(post_request, payload=payload), webhook_urls)
+    # Send the payload to all websocket clients
+    await manager.broadcast(payload)
 
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
@@ -146,3 +159,18 @@ async def fetch_ongoing_alerts(
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts
+
+
+@router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    # _=Security(get_current_access_ws, scopes=[AccessType.admin, AccessType.user]),
+):
+    await manager.connect(websocket)
+    try:
+        while True:
+            _ = await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await manager.disconnect(websocket)
