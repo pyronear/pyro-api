@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import argparse
+import os
 import time
 from getpass import getpass
 from typing import Any, Dict, Optional
@@ -38,8 +39,8 @@ def main(args):
     api_url = f"http://localhost:{args.port}"
 
     # Log as superuser
-    superuser_login = input("Login: ") if args.creds else "dummy_login"
-    superuser_pwd = getpass() if args.creds else "dummy&P@ssw0rd!"
+    superuser_login = input("Login: ") if args.creds else os.environ["SUPERUSER_LOGIN"]
+    superuser_pwd = getpass() if args.creds else os.environ["SUPERUSER_PWD"]
 
     start_ts = time.time()
     # Retrieve superuser token
