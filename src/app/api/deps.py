@@ -58,7 +58,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     try:
         access_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
-        token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
+        token_data = TokenPayload(user_id=access_id, scopes=token_scopes)
     except (KeyError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
