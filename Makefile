@@ -13,8 +13,6 @@ style:
 # Pin the dependencies
 lock:
 	poetry lock
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 
 # Build the docker
 build:
