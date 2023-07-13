@@ -14,6 +14,7 @@ COPY requirements.txt /app/requirements.txt
 RUN set -eux \
     && apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev libmagic \
     && pip install -r /app/requirements.txt \
+    && apk del --purge gcc \
     && rm -rf /root/.cache/pip
 
 # copy project
