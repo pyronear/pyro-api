@@ -30,14 +30,12 @@ jobs:
           S3_REGION: ${{ secrets.S3_REGION }}
           SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
           SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
-        run: |
-          docker build src/. -t pyroapi:python3.9-alpine3.14
-          docker-compose -f docker-compose.test.yml up -d --build
+        run: docker compose -f docker-compose.test.yml up -d --build
       - name: Run docker test
         run: |
-          docker-compose -f docker-compose.test.yml exec -T backend coverage --version
-          docker-compose -f docker-compose.test.yml exec -T backend coverage run -m pytest tests/
-          docker-compose -f docker-compose.test.yml exec -T backend coverage xml -o coverage-src.xml
+          docker compose -f docker-compose.test.yml exec -T backend coverage --version
+          docker compose -f docker-compose.test.yml exec -T backend coverage run -m pytest tests/
+          docker compose -f docker-compose.test.yml exec -T backend coverage xml -o coverage-src.xml
           docker cp pyro-api_backend_1:/app/coverage-src.xml .
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
@@ -75,7 +73,7 @@ jobs:
           SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
         run: |
           docker volume prune -f
-          docker-compose up -d --build
+          docker compose up -d --build
           docker ps
       - name: Cache python modules
         uses: actions/cache@v2
