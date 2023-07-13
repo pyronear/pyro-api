@@ -30,6 +30,9 @@ jobs:
           S3_REGION: ${{ secrets.S3_REGION }}
           SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
           SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         run: docker compose -f docker-compose.test.yml up -d --build
       - name: Run docker test
         run: |
@@ -71,6 +74,9 @@ jobs:
           S3_REGION: ${{ secrets.S3_REGION }}
           SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
           SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         run: |
           docker volume prune -f
           docker compose up -d --build
