@@ -101,6 +101,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": None,
+        "localization": None,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -111,6 +112,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
+        "localization": None,
         "created_at": "2020-10-13T09:18:45.447773",
     },
     {
@@ -121,6 +123,7 @@ ALERT_TABLE = [
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
+        "localization": None,
         "created_at": "2020-11-03T11:18:45.447773",
     },
     {
@@ -131,6 +134,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
+        "localization": None,
         "created_at": ts_to_string(datetime.utcnow()),
     },
 ]

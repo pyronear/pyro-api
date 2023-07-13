@@ -14,10 +14,12 @@ __all__ = ["SiteBase", "SiteIn", "SiteOut", "SiteUpdate"]
 
 # Sites
 class SiteBase(_FlatLocation):
-    name: str = Field(..., min_length=3, max_length=50, example="watchtower12", description="site name")
+    name: str = Field(
+        ..., min_length=3, max_length=50, description="site name", json_schema_extra={"examples": ["watchtower12"]}
+    )
     group_id: int = Field(None, gt=0, description="linked group entry")
-    country: str = Field(..., max_length=5, example="FR", description="country identifier")
-    geocode: str = Field(..., max_length=10, example="01", description="region geocode")
+    country: str = Field(..., max_length=5, description="country identifier", json_schema_extra={"examples": ["FR"]})
+    geocode: str = Field(..., max_length=10, description="region geocode", json_schema_extra={"examples": ["01"]})
 
 
 class SiteIn(SiteBase):

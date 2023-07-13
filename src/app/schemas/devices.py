@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from dateutil.parser import isoparse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.models import AccessType
 
@@ -31,28 +31,42 @@ class SoftwareHash(BaseModel):
         ...,
         min_length=8,
         max_length=16,
-        example="0123456789ABCDEF",
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
 
 class MyDeviceIn(Login, DefaultPosition):
-    specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1", description="hardware setup version")
+    specs: str = Field(
+        ...,
+        min_length=3,
+        max_length=100,
+        description="hardware setup version",
+        json_schema_extra={"examples": ["systemV0.1"]},
+    )
     last_ping: Optional[datetime] = Field(
         default=None,
-        example=datetime.utcnow().replace(tzinfo=None),
         description="timestamp of last communication with the API",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
-    angle_of_view: float = Field(..., ge=0, le=360, example=10, description="angle between left and right camera view")
+    angle_of_view: float = (
+        Field(
+            ...,
+            ge=0,
+            le=360,
+            description="angle between left and right camera view",
+            json_schema_extra={"examples": [10]},
+        ),
+    )
     software_hash: Optional[str] = Field(
         None,
         min_length=8,
         max_length=16,
-        example="0123456789ABCDEF",
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
-    @validator("last_ping", pre=True, always=True)
+    @field_validator("last_ping")
     def validate_last_ping(v):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
@@ -86,31 +100,53 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
 
 
 class DeviceUpdate(Login):
-    lat: Optional[float] = Field(..., gt=-90, lt=90, example=44.765181, description="latitude")
-    lon: Optional[float] = Field(..., gt=-180, lt=180, example=4.514880, description="longitude")
+    lat: Optional[float] = Field(
+        ..., gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]}
+    )
+    lon: Optional[float] = Field(
+        ..., gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]}
+    )
     elevation: Optional[float] = Field(
-        ..., gt=0.0, lt=10000, example=1582, description="number of meters from sea level"
+        ..., gt=0.0, lt=10000, description="number of meters from sea level", json_schema_extra={"examples": [1582]}
     )
     azimuth: Optional[float] = Field(
-        ..., ge=0, le=360, example=110.0, description="angle between north and direction in degrees"
+        ...,
+        ge=0,
+        le=360,
+        description="angle between north and direction in degrees",
+        json_schema_extra={"examples": [110.0]},
     )
     pitch: Optional[float] = Field(
-        ..., ge=-90, le=90, example=-5, description="angle between horizontal plane and direction"
+        ...,
+        ge=-90,
+        le=90,
+        description="angle between horizontal plane and direction",
+        json_schema_extra={"examples": [-5]},
     )
-    specs: str = Field(..., min_length=3, max_length=100, example="systemV0.1", description="hardware setup version")
+    specs: str = Field(
+        ...,
+        min_length=3,
+        max_length=100,
+        description="hardware setup version",
+        json_schema_extra={"examples": ["systemV0.1"]},
+    )
     last_ping: Optional[datetime] = Field(
-        ..., example=datetime.utcnow().replace(tzinfo=None), description="timestamp of last communication with the API"
+        ...,
+        description="timestamp of last communication with the API",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
-    angle_of_view: float = Field(..., ge=0, le=360, example=10, description="angle between left and right camera view")
+    angle_of_view: float = Field(
+        ..., ge=0, le=360, description="angle between left and right camera view", json_schema_extra={"examples": [10]}
+    )
     owner_id: int = Field(..., gt=0, description="the user ID of the device's owner")
     software_hash: Optional[str] = Field(
         ...,
         min_length=8,
         max_length=16,
-        example="0123456789ABCDEF",
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
-    @validator("last_ping", pre=True, always=True)
+    @field_validator("last_ping")
     def validate_last_ping(v):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)

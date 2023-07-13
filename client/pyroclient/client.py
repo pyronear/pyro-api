@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -116,6 +116,7 @@ class Client:
         lon: float,
         media_id: int,
         azimuth: Union[float, None] = None,
+        localization: Union[List[Tuple[float, float, float, float]], None] = None,
         event_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
@@ -129,12 +130,13 @@ class Client:
             lon: the longitude of the alert
             media_id: media ID linked to this alert
             azimuth: the azimuth of the alert
+            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax
             event_id: the ID of the event this alerts relates to
 
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id}
+        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": localization or []}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 

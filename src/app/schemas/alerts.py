@@ -16,6 +16,7 @@ class AlertBase(_FlatLocation):
     media_id: int = Field(..., gt=0, description="linked media entry")
     event_id: Optional[int] = Field(None, gt=0, description="linked event entry")
     azimuth: Optional[float] = Field(None, ge=0, le=360, description="angle between north and direction in degrees")
+    localization: Optional[str] = Field(None, description="list of bounding boxes")
 
 
 class AlertIn(AlertBase):

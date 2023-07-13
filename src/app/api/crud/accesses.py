@@ -72,7 +72,7 @@ async def create_accessed_entry(
     # Ensure database consistency between tables with a transaction
     async with base.database.transaction():
         access_entry = await post_access(accesses, payload.login, payload.password, payload.scope, payload.group_id)
-        entry = await base.create_entry(table, schema(**payload.dict(), access_id=access_entry.id))
+        entry = await base.create_entry(table, schema(**payload.model_dump(), access_id=access_entry.id))
 
     return entry
 

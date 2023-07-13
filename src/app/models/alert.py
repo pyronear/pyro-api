@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -23,6 +23,7 @@ class Alert(Base):
     azimuth = Column(Float(4, asdecimal=True))
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))
+    localization = Column(String(200), default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
     device = relationship("Device", back_populates="alerts")

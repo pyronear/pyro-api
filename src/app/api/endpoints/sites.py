@@ -40,7 +40,7 @@ async def create_noalert_site(
     or "Example Value" to get a concrete idea of arguments
     """
     await check_group_update(requester.id, payload.group_id)
-    _payload = payload.dict()
+    _payload = payload.model_dump()
 
     if _payload["group_id"] is None:
         _payload["group_id"] = requester.group_id
