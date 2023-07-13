@@ -10,6 +10,7 @@ from sqlalchemy import Table
 
 from app.api import security
 from app.api.crud import base
+from app.models.access import AccessType
 from app.schemas import (
     AccessCreation,
     AccessRead,
@@ -41,7 +42,7 @@ async def update_login(accesses: Table, login: str, access_id: int):
     return await base.update_entry(accesses, Login(login=login), access_id)
 
 
-async def post_access(accesses: Table, login: str, password: str, scope: str, group_id: int) -> AccessRead:
+async def post_access(accesses: Table, login: str, password: str, scope: AccessType, group_id: int) -> AccessRead:
     """Insert an access entry in the accesses table, call within a transaction to reuse returned access id."""
     await check_login_existence(accesses, login)
 

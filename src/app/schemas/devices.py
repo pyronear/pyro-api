@@ -49,14 +49,12 @@ class MyDeviceIn(Login, DefaultPosition):
         description="timestamp of last communication with the API",
         json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
-    angle_of_view: float = (
-        Field(
-            ...,
-            ge=0,
-            le=360,
-            description="angle between left and right camera view",
-            json_schema_extra={"examples": [10]},
-        ),
+    angle_of_view: float = Field(
+        ...,
+        ge=0,
+        le=360,
+        description="angle between left and right camera view",
+        json_schema_extra={"examples": [10]},
     )
     software_hash: Optional[str] = Field(
         None,

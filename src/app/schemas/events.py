@@ -18,7 +18,7 @@ __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "Acknowledge
 
 # Events
 class EventIn(_FlatLocation):
-    type: EventType = Field(EventType.wildfire, description="event type")
+    type: Optional[EventType] = Field(EventType.wildfire, description="event type")
     start_ts: Optional[datetime] = Field(
         None,
         description="timestamp of event start",
