@@ -39,7 +39,7 @@ services:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
       interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 3
   db_test:
     image: postgres:15-alpine
     environment:
