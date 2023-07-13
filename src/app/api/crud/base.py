@@ -86,9 +86,7 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
 
 
 async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
-    payload_dict = payload.model_dump()
-
-    _id = await put(entry_id, payload_dict, table)
+    _id = await put(entry_id, payload.model_dump(), table)
 
     if not isinstance(_id, int):
         raise HTTPException(
