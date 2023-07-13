@@ -16,12 +16,12 @@ lock:
 
 # Build the docker
 build:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.9-alpine3.14
 
 # Run the docker
 run:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+	poetry export -f requirements.txt --without-hashes --output src/requirements.txt
 	docker-compose up -d --build
 
 # Run the docker
@@ -29,8 +29,8 @@ stop:
 	docker-compose down
 
 run-dev:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.9-alpine3.14
 	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
 
@@ -39,8 +39,8 @@ stop-dev:
 
 # Run tests for the library
 test:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	poetry export -f requirements.txt --without-hashes --output src/requirements.txt
+	docker build src/. -t pyronear/pyro-api:python3.9-alpine3.14
 	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
 	docker-compose exec -T backend coverage run -m pytest tests/
