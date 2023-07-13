@@ -109,12 +109,9 @@ explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
-    "jose.*",
-    "passlib.*",
-    "sqlalchemy.*",
-    "app.*",
-    "boto3.*",
-    "botocore.*",
+    "magic",
+    "boto3",
+    "databases",
 ]
 ignore_missing_imports = true
 
