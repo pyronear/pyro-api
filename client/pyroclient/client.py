@@ -153,7 +153,6 @@ class Client:
         Returns:
             HTTP response containing the created media
         """
-
         return requests.post(
             self.routes["create-media-from-device"], headers=self.headers, json={}, timeout=self.timeout
         )
@@ -173,7 +172,6 @@ class Client:
         Returns:
             HTTP response containing the updated media
         """
-
         return requests.post(
             self.routes["upload-media"].format(media_id=media_id),
             headers=self.headers,
@@ -228,7 +226,6 @@ class Client:
         Returns:
             HTTP response containing the list of all ongoing alerts
         """
-
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
 
     def get_unacknowledged_events(self) -> Response:
@@ -256,7 +253,6 @@ class Client:
         Returns:
             HTTP response containing the updated event
         """
-
         return requests.put(
             self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
         )
@@ -293,7 +289,6 @@ class Client:
         Returns:
             HTTP response containing the URL to the media content
         """
-
         return requests.get(
             self.routes["get-media-url"].format(media_id=media_id), headers=self.headers, timeout=self.timeout
         )

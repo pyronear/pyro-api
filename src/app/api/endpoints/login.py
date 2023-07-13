@@ -25,7 +25,6 @@ async def create_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
     By default, the token expires after 1 hour
     """
-
     # Verify credentials
     entry = await crud.fetch_one(accesses, {"login": form_data.username})
     if entry is None or not await security.verify_password(form_data.password, entry["hashed_password"]):

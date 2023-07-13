@@ -46,7 +46,6 @@ async def create_alert(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
 
@@ -130,7 +129,6 @@ async def fetch_ongoing_alerts(
     """
     Retrieves the list of ongoing alerts and their information
     """
-
     if await is_admin_access(requester.id):
         query = (
             alerts.select().where(alerts.c.event_id.in_(select([events.c.id]).where(events.c.end_ts.is_(None))))
