@@ -200,7 +200,6 @@ async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, s
 )
 @pytest.mark.asyncio
 async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -260,7 +259,6 @@ async def test_fetch_past_events(
 )
 @pytest.mark.asyncio
 async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -406,7 +404,6 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
 async def test_update_event(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, event_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -443,7 +440,6 @@ async def test_update_event(
 )
 @pytest.mark.asyncio
 async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -473,7 +469,6 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
 async def test_acknowledge_event(
     test_app_asyncio, init_test_db, test_db, access_idx, event_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -502,7 +497,6 @@ async def test_acknowledge_event(
 )
 @pytest.mark.asyncio
 async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

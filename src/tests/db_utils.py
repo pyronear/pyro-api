@@ -19,7 +19,6 @@ async def reset_test_db():
     """
     Delete all rows from the database but keeps the schemas
     """
-
     with contextlib.closing(engine.connect()) as con:
         trans = con.begin()
         for table in reversed(metadata.sorted_tables):

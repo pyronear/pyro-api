@@ -105,7 +105,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -133,7 +132,6 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
 )
 @pytest.mark.asyncio
 async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -166,7 +164,6 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
 )
 @pytest.mark.asyncio
 async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_devices):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -194,7 +191,6 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
 )
 @pytest.mark.asyncio
 async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -284,7 +280,6 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
 async def test_register_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -364,7 +359,6 @@ async def test_register_device(
 async def test_register_my_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -612,7 +606,6 @@ async def test_register_my_device(
 async def test_update_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -688,7 +681,6 @@ async def test_update_device(
 async def test_update_device_location(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -728,7 +720,6 @@ async def test_update_device_location(
 async def test_update_device_hash(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -771,7 +762,6 @@ async def test_update_device_hash(
 async def test_update_my_location(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -816,7 +806,6 @@ async def test_update_my_location(
 async def test_update_device_password(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -847,7 +836,6 @@ async def test_update_device_password(
 )
 @pytest.mark.asyncio
 async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -891,7 +879,6 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
 )
 @pytest.mark.asyncio
 async def test_delete_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

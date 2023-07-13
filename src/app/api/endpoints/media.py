@@ -126,7 +126,6 @@ async def upload_media_from_device(
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
-
     # Check in DB
     entry = await check_media_registration(media_id, current_device.id)
 

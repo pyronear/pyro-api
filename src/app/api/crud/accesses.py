@@ -81,10 +81,8 @@ async def update_accessed_entry(table: Table, accesses: Table, entry_id: int, pa
     """Update an entry with a special treatment regarding login: if login is set -> update corresponding access."""
     # Ensure database consistency between tables with a transaction (login must remain the same in table & accesses)
     async with base.database.transaction():
-
         # Handle access update only if login is set
         if payload.login is not None:
-
             # Need to retrieve access_id from entry
             origin_entry = await base.get_entry(table, entry_id)  # assert entry exist
 

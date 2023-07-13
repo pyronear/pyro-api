@@ -15,13 +15,11 @@ __all__ = ["init_db"]
 
 
 async def init_db():
-
     login = cfg.SUPERUSER_LOGIN
 
     # check if access login does not already exist
     entry = await crud.fetch_one(accesses, {"login": login})
     if entry is None:
-
         hashed_password = await hash_password(cfg.SUPERUSER_PWD)
 
         admin_group = GroupIn(name="admins")

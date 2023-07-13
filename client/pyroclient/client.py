@@ -78,7 +78,7 @@ class Client:
         # Prepend API url to each route
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
         self.timeout = timeout
-        self.refresh_token(credentials_login, credentials_password, timeout=self.timeout, **kwargs)
+        self.refresh_token(credentials_login, credentials_password, **kwargs)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -88,7 +88,9 @@ class Client:
         self.token = self._retrieve_token(login, password, **kwargs)
 
     def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
-        response = requests.post(self.routes["token"], data={"username": login, "password": password}, **kwargs)
+        response = requests.post(
+            self.routes["token"], data={"username": login, "password": password}, timeout=self.timeout, **kwargs
+        )
         if response.status_code == 200:
             return response.json()["access_token"]
         else:
@@ -153,7 +155,6 @@ class Client:
         Returns:
             HTTP response containing the created media
         """
-
         return requests.post(
             self.routes["create-media-from-device"], headers=self.headers, json={}, timeout=self.timeout
         )
@@ -173,7 +174,6 @@ class Client:
         Returns:
             HTTP response containing the updated media
         """
-
         return requests.post(
             self.routes["upload-media"].format(media_id=media_id),
             headers=self.headers,
@@ -228,7 +228,6 @@ class Client:
         Returns:
             HTTP response containing the list of all ongoing alerts
         """
-
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
 
     def get_unacknowledged_events(self) -> Response:
@@ -256,7 +255,6 @@ class Client:
         Returns:
             HTTP response containing the updated event
         """
-
         return requests.put(
             self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
         )
@@ -293,7 +291,6 @@ class Client:
         Returns:
             HTTP response containing the URL to the media content
         """
-
         return requests.get(
             self.routes["get-media-url"].format(media_id=media_id), headers=self.headers, timeout=self.timeout
         )

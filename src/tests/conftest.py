@@ -17,7 +17,6 @@ async def mock_verify_password(plain_password, hashed_password):
 
 
 async def get_token(access_id, scopes):
-
     token_data = {"sub": str(access_id), "scopes": scopes}
     token = await create_unlimited_access_token(token_data)
 

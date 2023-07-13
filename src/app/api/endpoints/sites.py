@@ -25,7 +25,6 @@ async def create_site(payload: SiteIn, _=Security(get_current_access, scopes=[Ac
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-
     return await crud.create_entry(sites, payload)
 
 

@@ -101,7 +101,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -127,7 +126,6 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 )
 @pytest.mark.asyncio
 async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -156,7 +154,6 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 )
 @pytest.mark.asyncio
 async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -193,7 +190,6 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
 async def test_create_media_from_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -236,7 +232,6 @@ async def test_create_media_from_device(
 async def test_delete_media(
     test_app_asyncio, init_test_db, monkeypatch, access_idx, media_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -260,7 +255,6 @@ async def test_delete_media(
 
 @pytest.mark.asyncio
 async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
-
     device_idx = 2
     admin_idx = 1
     device_id = None
@@ -286,7 +280,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     # Download and save a temporary file
     local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
-    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png", timeout=5).content
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 
@@ -306,7 +300,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     del device_auth["Content-Type"]
 
     response = await test_app_asyncio.post(
-        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+        f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
     )
 
     assert response.status_code == 200, print(response.json()["detail"])
@@ -319,7 +313,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     # Same file
     response = await test_app_asyncio.post(
-        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+        f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
     )
     assert response.status_code == 200, print(response.json()["detail"])
 
@@ -351,7 +345,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     # Take a file
     local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
-    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png", timeout=5).content
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 
@@ -376,7 +370,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     monkeypatch.setattr(bucket_service, "upload_file", failing_upload)
     response = await test_app_asyncio.post(
-        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+        f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
     )
     assert response.status_code == 500, print(response.json()["detail"])
 
@@ -387,6 +381,6 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     monkeypatch.setattr(bucket_service, "get_file_metadata", mock_get_wrong_metadata)
     response = await test_app_asyncio.post(
-        f"/media/{new_media_id}/upload", files=dict(file=img_content), headers=device_auth
+        f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
     )
     assert response.status_code == 500, print(response.json()["detail"])

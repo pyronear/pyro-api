@@ -44,7 +44,7 @@ S3_REGION: str = os.environ["S3_REGION"]
 S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
 DUMMY_BUCKET_FILE = (
     "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/"
-    + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
+    "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
 )
 
 

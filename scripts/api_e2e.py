@@ -12,10 +12,10 @@ import requests
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
-
     response = requests.post(
         f"{api_url}/login/access-token",
         data={"username": login, "password": pwd},
+        timeout=5,
     )
     if response.status_code != 200:
         raise ValueError(response.json()["detail"])
@@ -23,7 +23,6 @@ def get_token(api_url: str, login: str, pwd: str) -> str:
 
 
 def api_request(method_type: str, route: str, headers=Dict[str, str], payload: Optional[Dict[str, Any]] = None):
-
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
@@ -36,7 +35,6 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
 
 
 def main(args):
-
     api_url = f"http://localhost:{args.port}"
 
     # Log as superuser
@@ -55,7 +53,7 @@ def main(args):
     user_group = 1
 
     # create a user
-    payload = dict(login=user_login, password=user_pwd, scope="user", group_id=user_group)
+    payload = {"login": user_login, "password": user_pwd, "scope": "user", "group_id": user_group}
     user_id = api_request("post", f"{api_url}/users/", superuser_auth, payload)["id"]
     user_auth = {
         "Authorization": f"Bearer {get_token(api_url, user_login, user_pwd)}",
@@ -63,17 +61,17 @@ def main(args):
     }
 
     # Create a site
-    payload = dict(name="first_site", country="FR", geocode="01", lat=44.1, lon=3.9, group_id=1)
+    payload = {"name": "first_site", "country": "FR", "geocode": "01", "lat": 44.1, "lon": 3.9, "group_id": 1}
     site_id = api_request("post", f"{api_url}/sites/", superuser_auth, payload)["id"]
 
     # Update the user password
-    payload = dict(password="my_second_pwd")  # nosec B106
+    payload = {"password": "my_second_pwd"}  # nosec B106
     api_request("put", f"{api_url}/users/update-pwd", user_auth, payload)
 
     # Create a device (as admin until #79 is closed)
     device_login = "my_device"
     device_pwd = "my_third_password"  # nosec B105
-    payload = dict(login=device_login, password=device_pwd, specs="raspberry_pi", angle_of_view=0.68)
+    payload = {"login": device_login, "password": device_pwd, "specs": "raspberry_pi", "angle_of_view": 0.68}
     device_id = api_request("post", f"{api_url}/devices/register", user_auth, payload)["id"]
 
     device_auth = {
@@ -82,18 +80,18 @@ def main(args):
     }
 
     # create an installation with this device and the site
-    payload = dict(device_id=device_id, site_id=site_id, start_ts="2019-08-24T14:15:22.00")
+    payload = {"device_id": device_id, "site_id": site_id, "start_ts": "2019-08-24T14:15:22.00"}
     installation_id = api_request("post", f"{api_url}/installations/", superuser_auth, payload)["id"]
 
     # Installation creates a media
-    payload = dict(type="image")
+    payload = {"type": "image"}
     media_id = api_request("post", f"{api_url}/media/from-device", device_auth, payload)["id"]
 
     # Installation creates an event & alert
-    payload = dict(lat=44.1, lon=3.9, type="wildfire")
+    payload = {"lat": 44.1, "lon": 3.9, "type": "wildfire"}
     event_id = api_request("post", f"{api_url}/events/", superuser_auth, payload)["id"]
 
-    payload = dict(lat=44.1, lon=3.9, azimuth=0, event_id=event_id, media_id=media_id)
+    payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id}
     alert_id = api_request("post", f"{api_url}/alerts/from-device", device_auth, payload)["id"]
 
     # Acknowledge it

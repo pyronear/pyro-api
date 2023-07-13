@@ -27,7 +27,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 def get_db():
-    db = SessionLocal()  # noqa: F405
+    db = SessionLocal()
     try:
         yield db
     finally:
@@ -41,7 +41,6 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     >>> async def read_users_me(current_user: User = Security(get_current_access, scopes=["me"])):
     >>>     return current_user
     """
-
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
@@ -59,7 +58,7 @@ async def get_current_access(security_scopes: SecurityScopes, token: str = Depen
     try:
         access_id = int(payload["sub"])
         token_scopes = payload.get("scopes", [])
-        token_data = TokenPayload(access_id=access_id, scopes=token_scopes)
+        token_data = TokenPayload(user_id=access_id, scopes=token_scopes)
     except (KeyError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
