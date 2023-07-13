@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
@@ -18,7 +18,7 @@ __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "Acknowledge
 
 # Events
 class EventIn(_FlatLocation):
-    type: Optional[EventType] = Field(EventType.wildfire, description="event type")
+    type: EventType = Field(EventType.wildfire, description="event type")
     start_ts: Optional[datetime] = Field(
         None,
         description="timestamp of event start",
@@ -32,11 +32,11 @@ class EventIn(_FlatLocation):
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
     @field_validator("start_ts")
-    def validate_start_ts(v):
+    def validate_start_ts(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
     @field_validator("end_ts")
-    def validate_end_ts(v):
+    def validate_end_ts(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 
@@ -67,5 +67,5 @@ class EventUpdate(_FlatLocation):
     is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")
 
     @field_validator("start_ts")
-    def validate_start_ts(v):
+    def validate_start_ts(cls, v: Union[datetime, str]):
         return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)

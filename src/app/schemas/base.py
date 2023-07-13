@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
@@ -20,7 +20,7 @@ class _CreatedAt(BaseModel):
     )
 
     @field_validator("created_at")
-    def validate_created_at(v):
+    def validate_created_at(cls, v: Union[datetime, str, None]):
         return datetime.utcnow() if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 

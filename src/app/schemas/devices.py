@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
@@ -65,7 +65,7 @@ class MyDeviceIn(Login, DefaultPosition):
     )
 
     @field_validator("last_ping")
-    def validate_last_ping(v):
+    def validate_last_ping(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 
@@ -146,5 +146,5 @@ class DeviceUpdate(Login):
     )
 
     @field_validator("last_ping")
-    def validate_last_ping(v):
+    def validate_last_ping(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)

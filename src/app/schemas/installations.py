@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
@@ -31,11 +31,11 @@ class InstallationIn(BaseModel):
     is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
     @field_validator("start_ts")
-    def validate_start_ts(v):
+    def validate_start_ts(cls, v: Union[datetime, str]):
         return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
     @field_validator("end_ts")
-    def validate_end_ts(v):
+    def validate_end_ts(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
 
 
@@ -52,5 +52,5 @@ class InstallationUpdate(InstallationIn):
     is_trustworthy: bool = Field(..., description="whether alerts from this installation can be trusted")
 
     @field_validator("end_ts")
-    def validate_end_ts(v):
+    def validate_end_ts(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
