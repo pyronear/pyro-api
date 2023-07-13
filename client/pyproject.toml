@@ -9,7 +9,7 @@ authors = [
     {name = "Pyronear", email = "contact@pyronear.org"}
 ]
 readme = "README.md"
-requires-python = ">=3.6,<4"
+requires-python = ">=3.8,<4"
 license = {file = "LICENSE"}
 keywords = ["backend", "wildfire", "alert", "client", "api"]
 classifiers = [
@@ -37,11 +37,9 @@ test = [
     "coverage[toml]>=4.5.4",
 ]
 quality = [
-    "flake8>=3.9.0",
-    "isort>=5.7.0",
-    "mypy>=0.812",
-    "pydocstyle[toml]>=6.0.0",
-    "black>=22.1,<23.0",
+    "ruff>=0.0.273,<1.0.0",
+    "mypy==1.4.1",
+    "black==23.3.0",
 ]
 docs = [
     "sphinx>=3.0.0,!=3.5.0",
@@ -57,11 +55,9 @@ dev = [
     "pytest>=5.3.2",
     "coverage[toml]>=4.5.4",
     # style
-    "flake8>=3.9.0",
-    "isort>=5.7.0",
-    "mypy>=0.812",
-    "pydocstyle[toml]>=6.0.0",
-    "black>=22.1,<23.0",
+    "ruff>=0.0.273,<1.0.0",
+    "mypy==1.4.1",
+    "black==23.3.0",
     # docs
     "sphinx>=3.0.0,!=3.5.0",
     "sphinxemoji>=0.1.8",
@@ -97,16 +93,6 @@ module = [
     "requests.*",
 ]
 ignore_missing_imports = true
-
-[tool.isort]
-profile = "black"
-src_paths = ["pyroclient/"]
-skip_glob = ["**/__init__.py"]
-known_third_party = []
-
-[tool.pydocstyle]
-select = "D300,D301,D417"
-match = ".*\\.py"
 
 [tool.coverage.run]
 source = ["pyroclient/"]
