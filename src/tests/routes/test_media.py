@@ -280,7 +280,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     # Download and save a temporary file
     local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
-    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png", timeout=5).content
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 
@@ -345,7 +345,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     # Take a file
     local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
-    img_content = requests.get("https://pyronear.org/img/logo_letters.png").content
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png", timeout=5).content
     with open(local_tmp_path, "wb") as f:
         f.write(img_content)
 

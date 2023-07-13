@@ -19,4 +19,4 @@ def post_request(url: str, payload: Optional[BaseModel] = None) -> requests.Resp
         HTTP response
     """
     kwargs = {} if payload is None else {"json": payload}
-    return requests.post(url, headers={"Content-Type": "application/json"}, **kwargs)
+    return requests.post(url, headers={"Content-Type": "application/json"}, timeout=5, **kwargs)

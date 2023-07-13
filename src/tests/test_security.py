@@ -34,11 +34,11 @@ def test_hash_content_file():
     file_url2 = "https://github.com/pyronear/pyro-api/releases/download/v0.1.1/pyronear_logo_mini.png"
 
     # Hash it
-    hash1 = security.hash_content_file(requests.get(file_url1).content)
-    hash2 = security.hash_content_file(requests.get(file_url2).content)
+    hash1 = security.hash_content_file(requests.get(file_url1, timeout=5).content)
+    hash2 = security.hash_content_file(requests.get(file_url2, timeout=5).content)
 
     # Check data integrity
-    assert security.hash_content_file(requests.get(file_url1).content) == hash1
+    assert security.hash_content_file(requests.get(file_url1, timeout=5).content) == hash1
     assert hash1 != hash2
 
 

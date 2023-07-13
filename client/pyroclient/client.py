@@ -78,7 +78,7 @@ class Client:
         # Prepend API url to each route
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
         self.timeout = timeout
-        self.refresh_token(credentials_login, credentials_password, timeout=self.timeout, **kwargs)
+        self.refresh_token(credentials_login, credentials_password, **kwargs)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -88,7 +88,9 @@ class Client:
         self.token = self._retrieve_token(login, password, **kwargs)
 
     def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
-        response = requests.post(self.routes["token"], data={"username": login, "password": password}, **kwargs)
+        response = requests.post(
+            self.routes["token"], data={"username": login, "password": password}, timeout=self.timeout, **kwargs
+        )
         if response.status_code == 200:
             return response.json()["access_token"]
         else:
