@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import io
+import json
 import logging
 from typing import Any, Dict, List, Tuple, Union
 from urllib.parse import urljoin
@@ -136,7 +137,7 @@ class Client:
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": localization or []}
+        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": json.dumps(localization) or "[]"}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 
