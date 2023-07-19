@@ -32,6 +32,10 @@ jobs:
         run: |
           docker build src/. -t pyroapi:python3.8-alpine3.10
           docker-compose -f docker-compose-dev.yml up -d --build
+      - name: "Wait for docker to finish building"
+        run: sleep 3
+      - name: "Create local AWS environment"
+        run: |
           docker-compose exec localstack awslocal s3 mb s3://sample-bucket
           docker-compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
       - name: Run docker test
