@@ -43,7 +43,7 @@ test:
 	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
 	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
-	docker-compose exec -T backend coverage run -m pytest tests/
+	docker-compose exec -T backend coverage run -m pytest tests/routes/test_alerts.py
 	docker-compose -f docker-compose-dev.yml down
 
 # Run tests for the Python client

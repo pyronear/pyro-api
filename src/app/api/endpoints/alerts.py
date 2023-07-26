@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from functools import partial
+from string import Template
 from typing import List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
@@ -13,10 +14,13 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_db
+from app.api.endpoints.devices import get_device
+from app.api.endpoints.notifications import send_notification
+from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
 from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn
 
 router = APIRouter()
 
@@ -32,6 +36,20 @@ async def alert_notification(payload: AlertOut):
     webhook_urls = await crud.webhooks.fetch_webhook_urls("create_alert")
     # Post the payload to each URL
     map(partial(post_request, payload=payload), webhook_urls)
+
+    # Send notification to the recipients of the same group as the device that issued the alert
+    # alert: AlertOut = AlertOut(**payload)
+    alert = payload  # FIXME
+    group_id = await get_entity_group_id(alerts, alert.id)
+    if group_id is None:  # for mypy, to convert Optional[int] -> int ; should never happen
+        return
+    device: DeviceOut = await get_device(alert.device_id)
+    for recipient in await fetch_recipients_for_group(group_id):
+        message: str = Template(recipient.message_template).safe_substitute(
+            alert_id=alert.id, date=alert.created_at, device_name=device.login
+        )
+        notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, message=message)
+        await send_notification(notification)
 
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")

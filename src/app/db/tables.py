@@ -4,7 +4,20 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
-from app.models import Access, Alert, Device, Event, Group, Installation, Media, Site, User, Webhook
+from app.models import (
+    Access,
+    Alert,
+    Device,
+    Event,
+    Group,
+    Installation,
+    Media,
+    Notification,
+    Recipient,
+    Site,
+    User,
+    Webhook,
+)
 
 from .base_class import Base
 
@@ -20,6 +33,8 @@ __all__ = [
     "installations",
     "alerts",
     "webhooks",
+    "recipients",
+    "notifications",
 ]
 
 users = User.__table__
@@ -32,5 +47,7 @@ media = Media.__table__
 installations = Installation.__table__
 alerts = Alert.__table__
 webhooks = Webhook.__table__
+recipients = Recipient.__table__
+notifications = Notification.__table__
 
 metadata = Base.metadata
