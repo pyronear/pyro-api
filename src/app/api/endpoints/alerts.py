@@ -7,6 +7,7 @@ from functools import partial
 from typing import List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
+from pydantic import PositiveInt
 from sqlalchemy import select
 
 from app.api import crud
@@ -146,3 +147,17 @@ async def fetch_ongoing_alerts(
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
         return retrieved_alerts
+
+
+@router.get("/event-alerts/{event_id}/", response_model=List[AlertOut], summary="Get the list of alerts for event")
+async def fetch_alerts_for_event(
+    event_id: PositiveInt,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
+):
+    """
+    Retrieves the list of alerts associated to the given event and their information
+    """
+    requested_group_id = await get_entity_group_id(events, event_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
+    return await crud.base.database.fetch_all(query=alerts.select().where(alerts.c.event_id == event_id))

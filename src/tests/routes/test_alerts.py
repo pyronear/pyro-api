@@ -258,6 +258,44 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 
 
 @pytest.mark.parametrize(
+    "access_idx, event_id, status_code, status_details",
+    [
+        [0, 1, 200, None],
+        [1, 1, 200, None],
+        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        [4, 3, 403, "This access can't read resources from group_id=1"],
+    ],
+)
+@pytest.mark.asyncio
+async def test_fetch_alerts_for_event(
+    test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details
+):
+    # Create a custom access token
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
+
+    response = await test_app_asyncio.get(f"/alerts/event-alerts/{event_id}", headers=auth)
+    assert response.status_code == status_code, response.json()
+    if isinstance(status_details, str):
+        assert response.json()["detail"] == status_details
+
+    if response.status_code // 100 == 2:
+        alerts_group_id = [entry["id"] for entry in ALERT_TABLE]
+
+        # Retrieve group_id condition first
+        if ACCESS_TABLE[access_idx]["scope"] != "admin":
+            group_id = ACCESS_TABLE[access_idx]["group_id"]
+            access_group_id = [access["id"] for access in ACCESS_TABLE if access["group_id"] == group_id]
+            devices_group_id = [device["id"] for device in DEVICE_TABLE if device["access_id"] in access_group_id]
+            alerts_group_id = [alert["id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
+
+        assert response.json() == [
+            entry for entry in ALERT_TABLE if (entry["event_id"] == event_id and entry["id"] in alerts_group_id)
+        ]
+
+
+@pytest.mark.parametrize(
     "access_idx, payload, expected_event_id, status_code, status_details",
     [
         [
