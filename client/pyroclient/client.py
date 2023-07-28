@@ -37,7 +37,7 @@ ROUTES: Dict[str, str] = {
     "get-unacknowledged-events": "/events/unacknowledged",
     "get-past-events": "/events/past",
     "acknowledge-event": "/events/{event_id}/acknowledge",
-    "get-alerts-for-event": "/event/{event_id}/alerts",
+    "get-alerts-for-event": "/events/{event_id}/alerts",
     #################
     # INSTALLATIONS
     #################
