@@ -241,7 +241,9 @@ class Client:
         Returns:
             HTTP response containing the list of all alerts for the given event
         """
-        return requests.get(self.routes["get-alerts-for-event"], headers=self.headers, timeout=self.timeout)
+        return requests.get(
+            self.routes["get-alerts-for-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_unacknowledged_events(self) -> Response:
         """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
