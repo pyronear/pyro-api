@@ -241,6 +241,7 @@
     <span class="s2">&quot;get-unacknowledged-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/unacknowledged&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-past-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/past&quot;</span><span class="p">,</span>
     <span class="s2">&quot;acknowledge-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/acknowledge&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get-alerts-for-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/alerts&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
     <span class="c1"># INSTALLATIONS</span>
     <span class="c1">#################</span>
@@ -433,6 +434,20 @@
 <span class="sd">            HTTP response containing the list of all ongoing alerts</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-ongoing-alerts&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.get_alerts_for_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_alerts_for_event">[docs]</a>    <span class="k">def</span> <span class="nf">get_alerts_for_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the alerts in the DB for the given event</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_alerts_for_event()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the list of all alerts for the given event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-alerts-for-event&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">event_id</span><span class="o">=</span><span class="n">event_id</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.get_unacknowledged_events"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_unacknowledged_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_unacknowledged_events</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the existing events in the DB that have the field &quot;is_acknowledged&quot; set to `False`</span>

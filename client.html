@@ -267,6 +267,22 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_alerts_for_event">
+<span class="sig-name descname"><span class="pre">get_alerts_for_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_alerts_for_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_alerts_for_event" title="Permalink to this definition">#</a></dt>
+<dd><p>Get all the alerts in the DB for the given event</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://pyronear-api.herokuapp.com&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_LOGIN&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_PWD&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">get_alerts_for_event</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>HTTP response containing the list of all alerts for the given event</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.get_all_alerts">
 <span class="sig-name descname"><span class="pre">get_all_alerts</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_all_alerts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_all_alerts" title="Permalink to this definition">#</a></dt>
 <dd><p>Get all the existing alerts in the DB</p>
@@ -554,6 +570,7 @@
 <li><a class="reference internal" href="#pyroclient.client.Client"><code class="docutils literal notranslate"><span class="pre">Client</span></code></a><ul>
 <li><a class="reference internal" href="#pyroclient.client.Client.acknowledge_event"><code class="docutils literal notranslate"><span class="pre">Client.acknowledge_event()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.create_media_from_device"><code class="docutils literal notranslate"><span class="pre">Client.create_media_from_device()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.get_alerts_for_event"><code class="docutils literal notranslate"><span class="pre">Client.get_alerts_for_event()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.get_all_alerts"><code class="docutils literal notranslate"><span class="pre">Client.get_all_alerts()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.get_media_url"><code class="docutils literal notranslate"><span class="pre">Client.get_media_url()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.get_ongoing_alerts"><code class="docutils literal notranslate"><span class="pre">Client.get_ongoing_alerts()</span></code></a></li>
