@@ -38,17 +38,16 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
     # Send notification to the recipients of the same group as the device that issued the alert
-    # alert: AlertOut = AlertOut(**payload)
-    alert = payload  # FIXME
-    group_id = await get_entity_group_id(alerts, alert.id)
+    group_id = await get_entity_group_id(alerts, payload.id)
     if group_id is None:  # for mypy, to convert Optional[int] -> int ; should never happen
         return
-    device: DeviceOut = await get_device(alert.device_id)
+    device: DeviceOut = await get_device(payload.device_id)
     for recipient in await fetch_recipients_for_group(group_id):
-        message: str = Template(recipient.message_template).safe_substitute(
-            alert_id=alert.id, date=alert.created_at, device_name=device.login
-        )
-        notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, message=message)
+        # Information to be added to subject and message: safe_substitute accepts fields that are not present
+        info = {"alert_id": payload.id, "date": payload.created_at, "device": device.login}
+        subject: str = Template(recipient.subject_template).safe_substitute(**info)
+        message: str = Template(recipient.message_template).safe_substitute(**info)
+        notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
         await send_notification(notification)
 
 
@@ -69,9 +68,9 @@ async def create_alert(
 
     if payload.event_id is None:
         payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
-    alert = await crud.create_entry(alerts, payload)
+    alert = AlertOut(**(await crud.create_entry(alerts, payload)))
     # Send notification
-    background_tasks.add_task(alert_notification, alert)  # type: ignore[arg-type]
+    background_tasks.add_task(alert_notification, alert)
     return alert
 
 

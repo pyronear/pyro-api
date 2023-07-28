@@ -12,7 +12,12 @@ from app.schemas.base import _CreatedAt, _GroupId, _Id
 class RecipientIn(_GroupId):
     notification_type: NotificationType = Field(description="type of notification")
     address: EmailStr = Field(description="address to send notification")
-    message_template: str = Field(description="message template")
+    subject_template: str = Field(
+        description="template for notification subject. Can contain fields like $date that are replaced when the notification is sent"
+    )
+    message_template: str = Field(
+        description="template for notification message. Can contain fields like $date that are replaced when the notification is sent"
+    )
 
 
 class RecipientOut(RecipientIn, _Id, _CreatedAt):

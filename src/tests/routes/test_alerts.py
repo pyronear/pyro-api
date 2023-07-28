@@ -145,11 +145,33 @@ ALERT_TABLE = [
     },
 ]
 
+RECIPIENT_TABLE = [
+    {
+        "id": 1,
+        "group_id": 1,
+        "notification_type": "email",
+        "address": "my@mail.com",
+        "subject_template": "New alert on $device",
+        "message_template": "Group 1: alert $alert_id issued by $device on $date",
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "group_id": 2,
+        "notification_type": "email",
+        "address": "my@othermail.com",
+        "subject_template": "New alert on $device",
+        "message_template": "Group 2: alert $alert_id issued by $device on $date",
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+]
+
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
+RECIPIENT_TABLE_FOR_DB = list(map(update_only_datetime, RECIPIENT_TABLE))
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -163,7 +185,7 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
-
+    await fill_table(test_db, db.alerts, RECIPIENT_TABLE_FOR_DB)
 
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",
@@ -313,6 +335,10 @@ async def test_create_alert(
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
         assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
+
+        # TODO: check notifications
+        # notifications = await test_app_asyncio.get("/notifications/", headers=auth)
+        # assert any(check_notification(entry, payload) for entry in notifications.json())
 
 
 @pytest.mark.parametrize(

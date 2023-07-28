@@ -19,6 +19,7 @@ class Notification(Base):
     created_at = Column(DateTime, default=func.now())
     alert_id = Column(Integer, ForeignKey("alerts.id"))
     recipient_id = Column(Integer, ForeignKey("recipients.id"))
+    subject = Column(String, nullable=False)
     message = Column(String, nullable=False)
 
     alert = relationship("Alert", uselist=False, back_populates="notifications")
@@ -27,5 +28,5 @@ class Notification(Base):
     def __repr__(self):
         return (
             f"<Notification(alert_id='{self.alert_id}', recipient_id='{self.recipient_id}', "
-            f"message='{self.message}'>"
+            f"subject='{self.subject}', message='{self.message}'>"
         )

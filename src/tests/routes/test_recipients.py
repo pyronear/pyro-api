@@ -26,7 +26,8 @@ RECIPIENT_TABLE = [
         "group_id": 1,
         "notification_type": "email",
         "address": "my@mail.com",
-        "message_template": "Group 1: alert $alert_id issued by $device_name on $date",
+        "subject_template": "New alert on $device",
+        "message_template": "Group 1: alert $alert_id issued by $device on $date",
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -34,7 +35,8 @@ RECIPIENT_TABLE = [
         "group_id": 2,
         "notification_type": "email",
         "address": "my@othermail.com",
-        "message_template": "Group 2: alert $alert_id issued by $device_name on $date",
+        "subject_template": "New alert on $device",
+        "message_template": "Group 2: alert $alert_id issued by $device on $date",
         "created_at": "2020-10-13T08:18:45.447773",
     },
 ]

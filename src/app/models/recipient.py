@@ -25,6 +25,7 @@ class Recipient(Base):
     group_id = Column(Integer, ForeignKey("groups.id"))
     notification_type = Column(Enum(NotificationType), nullable=False)
     address = Column(String, nullable=False)
+    subject_template = Column(String, nullable=False)
     message_template = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
 
@@ -33,5 +34,6 @@ class Recipient(Base):
     def __repr__(self):
         return (
             f"<Recipient(group_id='{self.group_id}', notification_type='{self.notification_type}', "
-            f"address='{self.address}'>"
+            f"address='{self.address}', subject_template='{self.subject_template}', "
+            f"message_template='{self.message_template}'>"
         )

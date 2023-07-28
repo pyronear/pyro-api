@@ -11,7 +11,8 @@ from app.schemas.base import _CreatedAt, _Id
 class NotificationIn(BaseModel):
     alert_id: int = Field(description="linked alert entry")
     recipient_id: int = Field(description="linked recipient entry")
-    message: str = Field(description="message sent")
+    subject: str = Field(description="subject of notification")
+    message: str = Field(description="message of notification")
 
 
 class NotificationOut(NotificationIn, _Id, _CreatedAt):
