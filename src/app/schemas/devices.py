@@ -6,12 +6,11 @@
 from datetime import datetime
 from typing import Optional
 
-from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, validator
 
 from app.models import AccessType
 
-from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id
+from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id, validate_datetime_none
 
 __all__ = [
     "DeviceIn",
@@ -52,9 +51,8 @@ class MyDeviceIn(Login, DefaultPosition):
         description="the unique version of the current software being run on the device",
     )
 
-    @validator("last_ping", pre=True, always=True)
-    def validate_last_ping(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    # validators
+    _validate_last_ping = validator("last_ping", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class DeviceIn(MyDeviceIn):
@@ -111,6 +109,5 @@ class DeviceUpdate(Login):
         description="the unique version of the current software being run on the device",
     )
 
-    @validator("last_ping", pre=True, always=True)
-    def validate_last_ping(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    # validators
+    # _validate_last_ping = validator("last_ping", pre=True, always=True, allow_reuse=True)(validate_datetime_none)

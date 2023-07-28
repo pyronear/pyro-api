@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, validator
@@ -12,14 +12,38 @@ from pydantic import BaseModel, Field, validator
 __all__ = ["Cred", "CredHash", "Login", "Position"]
 
 
+def validate_datetime(v: Any) -> datetime:
+    """Validator for datetime fields
+
+    Args:
+        v (str or datetime): datetime or equivalent
+
+    Returns: datetime object with no timezone
+    """
+    try:
+        return datetime.utcnow() if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    except AttributeError:
+        raise ValueError(f"Invalid value: {v}")
+
+
+def validate_datetime_none(v: Any) -> Optional[datetime]:
+    """Validator for datetime fields: keep None
+
+    Args:
+        v (str or datetime): datetime or equivalent
+
+    Returns: None if input is None or datetime object with no timezone
+    """
+    return None if v is None else validate_datetime(v)
+
+
 class _CreatedAt(BaseModel):
     created_at: Optional[datetime] = Field(
         None, description="timestamp of entry creation", example=datetime.utcnow().replace(tzinfo=None)
     )
 
-    @validator("created_at", pre=True, always=True)
-    def validate_created_at(v):
-        return datetime.utcnow() if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    # validators
+    _validate_created_at = validator("created_at", pre=True, always=True, allow_reuse=True)(validate_datetime)
 
 
 class _Id(BaseModel):

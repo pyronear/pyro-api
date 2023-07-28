@@ -5,7 +5,7 @@
 
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -31,11 +31,11 @@ class Device(Base):
     last_ping = Column(DateTime, default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
-    access = relationship("Access", uselist=False, back_populates="device")
-    owner = relationship("User", uselist=False, back_populates="device")
-    media = relationship("Media", back_populates="device")
-    alerts = relationship("Alert", back_populates="device")
-    installation = relationship("Installation", back_populates="device")
+    access: RelationshipProperty = relationship("Access", uselist=False, back_populates="device")
+    owner: RelationshipProperty = relationship("User", uselist=False, back_populates="device")
+    media: RelationshipProperty = relationship("Media", back_populates="device")
+    alerts: RelationshipProperty = relationship("Alert", back_populates="device")
+    installation: RelationshipProperty = relationship("Installation", back_populates="device")
 
     def __repr__(self):
         return (
