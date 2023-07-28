@@ -88,4 +88,5 @@ def test_client_user(setup, user_client, mock_img):
     assert event["is_acknowledged"]
     _test_route_return(user_client.get_all_alerts(), list)
     _test_route_return(user_client.get_ongoing_alerts(), list)
+    _test_route_return(user_client.get_alerts_for_event(1), list)
     assert user_client.get_media_url(1).status_code == 404
