@@ -38,6 +38,7 @@ ROUTES: Dict[str, str] = {
     "get-unacknowledged-events": "/events/unacknowledged",
     "get-past-events": "/events/past",
     "acknowledge-event": "/events/{event_id}/acknowledge",
+    "get-alerts-for-event": "/events/{event_id}/alerts",
     #################
     # INSTALLATIONS
     #################
@@ -232,6 +233,20 @@ class Client:
             HTTP response containing the list of all ongoing alerts
         """
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
+
+    def get_alerts_for_event(self, event_id: int) -> Response:
+        """Get all the alerts in the DB for the given event
+
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_alerts_for_event()
+
+        Returns:
+            HTTP response containing the list of all alerts for the given event
+        """
+        return requests.get(
+            self.routes["get-alerts-for-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_unacknowledged_events(self) -> Response:
         """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`

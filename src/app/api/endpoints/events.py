@@ -6,15 +6,16 @@
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
+from pydantic import PositiveInt
 from sqlalchemy import and_
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_db
-from app.db import events
+from app.db import alerts, events
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import Acknowledgement, AcknowledgementOut, EventIn, EventOut, EventUpdate
+from app.schemas import Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
 
 router = APIRouter()
 
@@ -138,3 +139,17 @@ async def fetch_unacknowledged_events(
         )
         retrieved_events = [x.__dict__ for x in retrieved_events.all()]
         return retrieved_events
+
+
+@router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")
+async def fetch_alerts_for_event(
+    event_id: PositiveInt,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
+):
+    """
+    Retrieves the list of alerts associated to the given event and their information
+    """
+    requested_group_id = await get_entity_group_id(events, event_id)
+    await check_group_read(requester.id, cast(int, requested_group_id))
+    return await crud.base.database.fetch_all(query=alerts.select().where(alerts.c.event_id == event_id))
