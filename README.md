@@ -131,7 +131,6 @@ BUCKET_NAME=my_storage_bucket_name
 POSTGRES_USER=dummy_pg_user
 POSTGRES_PASSWORD=dummy_pg_pwd
 POSTGRES_DB=dummy_pg_db
-DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
 SENTRY_DSN='https://replace.with.you.sentry.dsn/'
 SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
