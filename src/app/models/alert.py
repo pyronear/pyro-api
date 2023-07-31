@@ -23,7 +23,7 @@ class Alert(Base):
     azimuth = Column(Float(4, asdecimal=True))
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))
-    localization = Column(String(150), default=None, nullable=True)
+    localization = Column(String(200), default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
     device: RelationshipProperty = relationship("Device", back_populates="alerts")

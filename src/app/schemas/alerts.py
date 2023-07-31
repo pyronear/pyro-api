@@ -17,7 +17,7 @@ class AlertBase(_FlatLocation):
     event_id: Optional[int] = Field(None, gt=0, description="linked event entry")
     azimuth: Optional[float] = Field(None, ge=0, le=360, description="angle between north and direction in degrees")
     localization: Optional[str] = Field(
-        None, max_length=150, strip_whitespace=True, description="list of bounding boxes"
+        None, max_length=200, strip_whitespace=True, description="list of bounding boxes"
     )
 
 
