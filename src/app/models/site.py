@@ -6,7 +6,7 @@
 import enum
 
 from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -33,8 +33,8 @@ class Site(Base):
     type = Column(Enum(SiteType), default=SiteType.tower)
     created_at = Column(DateTime, default=func.now())
 
-    installations = relationship("Installation", back_populates="site")
-    group = relationship("Group", uselist=False, back_populates="sites")
+    installations: RelationshipProperty = relationship("Installation", back_populates="site")
+    group: RelationshipProperty = relationship("Group", uselist=False, back_populates="sites")
 
     def __repr__(self):
         return (
