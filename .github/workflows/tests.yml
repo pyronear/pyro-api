@@ -17,6 +17,11 @@ jobs:
       - uses: abatilo/actions-poetry@v2
         with:
           poetry-version: "1.3.0"
+      - name: Install Compose
+        uses: ndeloof/install-compose-action@v0.0.1
+        with:
+          version: v2.1.0 # defaults to 'latest'
+          legacy: true    # will also install in PATH as `docker-compose`
       - name: Resolve dependencies
         run: |
           poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
