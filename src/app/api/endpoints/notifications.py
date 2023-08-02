@@ -1,10 +1,12 @@
 # Copyright (C) 2020-2023, Pyronear.
-from typing import List
-
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
+from typing import List
+
+import requests
 from fastapi import APIRouter, HTTPException, Path, Security, status
 
+from app import config as cfg
 from app.api import crud
 from app.api.deps import get_current_access
 from app.api.endpoints.recipients import get_recipient
@@ -25,13 +27,21 @@ async def send_notification(payload: NotificationIn):
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    notification: NotificationOut = NotificationOut(**(await crud.create_entry(notifications, payload)))
-    recipient = RecipientOut(**(await get_recipient(recipient_id=notification.recipient_id)))
-    if recipient.notification_type == NotificationType.email:
-        pass  # TODO: implement
+    recipient = RecipientOut(**(await get_recipient(recipient_id=payload.recipient_id)))
+    if recipient.notification_type == NotificationType.telegram:
+        if not cfg.TELEGRAM_TOKEN:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Telegram token not set")
+        url = f"https://api.telegram.org/bot{cfg.TELEGRAM_TOKEN}/sendMessage?chat_id={recipient.address}&text={payload.message}"
+        response = requests.get(url)
+        if response.status_code != 200 or "ok" not in response.json() or not response.json()["ok"]:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Problem sending notification: {response.status_code, response.text}",
+            )
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid NotificationType, not treated")
 
+    notification: NotificationOut = NotificationOut(**(await crud.create_entry(notifications, payload)))
     return notification
 
 

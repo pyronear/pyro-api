@@ -149,8 +149,8 @@ RECIPIENT_TABLE = [
     {
         "id": 1,
         "group_id": 1,
-        "notification_type": "email",
-        "address": "my@mail.com",
+        "notification_type": "telegram",
+        "address": "my_chat_id",
         "subject_template": "New alert on $device",
         "message_template": "Group 1: alert $alert_id issued by $device on $date",
         "created_at": "2020-10-13T08:18:45.447773",
@@ -158,8 +158,8 @@ RECIPIENT_TABLE = [
     {
         "id": 2,
         "group_id": 2,
-        "notification_type": "email",
-        "address": "my@othermail.com",
+        "notification_type": "telegram",
+        "address": "my_other_chat_id",
         "subject_template": "New alert on $device",
         "message_template": "Group 2: alert $alert_id issued by $device on $date",
         "created_at": "2020-10-13T08:18:45.447773",
@@ -186,6 +186,7 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, RECIPIENT_TABLE_FOR_DB)
+
 
 @pytest.mark.parametrize(
     "access_idx, alert_id, status_code, status_details",

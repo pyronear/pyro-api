@@ -6,7 +6,7 @@
 import enum
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -15,7 +15,8 @@ __all__ = ["NotificationType", "Recipient"]
 
 
 class NotificationType(str, enum.Enum):
-    email: str = "email"
+    # email: str = "telegram"
+    telegram: str = "telegram"
 
 
 class Recipient(Base):
@@ -29,7 +30,7 @@ class Recipient(Base):
     message_template = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
 
-    notifications = relationship("Notification", uselist=False, back_populates="recipient")
+    notifications: RelationshipProperty = relationship("Notification", uselist=False, back_populates="recipient")
 
     def __repr__(self):
         return (

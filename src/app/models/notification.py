@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -22,8 +22,8 @@ class Notification(Base):
     subject = Column(String, nullable=False)
     message = Column(String, nullable=False)
 
-    alert = relationship("Alert", uselist=False, back_populates="notifications")
-    recipient = relationship("Recipient", uselist=False, back_populates="notifications")
+    alert: RelationshipProperty = relationship("Alert", uselist=False, back_populates="notifications")
+    recipient: RelationshipProperty = relationship("Recipient", uselist=False, back_populates="notifications")
 
     def __repr__(self):
         return (

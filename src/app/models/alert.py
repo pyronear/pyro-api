@@ -5,7 +5,7 @@
 
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -28,7 +28,7 @@ class Alert(Base):
     device = relationship("Device", back_populates="alerts")
     event = relationship("Event", back_populates="alerts")
     media = relationship("Media", back_populates="alerts")
-    notifications = relationship("Notification", back_populates="alert")
+    notifications: RelationshipProperty = relationship("Notification", back_populates="alert")
 
     def __repr__(self):
         return f"<Alert(device_id='{self.device_id}', event_id='{self.event_id}', media_id='{self.media_id}'>"
