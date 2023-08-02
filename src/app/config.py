@@ -9,7 +9,6 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
-# load_dotenv(".env_tests" if "pytest" in sys.modules else ".env")
 load_dotenv("../.env")
 
 PROJECT_NAME: str = "Pyronear - Alert API"

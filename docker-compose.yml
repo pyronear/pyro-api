@@ -7,6 +7,7 @@ services:
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
     volumes:
       - ./src/:/app/
+      - ./db_backup:/app/db_backup/
     ports:
       - 8080:8080
     environment:
