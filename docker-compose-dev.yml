@@ -12,6 +12,11 @@ services:
       - SERVICES=s3
     volumes:
       - ./volume:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   backend:
     build:
       context: src
