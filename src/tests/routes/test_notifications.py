@@ -4,11 +4,19 @@ import pytest
 import pytest_asyncio
 
 from app import db
-from tests.db_utils import fill_table
-from tests.routes.test_alerts import ACCESS_TABLE, init_test_db as init_test_db_alerts
+from app.api import crud, deps
+from tests.db_utils import TestSessionLocal, fill_table
+from tests.routes.test_alerts import (
+    ACCESS_TABLE,
+    ALERT_TABLE_FOR_DB,
+    DEVICE_TABLE_FOR_DB,
+    EVENT_TABLE_FOR_DB,
+    GROUP_TABLE,
+    MEDIA_TABLE_FOR_DB,
+    USER_TABLE_FOR_DB,
+)
 from tests.routes.test_recipients import RECIPIENT_TABLE_FOR_DB
 from tests.utils import update_only_datetime
-
 
 NOTIFICATION_TABLE = [
     {
@@ -35,7 +43,17 @@ NOTIFICATION_TABLE_FOR_DB = list(map(update_only_datetime, NOTIFICATION_TABLE))
 
 
 @pytest_asyncio.fixture(scope="function")
-async def init_test_db(test_db, init_test_db_alerts):
+async def init_test_db(monkeypatch, test_db):
+    monkeypatch.setattr(crud.base, "database", test_db)
+    monkeypatch.setattr(deps, "SessionLocal", TestSessionLocal)
+    await fill_table(test_db, db.groups, GROUP_TABLE)
+    await fill_table(test_db, db.accesses, ACCESS_TABLE)
+    await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
+    await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
+    await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
+    await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
+    await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
+    await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.notifications, NOTIFICATION_TABLE_FOR_DB)
 

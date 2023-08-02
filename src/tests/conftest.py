@@ -48,7 +48,7 @@ async def test_db():
         await test_database.disconnect()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def patch_send_telegram_msg(monkeypatch):
     """Patch send_telegram_msg -> do nothing"""
     monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", lambda *arg, **kwargs: None)

@@ -22,8 +22,8 @@ class Notification(Base):
     subject = Column(String, nullable=False)
     message = Column(String, nullable=False)
 
-    alert: RelationshipProperty = relationship("Alert", uselist=False, back_populates="notifications")
-    recipient: RelationshipProperty = relationship("Recipient", uselist=False, back_populates="notifications")
+    alert: RelationshipProperty = relationship("Alert", back_populates="notifications")
+    recipient: RelationshipProperty = relationship("Recipient", back_populates="notifications")
 
     def __repr__(self):
         return (

@@ -25,6 +25,8 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_REGION=${S3_REGION}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_TEST_CHAT_ID=${TELEGRAM_TEST_CHAT_ID}
     depends_on:
       - db
   db:

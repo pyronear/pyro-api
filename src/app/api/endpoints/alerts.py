@@ -76,7 +76,7 @@ async def create_alert(
     new_event: bool = False
     if payload.event_id is None:
         payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
-    alert = AlertOut(**(await crud.create_entry(alerts, payload)))
+    alert = AlertOut.parse_obj(await crud.create_entry(alerts, payload))
     # Send notification
     if new_event:
         background_tasks.add_task(alert_notification, alert)

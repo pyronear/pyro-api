@@ -30,7 +30,8 @@ class Recipient(Base):
     message_template = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
 
-    notifications: RelationshipProperty = relationship("Notification", uselist=False, back_populates="recipient")
+    group: RelationshipProperty = relationship("Group", back_populates="recipients")
+    notifications: RelationshipProperty = relationship("Notification", back_populates="recipient")
 
     def __repr__(self):
         return (
