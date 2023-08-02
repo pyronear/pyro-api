@@ -40,7 +40,7 @@ run-dev:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
 	# NOTE: sleep to make sure localstack is up and running
-	sleep 3
+	while ! nc -z localhost 4566; do sleep 1; done
 	# NOTE: should be docker-compose commands.
 	docker-compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker-compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
@@ -54,6 +54,8 @@ test:
 	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
 	poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
 	docker-compose -f docker-compose-dev.yml up -d --build
+	# NOTE: sleep to make sure localstack is up and running
+	while ! nc -z localhost 4566; do sleep 1; done
 	docker-compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker-compose exec -T backend coverage run -m pytest tests/
 	docker-compose -f docker-compose-dev.yml down
