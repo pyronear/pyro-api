@@ -35,8 +35,10 @@ services:
       - S3_SECRET_KEY=fake
       - S3_REGION=us-east-1
     depends_on:
-      - db
-      - localstack
+      db:
+        condition: service_started
+      localstack:
+        condition: service_healthy
   db:
     image: postgres:12.1-alpine
     volumes:
