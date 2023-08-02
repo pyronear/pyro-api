@@ -51,7 +51,6 @@ class MyDeviceIn(Login, DefaultPosition):
         description="the unique version of the current software being run on the device",
     )
 
-    # validators
     _validate_last_ping = validator("last_ping", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
@@ -109,5 +108,4 @@ class DeviceUpdate(Login):
         description="the unique version of the current software being run on the device",
     )
 
-    # validators
-    # _validate_last_ping = validator("last_ping", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_last_ping = validator("last_ping", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
