@@ -26,7 +26,6 @@ class EventIn(_FlatLocation):
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
-    # validators
     _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
     _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
@@ -53,5 +52,4 @@ class EventUpdate(_FlatLocation):
     )
     is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")
 
-    # validators
     _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)

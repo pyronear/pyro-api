@@ -25,7 +25,7 @@ if DATABASE_URL.startswith("postgres://"):
 TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "")
 LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
-ALERT_RELAXATION_SECONDS: int = 5 * 60
+ALERT_RELAXATION_SECONDS: int = 30 * 60
 
 
 SECRET_KEY: str = os.environ.get("SECRET_KEY", secrets.token_urlsafe(32))

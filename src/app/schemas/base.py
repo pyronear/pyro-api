@@ -42,7 +42,6 @@ class _CreatedAt(BaseModel):
         None, description="timestamp of entry creation", example=datetime.utcnow().replace(tzinfo=None)
     )
 
-    # validators
     _validate_created_at = validator("created_at", pre=True, always=True, allow_reuse=True)(validate_datetime)
 
 

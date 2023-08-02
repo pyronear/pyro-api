@@ -25,7 +25,6 @@ class InstallationIn(BaseModel):
     )
     is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
-    # validators
     _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
     _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
