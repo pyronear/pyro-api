@@ -112,11 +112,14 @@ This file will have to hold the following information:
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `BUCKET_NAME`: the name of the storage bucket
+- `DATABASE_URL`: database URL, including username and password 
 
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
 - `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
+- `BUCKET_DB_BACKUP_FOLDER`: subfolder where to store db backups
+- `POSTGRES_USER`: db username ; required for backups
 
 So your `.env` file should look like something similar to:
 ```
@@ -125,6 +128,8 @@ S3_SECRET_KEY=YOUR_SECRET_KEY
 S3_REGION=bucket-region
 S3_ENDPOINT_URL='https://s3.mydomain.com/'
 BUCKET_NAME=my_storage_bucket_name
+POSTGRES_USER=my_postgres_user
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
 SENTRY_DSN='https://replace.with.you.sentry.dsn/'
 SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
@@ -141,6 +146,9 @@ The full package documentation is available [here](http://pyronear-api.herokuapp
 
 This project is a REST-API, and you can interact with the service through HTTP requests. However, if you want to ease the integration into a Python project, take a look at our [Python client](client).
 
+### DB backup
+
+From the project root folder, you can run `sh scripts/dump_db.sh` to dump the db content to `db_backup` and upload it to s3
 
 ## Contributing
 

@@ -7,6 +7,10 @@ import os
 import secrets
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv("../.env")
+
 PROJECT_NAME: str = "Pyronear - Alert API"
 PROJECT_DESCRIPTION: str = "API for wildfire prevention, detection and monitoring"
 API_BASE: str = "api/"

@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import boto3
 from fastapi import HTTPException
@@ -55,11 +55,15 @@ class S3Bucket:
         # Generate a public URL for it using boto3 presign URL generation
         return self._s3.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
 
-    async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
+    async def upload_file(self, bucket_key: str, file_or_binary: Union[str, bytes]) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/upload_file.html
         try:
-            self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
+            if isinstance(file_or_binary, str):
+                self._s3.upload_file(file_or_binary, self.bucket_name, bucket_key)
+            else:
+                self._s3.upload_fileobj(file_or_binary, self.bucket_name, bucket_key)
         except Exception as e:
             logger.warning(e)
             return False
