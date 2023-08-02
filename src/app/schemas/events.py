@@ -6,12 +6,11 @@
 from datetime import datetime
 from typing import Optional
 
-from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, validator
 
 from app.models import EventType
 
-from .base import _CreatedAt, _FlatLocation, _Id
+from .base import _CreatedAt, _FlatLocation, _Id, validate_datetime_none
 
 __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "AcknowledgementOut"]
 
@@ -27,13 +26,9 @@ class EventIn(_FlatLocation):
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
-    @validator("start_ts", pre=True, always=True)
-    def validate_start_ts(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
-
-    @validator("end_ts", pre=True, always=True)
-    def validate_end_ts(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    # validators
+    _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -58,6 +53,5 @@ class EventUpdate(_FlatLocation):
     )
     is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")
 
-    @validator("start_ts", pre=True, always=True)
-    def validate_start_ts(v):
-        return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    # validators
+    _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)

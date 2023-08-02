@@ -5,7 +5,7 @@
 
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -24,8 +24,8 @@ class Installation(Base):
     is_trustworthy = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
 
-    device = relationship("Device", back_populates="installation")
-    site = relationship("Site", back_populates="installations")
+    device: RelationshipProperty = relationship("Device", back_populates="installation")
+    site: RelationshipProperty = relationship("Site", back_populates="installations")
 
     def __repr__(self):
         return (
