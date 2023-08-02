@@ -33,7 +33,10 @@ jobs:
           docker build src/. -t pyroapi:python3.8-alpine3.10
           docker-compose -f docker-compose-dev.yml up -d --build
       - name: "Wait for docker to finish building"
-        run: sleep 3
+        run: |
+          echo "Waiting for LocalStack to be ready..."
+          while ! nc -z localhost 4566; do sleep 1; done
+          echo "LocalStack is ready."
       - name: "Create local AWS environment"
         run: |
           docker-compose exec localstack awslocal s3 mb s3://sample-bucket
