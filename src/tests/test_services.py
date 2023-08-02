@@ -1,3 +1,5 @@
+import pytest
+
 from app.services import bucket_service, resolve_bucket_key
 from app.services.bucket import S3Bucket
 from app.services.utils import cfg
@@ -23,3 +25,14 @@ def test_resolve_bucket_key(monkeypatch):
 
 def test_bucket_service():
     assert isinstance(bucket_service, S3Bucket)
+
+
+@pytest.mark.parametrize("filename, is_binary", [("test.txt", False), ("test.binary", True)])
+@pytest.mark.asyncio
+async def test_upload_file(filename, is_binary, tmp_path):
+    fname = str(tmp_path / filename)
+    with open(fname, "wb" if is_binary else "w") as f:
+        f.write(bytearray(b"This is a test") if is_binary else "This is a test")
+    assert await bucket_service.upload_file(f"test/{filename}", open(fname, "rb") if is_binary else fname)
+    assert await bucket_service.get_file_metadata(f"test/{filename}")
+    await bucket_service.delete_file(f"test/{filename}")
