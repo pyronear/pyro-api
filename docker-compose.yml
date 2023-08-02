@@ -24,6 +24,7 @@ services:
       - S3_REGION=${S3_REGION}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_SERVER_NAME=${SENTRY_SERVER_NAME}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     depends_on:
       - db
   db:

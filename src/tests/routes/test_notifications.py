@@ -5,9 +5,10 @@ import pytest_asyncio
 
 from app import db
 from tests.db_utils import fill_table
-from tests.routes.test_alerts import ACCESS_TABLE
+from tests.routes.test_alerts import ACCESS_TABLE, init_test_db as init_test_db_alerts
 from tests.routes.test_recipients import RECIPIENT_TABLE_FOR_DB
 from tests.utils import update_only_datetime
+
 
 NOTIFICATION_TABLE = [
     {
@@ -34,7 +35,7 @@ NOTIFICATION_TABLE_FOR_DB = list(map(update_only_datetime, NOTIFICATION_TABLE))
 
 
 @pytest_asyncio.fixture(scope="function")
-async def init_test_db(monkeypatch, test_db, init_test_db_alerts):
+async def init_test_db(test_db, init_test_db_alerts):
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.notifications, NOTIFICATION_TABLE_FOR_DB)
 
@@ -135,7 +136,7 @@ async def test_send_notification(
 
     response = await test_app_asyncio.post("/notifications/", content=json.dumps(payload), headers=auth)
 
-    assert response.status_code == status_code
+    assert response.status_code == status_code, response.text
 
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details

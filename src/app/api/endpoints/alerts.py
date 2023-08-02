@@ -20,7 +20,7 @@ from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
 from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
 
 router = APIRouter()
 
@@ -41,10 +41,17 @@ async def alert_notification(payload: AlertOut):
     group_id = await get_entity_group_id(alerts, payload.id)
     if group_id is None:  # for mypy, to convert Optional[int] -> int ; should never happen
         return
-    device: DeviceOut = await get_device(payload.device_id)
-    for recipient in await fetch_recipients_for_group(group_id):
+    device: DeviceOut = DeviceOut.parse_obj(await get_device(payload.device_id))
+    for item in await fetch_recipients_for_group(group_id):
+        recipient: RecipientOut = RecipientOut.parse_obj(item)
         # Information to be added to subject and message: safe_substitute accepts fields that are not present
-        info = {"alert_id": payload.id, "date": payload.created_at, "device": device.login}
+        info = {
+            "alert_id": payload.id,
+            "event_id": payload.event_id,
+            "date": "?" if payload.created_at is None else payload.created_at.isoformat(sep=" ", timespec="seconds"),
+            "device_id": device.id,
+            "device_name": device.login,
+        }
         subject: str = Template(recipient.subject_template).safe_substitute(**info)
         message: str = Template(recipient.message_template).safe_substitute(**info)
         notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
@@ -58,7 +65,7 @@ async def create_alert(
     _=Security(get_current_access, scopes=[AccessType.admin]),
 ):
     """
-    Creates a new alert based on the given information
+    Creates a new alert based on the given information and send a notification if it is the first alert of the event
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
@@ -66,11 +73,13 @@ async def create_alert(
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
 
+    new_event: bool = False
     if payload.event_id is None:
-        payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
+        payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
     alert = AlertOut(**(await crud.create_entry(alerts, payload)))
     # Send notification
-    background_tasks.add_task(alert_notification, alert)
+    if new_event:
+        background_tasks.add_task(alert_notification, alert)
     return alert
 
 

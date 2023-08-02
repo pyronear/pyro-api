@@ -29,9 +29,6 @@ python-dotenv = "^1.0.0"
 [tool.poetry.group.quality]
 optional = true
 
-[tool.poetry.group.quality]
-optional = true
-
 [tool.poetry.group.quality.dependencies]
 ruff = { version = "==0.0.278" }
 mypy = { version = "==1.4.1" }

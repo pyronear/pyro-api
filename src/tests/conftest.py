@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
+from app.api import endpoints
 from app.api.security import create_unlimited_access_token
 from app.main import app
 from tests.db_utils import database as test_database
@@ -45,3 +46,9 @@ async def test_db():
     finally:
         await reset_test_db()
         await test_database.disconnect()
+
+
+@pytest.fixture(autouse=True)
+def patch_send_telegram_msg(monkeypatch):
+    """Patch send_telegram_msg -> do nothing"""
+    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", lambda *arg, **kwargs: None)

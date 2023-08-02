@@ -15,7 +15,7 @@ __all__ = ["NotificationType", "Recipient"]
 
 
 class NotificationType(str, enum.Enum):
-    # email: str = "telegram"
+    # email: str = "email"
     telegram: str = "telegram"
 
 
