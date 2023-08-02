@@ -3,6 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from typing import Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy import Table
 
@@ -34,7 +36,7 @@ async def check_group_read(access_id: int, group_id: int) -> bool:
     return True
 
 
-async def check_group_update(access_id: int, group_id: int) -> bool:
+async def check_group_update(access_id: int, group_id: Optional[int]) -> bool:
     if (
         (group_id is not None)
         and (not await is_admin_access(access_id))

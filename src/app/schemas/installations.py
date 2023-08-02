@@ -6,10 +6,9 @@
 from datetime import datetime
 from typing import Optional
 
-from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, validator
 
-from .base import _CreatedAt, _Id
+from .base import _CreatedAt, _Id, validate_datetime_none
 
 __all__ = ["InstallationIn", "InstallationOut", "InstallationUpdate"]
 
@@ -26,13 +25,8 @@ class InstallationIn(BaseModel):
     )
     is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
-    @validator("start_ts", pre=True, always=True)
-    def validate_start_ts(v):
-        return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
-
-    @validator("end_ts", pre=True, always=True)
-    def validate_end_ts(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class InstallationOut(InstallationIn, _CreatedAt, _Id):
@@ -44,7 +38,4 @@ class InstallationUpdate(InstallationIn):
         ..., description="timestamp of event end", example=datetime.utcnow().replace(tzinfo=None)
     )
     is_trustworthy: bool = Field(..., description="whether alerts from this installation can be trusted")
-
-    @validator("end_ts", pre=True, always=True)
-    def validate_end_ts(v):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)

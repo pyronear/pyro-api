@@ -6,7 +6,7 @@
 import enum
 
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -28,8 +28,8 @@ class Media(Base):
     type = Column(Enum(MediaType), default=MediaType.image)
     created_at = Column(DateTime, default=func.now())
 
-    device = relationship("Device", uselist=False, back_populates="media")
-    alerts = relationship("Alert", back_populates="media")
+    device: RelationshipProperty = relationship("Device", uselist=False, back_populates="media")
+    alerts: RelationshipProperty = relationship("Alert", back_populates="media")
 
     def __repr__(self):
         return f"<Media(device_id='{self.device_id}', bucket_key='{self.bucket_key}', type='{self.type}'>"

@@ -55,7 +55,10 @@ async def register_my_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id, group_id=await get_entity_group_id(users, me.id))
+    group_id = await get_entity_group_id(users, me.id)
+    if group_id is None:  # for mypy to convert int | None -> int ; should never happen
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid group_id for user {me.id}")
+    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id, group_id=group_id)
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 
