@@ -38,11 +38,9 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
     # Send notification to the recipients of the same group as the device that issued the alert
-    group_id = await get_entity_group_id(alerts, payload.id)
-    if group_id is None:  # for mypy, to convert Optional[int] -> int ; should never happen
-        return
     device: DeviceOut = DeviceOut.parse_obj(await get_device(payload.device_id))
-    for item in await fetch_recipients_for_group(group_id):
+    # N.B.: "or 0" is just for mypy, to convert Optional[int] -> int ; should never happen
+    for item in await fetch_recipients_for_group(await get_entity_group_id(alerts, payload.id) or 0):
         recipient: RecipientOut = RecipientOut.parse_obj(item)
         # Information to be added to subject and message: safe_substitute accepts fields that are not present
         info = {

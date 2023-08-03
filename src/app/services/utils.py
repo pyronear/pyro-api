@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from time import sleep
 from typing import Optional
 
 import requests
@@ -43,7 +42,6 @@ def send_telegram_msg(chat_id: str, message: str, autodelete: bool = False) -> O
     if response.status_code != 200 or "ok" not in response.json() or not response.json()["ok"]:
         logger.warning(f"Problem sending telegram message to {chat_id}: {response.status_code, response.text}")
     elif autodelete:
-        sleep(5)
         try:
             msg_id = response.json()["result"]["message_id"]
             del_response = requests.get(f"{base_url}/deleteMessage?chat_id={chat_id}&message_id={msg_id}", timeout=5)
