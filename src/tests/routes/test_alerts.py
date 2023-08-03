@@ -3,9 +3,11 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 
 from app import db
 from app.api import crud, deps
+from app.api.endpoints.alerts import check_media_existence
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
 
@@ -181,10 +183,10 @@ async def check_notifications(alert_id: int, device_id: int, is_new_event: bool)
         return
     for device in DEVICE_TABLE:
         if device["id"] == device_id:
-            group_id = [item["id"] for item in USER_TABLE if device["owner_id"] == item["id"]][0]
+            group_id = next(item["id"] for item in USER_TABLE if device["owner_id"] == item["id"])
             login = device["login"]
             break
-    recipient_id = [item["id"] for item in RECIPIENT_TABLE if item["group_id"] == group_id][0]
+    recipient_id = next(item["id"] for item in RECIPIENT_TABLE if item["group_id"] == group_id)
     expected_notification = {
         "alert_id": alert_id,
         "recipient_id": recipient_id,
@@ -206,6 +208,12 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
+
+
+@pytest.mark.asyncio
+async def test_check_media_existence_raise(init_test_db):
+    with pytest.raises(HTTPException):
+        await check_media_existence(-9999)
 
 
 @pytest.mark.parametrize(
