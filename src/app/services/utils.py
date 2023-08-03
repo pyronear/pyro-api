@@ -41,11 +41,9 @@ def send_telegram_msg(chat_id: str, message: str, autodelete: bool = False) -> O
     response = requests.get(f"{base_url}/sendMessage?chat_id={chat_id}&text={message}", timeout=5)
     if response.status_code != 200 or "ok" not in response.json() or not response.json()["ok"]:
         logger.warning(f"Problem sending telegram message to {chat_id}: {response.status_code, response.text}")
-    elif autodelete:
-        try:
-            msg_id = response.json()["result"]["message_id"]
-            del_response = requests.get(f"{base_url}/deleteMessage?chat_id={chat_id}&message_id={msg_id}", timeout=5)
-            assert del_response.status_code == 200
-        except Exception as e:
-            logger.warning(f"Could not delete telegram msg: {e}")
+    elif autodelete and "result" in response.json() and "message_id" in response.json()["result"]:
+        requests.get(
+            f'{base_url}/deleteMessage?chat_id={chat_id}&message_id={response.json()["result"]["message_id"]}',
+            timeout=5,
+        )
     return response
