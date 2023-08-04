@@ -36,7 +36,7 @@ async def create_event_if_inexistant(payload: AlertIn) -> Tuple[Optional[int], b
     Args:
         payload: alert object
 
-    Returns: tuple (bool, int) -> (new alert ?, event_id)
+    Returns: tuple (int, bool) -> (event_id, new alert ?)
 
     """
     # check whether there is an alert in the last 30 min by the same device

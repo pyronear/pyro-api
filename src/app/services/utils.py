@@ -30,7 +30,7 @@ def send_telegram_msg(chat_id: str, message: str, autodelete: bool = False) -> O
     Args:
         chat_id (str): chat id
         message (str): message to send
-        autodelete (str): delete msg after sending. Used for tests
+        autodelete (bool, default=False): delete msg after sending. Used by unittests
 
     Returns: response
     """
