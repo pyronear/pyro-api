@@ -117,6 +117,7 @@ Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
 - `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
+- `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
 
 So your `.env` file should look like something similar to:
 ```

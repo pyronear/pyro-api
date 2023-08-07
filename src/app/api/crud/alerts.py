@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Tuple
 
 from sqlalchemy import and_
 
@@ -30,14 +30,19 @@ async def resolve_previous_alert(device_id: int) -> Optional[AlertOut]:
     return AlertOut(**entries[0]) if len(entries) > 0 else None
 
 
-async def create_event_if_inexistant(payload: AlertIn) -> int:
+async def create_event_if_inexistant(payload: AlertIn) -> Tuple[Optional[int], bool]:
+    """Return the id of the event to be associated with the alert and a boolean flag to tell if a new event was created
+
+    Args:
+        payload: alert object
+
+    Returns: tuple (int, bool) -> (event_id, new alert ?)
+
+    """
     # check whether there is an alert in the last 30 min by the same device
     previous_alert = await resolve_previous_alert(payload.device_id)
     if previous_alert is None:
         # Create an event & get the ID
         event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
-        event_id = event["id"]
-    # Get event ref
-    else:
-        event_id = previous_alert.event_id
-    return event_id
+        return event["id"], True
+    return previous_alert.event_id, False

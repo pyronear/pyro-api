@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from functools import partial
+from string import Template
 from typing import List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
@@ -13,10 +14,13 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_db
+from app.api.endpoints.devices import get_device
+from app.api.endpoints.notifications import send_notification
+from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
 from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
 
 router = APIRouter()
 
@@ -33,6 +37,24 @@ async def alert_notification(payload: AlertOut):
     # Post the payload to each URL
     map(partial(post_request, payload=payload), webhook_urls)
 
+    # Send notification to the recipients of the same group as the device that issued the alert
+    device: DeviceOut = DeviceOut.parse_obj(await get_device(payload.device_id))
+    # N.B.: "or 0" is just for mypy, to convert Optional[int] -> int ; should never happen
+    for item in await fetch_recipients_for_group(await get_entity_group_id(alerts, payload.id) or 0):
+        recipient: RecipientOut = RecipientOut.parse_obj(item)
+        # Information to be added to subject and message: safe_substitute accepts fields that are not present
+        info = {
+            "alert_id": payload.id,
+            "event_id": payload.event_id,
+            "date": "?" if payload.created_at is None else payload.created_at.isoformat(sep=" ", timespec="seconds"),
+            "device_id": device.id,
+            "device_name": device.login,
+        }
+        subject: str = Template(recipient.subject_template).safe_substitute(**info)
+        message: str = Template(recipient.message_template).safe_substitute(**info)
+        notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
+        await send_notification(notification)
+
 
 @router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
 async def create_alert(
@@ -41,7 +63,7 @@ async def create_alert(
     _=Security(get_current_access, scopes=[AccessType.admin]),
 ):
     """
-    Creates a new alert based on the given information
+    Creates a new alert based on the given information and send a notification if it is the first alert of the event
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
@@ -49,11 +71,13 @@ async def create_alert(
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
 
+    new_event: bool = False
     if payload.event_id is None:
-        payload.event_id = await crud.alerts.create_event_if_inexistant(payload)
-    alert = await crud.create_entry(alerts, payload)
+        payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
+    alert = AlertOut.parse_obj(await crud.create_entry(alerts, payload))
     # Send notification
-    background_tasks.add_task(alert_notification, alert)  # type: ignore[arg-type]
+    if new_event:
+        background_tasks.add_task(alert_notification, alert)
     return alert
 
 
