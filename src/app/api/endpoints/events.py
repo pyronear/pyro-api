@@ -3,11 +3,11 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List, cast
+from typing import List, Optional, cast
 
-from fastapi import APIRouter, Depends, Path, Security, status
+from fastapi import APIRouter, Depends, Path, Query, Security, status
 from pydantic import PositiveInt
-from sqlalchemy import and_
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
@@ -44,40 +44,43 @@ async def get_event(
 
 @router.get("/", response_model=List[EventOut], summary="Get the list of all events")
 async def fetch_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of all events and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(events)
-    else:
-        retrieved_events = (
-            session.query(Event).join(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id)
-        )
-        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
-        return retrieved_events
+    return await crud.fetch_all(
+        events,
+        query=None
+        if await is_admin_access(requester.id)
+        else session.query(Event).join(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/past", response_model=List[EventOut], summary="Get the list of all past events")
 async def fetch_past_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
-    Retrieves the list of all events and their information
+    Retrieves the list of all events without end timestamp and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(events, exclusions={"end_ts": None})
-    else:
-        retrieved_events = (
-            session.query(Event)
-            .join(Alert)
-            .join(Device)
-            .join(Access)
-            .filter(and_(Access.group_id == requester.group_id, Event.end_ts.isnot(None)))
-        )
-        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
-        return retrieved_events
+    return await crud.fetch_all(
+        events,
+        exclusions={"end_ts": None},
+        query=None
+        if await is_admin_access(requester.id)
+        else session.query(Event).join(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.put("/{event_id}/", response_model=EventOut, summary="Update information about a specific event")
@@ -122,28 +125,30 @@ async def delete_event(
     "/unacknowledged", response_model=List[EventOut], summary="Get the list of events that haven't been acknowledged"
 )
 async def fetch_unacknowledged_events(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
-    Retrieves the list of non confirmed alerts and their information
+    Retrieves the list of unacknowledged alerts and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(events, {"is_acknowledged": False})
-    else:
-        retrieved_events = (
-            session.query(Event)
-            .join(Alert)
-            .join(Device)
-            .join(Access)
-            .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
-        )
-        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
-        return retrieved_events
+    return await crud.fetch_all(
+        events,
+        {"is_acknowledged": False},
+        query=None
+        if await is_admin_access(requester.id)
+        else session.query(Event).join(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")
 async def fetch_alerts_for_event(
     event_id: PositiveInt,
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
     session=Depends(get_db),
 ):
@@ -152,4 +157,4 @@ async def fetch_alerts_for_event(
     """
     requested_group_id = await get_entity_group_id(events, event_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
-    return await crud.base.database.fetch_all(query=alerts.select().where(alerts.c.event_id == event_id))
+    return await crud.fetch_all(alerts, {"event_id": event_id}, limit=limit, offset=offset)

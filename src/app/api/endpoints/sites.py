@@ -3,9 +3,10 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List, cast
+from typing import List, Optional, cast
 
-from fastapi import APIRouter, Depends, Path, Security, status
+from fastapi import APIRouter, Depends, Path, Query, Security, status
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
@@ -62,15 +63,20 @@ async def get_site(
 
 @router.get("/", response_model=List[SiteOut], summary="Get the list of all sites in your group")
 async def fetch_sites(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of all sites and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(sites)
-    else:
-        return await crud.fetch_all(sites, {"group_id": requester.group_id})
+    return await crud.fetch_all(
+        sites,
+        query_filters=None if await is_admin_access(requester.id) else {"group_id": requester.group_id},
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.put("/{site_id}/", response_model=SiteOut, summary="Update information about a specific site")

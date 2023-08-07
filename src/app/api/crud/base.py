@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Mapping, Optional
 from fastapi import HTTPException, Path, status
 from pydantic import BaseModel
 from sqlalchemy import Table
+from sqlalchemy.orm import Query
+from sqlalchemy.sql import Select
 
 from app.db import database
 
@@ -41,8 +43,11 @@ async def fetch_all(
     query_filters: Optional[Dict[str, Any]] = None,
     exclusions: Optional[Dict[str, Any]] = None,
     limit: int = 50,
+    offset: Optional[int] = None,
+    query: Optional[Select] = None,
 ) -> List[Mapping[str, Any]]:
-    query = table.select().order_by(table.c.id.desc())
+    if query is None:
+        query = table.select()
     if isinstance(query_filters, dict):
         for key, value in query_filters.items():
             query = query.where(getattr(table.c, key) == value)
@@ -50,7 +55,10 @@ async def fetch_all(
     if isinstance(exclusions, dict):
         for key, value in exclusions.items():
             query = query.where(getattr(table.c, key) != value)
-    return (await database.fetch_all(query=query.limit(limit)))[::-1]
+    query = query.order_by(table.c.id.desc()).limit(limit).offset(offset)
+    if isinstance(query, Query):
+        return [item.__dict__ for item in query[::-1]]
+    return (await database.fetch_all(query=query))[::-1]
 
 
 async def fetch_one(table: Table, query_filters: Dict[str, Any]) -> Optional[Mapping[str, Any]]:

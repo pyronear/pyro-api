@@ -3,9 +3,10 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Path, Security, status
+from fastapi import APIRouter, Depends, Path, Query, Security, status
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
@@ -68,17 +69,22 @@ async def get_user(user_id: int = Path(..., gt=0), _=Security(get_current_user, 
 
 @router.get("/", response_model=List[UserRead], summary="Get the list of all users")
 async def fetch_users(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of all users and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(users)
-    else:
-        retrieved_users = session.query(User).join(Access).filter(Access.group_id == requester.group_id).all()
-        retrieved_users = [x.__dict__ for x in retrieved_users]
-        return retrieved_users
+    return await crud.fetch_all(
+        users,
+        query=None
+        if await is_admin_access(requester.id)
+        else session.query(User).join(Access).filter(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.put("/{user_id}/", response_model=UserRead, summary="Update information about a specific user")

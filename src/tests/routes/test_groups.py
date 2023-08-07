@@ -97,12 +97,30 @@ async def test_get_group(test_app_asyncio, init_test_db, group_id, status_code, 
         assert response_json == GROUP_TABLE[group_id - 1]
 
 
+@pytest.mark.parametrize(
+    "limit, offset, expected",
+    [
+        (None, None, GROUP_TABLE[-50:]),
+        (50, None, GROUP_TABLE[-50:]),
+        (None, 0, GROUP_TABLE[-50:]),
+        (50, 0, GROUP_TABLE[-50:]),
+        (10, 0, GROUP_TABLE[-10:]),
+        (10, 10, GROUP_TABLE[-20:-10]),
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_groups(test_app_asyncio, init_test_db):
-    response = await test_app_asyncio.get("/groups/")
+async def test_fetch_groups(test_app_asyncio, init_test_db, limit, offset, expected):
+    query = []
+    if limit is not None:
+        query.append(f"limit={limit}")
+    if offset is not None:
+        query.append(f"offset={offset}")
+    if not query:
+        response = await test_app_asyncio.get("/groups/")
+    else:
+        response = await test_app_asyncio.get("/groups/?" + "&".join(query))
     assert response.status_code == 200
-    response_json = response.json()
-    assert all(result == entry for result, entry in zip(response_json, GROUP_TABLE[-50:]))
+    assert response.json() == expected
 
 
 @pytest.mark.parametrize(
