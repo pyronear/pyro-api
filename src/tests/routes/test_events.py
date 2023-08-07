@@ -24,6 +24,8 @@ EVENT_TABLE = [
         "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": "2020-09-13T08:18:45.447773",
         "is_acknowledged": True,
+        "acknowledged_by": 2,
+        "acknowledged_ts": "2020-09-13T08:18:45.447773",
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -34,6 +36,8 @@ EVENT_TABLE = [
         "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
+        "acknowledged_by": 2,
+        "acknowledged_ts": "2020-09-13T08:18:45.447773",
         "created_at": "2020-09-13T08:18:45.447773",
     },
     {
@@ -44,6 +48,8 @@ EVENT_TABLE = [
         "start_ts": "2021-03-13T08:18:45.447773",
         "end_ts": "2021-03-13T10:18:45.447773",
         "is_acknowledged": False,
+        "acknowledged_by": None,
+        "acknowledged_ts": None,
         "created_at": "2020-09-13T08:18:45.447773",
     },
 ]
@@ -274,10 +280,14 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
     if response.status_code // 100 == 2:
         json_response = response.json()
         test_response = {"id": len(EVENT_TABLE) + 1, **payload, "end_ts": None, "is_acknowledged": False}
-        assert {k: v for k, v in json_response.items() if k not in ("created_at", "start_ts")} == test_response
+        assert {
+            k: v
+            for k, v in json_response.items()
+            if k not in ("created_at", "start_ts", "acknowledged_ts", "acknowledged_by")
+        } == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
-        assert new_event_in_db["created_at"] > utc_dt and new_event_in_db["created_at"] < datetime.utcnow()
+        assert utc_dt < new_event_in_db["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
@@ -474,6 +484,7 @@ async def test_acknowledge_event(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
+    utc_dt = datetime.utcnow()
     response = await test_app_asyncio.put(f"/events/{event_id}/acknowledge", headers=auth)
     assert response.status_code == status_code
     if isinstance(status_details, str):
@@ -483,6 +494,8 @@ async def test_acknowledge_event(
         updated_event = await get_entry(test_db, db.events, event_id)
         updated_event = dict(**updated_event)
         assert updated_event["is_acknowledged"]
+        assert updated_event["acknowledged_by"] == ACCESS_TABLE[access_idx]["id"]
+        assert utc_dt < updated_event["acknowledged_ts"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(

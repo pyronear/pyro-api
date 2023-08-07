@@ -25,9 +25,12 @@ class EventIn(_FlatLocation):
         None, description="timestamp of event end", example=datetime.utcnow().replace(tzinfo=None)
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
+    acknowledged_by: Optional[int] = Field(None, description="id of the user who acknowledged the event")
+    acknowledged_ts: Optional[datetime] = Field(None, description="event acknowledgement timestamp")
 
     _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
     _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_ack_ts = validator("acknowledged_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -36,6 +39,10 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 class Acknowledgement(BaseModel):
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
+    acknowledged_by: Optional[int] = Field(None, description="id of the user who acknowledged the event")
+    acknowledged_ts: Optional[datetime] = Field(None, description="event acknowledgement timestamp")
+
+    _validate_ack_ts = validator("acknowledged_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class AcknowledgementOut(Acknowledgement, _Id):

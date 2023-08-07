@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from datetime import datetime
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
@@ -103,7 +104,11 @@ async def acknowledge_event(
     """
     requested_group_id = await get_entity_group_id(events, event_id)
     await check_group_update(requester.id, cast(int, requested_group_id))
-    return await crud.update_entry(events, Acknowledgement(is_acknowledged=True), event_id)
+    return await crud.update_entry(
+        events,
+        Acknowledgement(is_acknowledged=True, acknowledged_by=requester.id, acknowledged_ts=datetime.utcnow()),
+        event_id,
+    )
 
 
 @router.delete("/{event_id}/", response_model=EventOut, summary="Delete a specific event")
