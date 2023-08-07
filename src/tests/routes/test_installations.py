@@ -428,7 +428,7 @@ async def test_delete_installation(
         [1, 999, [], 404, "Table sites has no entry with id=999"],
         [1, 0, [], 422, None],
         [2, 1, [], 403, "Your access scope is not compatible with this operation."],
-        [4, 1, [], 403, "This access can't read resources from group_id=1"]
+        [4, 1, [], 403, "This access can't read resources from group_id=1"],
     ],
 )
 @pytest.mark.asyncio
