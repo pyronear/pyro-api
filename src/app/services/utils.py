@@ -23,12 +23,12 @@ def resolve_bucket_key(file_name: str, bucket_folder: Optional[str] = None) -> s
     return f"{bucket_folder}/{file_name}" if isinstance(bucket_folder, str) else file_name
 
 
-async def send_telegram_msg(chat_id: str, message: str, test: bool = False) -> Optional[telegram.Message]:
+async def send_telegram_msg(chat_id: str, text: str, test: bool = False) -> Optional[telegram.Message]:
     """Send telegram message to the chat with the given id
 
     Args:
         chat_id (str): chat id
-        message (str): message to send
+        text (str): message to send
         test (bool, default=False): disable notification and delete msg after sending. Used by unittests
 
     Returns: response
@@ -38,7 +38,7 @@ async def send_telegram_msg(chat_id: str, message: str, test: bool = False) -> O
         return None
     async with telegram.Bot(cfg.TELEGRAM_TOKEN) as bot:
         try:
-            msg: telegram.Message = await bot.send_message(text=message, chat_id=chat_id, disable_notification=test)
+            msg: telegram.Message = await bot.send_message(text=text, chat_id=chat_id, disable_notification=test)
         except telegram.error.TelegramError as e:
             logger.warning(f"Problem sending telegram message to {chat_id}: {e!s}")
         else:

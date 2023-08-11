@@ -54,7 +54,7 @@ async def test_no_send_telegram_msg(unset_telegram_token):
     ],
 )
 async def test_send_telegram_msg(chat_id, text, valid):
-    msg = await send_telegram_msg(chat_id=chat_id, message=text, test=True)
+    msg = await send_telegram_msg(chat_id=chat_id, text=text, test=True)
     if not valid:
         assert msg is None
     else:
