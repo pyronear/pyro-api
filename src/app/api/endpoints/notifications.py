@@ -3,13 +3,13 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Path, Security, status
 
 from app.api import crud
 from app.api.deps import get_current_access
-from app.api.endpoints.media import get_media_url
+from app.api.endpoints.media import get_temp_media_url
 from app.api.endpoints.recipients import get_recipient
 from app.db import notifications
 from app.models import AccessType, NotificationType
@@ -22,7 +22,7 @@ router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType
 @router.post(
     "/", response_model=NotificationOut, status_code=status.HTTP_201_CREATED, summary="Send and log notification"
 )
-async def send_notification(payload: NotificationIn, requester=Security(get_current_access, scopes=[AccessType.admin])):
+async def send_notification(payload: NotificationIn):
     """
     Send a notification to the recipients of the same group as the device that issued the alert; log notification to db
 
@@ -30,11 +30,12 @@ async def send_notification(payload: NotificationIn, requester=Security(get_curr
     or "Example Value" to get a concrete idea of arguments
     """
     recipient = RecipientOut(**(await get_recipient(recipient_id=payload.recipient_id)))
-    image_url: Optional[str] = (
-        (await get_media_url(payload.media_id, requester=requester)).url if payload.media_id is not None else None
-    )
     if recipient.notification_type == NotificationType.telegram:
-        await send_telegram_msg(chat_id=recipient.address, text=payload.message, photo=image_url)
+        await send_telegram_msg(
+            chat_id=recipient.address,
+            text=payload.message,
+            photo=await get_temp_media_url(payload.media_id) if payload.media_id is not None else None,
+        )
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid NotificationType, not treated")
 

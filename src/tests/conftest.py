@@ -61,9 +61,9 @@ def patch_send_telegram_msg(monkeypatch):
 
 @pytest.fixture(scope="function", autouse=True)
 def patch_get_media_url(monkeypatch):
-    """Patch get_media_url for notifications"""
+    """Patch get_temp_media_url for notifications"""
 
-    async def fake_get_media_url(*arg, **kwargs):
-        return MediaUrl(url="https://avatars.githubusercontent.com/u/61667887?s=200&v=4")
+    async def patched_get_media_url(*arg, **kwargs):
+        return "https://avatars.githubusercontent.com/u/61667887?s=200&v=4"
 
-    monkeypatch.setattr(endpoints.notifications, "get_media_url", fake_get_media_url)
+    monkeypatch.setattr(endpoints.notifications, "get_temp_media_url", patched_get_media_url)
