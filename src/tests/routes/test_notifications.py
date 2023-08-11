@@ -56,7 +56,6 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
-    await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.notifications, NOTIFICATION_TABLE_FOR_DB)
 
 
