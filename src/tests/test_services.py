@@ -34,26 +34,28 @@ def unset_telegram_token(monkeypatch):
     monkeypatch.setattr(cfg, "TELEGRAM_TOKEN", None)
 
 
-def test_no_send_telegram_msg(unset_telegram_token):
-    assert send_telegram_msg("invalid-chat-id", "Fake message") is None
+@pytest.mark.asyncio
+async def test_no_send_telegram_msg(unset_telegram_token):
+    assert await send_telegram_msg("invalid-chat-id", "Fake message") is None
 
 
 @pytest.mark.skipif(not cfg.TELEGRAM_TOKEN, reason="TELEGRAM_TOKEN not set")
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "chat_id, msg, expected_status_code",
+    "chat_id, text, valid",
     [
-        ("invalid-chat-id", "Fake message", 400),
+        ("invalid-chat-id", "Fake message", False),
         pytest.param(
             os.environ.get("TELEGRAM_TEST_CHAT_ID"),
-            "Test message&disable_notification=true",
-            200,
+            "Test message",
+            True,
             marks=pytest.mark.skipif("TELEGRAM_TEST_CHAT_ID" not in os.environ, reason="TELEGRAM_TEST_CHAT_ID not set"),
         ),
     ],
 )
-def test_send_telegram_msg(chat_id, msg, expected_status_code):
-    response = send_telegram_msg(chat_id=chat_id, message=msg, autodelete=expected_status_code == 200)
-    if expected_status_code is None:
-        assert response is None
+async def test_send_telegram_msg(chat_id, text, valid):
+    msg = await send_telegram_msg(chat_id=chat_id, message=text, test=True)
+    if not valid:
+        assert msg is None
     else:
-        assert response.status_code == expected_status_code, response.text
+        assert msg.text == text

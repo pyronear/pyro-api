@@ -51,4 +51,8 @@ async def test_db():
 @pytest.fixture(scope="function", autouse=True)
 def patch_send_telegram_msg(monkeypatch):
     """Patch send_telegram_msg -> do nothing"""
-    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", lambda *arg, **kwargs: None)
+
+    async def fake_send_telegram_msg(*arg, **kwargs):
+        return None
+
+    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", fake_send_telegram_msg)

@@ -30,7 +30,7 @@ async def send_notification(payload: NotificationIn):
     """
     recipient = RecipientOut(**(await get_recipient(recipient_id=payload.recipient_id)))
     if recipient.notification_type == NotificationType.telegram:
-        send_telegram_msg(recipient.address, payload.message)
+        await send_telegram_msg(recipient.address, payload.message)
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid NotificationType, not treated")
 
