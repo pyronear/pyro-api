@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import telegram
 
@@ -23,12 +23,15 @@ def resolve_bucket_key(file_name: str, bucket_folder: Optional[str] = None) -> s
     return f"{bucket_folder}/{file_name}" if isinstance(bucket_folder, str) else file_name
 
 
-async def send_telegram_msg(chat_id: str, text: str, test: bool = False) -> Optional[telegram.Message]:
+async def send_telegram_msg(
+    chat_id: str, text: str, photo: Union[None, str, bytes] = None, test: bool = False
+) -> Optional[telegram.Message]:
     """Send telegram message to the chat with the given id
 
     Args:
         chat_id (str): chat id
         text (str): message to send
+        photo (str, bytes or None, default=None): photo to send
         test (bool, default=False): disable notification and delete msg after sending. Used by unittests
 
     Returns: response
@@ -38,7 +41,11 @@ async def send_telegram_msg(chat_id: str, text: str, test: bool = False) -> Opti
         return None
     async with telegram.Bot(cfg.TELEGRAM_TOKEN) as bot:
         try:
-            msg: telegram.Message = await bot.send_message(text=text, chat_id=chat_id, disable_notification=test)
+            msg: telegram.Message = (
+                await bot.send_message(text=text, chat_id=chat_id, disable_notification=test)
+                if photo is None
+                else await bot.send_photo(chat_id=chat_id, photo=photo, caption=text)
+            )
         except telegram.error.TelegramError as e:
             logger.warning(f"Problem sending telegram message to {chat_id}: {e!s}")
         else:

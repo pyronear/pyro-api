@@ -5,7 +5,7 @@
 
 import enum
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
@@ -28,6 +28,7 @@ class Recipient(Base):
     address = Column(String, nullable=False)
     subject_template = Column(String, nullable=False)
     message_template = Column(String, nullable=False)
+    send_image = Column(Boolean)
     created_at = Column(DateTime, default=func.now())
 
     group: RelationshipProperty = relationship("Group", back_populates="recipients")

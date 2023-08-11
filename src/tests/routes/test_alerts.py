@@ -155,6 +155,7 @@ RECIPIENT_TABLE = [
         "address": "my_chat_id",
         "subject_template": "New alert on $device_name",
         "message_template": "Group 1: alert $alert_id issued by $device_name",
+        "send_image": True,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -164,6 +165,7 @@ RECIPIENT_TABLE = [
         "address": "my_other_chat_id",
         "subject_template": "New alert on $device_name",
         "message_template": "Group 2: alert $alert_id issued by $device_name",
+        "send_image": False,
         "created_at": "2020-10-13T08:18:45.447773",
     },
 ]
@@ -176,7 +178,7 @@ ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
 RECIPIENT_TABLE_FOR_DB = list(map(update_only_datetime, RECIPIENT_TABLE))
 
 
-async def check_notifications(alert_id: int, device_id: int, is_new_event: bool):
+async def check_notifications(alert_id: int, device_id: int, media_id: int, is_new_event: bool):
     notifications = await crud.fetch_all(db.notifications, {"alert_id": alert_id})
     assert len(notifications) == is_new_event
     if not is_new_event:
@@ -186,12 +188,15 @@ async def check_notifications(alert_id: int, device_id: int, is_new_event: bool)
             group_id = next(item["id"] for item in USER_TABLE if device["owner_id"] == item["id"])
             login = device["login"]
             break
-    recipient_id = next(item["id"] for item in RECIPIENT_TABLE if item["group_id"] == group_id)
+    recipient = next(item for item in RECIPIENT_TABLE if item["group_id"] == group_id)
+    recipient_id = recipient["id"]
+    media_id = media_id if recipient["send_image"] else None
     expected_notification = {
         "alert_id": alert_id,
         "recipient_id": recipient_id,
         "subject": f"New alert on {login}",
         "message": f"Group {group_id}: alert {alert_id} issued by {login}",
+        "media_id": media_id,
     }
     assert {k: v for k, v in notifications[0].items() if k not in ("id", "created_at")} == expected_notification
 
@@ -367,7 +372,12 @@ async def test_create_alert(
         new_alert = dict(**new_alert)
         assert utc_dt < new_alert["created_at"] < datetime.utcnow()
 
-        await check_notifications(alert_id=new_alert["id"], device_id=payload["device_id"], is_new_event=is_new_event)
+        await check_notifications(
+            alert_id=new_alert["id"],
+            device_id=payload["device_id"],
+            media_id=new_alert["media_id"],
+            is_new_event=is_new_event,
+        )
 
 
 @pytest.mark.parametrize(
@@ -431,7 +441,9 @@ async def test_create_alert_by_device(
         new_alert = dict(**new_alert)
         assert utc_dt < new_alert["created_at"] < datetime.utcnow()
 
-        await check_notifications(alert_id=new_alert["id"], device_id=device_id, is_new_event=is_new_event)
+        await check_notifications(
+            alert_id=new_alert["id"], device_id=device_id, media_id=new_alert["media_id"], is_new_event=is_new_event
+        )
 
 
 @pytest.mark.parametrize(

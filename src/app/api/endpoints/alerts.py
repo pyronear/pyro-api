@@ -52,7 +52,13 @@ async def alert_notification(payload: AlertOut):
         }
         subject: str = Template(recipient.subject_template).safe_substitute(**info)
         message: str = Template(recipient.message_template).safe_substitute(**info)
-        notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
+        notification = NotificationIn(
+            alert_id=payload.id,
+            recipient_id=recipient.id,
+            subject=subject,
+            message=message,
+            media_id=payload.media_id if recipient.send_image else None,
+        )
         await send_notification(notification)
 
 

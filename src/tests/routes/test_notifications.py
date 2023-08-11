@@ -25,6 +25,7 @@ NOTIFICATION_TABLE = [
         "recipient_id": 1,
         "subject": "New alert",
         "message": "Alert issued",
+        "media_id": 1,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -33,6 +34,7 @@ NOTIFICATION_TABLE = [
         "recipient_id": 2,
         "subject": "New alert",
         "message": "Alert issued",
+        "media_id": None,
         "created_at": "2020-10-13T08:18:45.447773",
     },
 ]

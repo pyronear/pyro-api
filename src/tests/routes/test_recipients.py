@@ -28,6 +28,7 @@ RECIPIENT_TABLE = [
         "address": "my_chat_id",
         "subject_template": "New alert on $device",
         "message_template": "Group 1: alert $alert_id issued by $device on $date",
+        "send_image": True,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -37,6 +38,7 @@ RECIPIENT_TABLE = [
         "address": "my_other_chat_id",
         "subject_template": "New alert on $device",
         "message_template": "Group 2: alert $alert_id issued by $device on $date",
+        "send_image": False,
         "created_at": "2020-10-13T08:18:45.447773",
     },
 ]
