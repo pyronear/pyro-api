@@ -5,7 +5,6 @@ from httpx import AsyncClient
 from app.api import endpoints
 from app.api.security import create_unlimited_access_token
 from app.main import app
-from app.schemas import MediaUrl
 from tests.db_utils import database as test_database
 from tests.db_utils import reset_test_db
 
