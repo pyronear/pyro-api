@@ -44,7 +44,7 @@ async def send_telegram_msg(
             msg: telegram.Message = (
                 await bot.send_message(text=text, chat_id=chat_id, disable_notification=test)
                 if photo is None
-                else await bot.send_photo(chat_id=chat_id, photo=photo, caption=text)
+                else await bot.send_photo(chat_id=chat_id, photo=photo, caption=text, disable_notification=test)
             )
         except telegram.error.TelegramError as e:
             logger.warning(f"Problem sending telegram message to {chat_id}: {e!s}")
