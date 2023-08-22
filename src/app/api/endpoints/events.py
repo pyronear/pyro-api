@@ -13,10 +13,19 @@ from sqlalchemy import and_
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_db
+from app.api.deps import get_current_access, get_current_user, get_db
 from app.db import alerts, events
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
+from app.schemas import (
+    AccessRead,
+    Acknowledgement,
+    AcknowledgementOut,
+    AlertOut,
+    EventIn,
+    EventOut,
+    EventUpdate,
+    UserRead,
+)
 
 router = APIRouter()
 
@@ -97,16 +106,18 @@ async def update_event(
 
 @router.put("/{event_id}/acknowledge", response_model=AcknowledgementOut, summary="Acknowledge an existing event")
 async def acknowledge_event(
-    event_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    event_id: int = Path(..., gt=0),
+    requester: AccessRead = Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    user: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user]),
 ):
     """
-    Based on a event_id, acknowledge the specified event
+    Based on an event_id, acknowledge the specified event
     """
     requested_group_id = await get_entity_group_id(events, event_id)
     await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(
         events,
-        Acknowledgement(is_acknowledged=True, acknowledged_by=requester.id, acknowledged_ts=datetime.utcnow()),
+        Acknowledgement(is_acknowledged=True, acknowledged_by=user.id, acknowledged_ts=datetime.utcnow()),
         event_id,
     )
 
