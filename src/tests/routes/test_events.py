@@ -493,8 +493,9 @@ async def test_acknowledge_event(
     if response.status_code // 100 == 2:
         updated_event = await get_entry(test_db, db.events, event_id)
         updated_event = dict(**updated_event)
+        user_id = next(item["id"] for item in USER_TABLE if item["access_id"] == ACCESS_TABLE[access_idx]["id"])
         assert updated_event["is_acknowledged"]
-        assert updated_event["acknowledged_by"] == ACCESS_TABLE[access_idx]["id"]
+        assert updated_event["acknowledged_by"] == user_id
         assert utc_dt < updated_event["acknowledged_ts"] < datetime.utcnow()
 
 
