@@ -1,12 +1,14 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 
+import app.config as cfg
 from app import db
 from app.api import crud, deps
+from app.api.crud.alerts import resolve_previous_alert
 from app.api.endpoints.alerts import check_media_existence
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
@@ -143,7 +145,8 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
-        "created_at": ts_to_string(datetime.utcnow()),
+        "created_at": ts_to_string(datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS - 300)),
+        # to test resolve_previous_alert with a tolerance of 5 minutes
     },
 ]
 
@@ -460,3 +463,10 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
+
+
+@pytest.mark.parametrize("device_id, expected_alert_id", [(2, None), (1, 4)])
+@pytest.mark.asyncio
+async def test_resolve_previous_alert(test_app_asyncio, init_test_db, device_id, expected_alert_id):
+    alert = await resolve_previous_alert(device_id)
+    assert expected_alert_id is None if alert is None else expected_alert_id == alert.id
