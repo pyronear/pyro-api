@@ -30,6 +30,8 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
+          S3_USE_PROXY: ${{ secrets.S3_USE_PROXY }}
+          S3_PROXY_URL: ${{ secrets.S3_PROXY_URL }}
         run: docker-compose up -d --build
       - name: Docker sanity check
         run: sleep 20 && nc -vz localhost 8080
