@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import boto3
 from fastapi import HTTPException
@@ -28,7 +28,7 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, use_proxy: bool = False, proxy_url: str | None = None) -> None:
+    def __init__(self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, use_proxy: bool = False, proxy_url: Union[str, None] = None) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         self.bucket_name = bucket_name
