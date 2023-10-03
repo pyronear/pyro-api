@@ -17,7 +17,7 @@ lock:
 # Build the docker
 build:
 	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10
+	docker build src/. -t pyronear/pyro-api:python3.8-alpine3.10-prod
 
 # Run the docker
 run:
