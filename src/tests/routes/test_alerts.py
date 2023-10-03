@@ -126,7 +126,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
-        "localization": "[(0, 0, 1, 1)]",
+        "localization": "[(0, 0, 1, 1, 1)]",
         "created_at": "2020-10-13T09:18:45.447773",
     },
     {

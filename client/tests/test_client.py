@@ -1,4 +1,5 @@
 import time
+from contextlib import nullcontext
 from copy import deepcopy
 from urllib.parse import urljoin
 
@@ -6,7 +7,7 @@ import pytest
 import requests
 from requests.exceptions import ConnectionError, ReadTimeout
 
-from pyroclient.client import Client
+from pyroclient.client import Client, convert_loc_to_str
 from pyroclient.exceptions import HTTPRequestException
 
 
@@ -90,3 +91,22 @@ def test_client_user(setup, user_client, mock_img):
     _test_route_return(user_client.get_ongoing_alerts(), list)
     _test_route_return(user_client.get_alerts_for_event(events[0]["id"]), list)
     assert user_client.get_media_url(1).status_code == 404
+
+
+@pytest.mark.parametrize(
+    "loc, error, expected",
+    [
+        (None, nullcontext(), "[]"),
+        ([], nullcontext(), "[]"),
+        ([[0, 0, 1, 1, 1]], nullcontext(), "[[0.000,0.000,1.000,1.000,1.000]]"),
+        ([0] * 10, pytest.raises(ValueError), None),
+        ("something else", pytest.raises(ValueError), None),
+        ([[]], pytest.raises(ValueError), None),
+        ([[0, -0.1, 1, 1, 1]], pytest.raises(ValueError), None),
+        ([[0, 0.1, 1, 1.5, 1]], pytest.raises(ValueError), None),
+        ([[0] * 10], pytest.raises(ValueError), None),
+    ],
+)
+def test_convert_loc_to_str(loc, error, expected):
+    with error:
+        assert convert_loc_to_str(loc) == expected

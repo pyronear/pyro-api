@@ -69,7 +69,9 @@ def convert_loc_to_str(
     Returns:
         the JSON string dump with 3 decimal precision
     """
-    if isinstance(localization, list) and len(localization) > 0:
+    if localization is None or localization == []:
+        return "[]"
+    if isinstance(localization, list) and all(isinstance(bbox, list) for bbox in localization):
         if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
             raise ValueError("coordinates are expected to be relative")
         if any(len(bbox) != 5 for bbox in localization):
@@ -81,7 +83,7 @@ def convert_loc_to_str(
         )
         return f"[{','.join(box_list)}]"
     else:
-        return "[]"
+        raise ValueError("localization must be a list or lists")
 
 
 class Client:
