@@ -1,8 +1,7 @@
 # Copyright (C) 2020-2023, Pyronear.
-
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-
+import ast
 from typing import Optional
 
 from pydantic import Field, validator
@@ -20,7 +19,7 @@ def validate_localization(v: Optional[str]) -> Optional[str]:
     if v is None:
         return v
     try:
-        localization = eval(v)
+        localization = ast.literal_eval(v)
     except Exception:
         raise ValueError("localization must be a str that is converted to a list")
     max_num_boxes: int = 5
