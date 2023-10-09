@@ -24,6 +24,8 @@ EVENT_TABLE = [
         "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": "2020-09-13T08:18:45.447773",
         "is_acknowledged": True,
+        "type_set_by": 2,
+        "type_set_ts": "2020-10-13T08:18:45.447773",
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -34,16 +36,20 @@ EVENT_TABLE = [
         "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
+        "type_set_by": 2,
+        "type_set_ts": "2020-10-13T08:18:45.447773",
         "created_at": "2020-09-13T08:18:45.447773",
     },
     {
         "id": 3,
         "lat": -5.0,
         "lon": 3.0,
-        "type": "wildfire",
+        "type": "undefined",
         "start_ts": "2021-03-13T08:18:45.447773",
         "end_ts": "2021-03-13T10:18:45.447773",
         "is_acknowledged": False,
+        "type_set_by": None,
+        "type_set_ts": None,
         "created_at": "2020-09-13T08:18:45.447773",
     },
 ]
@@ -274,10 +280,12 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
     if response.status_code // 100 == 2:
         json_response = response.json()
         test_response = {"id": len(EVENT_TABLE) + 1, **payload, "end_ts": None, "is_acknowledged": False}
-        assert {k: v for k, v in json_response.items() if k not in ("created_at", "start_ts")} == test_response
+        assert {
+            k: v for k, v in json_response.items() if k not in ("created_at", "start_ts", "type_set_by", "type_set_ts")
+        } == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
-        assert new_event_in_db["created_at"] > utc_dt and new_event_in_db["created_at"] < datetime.utcnow()
+        assert utc_dt < new_event_in_db["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
@@ -559,3 +567,43 @@ async def test_fetch_alerts_for_event(
         assert response.json() == [
             entry for entry in ALERT_TABLE if (entry["event_id"] == event_id and entry["id"] in alerts_group_id)
         ]
+
+
+@pytest.mark.parametrize(
+    "access_idx, event_id, event_type, status_code, status_details",
+    [
+        [None, 1, "undefined", 401, "Not authenticated"],
+        [0, 1, "wildfire", 200, None],
+        [1, 1, "domestic fire", 200, None],
+        [1, 1, "undefined", 200, None],
+        [1, 1, "lightning", 422, None],
+        [2, 1, "wildfire", 403, "Your access scope is not compatible with this operation."],
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_event_type(
+    test_app_asyncio, init_test_db, test_db, access_idx, event_id, event_type, status_code, status_details
+):
+    # Create a custom access token
+    auth = None
+    if isinstance(access_idx, int):
+        auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
+
+    utc_dt = datetime.utcnow()
+    response = await test_app_asyncio.put(f"/events/{event_id}/type?event_type={event_type}", headers=auth)
+    assert response.status_code == status_code
+    if isinstance(status_details, str):
+        assert response.json()["detail"] == status_details
+
+    if response.status_code // 100 == 2:
+        updated_event = await get_entry(test_db, db.events, event_id)
+        updated_event = dict(**updated_event)
+        user_id = next(item["id"] for item in USER_TABLE if item["access_id"] == ACCESS_TABLE[access_idx]["id"])
+        assert updated_event["type"] == event_type
+        if event_type != "undefined":
+            assert updated_event["type_set_by"] == user_id
+            assert utc_dt < updated_event["type_set_ts"] < datetime.utcnow()
+        else:
+            assert updated_event["type_set_by"] is None
+            assert updated_event["type_set_ts"] is None
+

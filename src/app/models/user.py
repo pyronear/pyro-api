@@ -23,6 +23,7 @@ class User(Base):
 
     access: RelationshipProperty = relationship("Access", uselist=False, back_populates="user")
     device: RelationshipProperty = relationship("Device", uselist=False, back_populates="owner")
+    type_set_events: RelationshipProperty = relationship("Event", back_populates="type_setter")
 
     def __repr__(self):
         return f"<User(login='{self.login}', created_at='{self.created_at}'>"

@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from datetime import datetime
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
@@ -12,10 +13,21 @@ from sqlalchemy import and_
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_db
+from app.api.deps import get_current_access, get_current_user, get_db
 from app.db import alerts, events
-from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
+from app.models import Access, AccessType, Alert, Device, Event, EventType
+from app.schemas import (
+    AccessRead,
+    Acknowledgement,
+    AcknowledgementOut,
+    AlertOut,
+    EventIn,
+    EventOut,
+    EventTypeSetting,
+    EventTypeSettingOut,
+    EventUpdate,
+    UserRead,
+)
 
 router = APIRouter()
 
@@ -153,3 +165,24 @@ async def fetch_alerts_for_event(
     requested_group_id = await get_entity_group_id(events, event_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.base.database.fetch_all(query=alerts.select().where(alerts.c.event_id == event_id))
+
+
+@router.put("/{event_id}/type", response_model=EventTypeSettingOut, summary="Redefine the type of an existing event")
+async def update_event_type(
+    event_type: EventType,
+    event_id: int = Path(..., gt=0),
+    requester: AccessRead = Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    user: UserRead = Security(get_current_user, scopes=[AccessType.admin, AccessType.user]),
+):
+    """
+    Based on an event_id, redefine the type of the given event
+    """
+    requested_group_id = await get_entity_group_id(events, event_id)
+    await check_group_update(requester.id, cast(int, requested_group_id))
+    return await crud.update_entry(
+        events,
+        EventTypeSetting(type=event_type, type_set_by=user.id, type_set_ts=datetime.utcnow())
+        if event_type != EventType.undefined
+        else EventTypeSetting(type=event_type, type_set_by=None, type_set_ts=None),
+        event_id,
+    )

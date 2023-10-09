@@ -5,7 +5,7 @@
 
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, Integer
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer
 from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
@@ -16,6 +16,11 @@ __all__ = ["EventType", "Event"]
 
 class EventType(str, enum.Enum):
     wildfire: str = "wildfire"
+    domestic_fire: str = "domestic fire"
+    chimney: str = "chimney"
+    cloud: str = "cloud"
+    other: str = "other"
+    undefined: str = "undefined"
 
 
 class Event(Base):
@@ -24,13 +29,16 @@ class Event(Base):
     id = Column(Integer, primary_key=True)
     lat = Column(Float(4, asdecimal=True))
     lon = Column(Float(4, asdecimal=True))
-    type = Column(Enum(EventType), default=EventType.wildfire)
+    type = Column(Enum(EventType), default=EventType.undefined)
     start_ts = Column(DateTime, default=func.now())
     end_ts = Column(DateTime, default=None, nullable=True)
     is_acknowledged = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
+    type_set_by = Column(Integer, ForeignKey("users.id"))
+    type_set_ts = Column(DateTime, default=None, nullable=True)
 
     alerts: RelationshipProperty = relationship("Alert", back_populates="event")
+    type_setter: RelationshipProperty = relationship("User", back_populates="type_set_events")
 
     def __repr__(self):
         return (

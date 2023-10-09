@@ -12,7 +12,15 @@ from app.models import EventType
 
 from .base import _CreatedAt, _FlatLocation, _Id, validate_datetime_none
 
-__all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "AcknowledgementOut"]
+__all__ = [
+    "EventIn",
+    "EventOut",
+    "EventUpdate",
+    "Acknowledgement",
+    "AcknowledgementOut",
+    "EventTypeSetting",
+    "EventTypeSettingOut",
+]
 
 
 # Events
@@ -25,9 +33,12 @@ class EventIn(_FlatLocation):
         None, description="timestamp of event end", example=datetime.utcnow().replace(tzinfo=None)
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
+    type_set_by: Optional[int] = Field(None, description="id of the user who defined the event type")
+    type_set_ts: Optional[datetime] = Field(None, description="event type definition timestamp")
 
     _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
     _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_type_ts = validator("type_set_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -39,6 +50,18 @@ class Acknowledgement(BaseModel):
 
 
 class AcknowledgementOut(Acknowledgement, _Id):
+    pass
+
+
+class EventTypeSetting(BaseModel):
+    type: EventType = Field(..., description="event type")
+    type_set_by: Optional[int] = Field(None, description="id of the user who defined the event type")
+    type_set_ts: Optional[datetime] = Field(None, description="event type definition timestamp")
+
+    _validate_type_ts = validator("type_set_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+
+
+class EventTypeSettingOut(EventTypeSetting, _Id):
     pass
 
 
