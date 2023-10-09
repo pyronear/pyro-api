@@ -606,4 +606,3 @@ async def test_update_event_type(
         else:
             assert updated_event["type_set_by"] is None
             assert updated_event["type_set_ts"] is None
-
