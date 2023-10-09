@@ -5,7 +5,7 @@
 
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, Integer
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer
 from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
@@ -28,9 +28,12 @@ class Event(Base):
     start_ts = Column(DateTime, default=func.now())
     end_ts = Column(DateTime, default=None, nullable=True)
     is_acknowledged = Column(Boolean, default=False)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"))
+    acknowledged_ts = Column(DateTime, default=None, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
     alerts: RelationshipProperty = relationship("Alert", back_populates="event")
+    acknowledger: RelationshipProperty = relationship("User", back_populates="acknowledged_events")
 
     def __repr__(self):
         return (

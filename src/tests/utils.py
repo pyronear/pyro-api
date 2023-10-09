@@ -6,7 +6,9 @@ DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 def update_only_datetime(entity_as_dict: Dict[str, Any]):
     return {
-        k: parse_time(v) if isinstance(v, str) and k in ("created_at", "start_ts", "end_ts", "last_ping") else v
+        k: parse_time(v)
+        if isinstance(v, str) and k in ("created_at", "start_ts", "end_ts", "last_ping", "acknowledged_ts")
+        else v
         for k, v in entity_as_dict.items()
     }
 
