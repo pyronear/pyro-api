@@ -86,6 +86,8 @@ def test_client_user(setup, user_client, mock_img):
     events = _test_route_return(user_client.get_unacknowledged_events(), list)
     event = _test_route_return(user_client.acknowledge_event(events[0]["id"]), dict)
     assert event["is_acknowledged"]
+    type_info = _test_route_return(user_client.set_event_type(events[0]["id"], "wildfire"), dict)
+    assert type_info["type"] == "wildfire"
     _test_route_return(user_client.get_all_alerts(), list)
     _test_route_return(user_client.get_ongoing_alerts(), list)
     _test_route_return(user_client.get_alerts_for_event(events[0]["id"]), list)

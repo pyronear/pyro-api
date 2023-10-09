@@ -37,6 +37,7 @@ ROUTES: Dict[str, str] = {
     "get-unacknowledged-events": "/events/unacknowledged",
     "get-past-events": "/events/past",
     "acknowledge-event": "/events/{event_id}/acknowledge",
+    "set-event-type": "/events/{event_id}/type?event_type={event_type}",
     "get-alerts-for-event": "/events/{event_id}/alerts",
     #################
     # INSTALLATIONS
@@ -272,6 +273,22 @@ class Client:
         """
         return requests.put(
             self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+        )
+
+    def set_event_type(self, event_id: int, event_type: str):
+        """Set the event type field value
+
+        Args:
+            event_id: ID of the associated event entry
+            event_type: event type ("wildfire" or other)
+
+        Returns:
+            HTTP response containing the updated event
+        """
+        return requests.put(
+            self.routes["set-event-type"].format(event_id=event_id, event_type=event_type),
+            headers=self.headers,
+            timeout=self.timeout,
         )
 
     def get_site_devices(self, site_id: int) -> Response:
