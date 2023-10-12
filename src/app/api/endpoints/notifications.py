@@ -3,9 +3,10 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Path, Security, status
+from fastapi import APIRouter, HTTPException, Path, Query, Security, status
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.deps import get_current_access
@@ -49,11 +50,14 @@ async def get_notification(notification_id: int = Path(..., gt=0)):
 
 
 @router.get("/", response_model=List[NotificationOut], summary="Get the list of all notifications")
-async def fetch_notifications():
+async def fetch_notifications(
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+):
     """
     Retrieves the list of all notifications and their information
     """
-    return await crud.fetch_all(notifications)
+    return await crud.fetch_all(notifications, limit=limit, offset=offset)
 
 
 @router.delete("/{notification_id}/", response_model=NotificationOut, summary="Delete a specific notification")

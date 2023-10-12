@@ -8,7 +8,8 @@ from mimetypes import guess_extension
 from typing import Any, Dict, List, Optional, cast
 
 import magic
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Query, Security, UploadFile, status
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
@@ -88,19 +89,22 @@ async def get_media(
 
 @router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
 async def fetch_media(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of all media and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(media)
-    else:
-        retrieved_media = (
-            session.query(Media).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
-        )
-        retrieved_media = [x.__dict__ for x in retrieved_media]
-        return retrieved_media
+    return await crud.fetch_all(
+        media,
+        query=media.select()
+        if await is_admin_access(requester.id)
+        else session.query(Media).join(Device).join(Access).where(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")

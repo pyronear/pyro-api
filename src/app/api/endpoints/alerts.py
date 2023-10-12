@@ -5,10 +5,10 @@
 
 from functools import partial
 from string import Template
-from typing import List, cast
+from typing import List, Optional, cast
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, Security, status
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
@@ -18,7 +18,7 @@ from app.api.endpoints.devices import get_device
 from app.api.endpoints.notifications import send_notification
 from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
-from app.db import alerts, events, media
+from app.db import alerts, media
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
 
@@ -123,19 +123,22 @@ async def get_alert(
 
 @router.get("/", response_model=List[AlertOut], summary="Get the list of all alerts")
 async def fetch_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of all alerts and their information
     """
-    if await is_admin_access(requester.id):
-        return await crud.fetch_all(alerts)
-    else:
-        retrieved_alerts = (
-            session.query(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
-        )
-        retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
-        return retrieved_alerts
+    return await crud.fetch_all(
+        alerts,
+        query=None
+        if await is_admin_access(requester.id)
+        else session.query(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
@@ -148,25 +151,15 @@ async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_a
 
 @router.get("/ongoing", response_model=List[AlertOut], summary="Get the list of ongoing alerts")
 async def fetch_ongoing_alerts(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
     Retrieves the list of ongoing alerts and their information
     """
-    if await is_admin_access(requester.id):
-        query = (
-            alerts.select().where(alerts.c.event_id.in_(select([events.c.id]).where(events.c.end_ts.is_(None))))
-        ).order_by(alerts.c.id.desc())
-
-        return (await crud.base.database.fetch_all(query=query.limit(50)))[::-1]
-    else:
-        retrieved_alerts = (
-            session.query(Alert)
-            .join(Event)
-            .filter(Event.end_ts.is_(None))
-            .join(Device)
-            .join(Access)
-            .filter(Access.group_id == requester.group_id)
-        )
-        retrieved_alerts = [x.__dict__ for x in retrieved_alerts.all()]
-        return retrieved_alerts
+    query = session.query(Alert).join(Event).filter(Event.end_ts.is_(None))
+    if not await is_admin_access(requester.id):
+        query = query.join(Device).join(Access).filter(Access.group_id == requester.group_id)
+    return await crud.fetch_all(alerts, query=query, limit=limit, offset=offset)

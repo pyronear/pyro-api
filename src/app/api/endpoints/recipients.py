@@ -3,10 +3,11 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Security, status
+from fastapi import APIRouter, Query, Security, status
 from pydantic import PositiveInt
+from typing_extensions import Annotated
 
 from app.api import crud
 from app.api.deps import get_current_access
@@ -39,11 +40,14 @@ async def get_recipient(recipient_id: PositiveInt):
 
 
 @router.get("/", response_model=List[RecipientOut], summary="Get the list of all recipients")
-async def fetch_recipients():
+async def fetch_recipients(
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+):
     """
     Retrieves the list of all recipients and their information
     """
-    return await crud.fetch_all(recipients)
+    return await crud.fetch_all(recipients, limit=limit, offset=offset)
 
 
 @router.get(
@@ -51,11 +55,15 @@ async def fetch_recipients():
     response_model=List[RecipientOut],
     summary="Get the list of all recipients for the given group",
 )
-async def fetch_recipients_for_group(group_id: PositiveInt):
+async def fetch_recipients_for_group(
+    group_id: PositiveInt,
+    limit: Annotated[int, Query(description="maximum number of items", ge=1, le=1000)] = 50,
+    offset: Annotated[Optional[int], Query(description="number of items to skip", ge=0)] = None,
+):
     """
     Retrieves the list of all recipients for the given group and their information
     """
-    return await crud.fetch_all(recipients, {"group_id": group_id})
+    return await crud.fetch_all(recipients, {"group_id": group_id}, limit=limit, offset=offset)
 
 
 @router.put("/{recipient_id}/", response_model=RecipientOut, summary="Update information about a specific recipient")
