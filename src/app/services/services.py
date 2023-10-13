@@ -11,5 +11,4 @@ __all__ = ["bucket_service"]
 
 bucket_service = S3Bucket(cfg.S3_REGION, cfg.S3_ENDPOINT_URL,
                           cfg.S3_ACCESS_KEY, cfg.S3_SECRET_KEY,
-                          cfg.BUCKET_NAME, cfg.S3_USE_PROXY,
-                          cfg.S3_PROXY_URL)
+                          cfg.BUCKET_NAME, cfg.S3_PROXY_URL)
