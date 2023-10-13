@@ -112,7 +112,7 @@ This file will have to hold the following information:
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `BUCKET_NAME`: the name of the storage bucket
-
+- `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.

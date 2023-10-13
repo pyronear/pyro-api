@@ -47,6 +47,7 @@ S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]
 S3_SECRET_KEY: str = os.environ["S3_SECRET_KEY"]
 S3_REGION: str = os.environ["S3_REGION"]
 S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
+S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
 DUMMY_BUCKET_FILE = (
     "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/"
     "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
