@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
 import boto3
 from fastapi import HTTPException
@@ -27,7 +27,9 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, proxy_url: str) -> None:
+    def __init__(
+        self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, proxy_url: str
+    ) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         self.bucket_name = bucket_name
@@ -50,14 +52,12 @@ class S3Bucket:
     async def get_public_url(self, bucket_key: str, url_expiration: int = 3600) -> str:
         """Generate a temporary public URL for a bucket file"""
         if not (await self.check_file_existence(bucket_key)):
-            raise HTTPException(
-                status_code=404, detail="File cannot be found on the bucket storage")
+            raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
 
         # Point to the bucket file
         file_params = {"Bucket": self.bucket_name, "Key": bucket_key}
         # Generate a public URL for it using boto3 presign URL generation\
-        presigned_url = self._s3.generate_presigned_url(
-            "get_object", Params=file_params, ExpiresIn=url_expiration)
+        presigned_url = self._s3.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
         if len(self.proxy_url) > 0:
             return presigned_url.replace(self.bucket_name, self.proxy_url)
         return presigned_url

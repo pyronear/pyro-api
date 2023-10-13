@@ -5,7 +5,7 @@
 
 import os
 import secrets
-from typing import Optional, Union
+from typing import Optional
 
 from dotenv import load_dotenv
 
