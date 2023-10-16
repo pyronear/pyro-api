@@ -59,7 +59,7 @@ class S3Bucket:
         # Generate a public URL for it using boto3 presign URL generation\
         presigned_url = self._s3.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
         if len(self.proxy_url) > 0:
-            return presigned_url.replace(self.bucket_name, self.proxy_url)
+            return presigned_url.replace(self.endpoint_url, self.proxy_url)
         return presigned_url
 
     async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
