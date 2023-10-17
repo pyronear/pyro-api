@@ -31,6 +31,7 @@ class S3Bucket:
         self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, proxy_url: str
     ) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
+        self.endpoint_url = endpoint_url
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         self.bucket_name = bucket_name
         self.proxy_url = proxy_url
