@@ -87,6 +87,7 @@ ignore = [
 exclude = [".git", "engine"]
 line-length = 120
 target-version = "py39"
+preview = true
 
 [tool.ruff.per-file-ignores]
 "**/__init__.py" = ["I001", "F401", "CPY001"]
@@ -95,6 +96,7 @@ target-version = "py39"
 "client/docs/**.py" = ["E402"]
 "src/tests/**.py" = ["D103", "CPY001"]
 "client/tests/**.py" = ["D103", "CPY001"]
+"src/alembic/versions/**.py" = ["CPY001"]
 
 
 [tool.ruff.flake8-quotes]
