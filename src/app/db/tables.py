@@ -50,4 +50,4 @@ webhooks = Webhook.__table__
 recipients = Recipient.__table__
 notifications = Notification.__table__
 
-metadata = Base.metadata
+metadata = Base.metadata  # type: ignore[attr-defined]
