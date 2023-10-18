@@ -33,8 +33,13 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
+          POSTGRES_USER: dummy_pg_user
+          POSTGRES_PASSWORD: dummy_pg_pwd
+          POSTGRES_DB: dummy_pg_db
         run: |
-          docker-compose up -d --build
+          docker compose up -d --build
           docker ps
       - name: Cache python modules
         uses: actions/cache@v2
