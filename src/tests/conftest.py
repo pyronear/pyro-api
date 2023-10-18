@@ -40,11 +40,11 @@ async def test_app_asyncio():
 
 @pytest_asyncio.fixture(scope="function")
 async def test_db():
+    await reset_test_db()
     try:
         await test_database.connect()
         yield test_database
     finally:
-        await reset_test_db()
         await test_database.disconnect()
 
 

@@ -22,7 +22,6 @@ DATABASE_URL: str = os.environ["DATABASE_URL"]
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "")
 LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
 ALERT_RELAXATION_SECONDS: int = 30 * 60
