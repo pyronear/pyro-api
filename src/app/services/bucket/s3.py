@@ -31,7 +31,6 @@ class S3Bucket:
         self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, proxy_url: str
     ) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
-        self.endpoint_url = endpoint_url
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         self.bucket_name = bucket_name
         self.proxy_url = proxy_url
@@ -60,7 +59,7 @@ class S3Bucket:
         # Generate a public URL for it using boto3 presign URL generation\
         presigned_url = self._s3.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
         if len(self.proxy_url) > 0:
-            return presigned_url.replace(self.endpoint_url, self.proxy_url)
+            return presigned_url.replace(self._s3.meta.endpoint_url, self.proxy_url)
         return presigned_url
 
     async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
