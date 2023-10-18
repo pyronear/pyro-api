@@ -17,7 +17,7 @@ jobs:
         with:
           poetry-version: "1.6.1"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output src/requirements.txt
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:

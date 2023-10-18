@@ -24,7 +24,7 @@ jobs:
         with:
           poetry-version: "1.6.1"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output src/requirements.txt
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Build & run docker
         env:
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
