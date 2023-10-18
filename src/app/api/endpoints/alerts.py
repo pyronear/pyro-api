@@ -132,7 +132,12 @@ async def fetch_alerts(
         return await crud.fetch_all(alerts)
     else:
         retrieved_alerts = (
-            session.query(Alert).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
+            session.query(Alert)
+            .join(Device)
+            .join(Access)
+            .filter(Access.group_id == requester.group_id)
+            .order_by(Alert.id)
+            .all()
         )
         retrieved_alerts = [x.__dict__ for x in retrieved_alerts]
         return retrieved_alerts
