@@ -209,7 +209,7 @@
 
 <span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span> <span class="nn">requests</span>
@@ -259,6 +259,33 @@
     <span class="s2">&quot;get-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts&quot;</span><span class="p">,</span>
     <span class="s2">&quot;get-ongoing-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/ongoing&quot;</span><span class="p">,</span>
 <span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">convert_loc_to_str</span><span class="p">(</span>
+    <span class="n">localization</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_num_boxes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs a custom JSON dump for list of coordinates</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
+<span class="sd">        max_num_boxes: maximum allowed number of bounding boxes</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        the JSON string dump with 2 decimal precision</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">localization</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">localization</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">coord</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coord</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">localization</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">bbox</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coordinates are expected to be relative&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bbox</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">localization</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">localization</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_num_boxes</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please limit the number of boxes to </span><span class="si">{</span><span class="n">max_num_boxes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">box_list</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">xmin</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">ymin</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">xmax</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">ymax</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">conf</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">for</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">conf</span> <span class="ow">in</span> <span class="n">localization</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">box_list</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;[]&quot;</span>
 
 
 <div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">:</span>
@@ -321,6 +348,7 @@
         <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">localization</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">event_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise an alert to the API from a device (no need to specify device ID).</span>
@@ -334,12 +362,13 @@
 <span class="sd">            lon: the longitude of the alert</span>
 <span class="sd">            media_id: media ID linked to this alert</span>
 <span class="sd">            azimuth: the azimuth of the alert</span>
+<span class="sd">            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax, conf</span>
 <span class="sd">            event_id: the ID of the event this alerts relates to</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the created alert</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span> <span class="s2">&quot;event_id&quot;</span><span class="p">:</span> <span class="n">event_id</span><span class="p">}</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span> <span class="s2">&quot;event_id&quot;</span><span class="p">:</span> <span class="n">event_id</span><span class="p">,</span> <span class="s2">&quot;localization&quot;</span><span class="p">:</span> <span class="n">convert_loc_to_str</span><span class="p">(</span><span class="n">localization</span><span class="p">)}</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">media_id</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;media_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">media_id</span>
 
