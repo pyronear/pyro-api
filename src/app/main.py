@@ -5,7 +5,6 @@
 
 import logging
 import time
-from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI, Request
@@ -46,20 +45,20 @@ if isinstance(cfg.SENTRY_DSN, str):
     logger.info(f"Sentry middleware enabled on server {cfg.SENTRY_SERVER_NAME}")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Connect to the DB
+app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION)
+
+
+# Database connection
+@app.on_event("startup")
+async def startup():
     await database.connect()
     await init_db()
-    # App execution
-    yield
-    # Disconnect safely
+
+
+@app.on_event("shutdown")
+async def shutdown():
     await database.disconnect()
 
-
-app = FastAPI(
-    title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION, lifesan=lifespan
-)
 
 # Routing
 app.include_router(login.router, prefix="/login", tags=["login"])
