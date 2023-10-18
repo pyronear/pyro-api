@@ -15,8 +15,8 @@ services:
       - DEBUG=true
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
-      - SUPERUSER_PWD=${SUPERUSER_PWD}
+      - SUPERUSER_LOGIN=dummy_login
+      - SUPERUSER_PWD=dummy&P@ssw0rd!
       - BUCKET_NAME=${BUCKET_NAME}
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
