@@ -117,4 +117,4 @@ jobs:
           starting-year: 2020
           folders: 'src,client,.github'
           ignore-files: 'version.py,__init__.py'
-          ignore-folders: 'client/tests/,src/tests/'
+          ignore-folders: 'client/tests/,src/tests/,src/alembic/versions/'
