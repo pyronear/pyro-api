@@ -5,8 +5,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Security, status
-from pydantic import PositiveInt
+from fastapi import APIRouter, Path, Security, status
 
 from app.api import crud
 from app.api.deps import get_current_access
@@ -31,7 +30,7 @@ async def create_recipient(
 
 
 @router.get("/{recipient_id}/", response_model=RecipientOut, summary="Get information about a specific recipient")
-async def get_recipient(recipient_id: PositiveInt):
+async def get_recipient(recipient_id: int = Path(..., gt=0)):
     """
     Retrieve information about the recipient with the given recipient_id
     """
@@ -51,7 +50,7 @@ async def fetch_recipients():
     response_model=List[RecipientOut],
     summary="Get the list of all recipients for the given group",
 )
-async def fetch_recipients_for_group(group_id: PositiveInt):
+async def fetch_recipients_for_group(group_id: int = Path(..., gt=0)):
     """
     Retrieves the list of all recipients for the given group and their information
     """
@@ -59,7 +58,7 @@ async def fetch_recipients_for_group(group_id: PositiveInt):
 
 
 @router.put("/{recipient_id}/", response_model=RecipientOut, summary="Update information about a specific recipient")
-async def update_recipient(payload: RecipientIn, recipient_id: PositiveInt):
+async def update_recipient(payload: RecipientIn, recipient_id: int = Path(..., gt=0)):
     """
     Given its ID, updates information about the specified recipient
     """
@@ -67,7 +66,7 @@ async def update_recipient(payload: RecipientIn, recipient_id: PositiveInt):
 
 
 @router.delete("/{recipient_id}/", response_model=RecipientOut, summary="Delete a specific recipient")
-async def delete_recipient(recipient_id: PositiveInt):
+async def delete_recipient(recipient_id: int = Path(..., gt=0)):
     """
     Based on a recipient_id, deletes the specified recipient
     """
