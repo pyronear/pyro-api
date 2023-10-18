@@ -37,8 +37,9 @@ jobs:
           docker compose -f docker-compose.test.yml exec -T backend coverage xml -o coverage-src.xml
           docker compose -f docker-compose.test.yml cp backend:/app/coverage-src.xml .
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-src.xml
           flags: unittests
           fail_ci_if_error: true
@@ -92,8 +93,9 @@ jobs:
           sleep 15
           cd client && coverage run -m pytest tests/ && coverage xml -o coverage-client.xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./client/coverage-client.xml
           flags: client
           fail_ci_if_error: true

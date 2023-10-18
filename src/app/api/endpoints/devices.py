@@ -40,7 +40,7 @@ async def register_device(payload: AdminDeviceAuth, _=Security(get_current_acces
     await crud.get_entry(users, payload.owner_id)
 
     if payload.group_id is None:
-        _payload = payload.dict()
+        _payload = payload.model_dump()
         _payload["group_id"] = await get_entity_group_id(users, _payload["owner_id"])
         payload = DeviceAuth(**_payload)  # type: ignore[assignment]
     return await crud.accesses.create_accessed_entry(devices, accesses, cast(DeviceAuth, payload), DeviceCreation)
@@ -58,7 +58,7 @@ async def register_my_device(
     group_id = await get_entity_group_id(users, me.id)
     if group_id is None:  # for mypy to convert int | None -> int ; should never happen
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid group_id for user {me.id}")
-    device_payload = DeviceAuth(**payload.dict(), owner_id=me.id, group_id=group_id)
+    device_payload = DeviceAuth(**payload.model_dump(), owner_id=me.id, group_id=group_id)
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 
@@ -148,7 +148,7 @@ async def update_device_location(
             status_code=status.HTTP_403_FORBIDDEN, detail=f"Permission denied to modify device with id={device_id}."
         )
     # Update only the location
-    device.update(payload.dict())
+    device.update(payload.model_dump())
     _device = DeviceOut(**device)
     await crud.update_entry(devices, _device, _device.id)
     return _device
@@ -162,7 +162,7 @@ async def update_my_location(
     Updates the location of the current device
     """
     # Update only the position
-    for k, v in payload.dict().items():
+    for k, v in payload.model_dump().items():
         setattr(device, k, v)
     await crud.update_entry(devices, device, device.id)
     return device
@@ -177,7 +177,7 @@ async def update_device_hash(
     """
     device = await crud.get_entry(devices, device_id)
     # Update only the corresponding field
-    device.update(payload.dict())
+    device.update(payload.model_dump())
     _device = DeviceOut(**device)
     await crud.update_entry(devices, _device, device_id)
     return _device

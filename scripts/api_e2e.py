@@ -10,6 +10,7 @@ from getpass import getpass
 from typing import Any, Dict, Optional
 
 import requests
+from dotenv import load_dotenv
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
@@ -37,6 +38,8 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
 
 def main(args):
     api_url = f"http://localhost:{args.port}"
+
+    load_dotenv()
 
     # Log as superuser
     superuser_login = input("Login: ") if args.creds else os.environ["SUPERUSER_LOGIN"]

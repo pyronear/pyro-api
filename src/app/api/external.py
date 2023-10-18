@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import requests
 from pydantic import BaseModel
@@ -19,5 +19,4 @@ def post_request(url: str, payload: Optional[BaseModel] = None, timeout: int = 1
     Returns:
         HTTP response
     """
-    kwargs: Dict[str, Any] = {} if payload is None else {"json": payload}
-    return requests.post(url, headers={"Content-Type": "application/json"}, timeout=timeout, **kwargs)
+    return requests.post(url, timeout=timeout, json={} if payload is None else payload.model_dump())

@@ -38,10 +38,10 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
     # Send notification to the recipients of the same group as the device that issued the alert
-    device: DeviceOut = DeviceOut.parse_obj(await get_device(payload.device_id))
+    device: DeviceOut = DeviceOut.model_validate(await get_device(payload.device_id))
     # N.B.: "or 0" is just for mypy, to convert Optional[int] -> int ; should never happen
     for item in await fetch_recipients_for_group(await get_entity_group_id(alerts, payload.id) or 0):
-        recipient: RecipientOut = RecipientOut.parse_obj(item)
+        recipient: RecipientOut = RecipientOut.model_validate(item)
         # Information to be added to subject and message: safe_substitute accepts fields that are not present
         info = {
             "alert_id": payload.id,
@@ -74,7 +74,7 @@ async def create_alert(
     new_event: bool = False
     if payload.event_id is None:
         payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
-    alert = AlertOut.parse_obj(await crud.create_entry(alerts, payload))
+    alert = AlertOut.model_validate(await crud.create_entry(alerts, payload))
     # Send notification
     if new_event:
         background_tasks.add_task(alert_notification, alert)
@@ -98,7 +98,7 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    payload_dict = payload.dict()
+    payload_dict = payload.model_dump()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
     if payload_dict["azimuth"] is None:
