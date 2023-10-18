@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
 from app.api import crud
 from app.api.crud.authorizations import is_admin_access
-from app.api.crud.groups import _get_user_group_id
+from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
 from app.db import accesses, devices, users
 from app.models import Access, AccessType, Device
@@ -41,7 +41,7 @@ async def register_device(payload: AdminDeviceAuth, _=Security(get_current_acces
 
     if payload.group_id is None:
         _payload = payload.model_dump()
-        _payload["group_id"] = await _get_user_group_id(_payload["owner_id"])
+        _payload["group_id"] = await get_entity_group_id(users, _payload["owner_id"])
         payload = DeviceAuth(**_payload)  # type: ignore[assignment]
     return await crud.accesses.create_accessed_entry(devices, accesses, cast(DeviceAuth, payload), DeviceCreation)
 
@@ -55,7 +55,10 @@ async def register_my_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    device_payload = DeviceAuth(**payload.model_dump(), owner_id=me.id, group_id=await _get_user_group_id(me.id))
+    group_id = await get_entity_group_id(users, me.id)
+    if group_id is None:  # for mypy to convert int | None -> int ; should never happen
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid group_id for user {me.id}")
+    device_payload = DeviceAuth(**payload.model_dump(), owner_id=me.id, group_id=group_id)
     return await crud.accesses.create_accessed_entry(devices, accesses, device_payload, DeviceCreation)
 
 

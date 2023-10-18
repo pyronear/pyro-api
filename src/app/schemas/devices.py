@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models import AccessType
 
-from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id
+from .base import Cred, DefaultPosition, Login, _CreatedAt, _GroupId, _Id, validate_datetime_none
 
 __all__ = [
     "DeviceIn",
@@ -67,6 +67,8 @@ class MyDeviceIn(Login, DefaultPosition):
     @field_validator("last_ping")
     def validate_last_ping(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+
+    _validate_last_ping = field_validator("last_ping")(validate_datetime_none)
 
 
 class DeviceIn(MyDeviceIn):
@@ -148,3 +150,5 @@ class DeviceUpdate(Login):
     @field_validator("last_ping")
     def validate_last_ping(cls, v: Union[datetime, str, None]):
         return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+
+    _validate_last_ping = field_validator("last_ping")(validate_datetime_none)

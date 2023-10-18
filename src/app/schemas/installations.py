@@ -4,12 +4,11 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional
 
-from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
 
-from .base import _CreatedAt, _Id
+from .base import _CreatedAt, _Id, validate_datetime_none
 
 __all__ = ["InstallationIn", "InstallationOut", "InstallationUpdate"]
 
@@ -30,13 +29,8 @@ class InstallationIn(BaseModel):
     )
     is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
-    @field_validator("start_ts")
-    def validate_start_ts(cls, v: Union[datetime, str]):
-        return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
-
-    @field_validator("end_ts")
-    def validate_end_ts(cls, v: Union[datetime, str, None]):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_start_ts = field_validator("start_ts")(validate_datetime_none)
+    _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
 
 
 class InstallationOut(InstallationIn, _CreatedAt, _Id):
@@ -50,7 +44,4 @@ class InstallationUpdate(InstallationIn):
         json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     is_trustworthy: bool = Field(..., description="whether alerts from this installation can be trusted")
-
-    @field_validator("end_ts")
-    def validate_end_ts(cls, v: Union[datetime, str, None]):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_end_ts = field_validator("end_ts")(validate_datetime_none)

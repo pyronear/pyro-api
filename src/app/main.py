@@ -21,6 +21,8 @@ from app.api.endpoints import (
     installations,
     login,
     media,
+    notifications,
+    recipients,
     sites,
     users,
     webhooks,
@@ -70,6 +72,8 @@ app.include_router(installations.router, prefix="/installations", tags=["install
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(accesses.router, prefix="/accesses", tags=["accesses"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+app.include_router(recipients.router, prefix="/recipients", tags=["recipients"])
+app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 
 
 # Middleware

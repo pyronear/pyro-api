@@ -29,6 +29,7 @@ class Alert(Base):
     device: RelationshipProperty = relationship("Device", back_populates="alerts")
     event: RelationshipProperty = relationship("Event", back_populates="alerts")
     media: RelationshipProperty = relationship("Media", back_populates="alerts")
+    notifications: RelationshipProperty = relationship("Notification", back_populates="alert")
 
     def __repr__(self):
         return f"<Alert(device_id='{self.device_id}', event_id='{self.event_id}', media_id='{self.media_id}'>"

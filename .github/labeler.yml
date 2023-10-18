@@ -71,7 +71,7 @@
 
 'topic: docker':
 - docker-compose.yml
-- docker-compose-dev.yml
+- docker-compose.test.yml
 - src/Dockerfile
 - src/Dockerfile-dev
 

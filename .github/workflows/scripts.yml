@@ -22,7 +22,7 @@ jobs:
           architecture: x64
       - uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.3.0"
+          poetry-version: "1.6.1"
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output src/requirements.txt
       - name: Build & run docker
@@ -33,13 +33,14 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
-          SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
-          SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
+          POSTGRES_USER: dummy_pg_user
+          POSTGRES_PASSWORD: dummy_pg_pwd
+          POSTGRES_DB: dummy_pg_db
         run: |
-          docker-compose up -d --build
+          docker volume prune -f
+          docker compose up -d --build
           docker ps
       - name: Cache python modules
         uses: actions/cache@v2
@@ -52,6 +53,9 @@ jobs:
           pip install -r scripts/requirements.txt
 
       - name: End-to-End test
+        env:
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
         run: |
           sleep 5
           python scripts/api_e2e.py 8080

@@ -7,6 +7,11 @@ import os
 import secrets
 from typing import Optional
 
+from dotenv import load_dotenv
+
+# load_dotenv(".env_tests" if "pytest" in sys.modules else ".env")
+load_dotenv("../.env")
+
 PROJECT_NAME: str = "Pyronear - Alert API"
 PROJECT_DESCRIPTION: str = "API for wildfire prevention, detection and monitoring"
 API_BASE: str = "api/"
@@ -17,7 +22,6 @@ DATABASE_URL: str = os.environ["DATABASE_URL"]
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "")
 LOGO_URL: str = "https://pyronear.org/img/logo_letters.png"
 
 ALERT_RELAXATION_SECONDS: int = 30 * 60
@@ -42,6 +46,7 @@ S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]
 S3_SECRET_KEY: str = os.environ["S3_SECRET_KEY"]
 S3_REGION: str = os.environ["S3_REGION"]
 S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
+S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
 DUMMY_BUCKET_FILE = (
     "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/"
     "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
@@ -51,3 +56,6 @@ DUMMY_BUCKET_FILE = (
 # Sentry
 SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
 SENTRY_SERVER_NAME: Optional[str] = os.getenv("SENTRY_SERVER_NAME")
+
+# Telegram
+TELEGRAM_TOKEN: Optional[str] = os.getenv("TELEGRAM_TOKEN")

@@ -115,11 +115,12 @@ This file will have to hold the following information:
 - `POSTGRES_DB`: name of postgres database
 - `POSTGRES_USER`: user of postgres database
 - `POSTGRES_PASSWORD`: user password of postgres database
-
+- `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
 - `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
+- `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
 
 So your `.env` file should look like something similar to:
 ```

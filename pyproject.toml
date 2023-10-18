@@ -23,13 +23,16 @@ requests = "^2.31.0"
 sentry-sdk = { version = "^1.14.0", extras = ["fastapi"] }
 python-magic = "^0.4.17"
 boto3 = "^1.26.0"
+python-dotenv = "^1.0.0"
 alembic = "^1.8.1"
+# https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
 
 [tool.poetry.group.quality]
 optional = true
 
 [tool.poetry.group.quality.dependencies]
-ruff = { version = "==0.0.278" }
+ruff = { version = "==0.0.290" }
 mypy = { version = "==1.4.1" }
 types-requests = { version = ">=2.0.0" }
 types-python-dateutil = {version = "^2.8.0"}

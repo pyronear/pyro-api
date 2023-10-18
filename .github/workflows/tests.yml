@@ -16,10 +16,9 @@ jobs:
           python-version: "3.9"
       - uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.3.0"
+          poetry-version: "1.6.1"
       - name: Resolve dependencies
-        run: |
-          poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
+        run: poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
       - name: Build & run docker
         env:
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
@@ -28,21 +27,19 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
-          SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
-          SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
         run: docker compose -f docker-compose.test.yml up -d --build
       - name: Run docker test
         run: |
           docker compose -f docker-compose.test.yml exec -T backend coverage --version
           docker compose -f docker-compose.test.yml exec -T backend coverage run -m pytest tests/
           docker compose -f docker-compose.test.yml exec -T backend coverage xml -o coverage-src.xml
-          docker cp pyro-api_backend_1:/app/coverage-src.xml .
+          docker compose -f docker-compose.test.yml cp backend:/app/coverage-src.xml .
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-src.xml
           flags: unittests
           fail_ci_if_error: true
@@ -61,7 +58,7 @@ jobs:
           architecture: x64
       - uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.3.0"
+          poetry-version: "1.6.1"
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output src/requirements.txt
       - name: Build & run API server
@@ -72,11 +69,11 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
-          SUPERUSER_LOGIN: ${{ secrets.SUPERUSER_LOGIN }}
-          SUPERUSER_PWD: ${{ secrets.SUPERUSER_PWD }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
+          POSTGRES_USER: dummy_pg_user
+          POSTGRES_PASSWORD: dummy_pg_pwd
+          POSTGRES_DB: dummy_pg_db
         run: |
           docker volume prune -f
           docker compose up -d --build
@@ -96,8 +93,9 @@ jobs:
           sleep 15
           cd client && coverage run -m pytest tests/ && coverage xml -o coverage-client.xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./client/coverage-client.xml
           flags: client
           fail_ci_if_error: true

@@ -4,14 +4,13 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional
 
-from dateutil.parser import isoparse
 from pydantic import BaseModel, Field, field_validator
 
 from app.models import EventType
 
-from .base import _CreatedAt, _FlatLocation, _Id
+from .base import _CreatedAt, _FlatLocation, _Id, validate_datetime_none
 
 __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "AcknowledgementOut"]
 
@@ -31,13 +30,8 @@ class EventIn(_FlatLocation):
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
-    @field_validator("start_ts")
-    def validate_start_ts(cls, v: Union[datetime, str, None]):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
-
-    @field_validator("end_ts")
-    def validate_end_ts(cls, v: Union[datetime, str, None]):
-        return None if v is None else (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_start_ts = field_validator("start_ts")(validate_datetime_none)
+    _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -66,6 +60,4 @@ class EventUpdate(_FlatLocation):
     )
     is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")
 
-    @field_validator("start_ts")
-    def validate_start_ts(cls, v: Union[datetime, str]):
-        return (isoparse(v) if isinstance(v, str) else v).replace(tzinfo=None)
+    _validate_start_ts = field_validator("start_ts")(validate_datetime_none)

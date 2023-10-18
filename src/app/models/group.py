@@ -20,6 +20,7 @@ class Group(Base):
 
     accesses: RelationshipProperty = relationship("Access", back_populates="group")
     sites: RelationshipProperty = relationship("Site", back_populates="group")
+    recipients: RelationshipProperty = relationship("Recipient", back_populates="group")
 
     def __repr__(self):
         return f"<Group(name='{self.name}')>"
