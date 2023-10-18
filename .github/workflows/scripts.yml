@@ -39,6 +39,7 @@ jobs:
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
         run: |
+          docker volume prune -f
           docker compose up -d --build
           docker ps
       - name: Cache python modules
@@ -52,6 +53,9 @@ jobs:
           pip install -r scripts/requirements.txt
 
       - name: End-to-End test
+        env:
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
         run: |
           sleep 5
           python scripts/api_e2e.py 8080
