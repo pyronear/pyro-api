@@ -112,6 +112,9 @@ This file will have to hold the following information:
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `BUCKET_NAME`: the name of the storage bucket
+- `POSTGRES_DB`: name of postgres database
+- `POSTGRES_USER`: user of postgres database
+- `POSTGRES_PASSWORD`: user password of postgres database
 - `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
@@ -126,6 +129,9 @@ S3_SECRET_KEY=YOUR_SECRET_KEY
 S3_REGION=bucket-region
 S3_ENDPOINT_URL='https://s3.mydomain.com/'
 BUCKET_NAME=my_storage_bucket_name
+POSTGRES_USER=dummy_pg_user
+POSTGRES_PASSWORD=dummy_pg_pwd
+POSTGRES_DB=dummy_pg_db
 SENTRY_DSN='https://replace.with.you.sentry.dsn/'
 SENTRY_SERVER_NAME=my_storage_bucket_name
 ```
