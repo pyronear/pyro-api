@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -55,6 +55,33 @@ ROUTES: Dict[str, str] = {
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
 }
+
+
+def convert_loc_to_str(
+    localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
+    max_num_boxes: int = 5,
+) -> str:
+    """Performs a custom JSON dump for list of coordinates
+
+    Args:
+        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+        max_num_boxes: maximum allowed number of bounding boxes
+    Returns:
+        the JSON string dump with 2 decimal precision
+    """
+    if isinstance(localization, list) and len(localization) > 0:
+        if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
+            raise ValueError("coordinates are expected to be relative")
+        if any(len(bbox) != 5 for bbox in localization):
+            raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
+        if len(localization) > max_num_boxes:
+            raise ValueError(f"Please limit the number of boxes to {max_num_boxes}")
+        box_list = tuple(
+            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
+        )
+        return f"[{','.join(box_list)}]"
+    else:
+        return "[]"
 
 
 class Client:
@@ -117,6 +144,7 @@ class Client:
         lon: float,
         media_id: int,
         azimuth: Union[float, None] = None,
+        localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
         event_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
@@ -130,12 +158,13 @@ class Client:
             lon: the longitude of the alert
             media_id: media ID linked to this alert
             azimuth: the azimuth of the alert
+            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax, conf
             event_id: the ID of the event this alerts relates to
 
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id}
+        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": convert_loc_to_str(localization)}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 

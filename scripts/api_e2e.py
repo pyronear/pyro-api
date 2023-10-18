@@ -95,7 +95,7 @@ def main(args):
     payload = {"lat": 44.1, "lon": 3.9, "type": "wildfire"}
     event_id = api_request("post", f"{api_url}/events/", superuser_auth, payload)["id"]
 
-    payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id}
+    payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id, "localization": None}
     alert_id = api_request("post", f"{api_url}/alerts/from-device", device_auth, payload)["id"]
 
     # Acknowledge it

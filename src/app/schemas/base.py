@@ -62,13 +62,13 @@ class Login(BaseModel):
         min_length=3,
         max_length=50,
         pattern="^[a-zA-Z0-9_-]+$",
-        json_schema_extra={"examples": ["JohnDoe"]},
         description="login of the access",
+        json_schema_extra={"examples": ["JohnDoe"]},
     )
 
 
 class Cred(BaseModel):
-    password: str = Field(..., min_length=3, json_schema_extra={"examples": ["PickARobustOne"]}, description="password")
+    password: str = Field(..., min_length=3, description="password", json_schema_extra={"examples": ["PickARobustOne"]})
 
 
 class CredHash(BaseModel):
@@ -77,25 +77,25 @@ class CredHash(BaseModel):
 
 # Location
 class _FlatLocation(BaseModel):
-    lat: float = Field(..., gt=-90, lt=90, json_schema_extra={"examples": [44.765181]}, description="latitude")
-    lon: float = Field(..., gt=-180, lt=180, json_schema_extra={"examples": [4.514880]}, description="longitude")
+    lat: float = Field(..., gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]})
+    lon: float = Field(..., gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]})
 
 
 class _Location(_FlatLocation):
     elevation: float = Field(
-        ..., gt=0.0, lt=10000, json_schema_extra={"examples": [1582]}, description="number of meters from sea level"
+        ..., gt=0.0, lt=10000, description="number of meters from sea level", json_schema_extra={"examples": [1582]}
     )
 
 
 class _DefaultLocation(BaseModel):
     lat: Optional[float] = Field(
-        None, gt=-90, lt=90, json_schema_extra={"examples": [44.765181]}, description="latitude"
+        None, gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]}
     )
     lon: Optional[float] = Field(
-        None, gt=-180, lt=180, json_schema_extra={"examples": [4.514880]}, description="longitude"
+        None, gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]}
     )
     elevation: Optional[float] = Field(
-        None, gt=0.0, lt=10000, json_schema_extra={"examples": [1582]}, description="number of meters from sea level"
+        None, gt=0.0, lt=10000, description="number of meters from sea level", json_schema_extra={"examples": [1582]}
     )
 
 
@@ -104,8 +104,8 @@ class _Rotation(BaseModel):
         ...,
         ge=0,
         le=360,
-        json_schema_extra={"examples": [110]},
         description="angle between north and direction in degrees",
+        json_schema_extra={"examples": [110]},
     )
     pitch: float = Field(..., ge=-90, le=90, json_schema_extra={"examples": [-5]})
 
@@ -115,15 +115,15 @@ class _DefaultRotation(BaseModel):
         None,
         ge=0,
         le=360,
-        json_schema_extra={"examples": [110]},
         description="angle between north and direction in degrees",
+        json_schema_extra={"examples": [110]},
     )
     pitch: Optional[float] = Field(
         None,
         ge=-90,
         le=90,
-        json_schema_extra={"examples": [-5]},
         description="angle between horizontal plane and direction",
+        json_schema_extra={"examples": [-5]},
     )
 
 

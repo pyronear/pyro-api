@@ -32,7 +32,7 @@ urllib3 = ">=1.25.4,<1.27"
 optional = true
 
 [tool.poetry.group.quality.dependencies]
-ruff = { version = "==0.0.278" }
+ruff = { version = "==0.0.290" }
 mypy = { version = "==1.4.1" }
 types-requests = { version = ">=2.0.0" }
 types-python-dateutil = {version = "^2.8.0"}
@@ -87,6 +87,7 @@ ignore = [
 exclude = [".git", "engine"]
 line-length = 120
 target-version = "py39"
+preview = true
 
 [tool.ruff.per-file-ignores]
 "**/__init__.py" = ["I001", "F401", "CPY001"]
@@ -95,6 +96,7 @@ target-version = "py39"
 "client/docs/**.py" = ["E402"]
 "src/tests/**.py" = ["D103", "CPY001"]
 "client/tests/**.py" = ["D103", "CPY001"]
+"src/alembic/versions/**.py" = ["CPY001"]
 
 
 [tool.ruff.flake8-quotes]

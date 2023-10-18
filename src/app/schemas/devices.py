@@ -30,8 +30,8 @@ class SoftwareHash(BaseModel):
         ...,
         min_length=8,
         max_length=16,
-        json_schema_extra={"examples": ["0123456789ABCDEF"]},
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
 
@@ -40,23 +40,27 @@ class MyDeviceIn(Login, DefaultPosition):
         ...,
         min_length=3,
         max_length=100,
-        json_schema_extra={"examples": ["systemV0.1"]},
         description="hardware setup version",
+        json_schema_extra={"examples": ["systemV0.1"]},
     )
     last_ping: Optional[datetime] = Field(
         default=None,
-        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
         description="timestamp of last communication with the API",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     angle_of_view: float = Field(
-        ..., ge=0, le=360, json_schema_extra={"examples": [10]}, description="angle between left and right camera view"
+        ...,
+        ge=0,
+        le=360,
+        description="angle between left and right camera view",
+        json_schema_extra={"examples": [10]},
     )
     software_hash: Optional[str] = Field(
         None,
         min_length=8,
         max_length=16,
-        json_schema_extra={"examples": ["0123456789ABCDEF"]},
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
     _validate_last_ping = field_validator("last_ping")(validate_datetime_none)
@@ -92,50 +96,50 @@ class DeviceOut(DeviceIn, _CreatedAt, _Id):
 
 class DeviceUpdate(Login):
     lat: Optional[float] = Field(
-        ..., gt=-90, lt=90, json_schema_extra={"examples": [44.765181]}, description="latitude"
+        ..., gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]}
     )
     lon: Optional[float] = Field(
-        ..., gt=-180, lt=180, json_schema_extra={"examples": [4.514880]}, description="longitude"
+        ..., gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]}
     )
     elevation: Optional[float] = Field(
-        ..., gt=0.0, lt=10000, json_schema_extra={"examples": [1582]}, description="number of meters from sea level"
+        ..., gt=0.0, lt=10000, description="number of meters from sea level", json_schema_extra={"examples": [1582]}
     )
     azimuth: Optional[float] = Field(
         ...,
         ge=0,
         le=360,
-        json_schema_extra={"examples": [110.0]},
         description="angle between north and direction in degrees",
+        json_schema_extra={"examples": [110.0]},
     )
     pitch: Optional[float] = Field(
         ...,
         ge=-90,
         le=90,
-        json_schema_extra={"examples": [-5]},
         description="angle between horizontal plane and direction",
+        json_schema_extra={"examples": [-5]},
     )
     specs: str = Field(
         ...,
         min_length=3,
         max_length=100,
-        json_schema_extra={"examples": ["systemV0.1"]},
         description="hardware setup version",
+        json_schema_extra={"examples": ["systemV0.1"]},
     )
     last_ping: Optional[datetime] = Field(
         ...,
-        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
         description="timestamp of last communication with the API",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     angle_of_view: float = Field(
-        ..., ge=0, le=360, json_schema_extra={"examples": [10]}, description="angle between left and right camera view"
+        ..., ge=0, le=360, description="angle between left and right camera view", json_schema_extra={"examples": [10]}
     )
     owner_id: int = Field(..., gt=0, description="the user ID of the device's owner")
     software_hash: Optional[str] = Field(
         ...,
         min_length=8,
         max_length=16,
-        json_schema_extra={"examples": ["0123456789ABCDEF"]},
         description="the unique version of the current software being run on the device",
+        json_schema_extra={"examples": ["0123456789ABCDEF"]},
     )
 
     _validate_last_ping = field_validator("last_ping")(validate_datetime_none)

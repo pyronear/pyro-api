@@ -2,7 +2,6 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-
 from typing import Optional
 
 from pydantic import Field
@@ -17,11 +16,11 @@ __all__ = ["SiteBase", "SiteIn", "SiteOut", "SiteUpdate"]
 # Sites
 class SiteBase(_FlatLocation):
     name: str = Field(
-        ..., min_length=3, max_length=50, json_schema_extra={"examples": ["watchtower12"]}, description="site name"
+        ..., min_length=3, max_length=50, description="site name", json_schema_extra={"examples": ["watchtower12"]}
     )
     group_id: Optional[int] = Field(None, gt=0, description="linked group entry")
-    country: str = Field(..., max_length=5, json_schema_extra={"examples": ["FR"]}, description="country identifier")
-    geocode: str = Field(..., max_length=10, json_schema_extra={"examples": ["01"]}, description="region geocode")
+    country: str = Field(..., max_length=5, description="country identifier", json_schema_extra={"examples": ["FR"]})
+    geocode: str = Field(..., max_length=10, description="region geocode", json_schema_extra={"examples": ["01"]})
 
 
 class SiteIn(SiteBase):

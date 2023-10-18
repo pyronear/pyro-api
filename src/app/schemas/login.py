@@ -16,10 +16,10 @@ __all__ = ["Token", "TokenPayload"]
 class Token(BaseModel):
     access_token: str = Field(
         ...,
-        json_schema_extra={"examples": ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E"]},
         description="access token",
+        json_schema_extra={"examples": ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.423fgFGTfttrvU6D1k7vF92hH5vaJHCGFYd8E"]},
     )
-    token_type: str = Field(..., json_schema_extra={"examples": ["bearer"]}, description="type of token")
+    token_type: str = Field(..., description="type of token", json_schema_extra={"examples": ["bearer"]})
 
 
 class TokenPayload(BaseModel):

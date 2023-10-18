@@ -151,4 +151,5 @@ _build/
 # Poetry
 src/requirements.txt
 src/app/requirements.txt
+src/requirements.txt
 src/requirements-dev.txt
