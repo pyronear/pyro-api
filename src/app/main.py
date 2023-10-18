@@ -27,7 +27,8 @@ from app.api.endpoints import (
     users,
     webhooks,
 )
-from app.db import database, engine, init_db, metadata
+from app.db import database, engine, metadata
+from app.db.init import init_db
 
 logger = logging.getLogger("uvicorn.error")
 
