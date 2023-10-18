@@ -14,7 +14,6 @@ services:
     environment:
       - DEBUG=true
       - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
-      - TEST_DATABASE_URL=postgresql://dummy_pg_tuser:dummy_pg_tpwd@db_test/dummy_pg_tdb
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
       - SUPERUSER_LOGIN=dummy_login
       - SUPERUSER_PWD=dummy&P@ssw0rd!
@@ -31,23 +30,9 @@ services:
       - db
   db:
     image: postgres:12.1-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
     ports:
       - 5432:5432
     environment:
       - POSTGRES_USER=dummy_pg_user
       - POSTGRES_PASSWORD=dummy_pg_pwd
       - POSTGRES_DB=dummy_pg_db
-  db_test:
-    image: postgres:12.1-alpine
-    volumes:
-      - postgres_data_test:/var/lib/postgresql/data_test/
-    environment:
-      - POSTGRES_USER=dummy_pg_tuser
-      - POSTGRES_PASSWORD=dummy_pg_tpwd
-      - POSTGRES_DB=dummy_pg_tdb
-
-volumes:
-  postgres_data:
-  postgres_data_test:

@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import app.config as cfg
 from app.db import metadata
 
-SQLALCHEMY_DATABASE_URL = cfg.TEST_DATABASE_URL
+SQLALCHEMY_DATABASE_URL = cfg.DATABASE_URL
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 metadata.create_all(bind=engine)
 database = Database(SQLALCHEMY_DATABASE_URL)
