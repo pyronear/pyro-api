@@ -21,5 +21,4 @@ RUN set -eux \
 COPY app /app/app
 COPY alembic.ini /app/alembic.ini
 COPY alembic /app/alembic
-COPY .coveragerc /app/.coveragerc
 COPY tests /app/tests
