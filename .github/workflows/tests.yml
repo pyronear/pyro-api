@@ -87,7 +87,6 @@ jobs:
           pip install -e "client/.[test]"
       - name: Run client unittests
         run: |
-          coverage --version
           sleep 15
           cd client && pytest --cov=app --cov-report xml tests/ -n auto
       - name: Upload coverage to Codecov
