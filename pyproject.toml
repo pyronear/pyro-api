@@ -52,7 +52,6 @@ aiosqlite = ">=0.16.0,<1.0.0"
 pytest = ">=5.3.2,<8.0.0"
 pytest-asyncio = ">=0.17.0,<1.0.0"
 pytest-cov = ">=3.0.0,<5.0.0"
-pytest-xdist = ">=2.0.0,<4.0.0"
 pytest-pretty = "^1.0.0"
 
 [tool.coverage.run]
