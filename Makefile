@@ -39,12 +39,12 @@ stop-dev:
 test:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build
-	docker compose exec -T backend pytest --cov=app -n auto
+	docker compose exec -T backend pytest --cov=app
 	docker compose -f docker-compose.test.yml down
 
 # Run tests for the Python client
 test-client:
-	cd client && pytest tests/
+	cd client && pytest --cov=pyroclient tests/ -n auto
 
 # Check that docs can build for client
 docs-client:
