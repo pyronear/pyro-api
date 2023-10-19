@@ -39,7 +39,7 @@ stop-dev:
 test:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build
-	docker compose exec -T pytest --cov=app -n auto
+	docker compose exec -T backend pytest --cov=app -n auto
 	docker compose -f docker-compose.test.yml down
 
 # Run tests for the Python client
