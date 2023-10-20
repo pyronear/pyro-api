@@ -31,6 +31,8 @@ stop:
 run-dev:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build
+	docker compose exec localstack awslocal s3 mb s3://sample-bucket
+	docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
 
 stop-dev:
 	docker compose -f docker-compose.test.yml down
@@ -39,6 +41,7 @@ stop-dev:
 test:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build
+	docker compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker compose exec -T backend pytest --cov=app
 	docker compose -f docker-compose.test.yml down
 

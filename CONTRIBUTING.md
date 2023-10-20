@@ -101,6 +101,24 @@ The previous command won't modify anything in your codebase. Some fixes (import 
 make style
 ```
 
+#### Local deployment
+
+To run the API locally, the easiest way is with Docker. Launch this command in the project directory:
+
+```shell
+make run-dev
+```
+
+To enable a smoother development experience, we are using [localstack](https://docs.localstack.cloud/overview/) to create a local S3 bucket.
+
+We automatically create a s3 bucket called `sample-bucket`, which you can check by running:
+```shell
+docker-compose exec localstack awslocal s3 ls
+```
+
+NOTE: please check localstack documentation to understand how to create buckets or to add/delete objects.
+
+
 ### Submit your modifications
 
 Push your last modifications to your remote branch

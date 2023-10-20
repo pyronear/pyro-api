@@ -21,15 +21,13 @@ jobs:
         run: poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
       - name: Build & run docker
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_REGION: ${{ secrets.S3_REGION }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
         run: docker compose -f docker-compose.test.yml up -d --build
+      - name: "Create local AWS environment"
+        run: |
+          docker compose exec localstack awslocal s3 mb s3://sample-bucket
+          docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
       - name: Run docker test
         run: |
           docker compose -f docker-compose.test.yml exec -T backend pytest --cov=app --cov-report xml tests/
@@ -60,18 +58,6 @@ jobs:
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Build & run API server
-        env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_REGION: ${{ secrets.S3_REGION }}
-          SUPERUSER_LOGIN: dummy_login
-          SUPERUSER_PWD: dummy&P@ssw0rd!
-          POSTGRES_USER: dummy_pg_user
-          POSTGRES_PASSWORD: dummy_pg_pwd
-          POSTGRES_DB: dummy_pg_db
         run: |
           docker volume prune -f
           docker compose up -d --build
