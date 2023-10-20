@@ -1,22 +1,6 @@
 version: '3.7'
 
 services:
-  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
-  localstack:
-    image: localstack/localstack:1.4.0
-    ports:
-      - 4566:4566
-    # environment variables details: https://docs.localstack.cloud/references/configuration/
-    environment:
-      - EDGE_PORT=4566
-      - SERVICES=s3
-    volumes:
-      - ./volume:/var/lib/localstack
-    healthcheck:
-      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
   backend:
     build:
       context: src
@@ -58,3 +42,17 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.4.0
+    ports:
+      - 4566:4566
+    # environment variables details: https://docs.localstack.cloud/references/configuration/
+    environment:
+      - EDGE_PORT=4566
+      - SERVICES=s3
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
