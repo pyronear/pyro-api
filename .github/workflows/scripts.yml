@@ -58,4 +58,4 @@ jobs:
           SUPERUSER_PWD: dummy&P@ssw0rd!
         run: |
           sleep 5
-          python scripts/api_e2e.py 8080
+          python scripts/api_e2e.py 8050

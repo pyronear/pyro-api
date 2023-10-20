@@ -39,11 +39,11 @@ jobs:
           POSTGRES_DB: dummy_pg_db
         run: docker compose up -d --build
       - name: Docker sanity check
-        run: sleep 20 && nc -vz localhost 8080
+        run: sleep 20 && nc -vz localhost 8050
       - name: Debug
         run: docker compose logs
       - name: Ping server
-        run: curl http://localhost:8080/docs
+        run: curl http://api.localhost:8050/docs
 
   client:
     runs-on: ${{ matrix.os }}

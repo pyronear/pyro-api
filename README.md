@@ -42,7 +42,7 @@ You can run the API containers using this command:
 make run
 ```
 
-You can now navigate to `http://localhost:8080/docs` to interact with the API (or do it through HTTP requests) and explore the documentation.
+You can now navigate to `http://api.localhost:8050/docs` to interact with the API (or do it through HTTP requests) and explore the documentation.
 
 ![Swagger](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/swagger_interface.png)
 
