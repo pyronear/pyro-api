@@ -148,9 +148,6 @@ client/pyroclient/version.py
 _build/
 *.sql
 
-# Docker Volume
-volume/
-
 # Poetry
 src/requirements.txt
 src/app/requirements.txt
