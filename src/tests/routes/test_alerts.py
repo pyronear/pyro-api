@@ -1,11 +1,15 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 
+import app.config as cfg
 from app import db
 from app.api import crud, deps
+from app.api.crud.alerts import resolve_previous_alert
+from app.api.endpoints.alerts import check_media_existence
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
 
@@ -111,6 +115,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 0.0,
+        "localization": None,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -121,6 +126,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
+        "localization": "[(0, 0, 1, 1)]",
         "created_at": "2020-10-13T09:18:45.447773",
     },
     {
@@ -131,6 +137,7 @@ ALERT_TABLE = [
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
+        "localization": None,
         "created_at": "2020-11-03T11:18:45.447773",
     },
     {
@@ -141,7 +148,30 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
-        "created_at": ts_to_string(datetime.utcnow()),
+        "localization": None,
+        "created_at": ts_to_string(datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS - 300)),
+        # to test resolve_previous_alert with a tolerance of 5 minutes
+    },
+]
+
+RECIPIENT_TABLE = [
+    {
+        "id": 1,
+        "group_id": 1,
+        "notification_type": "telegram",
+        "address": "my_chat_id",
+        "subject_template": "New alert on $device_name",
+        "message_template": "Group 1: alert $alert_id issued by $device_name",
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "group_id": 2,
+        "notification_type": "telegram",
+        "address": "my_other_chat_id",
+        "subject_template": "New alert on $device_name",
+        "message_template": "Group 2: alert $alert_id issued by $device_name",
+        "created_at": "2020-10-13T08:18:45.447773",
     },
 ]
 
@@ -150,6 +180,27 @@ DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
 EVENT_TABLE_FOR_DB = list(map(update_only_datetime, EVENT_TABLE))
 ALERT_TABLE_FOR_DB = list(map(update_only_datetime, ALERT_TABLE))
+RECIPIENT_TABLE_FOR_DB = list(map(update_only_datetime, RECIPIENT_TABLE))
+
+
+async def check_notifications(alert_id: int, device_id: int, is_new_event: bool):
+    notifications = await crud.fetch_all(db.notifications, {"alert_id": alert_id})
+    assert len(notifications) == is_new_event
+    if not is_new_event:
+        return
+    for device in DEVICE_TABLE:
+        if device["id"] == device_id:
+            group_id = next(item["id"] for item in USER_TABLE if device["owner_id"] == item["id"])
+            login = device["login"]
+            break
+    recipient_id = next(item["id"] for item in RECIPIENT_TABLE if item["group_id"] == group_id)
+    expected_notification = {
+        "alert_id": alert_id,
+        "recipient_id": recipient_id,
+        "subject": f"New alert on {login}",
+        "message": f"Group {group_id}: alert {alert_id} issued by {login}",
+    }
+    assert {k: v for k, v in notifications[0].items() if k not in ("id", "created_at")} == expected_notification
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -163,6 +214,13 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
+    await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
+
+
+@pytest.mark.asyncio
+async def test_check_media_existence_raise(init_test_db):
+    with pytest.raises(HTTPException):
+        await check_media_existence(-9999)
 
 
 @pytest.mark.parametrize(
@@ -179,7 +237,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -206,7 +263,6 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 )
 @pytest.mark.asyncio
 async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -232,7 +288,6 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 )
 @pytest.mark.asyncio
 async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -265,36 +320,101 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
     [
         [
             0,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, None, 201, None],
-        [1, {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 4, 201, None],
-        [1, {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 3, 201, None],
-        [
-            2,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
-            None,
-            403,
-            "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0}, None, 422, None],
         [
             1,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "hello"},
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
+            None,
+            201,
+            None,
+        ],
+        [
+            1,
+            {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
+            4,
+            201,
+            None,
+        ],
+        [
+            1,
+            {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
+            3,
+            201,
+            None,
+        ],
+        [
+            2,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "localization": None}, None, 422, None],
+        [
+            1,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": "hello",
+                "localization": None,
+            },
             None,
             422,
             None,
         ],
-        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, None, 422, None],
+        [
+            1,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": -5.0,
+                "localization": None,
+            },
+            None,
+            422,
+            None,
+        ],
     ],
 )
 @pytest.mark.asyncio
 async def test_create_alert(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
+    is_new_event: bool = expected_event_id is not None and expected_event_id > len(EVENT_TABLE)
 
     # Create a custom access token
     auth = None
@@ -316,7 +436,9 @@ async def test_create_alert(
 
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
-        assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
+        assert utc_dt < new_alert["created_at"] < datetime.utcnow()
+
+        await check_notifications(alert_id=new_alert["id"], device_id=payload["device_id"], is_new_event=is_new_event)
 
 
 @pytest.mark.parametrize(
@@ -324,28 +446,35 @@ async def test_create_alert(
     [
         [
             0,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
         [
             1,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [2, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, None, 201, None],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 3, 201, None],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 3, 201, None],
-        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 4, 201, None],
+        [
+            2,
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
+            None,
+            201,
+            None,
+        ],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 3, 201, None],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "localization": None}, 3, 201, None],
+        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
 async def test_create_alert_by_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
+    is_new_event: bool = expected_event_id is not None and expected_event_id > len(EVENT_TABLE)
 
     # Create a custom access token
     auth = None
@@ -377,7 +506,9 @@ async def test_create_alert_by_device(
         assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
         new_alert = await get_entry(test_db, db.alerts, json_response["id"])
         new_alert = dict(**new_alert)
-        assert new_alert["created_at"] > utc_dt and new_alert["created_at"] < datetime.utcnow()
+        assert utc_dt < new_alert["created_at"] < datetime.utcnow()
+
+        await check_notifications(alert_id=new_alert["id"], device_id=device_id, is_new_event=is_new_event)
 
 
 @pytest.mark.parametrize(
@@ -392,7 +523,6 @@ async def test_create_alert_by_device(
 )
 @pytest.mark.asyncio
 async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -407,3 +537,10 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
+
+
+@pytest.mark.parametrize("device_id, expected_alert_id", [(2, None), (1, 4)])
+@pytest.mark.asyncio
+async def test_resolve_previous_alert(test_app_asyncio, init_test_db, device_id, expected_alert_id):
+    alert = await resolve_previous_alert(device_id)
+    assert expected_alert_id is None if alert is None else expected_alert_id == alert.id

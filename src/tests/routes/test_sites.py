@@ -79,7 +79,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -117,8 +116,7 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
         assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-
-        for (i, entry) in enumerate(response.json()):
+        for i, entry in enumerate(response.json()):
             compare_entries(entry, expected_sites[i])
 
 
@@ -236,7 +234,6 @@ async def test_create_site(
     status_code,
     status_details,
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -325,7 +322,6 @@ async def test_create_site(
 async def test_update_site(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, site_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -356,7 +352,6 @@ async def test_update_site(
 )
 @pytest.mark.asyncio
 async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

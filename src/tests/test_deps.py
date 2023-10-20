@@ -97,7 +97,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_current_access(init_test_db, token_data, scope, expected_access, exception):
-
     # Create a token for the access we'll want to retrieve
     if isinstance(token_data, str):
         token = token_data
@@ -111,7 +110,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     else:
         access = await deps.get_current_access(SecurityScopes([scope]), token=token)
         if isinstance(expected_access, int):
-            assert access.dict() == AccessRead(**ACCESS_TABLE[expected_access]).dict()
+            assert access.model_dump() == AccessRead(**ACCESS_TABLE[expected_access]).model_dump()
 
 
 @pytest.mark.parametrize(
@@ -123,7 +122,6 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
 )
 @pytest.mark.asyncio
 async def test_get_current_user(init_test_db, access_idx, user_idx):
-
     if isinstance(user_idx, int):
         response = await deps.get_current_user(AccessRead(**ACCESS_TABLE[access_idx]))
         assert response == UserRead(**USER_TABLE_FOR_DB[user_idx])
@@ -141,7 +139,6 @@ async def test_get_current_user(init_test_db, access_idx, user_idx):
 )
 @pytest.mark.asyncio
 async def test_get_current_device(init_test_db, access_idx, device_idx):
-
     if isinstance(device_idx, int):
         response = await deps.get_current_device(AccessRead(**ACCESS_TABLE[access_idx]))
         assert response == DeviceOut(**DEVICE_TABLE_FOR_DB[device_idx])

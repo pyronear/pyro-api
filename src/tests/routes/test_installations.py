@@ -140,7 +140,6 @@ async def init_test_db(monkeypatch, test_db):
 async def test_get_installation(
     test_app_asyncio, init_test_db, access_idx, installation_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -167,7 +166,6 @@ async def test_get_installation(
 async def test_fetch_installations(
     test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -229,7 +227,6 @@ async def test_fetch_installations(
 async def test_create_installation(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -368,7 +365,6 @@ async def test_create_installation(
 async def test_update_installation(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, installation_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -406,7 +402,6 @@ async def test_update_installation(
 async def test_delete_installation(
     test_app_asyncio, init_test_db, access_idx, installation_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -447,7 +442,6 @@ async def test_get_active_devices_on_site(
     status_code,
     status_details,
 ):
-
     # Custom patching for DB operations done on route
     monkeypatch.setattr(db.session, "database", test_db)
 

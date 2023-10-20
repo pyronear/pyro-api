@@ -12,7 +12,6 @@ from app.db import webhooks
 
 
 async def fetch_webhook_urls(route: str) -> List[str]:
-
     query = select([webhooks.c.url]).where(webhooks.c.callback == route)
 
     return cast(List[str], await crud.base.database.fetch_all(query=query))

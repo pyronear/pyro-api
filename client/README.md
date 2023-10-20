@@ -84,7 +84,7 @@ api_client.update_my_hash("MyNewHash")
 
 ### Prerequisites
 
-Python 3.6 (or higher) and [pip](https://pip.pypa.io/en/stable/)/[conda](https://docs.conda.io/en/latest/miniconda.html) are required to install the client of the alert API.
+Python 3.8 (or higher) and [pip](https://pip.pypa.io/en/stable/)/[conda](https://docs.conda.io/en/latest/miniconda.html) are required to install the client of the alert API.
 
 ### Latest stable release
 

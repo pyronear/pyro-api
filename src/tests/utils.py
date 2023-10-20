@@ -1,18 +1,14 @@
-from copy import deepcopy
 from datetime import datetime
+from typing import Any, Dict
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
-def update_only_datetime(entity_as_dict):
-    to_return = deepcopy(entity_as_dict)
-    if isinstance(to_return.get("created_at"), str):
-        to_return["created_at"] = parse_time(to_return["created_at"])
-    if isinstance(to_return.get("start_ts"), str):
-        to_return["start_ts"] = parse_time(to_return["start_ts"])
-    if isinstance(to_return.get("end_ts"), str):
-        to_return["end_ts"] = parse_time(to_return["end_ts"])
-    return to_return
+def update_only_datetime(entity_as_dict: Dict[str, Any]):
+    return {
+        k: parse_time(v) if isinstance(v, str) and k in ("created_at", "start_ts", "end_ts", "last_ping") else v
+        for k, v in entity_as_dict.items()
+    }
 
 
 def parse_time(d):

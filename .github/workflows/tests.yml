@@ -13,19 +13,12 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.8"
+          python-version: "3.9"
       - uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.3.0"
-      - name: Install Compose
-        uses: ndeloof/install-compose-action@v0.0.1
-        with:
-          version: v2.1.0 # defaults to 'latest'
-          legacy: true    # will also install in PATH as `docker-compose`
+          poetry-version: "1.6.1"
       - name: Resolve dependencies
-        run: |
-          poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-          poetry export -f requirements.txt --without-hashes --with dev --output src/requirements-dev.txt
+        run: poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
       - name: Build & run docker
         env:
           BUCKET_NAME: sample-bucket
@@ -34,22 +27,21 @@ jobs:
           S3_ACCESS_KEY: fake
           S3_SECRET_KEY: fake
           S3_REGION: us-east-1
-        run: |
-          docker build src/. -t pyroapi:python3.8-alpine3.10
-          docker-compose -f docker-compose-dev.yml up -d --build
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+        run: docker compose -f docker-compose.test.yml up -d --build
       - name: "Create local AWS environment"
         run: |
-          docker-compose exec localstack awslocal s3 mb s3://sample-bucket
-          docker-compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
+          docker compose exec localstack awslocal s3 mb s3://sample-bucket
+          docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
       - name: Run docker test
         run: |
-          docker-compose -f docker-compose-dev.yml exec -T backend coverage --version
-          docker-compose -f docker-compose-dev.yml exec -T backend coverage run -m pytest tests/
-          docker-compose -f docker-compose-dev.yml exec -T backend coverage xml -o coverage-src.xml
-          docker cp pyro-api_backend_1:/app/coverage-src.xml .
+          docker compose -f docker-compose.test.yml exec -T backend pytest --cov=app --cov-report xml tests/
+          docker compose -f docker-compose.test.yml cp backend:/app/coverage.xml ./coverage-src.xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-src.xml
           flags: unittests
           fail_ci_if_error: true
@@ -59,7 +51,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.8]
+        python: [3.9]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v4
@@ -68,12 +60,7 @@ jobs:
           architecture: x64
       - uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.3.0"
-      - name: Install Compose
-        uses: ndeloof/install-compose-action@v0.0.1
-        with:
-          version: v2.1.0 # defaults to 'latest'
-          legacy: true    # will also install in PATH as `docker-compose`
+          poetry-version: "1.6.1"
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Build & run API server
@@ -84,9 +71,14 @@ jobs:
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
+          POSTGRES_USER: dummy_pg_user
+          POSTGRES_PASSWORD: dummy_pg_pwd
+          POSTGRES_DB: dummy_pg_db
         run: |
           docker volume prune -f
-          docker-compose up -d --build
+          docker compose up -d --build
           docker ps
       - name: Cache python modules
         uses: actions/cache@v2
@@ -99,13 +91,13 @@ jobs:
           pip install -e "client/.[test]"
       - name: Run client unittests
         run: |
-          coverage --version
           sleep 15
-          cd client && coverage run -m pytest tests/ && coverage xml -o coverage-client.xml
+          cd client && pytest --cov=pyroclient --cov-report xml tests/ -n auto
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
-          file: ./client/coverage-client.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./client/coverage.xml
           flags: client
           fail_ci_if_error: true
 
@@ -126,4 +118,4 @@ jobs:
           starting-year: 2020
           folders: 'src,client,.github'
           ignore-files: 'version.py,__init__.py'
-          ignore-folders: 'client/tests/,src/tests/'
+          ignore-folders: 'client/tests/,src/tests/,src/alembic/versions/'

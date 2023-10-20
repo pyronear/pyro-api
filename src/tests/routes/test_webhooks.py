@@ -49,7 +49,6 @@ async def init_test_db(monkeypatch, test_db):
 )
 @pytest.mark.asyncio
 async def test_get_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -98,14 +97,14 @@ async def test_fetch_webhooks(
         [None, {}, 401, "Not authenticated"],
         [
             0,
-            {"callback": "create_alert", "url": "https://www.pyronear.org"},
+            {"callback": "create_alert", "url": "https://www.pyronear.org/"},
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"callback": "create_alert", "url": "https://www.pyronear.org"}, 201, None],
+        [1, {"callback": "create_alert", "url": "https://www.pyronear.org/"}, 201, None],
         [
             2,
-            {"callback": "create_alert", "url": "https://www.pyronear.org"},
+            {"callback": "create_alert", "url": "https://www.pyronear.org/"},
             403,
             "Your access scope is not compatible with this operation.",
         ],
@@ -122,7 +121,6 @@ async def test_create_wedbhook(
     status_code,
     status_details,
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -144,18 +142,18 @@ async def test_create_wedbhook(
 @pytest.mark.parametrize(
     "access_idx, payload, webhook_id, status_code, status_details",
     [
-        [None, {"callback": "create_alert", "url": "https://www.pyronear.org"}, 1, 401, "Not authenticated"],
+        [None, {"callback": "create_alert", "url": "https://www.pyronear.org/"}, 1, 401, "Not authenticated"],
         [
             0,
-            {"callback": "create_alert", "url": "https://www.pyronear.org"},
+            {"callback": "create_alert", "url": "https://www.pyronear.org/"},
             1,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"callback": "create_alert", "url": "https://www.pyronear.org"}, 1, 200, None],
+        [1, {"callback": "create_alert", "url": "https://www.pyronear.org/"}, 1, 200, None],
         [
             2,
-            {"callback": "create_alert", "url": "https://www.pyronear.org"},
+            {"callback": "create_alert", "url": "https://www.pyronear.org/"},
             1,
             403,
             "Your access scope is not compatible with this operation.",
@@ -163,7 +161,7 @@ async def test_create_wedbhook(
         [1, {"callback": "create_alert", "url": "hello"}, 0, 422, None],
         [
             1,
-            {"callback": "create_alert", "url": "https://www.pyronear.org"},
+            {"callback": "create_alert", "url": "https://www.pyronear.org/"},
             999,
             404,
             "Table webhooks has no entry with id=999",
@@ -174,7 +172,6 @@ async def test_create_wedbhook(
 async def test_update_webhook(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, webhook_id, status_code, status_details
 ):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
@@ -205,7 +202,6 @@ async def test_update_webhook(
 )
 @pytest.mark.asyncio
 async def test_delete_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
-
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):

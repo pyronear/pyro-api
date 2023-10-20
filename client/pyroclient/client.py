@@ -5,7 +5,7 @@
 
 import io
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -37,6 +37,7 @@ ROUTES: Dict[str, str] = {
     "get-unacknowledged-events": "/events/unacknowledged",
     "get-past-events": "/events/past",
     "acknowledge-event": "/events/{event_id}/acknowledge",
+    "get-alerts-for-event": "/events/{event_id}/alerts",
     #################
     # INSTALLATIONS
     #################
@@ -54,6 +55,33 @@ ROUTES: Dict[str, str] = {
     "get-alerts": "/alerts",
     "get-ongoing-alerts": "/alerts/ongoing",
 }
+
+
+def convert_loc_to_str(
+    localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
+    max_num_boxes: int = 5,
+) -> str:
+    """Performs a custom JSON dump for list of coordinates
+
+    Args:
+        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+        max_num_boxes: maximum allowed number of bounding boxes
+    Returns:
+        the JSON string dump with 2 decimal precision
+    """
+    if isinstance(localization, list) and len(localization) > 0:
+        if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
+            raise ValueError("coordinates are expected to be relative")
+        if any(len(bbox) != 5 for bbox in localization):
+            raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
+        if len(localization) > max_num_boxes:
+            raise ValueError(f"Please limit the number of boxes to {max_num_boxes}")
+        box_list = tuple(
+            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
+        )
+        return f"[{','.join(box_list)}]"
+    else:
+        return "[]"
 
 
 class Client:
@@ -78,7 +106,7 @@ class Client:
         # Prepend API url to each route
         self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
         self.timeout = timeout
-        self.refresh_token(credentials_login, credentials_password, timeout=self.timeout, **kwargs)
+        self.refresh_token(credentials_login, credentials_password, **kwargs)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -88,7 +116,9 @@ class Client:
         self.token = self._retrieve_token(login, password, **kwargs)
 
     def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
-        response = requests.post(self.routes["token"], data={"username": login, "password": password}, **kwargs)
+        response = requests.post(
+            self.routes["token"], data={"username": login, "password": password}, timeout=self.timeout, **kwargs
+        )
         if response.status_code == 200:
             return response.json()["access_token"]
         else:
@@ -114,6 +144,7 @@ class Client:
         lon: float,
         media_id: int,
         azimuth: Union[float, None] = None,
+        localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
         event_id: Union[int, None] = None,
     ) -> Response:
         """Raise an alert to the API from a device (no need to specify device ID).
@@ -127,12 +158,13 @@ class Client:
             lon: the longitude of the alert
             media_id: media ID linked to this alert
             azimuth: the azimuth of the alert
+            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax, conf
             event_id: the ID of the event this alerts relates to
 
         Returns:
             HTTP response containing the created alert
         """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id}
+        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": convert_loc_to_str(localization)}
         if isinstance(media_id, int):
             payload["media_id"] = media_id
 
@@ -153,7 +185,6 @@ class Client:
         Returns:
             HTTP response containing the created media
         """
-
         return requests.post(
             self.routes["create-media-from-device"], headers=self.headers, json={}, timeout=self.timeout
         )
@@ -173,7 +204,6 @@ class Client:
         Returns:
             HTTP response containing the updated media
         """
-
         return requests.post(
             self.routes["upload-media"].format(media_id=media_id),
             headers=self.headers,
@@ -228,8 +258,21 @@ class Client:
         Returns:
             HTTP response containing the list of all ongoing alerts
         """
-
         return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
+
+    def get_alerts_for_event(self, event_id: int) -> Response:
+        """Get all the alerts in the DB for the given event
+
+        >>> from pyroclient import client
+        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> response = api_client.get_alerts_for_event()
+
+        Returns:
+            HTTP response containing the list of all alerts for the given event
+        """
+        return requests.get(
+            self.routes["get-alerts-for-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+        )
 
     def get_unacknowledged_events(self) -> Response:
         """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
@@ -256,7 +299,6 @@ class Client:
         Returns:
             HTTP response containing the updated event
         """
-
         return requests.put(
             self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
         )
@@ -293,7 +335,6 @@ class Client:
         Returns:
             HTTP response containing the URL to the media content
         """
-
         return requests.get(
             self.routes["get-media-url"].format(media_id=media_id), headers=self.headers, timeout=self.timeout
         )

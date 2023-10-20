@@ -70,7 +70,9 @@ def test_client_device(admin_client, device_client, mock_img):
         assert isinstance(media["bucket_key"], str)
         _test_route_return(admin_client.get_media_url(media_id), str)
         # Delete media
-        response = requests.delete(urljoin("http://localhost:8080", f"media/{media_id}"), headers=admin_client.headers)
+        response = requests.delete(
+            urljoin("http://localhost:8080", f"media/{media_id}"), headers=admin_client.headers, timeout=5
+        )
         assert response.status_code == 200
 
 
@@ -86,4 +88,5 @@ def test_client_user(setup, user_client, mock_img):
     assert event["is_acknowledged"]
     _test_route_return(user_client.get_all_alerts(), list)
     _test_route_return(user_client.get_ongoing_alerts(), list)
+    _test_route_return(user_client.get_alerts_for_event(events[0]["id"]), list)
     assert user_client.get_media_url(1).status_code == 404

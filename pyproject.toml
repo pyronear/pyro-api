@@ -10,45 +10,105 @@ authors = ["Pyronear <contact@pyronear.org>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 uvicorn = ">=0.11.1,<1.0.0"
-fastapi = ">=0.89.0,<1.0.0"
+fastapi = ">=0.100.0,<1.0.0"
 bcrypt = "^3.2.0"
 passlib = { version = "^1.7.4", extras = ["bcrypt"] }
 databases = { version = ">=0.2.6,<=0.4.0", extras = ["postgresql"] }
 python-jose = "^3.2.0"
 SQLAlchemy = "^1.3.12"
 python-multipart = "==0.0.5"
-aiofiles = "==0.6.0"
 requests = "^2.31.0"
-sentry-sdk = "^1.14.0"
+sentry-sdk = { version = "^1.14.0", extras = ["fastapi"] }
 python-magic = "^0.4.17"
 boto3 = "^1.26.0"
+python-dotenv = "^1.0.0"
+alembic = "^1.8.1"
+# https://github.com/python-poetry/poetry-plugin-export/issues/183
+urllib3 = ">=1.25.4,<1.27"
 
-flake8 = { version = ">=3.9.0,<5.0.0", optional = true }
-isort = { version = "^5.7.0", optional = true }
-mypy = {version = "==1.2.0", optional = true}
-types-requests = {version = "^2.31.0", optional = true}
-types-python-dateutil = {version = "^2.8.0", optional = true}
-black = {version = "==22.3.0", optional = true}
-pydocstyle = { version = "^6.0.0", extras = ["toml"], optional = true }
-autoflake = { version = "^1.5.0", optional = true }
-bandit = { version = "^1.7.0", extras = ["toml"], optional = true }
-pre-commit = { version = "^2.17.0", optional = true }
+[tool.poetry.group.quality]
+optional = true
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.quality.dependencies]
+ruff = { version = "==0.0.290" }
+mypy = { version = "==1.4.1" }
+types-requests = { version = ">=2.0.0" }
+types-python-dateutil = {version = "^2.8.0"}
+sqlalchemy-stubs = "^0.4"
+types-python-jose = "^3.3.4.8"
+types-passlib = "^1.7.7.12"
+black = { version = "==23.3.0" }
+bandit = { version = "^1.7.0", extras = ["toml"] }
+pre-commit = { version = "^2.17.0" }
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+httpx = ">=0.23.0"
+aiosqlite = ">=0.16.0,<1.0.0"
 pytest = ">=5.3.2,<8.0.0"
 pytest-asyncio = ">=0.17.0,<1.0.0"
-coverage = ">=4.5.4,<7.0.0"
-aiosqlite = ">=0.16.0,<1.0.0"
-httpx = ">=0.23.0"
-alembic = "==1.5.4"
-asyncpg = ">=0.20.0,<1.0.0"
+pytest-cov = ">=3.0.0,<5.0.0"
+pytest-pretty = "^1.0.0"
 
-[tool.poetry.extras]
-quality = ["flake8", "isort", "mypy", "types-requests", "types-python-dateutil", "pydocstyle", "black", "autoflake", "bandit", "pre-commit"]
+[tool.coverage.run]
+source = ["src/app", "client/pyroclient"]
+
+
+[tool.ruff]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    # "D101", "D103",  # pydocstyle missing docstring in public function/class
+    "D201","D202","D207","D208","D214","D215","D300","D301","D417", "D419",  # pydocstyle
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "CPY001",  # flake8-copyright
+    "ISC",  # flake8-implicit-str-concat
+    "PYI",  # flake8-pyi
+    "NPY",  # numpy
+    "PERF",  # perflint
+    "RUF",  # ruff specific
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # raise from
+    "C901",  # too complex
+    "F403",  # star imports
+    "E731",  # lambda assignment
+    "C416",  # list comprehension to list()
+]
+exclude = [".git", "engine"]
+line-length = 120
+target-version = "py39"
+preview = true
+
+[tool.ruff.per-file-ignores]
+"**/__init__.py" = ["I001", "F401", "CPY001"]
+"scripts/**.py" = ["D"]
+".github/**.py" = ["D"]
+"client/docs/**.py" = ["E402"]
+"src/tests/**.py" = ["D103", "CPY001"]
+"client/tests/**.py" = ["D103", "CPY001"]
+"src/alembic/versions/**.py" = ["CPY001"]
+
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.isort]
+known-first-party = ["app", "tests", "pyroclient"]
+known-third-party = ["fastapi"]
+
 
 [tool.mypy]
+python_version = "3.9"
 mypy_path = "src/"
 files = "src/app"
 show_error_codes = true
@@ -59,40 +119,19 @@ no_implicit_optional = true
 check_untyped_defs = true
 implicit_reexport = false
 explicit_package_bases = true
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = [
-    "jose.*",
-    "passlib.*",
-    "sqlalchemy.*",
-    "app.*",
-    "boto3.*",
-    "botocore.*",
+    "magic",
+    "boto3",
+    "databases",
 ]
 ignore_missing_imports = true
 
-[tool.isort]
-profile = "black"
-line_length = 120
-src_paths = ["src/", "scripts/"]
-skip_glob = ["**/__init__.py", "client/*"]
-known_third_party = ["fastapi"]
-
-[tool.pydocstyle]
-select = "D300,D301,D417"
-match = ".*\\.py"
-
-[tool.coverage.run]
-source = ["src/app", "client/pyroclient"]
-
 [tool.black]
 line-length = 120
-target-version = ['py38']
-
-[tool.autoflake]
-remove-unused-variables = true
-remove-all-unused-imports = true
-ignore-init-module-imports = true
+target-version = ['py39']
 
 [tool.bandit]
 exclude_dirs = []

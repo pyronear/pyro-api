@@ -6,7 +6,7 @@
 import enum
 
 from sqlalchemy import Column, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 
 from app.db.base_class import Base
 
@@ -28,9 +28,9 @@ class Access(Base):
     scope = Column(Enum(AccessType), default=AccessType.user, nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
 
-    user = relationship("User", uselist=False, back_populates="access")
-    device = relationship("Device", uselist=False, back_populates="access")
-    group = relationship("Group", uselist=False, back_populates="accesses")
+    user: RelationshipProperty = relationship("User", uselist=False, back_populates="access")
+    device: RelationshipProperty = relationship("Device", uselist=False, back_populates="access")
+    group: RelationshipProperty = relationship("Group", uselist=False, back_populates="accesses")
 
     def __repr__(self):
         return f"<Access(login='{self.login}', scope='{self.scope}', group_id='{self.group_id}')>"

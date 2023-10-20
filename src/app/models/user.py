@@ -5,7 +5,7 @@
 
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import RelationshipProperty, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -21,8 +21,8 @@ class User(Base):
     access_id = Column(Integer, ForeignKey("accesses.id", ondelete="CASCADE"), unique=True)
     created_at = Column(DateTime, default=func.now())
 
-    access = relationship("Access", uselist=False, back_populates="user")
-    device = relationship("Device", uselist=False, back_populates="owner")
+    access: RelationshipProperty = relationship("Access", uselist=False, back_populates="user")
+    device: RelationshipProperty = relationship("Device", uselist=False, back_populates="owner")
 
     def __repr__(self):
         return f"<User(login='{self.login}', created_at='{self.created_at}'>"
