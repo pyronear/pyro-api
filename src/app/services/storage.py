@@ -9,7 +9,9 @@ from typing import Any, Dict
 import boto3
 from fastapi import HTTPException
 
-__all__ = ["S3Bucket"]
+from app import config as cfg
+
+__all__ = ["s3_bucket"]
 
 
 logger = logging.getLogger("uvicorn.warning")
@@ -76,3 +78,8 @@ class S3Bucket:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.bucket_name, Key=bucket_key)
+
+
+s3_bucket = S3Bucket(
+    cfg.S3_REGION, cfg.S3_ENDPOINT_URL, cfg.S3_ACCESS_KEY, cfg.S3_SECRET_KEY, cfg.BUCKET_NAME, cfg.S3_PROXY_URL
+)
