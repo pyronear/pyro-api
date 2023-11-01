@@ -57,5 +57,8 @@ DUMMY_BUCKET_FILE = (
 SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
 SENTRY_SERVER_NAME: Optional[str] = os.getenv("SENTRY_SERVER_NAME")
 
+# Telemetry APM
+POSTHOG_KEY: Optional[str] = os.getenv("POSTHOG_KEY")
+
 # Telegram
 TELEGRAM_TOKEN: Optional[str] = os.getenv("TELEGRAM_TOKEN")
