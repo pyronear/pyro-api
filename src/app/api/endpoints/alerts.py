@@ -21,6 +21,7 @@ from app.api.external import post_request
 from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
@@ -60,7 +61,7 @@ async def alert_notification(payload: AlertOut):
 async def create_alert(
     payload: AlertIn,
     background_tasks: BackgroundTasks,
-    _=Security(get_current_access, scopes=[AccessType.admin]),
+    access=Security(get_current_access, scopes=[AccessType.admin]),
 ):
     """
     Creates a new alert based on the given information and send a notification if it is the first alert of the event
@@ -68,6 +69,7 @@ async def create_alert(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(access.id, event="alerts-create")
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
 
@@ -98,6 +100,7 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(device.id, event="alerts-create-from-device")
     payload_dict = payload.model_dump()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
@@ -116,6 +119,7 @@ async def get_alert(
     """
     Based on a alert_id, retrieves information about the specified alert
     """
+    telemetry_client.capture(requester.id, event="alerts-get", properties={"alert_id": alert_id})
     requested_group_id = await get_entity_group_id(alerts, alert_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(alerts, alert_id)
@@ -128,6 +132,7 @@ async def fetch_alerts(
     """
     Retrieves the list of all alerts and their information
     """
+    telemetry_client.capture(requester.id, event="alerts-fetch")
     if await is_admin_access(requester.id):
         return await crud.fetch_all(alerts)
     else:
@@ -144,10 +149,11 @@ async def fetch_alerts(
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_alert(alert_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
+    telemetry_client.capture(access.id, event="alerts-delete", properties={"alert_id": alert_id})
     return await crud.delete_entry(alerts, alert_id)
 
 
@@ -158,6 +164,7 @@ async def fetch_ongoing_alerts(
     """
     Retrieves the list of ongoing alerts and their information
     """
+    telemetry_client.capture(requester.id, event="alerts-fetch-ongoing")
     if await is_admin_access(requester.id):
         query = (
             alerts.select().where(alerts.c.event_id.in_(select([events.c.id]).where(events.c.end_ts.is_(None))))

@@ -18,7 +18,7 @@ from app.api.security import hash_content_file
 from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
 from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
-from app.services import bucket_service, resolve_bucket_key
+from app.services import resolve_bucket_key, s3_bucket, telemetry_client
 
 router = APIRouter()
 
@@ -43,13 +43,14 @@ async def check_media_registration(media_id: int, device_id: Optional[int] = Non
     status_code=status.HTTP_201_CREATED,
     summary="Create a media related to a specific device",
 )
-async def create_media(payload: MediaIn, _=Security(get_current_access, scopes=[AccessType.admin])):
+async def create_media(payload: MediaIn, access=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Creates a media related to specific device, based on device_id as argument
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(access.id, event="media-create")
     # Check that the device exits
     await crud.get_entry(devices, payload.device_id)
     return await crud.create_entry(media, payload)
@@ -70,6 +71,7 @@ async def create_media_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(device.id, event="media-create-from-device")
     return await crud.create_entry(media, MediaIn(**payload.model_dump(), device_id=device.id))
 
 
@@ -80,6 +82,7 @@ async def get_media(
     """
     Based on a media_id, retrieves information about the specified media
     """
+    telemetry_client.capture(requester.id, event="media-get", properties={"media_id": media_id})
     # TODO: confirm this one
     requested_group_id = await get_entity_group_id(media, media_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
@@ -93,6 +96,7 @@ async def fetch_media(
     """
     Retrieves the list of all media and their information
     """
+    telemetry_client.capture(requester.id, event="media-fetch")
     if await is_admin_access(requester.id):
         return await crud.fetch_all(media)
     else:
@@ -104,15 +108,16 @@ async def fetch_media(
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
-async def delete_media(media_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_media(media_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a media_id, deletes the specified media
     """
+    telemetry_client.capture(access.id, event="media-delete", properties={"media_id": media_id})
     # Delete entry
     entry = await crud.delete_entry(media, media_id)
     # Delete media file if one exists
     if isinstance(entry["bucket_key"], str) and len(entry["bucket_key"]) > 0:
-        await bucket_service.delete_file(entry["bucket_key"])
+        await s3_bucket.delete_file(entry["bucket_key"])
     return entry
 
 
@@ -126,6 +131,7 @@ async def upload_media_from_device(
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
+    telemetry_client.capture(current_device.id, event="media-upload", properties={"media_id": media_id})
     # Check in DB
     entry = await check_media_registration(media_id, current_device.id)
 
@@ -149,14 +155,14 @@ async def upload_media_from_device(
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
-        if not (await bucket_service.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
+        if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        file_meta = await bucket_service.get_file_metadata(bucket_key)
+        file_meta = await s3_bucket.get_file_metadata(bucket_key)
         # Corrupted file
         if md5_hash != file_meta["ETag"].replace('"', ""):
             # Delete the corrupted upload
-            await bucket_service.delete_file(bucket_key)
+            await s3_bucket.delete_file(bucket_key)
             # Raise the exception
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -164,7 +170,7 @@ async def upload_media_from_device(
             )
         # If a file was previously uploaded, delete it
         if isinstance(entry["bucket_key"], str):
-            await bucket_service.delete_file(entry["bucket_key"])
+            await s3_bucket.delete_file(entry["bucket_key"])
 
         entry_dict = dict(**entry)
         entry_dict["bucket_key"] = bucket_key
@@ -176,11 +182,12 @@ async def get_media_url(
     media_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
 ):
     """Resolve the temporary media image URL"""
+    telemetry_client.capture(requester.id, event="media-get-url", properties={"media_id": media_id})
     requested_group_id = await get_entity_group_id(media, media_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
 
     # Check in DB
     media_instance = await check_media_registration(media_id)
     # Check in bucket
-    temp_public_url = await bucket_service.get_public_url(media_instance["bucket_key"])
+    temp_public_url = await s3_bucket.get_public_url(media_instance["bucket_key"])
     return MediaUrl(url=temp_public_url)
