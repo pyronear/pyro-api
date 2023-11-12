@@ -127,6 +127,7 @@ module = [
     "magic",
     "boto3",
     "databases",
+    "posthog",
 ]
 ignore_missing_imports = true
 
