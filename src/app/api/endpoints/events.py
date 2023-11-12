@@ -16,7 +16,7 @@ from app.api.deps import get_current_access, get_db
 from app.db import alerts, events
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
-from app.services import telemetry_client
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 

@@ -18,7 +18,8 @@ from app.api.security import hash_content_file
 from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
 from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
-from app.services import resolve_bucket_key, s3_bucket, telemetry_client
+from app.services import resolve_bucket_key, s3_bucket
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ async def create_media_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(device.id, event="media-create-from-device")
+    telemetry_client.capture(device.id, event="media-create-from-device", properties={"owner_id": device.owner_id})
     return await crud.create_entry(media, MediaIn(**payload.model_dump(), device_id=device.id))
 
 
@@ -126,14 +127,16 @@ async def upload_media_from_device(
     background_tasks: BackgroundTasks,
     media_id: int = Path(..., gt=0),
     file: UploadFile = File(...),
-    current_device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
+    device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
 ):
     """
     Upload a media (image or video) linked to an existing media object in the DB
     """
-    telemetry_client.capture(current_device.id, event="media-upload", properties={"media_id": media_id})
+    telemetry_client.capture(
+        device.id, event="media-upload", properties={"media_id": media_id, "owner_id": device.owner_id}
+    )
     # Check in DB
-    entry = await check_media_registration(media_id, current_device.id)
+    entry = await check_media_registration(media_id, device.id)
 
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hash_content_file(file.file.read())

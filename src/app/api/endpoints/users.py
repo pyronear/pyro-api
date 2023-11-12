@@ -13,7 +13,7 @@ from app.api.deps import get_current_access, get_current_user, get_db
 from app.db import accesses, users
 from app.models import Access, AccessType, User
 from app.schemas import Cred, Login, UserAuth, UserCreation, UserRead
-from app.services import telemetry_client
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 

@@ -16,7 +16,7 @@ from app.api.deps import get_current_access, get_db
 from app.db import installations
 from app.models import AccessType, Installation, Site
 from app.schemas import InstallationIn, InstallationOut, InstallationUpdate
-from app.services import telemetry_client
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 

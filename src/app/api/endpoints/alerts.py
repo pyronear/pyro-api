@@ -100,7 +100,7 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(device.id, event="alerts-create-from-device")
+    telemetry_client.capture(device.id, event="alerts-create-from-device", properties={"owner_id": device.owner_id})
     payload_dict = payload.model_dump()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
