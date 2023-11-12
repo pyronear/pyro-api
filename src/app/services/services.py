@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from app import config as cfg
-from app.services.bucket import S3Bucket
+from app.services.storage import S3Bucket
 
 __all__ = ["bucket_service"]
 
