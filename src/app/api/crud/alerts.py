@@ -10,8 +10,7 @@ from sqlalchemy import and_
 
 import app.config as cfg
 from app.api import crud
-from app.api.endpoints.events import create_event
-from app.db import alerts
+from app.db import alerts, events
 from app.schemas import AlertIn, AlertOut, EventIn
 
 
@@ -43,6 +42,6 @@ async def create_event_if_inexistant(payload: AlertIn) -> Tuple[Optional[int], b
     previous_alert = await resolve_previous_alert(payload.device_id)
     if previous_alert is None:
         # Create an event & get the ID
-        event = await create_event(EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
+        event = await crud.create_entry(events, EventIn(lat=payload.lat, lon=payload.lon, start_ts=datetime.utcnow()))
         return event["id"], True
     return previous_alert.event_id, False

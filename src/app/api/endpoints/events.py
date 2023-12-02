@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List, cast
+from typing import Annotated, List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
@@ -15,23 +15,24 @@ from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_db
 from app.db import alerts, events
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
+from app.schemas import AccessRead, Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
 
-@router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED, summary="Create a new event")
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new event")
 async def create_event(
-    payload: EventIn, access=Security(get_current_access, scopes=[AccessType.admin, AccessType.device])
-):
+    payload: EventIn,
+    access: Annotated[AccessRead, Security(get_current_access, scopes=[AccessType.admin, AccessType.device])],
+) -> EventOut:
     """Creates a new event based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
     telemetry_client.capture(access.id, event="events-create")
-    return await crud.create_entry(events, payload)
+    return EventOut(**(await crud.create_entry(events, payload)))
 
 
 @router.get("/{event_id}/", response_model=EventOut, summary="Get information about a specific event")
