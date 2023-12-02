@@ -13,14 +13,14 @@ from sqlalchemy import select
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_db
+from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
 from app.api.endpoints.devices import get_device
 from app.api.endpoints.notifications import send_notification
 from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
 from app.db import alerts, events, media
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut, UserRead
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -61,7 +61,7 @@ async def alert_notification(payload: AlertOut):
 async def create_alert(
     payload: AlertIn,
     background_tasks: BackgroundTasks,
-    access=Security(get_current_access, scopes=[AccessType.admin]),
+    user: UserRead = Security(get_current_user, scopes=[AccessType.admin]),
 ):
     """
     Creates a new alert based on the given information and send a notification if it is the first alert of the event
@@ -69,7 +69,7 @@ async def create_alert(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(access.id, event="alerts-create")
+    telemetry_client.capture(user.id, event="alerts-create")
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
 
@@ -85,7 +85,6 @@ async def create_alert(
 
 @router.post(
     "/from-device",
-    response_model=AlertOut,
     status_code=status.HTTP_201_CREATED,
     summary="Create an alert related to the authentified device",
 )
@@ -93,7 +92,7 @@ async def create_alert_from_device(
     payload: AlertBase,
     background_tasks: BackgroundTasks,
     device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
-):
+) -> AlertOut:
     """
     Creates an alert related to the authentified device, uses its device_id as argument
 
