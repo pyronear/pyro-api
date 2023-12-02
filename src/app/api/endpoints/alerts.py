@@ -5,7 +5,7 @@
 
 from functools import partial
 from string import Template
-from typing import List, cast
+from typing import Annotated, List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
 from sqlalchemy import select
@@ -57,22 +57,9 @@ async def alert_notification(payload: AlertOut):
         await send_notification(notification)
 
 
-@router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
-async def create_alert(
-    payload: AlertIn,
-    background_tasks: BackgroundTasks,
-    user: UserRead = Security(get_current_user, scopes=[AccessType.admin]),
-):
-    """
-    Creates a new alert based on the given information and send a notification if it is the first alert of the event
-
-    Below, click on "Schema" for more detailed information about arguments
-    or "Example Value" to get a concrete idea of arguments
-    """
-    telemetry_client.capture(user.id, event="alerts-create")
+async def _create_alert(payload: AlertIn, background_tasks: BackgroundTasks) -> AlertOut:
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
-
     new_event: bool = False
     if payload.event_id is None:
         payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
@@ -81,6 +68,22 @@ async def create_alert(
     if new_event:
         background_tasks.add_task(alert_notification, alert)
     return alert
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new alert")
+async def create_alert(
+    payload: AlertIn,
+    background_tasks: BackgroundTasks,
+    user: Annotated[UserRead, Security(get_current_user, scopes=[AccessType.admin])],
+) -> AlertOut:
+    """
+    Creates a new alert based on the given information and send a notification if it is the first alert of the event
+
+    Below, click on "Schema" for more detailed information about arguments
+    or "Example Value" to get a concrete idea of arguments
+    """
+    telemetry_client.capture(user.id, event="alerts-create")
+    return await _create_alert(payload, background_tasks)
 
 
 @router.post(
@@ -108,7 +111,7 @@ async def create_alert_from_device(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Please specify a value for 'azimuth' in the payload, since this device's azimuth is not set.",
         )
-    return await create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
+    return await _create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
