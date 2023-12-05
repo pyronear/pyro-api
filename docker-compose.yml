@@ -11,10 +11,10 @@ services:
       - 8080:8080
     environment:
       - DEBUG=false
-      - DATABASE_URL=postgresql://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - SUPERUSER_LOGIN=dummy_login
-      - SUPERUSER_PWD=dummy&P@ssw0rd!
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
+      - SUPERUSER_PWD=${SUPERUSER_PWD}
       - QARNOT_TOKEN=${QARNOT_TOKEN}
       - BUCKET_NAME=${BUCKET_NAME}
       - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
@@ -22,21 +22,28 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_REGION=${S3_REGION}
+      - S3_PROXY_URL=${S3_PROXY_URL}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_SERVER_NAME=${SENTRY_SERVER_NAME}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
   db:
-    image: postgres:12.1-alpine
+    image: postgres:15-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     expose:
       - 5432
     environment:
-      - POSTGRES_USER=dummy_pg_user
-      - POSTGRES_PASSWORD=dummy_pg_pwd
-      - POSTGRES_DB=dummy_pg_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 volumes:
   postgres_data:

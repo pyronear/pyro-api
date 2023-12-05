@@ -101,6 +101,24 @@ The previous command won't modify anything in your codebase. Some fixes (import 
 make style
 ```
 
+#### Local deployment
+
+To run the API locally, the easiest way is with Docker. Launch this command in the project directory:
+
+```shell
+make run-dev
+```
+
+To enable a smoother development experience, we are using [localstack](https://docs.localstack.cloud/overview/) to create a local S3 bucket.
+
+We automatically create a s3 bucket called `sample-bucket`, which you can check by running:
+```shell
+docker-compose exec localstack awslocal s3 ls
+```
+
+NOTE: please check localstack documentation to understand how to create buckets or to add/delete objects.
+
+
 ### Submit your modifications
 
 Push your last modifications to your remote branch
@@ -111,6 +129,28 @@ git push -u origin a-short-description
 Then [open a Pull Request](https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) from your fork's branch. Follow the instructions of the Pull Request template and then click on "Create a pull request".
 
 
-## Database migration
+## Database
+
+### Schema evolution
 
 See [Alembic](https://github.com/pyronear/pyro-api/blob/main/src/alembic) guide to create revision and run it locally.
+
+
+### Postgres upgrade
+
+With your current PG version, we first make a data extract:
+```shell
+make run
+docker compose exec -it db pg_dumpall -U mybdsuperuserpyro > my_local_dump.sql
+./scripts/pg_extract.sh my_local_dump.sql pyro_api_prod >> upgrade_dump.sql
+```
+We stop the container and remove the volume to prevent it from repopulating the new database
+```shell
+make stop
+docker volume rm pyro-api_postgres_data
+```
+Now update the Postgres version on your docker. We then run the DB only (to prevent the backend from initializing it) and restore the data:
+```shell
+docker compose up db -d
+cat upgrade_dump.sql| docker compose exec -T db psql -U mybdsuperuserpyro
+```

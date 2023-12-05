@@ -1,12 +1,14 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 
+import app.config as cfg
 from app import db
 from app.api import crud, deps
+from app.api.crud.alerts import resolve_previous_alert
 from app.api.endpoints.alerts import check_media_existence
 from tests.db_utils import TestSessionLocal, fill_table, get_entry
 from tests.utils import parse_time, ts_to_string, update_only_datetime
@@ -113,6 +115,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 0.0,
+        "localization": None,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -123,6 +126,7 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
+        "localization": "[(0, 0, 1, 1)]",
         "created_at": "2020-10-13T09:18:45.447773",
     },
     {
@@ -133,6 +137,7 @@ ALERT_TABLE = [
         "lat": 10.0,
         "lon": 8.0,
         "azimuth": 123.0,
+        "localization": None,
         "created_at": "2020-11-03T11:18:45.447773",
     },
     {
@@ -143,7 +148,9 @@ ALERT_TABLE = [
         "lat": 0.0,
         "lon": 0.0,
         "azimuth": 47.0,
-        "created_at": ts_to_string(datetime.utcnow()),
+        "localization": None,
+        "created_at": ts_to_string(datetime.utcnow() - timedelta(seconds=cfg.ALERT_RELAXATION_SECONDS - 300)),
+        # to test resolve_previous_alert with a tolerance of 5 minutes
     },
 ]
 
@@ -318,30 +325,94 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
     [
         [
             0,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, None, 201, None],
-        [1, {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 4, 201, None],
-        [1, {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5}, 3, 201, None],
-        [
-            2,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 47.5},
-            None,
-            403,
-            "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0}, None, 422, None],
         [
             1,
-            {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": "hello"},
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
+            None,
+            201,
+            None,
+        ],
+        [
+            1,
+            {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
+            4,
+            201,
+            None,
+        ],
+        [
+            1,
+            {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
+            3,
+            201,
+            None,
+        ],
+        [
+            2,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": 47.5,
+                "localization": None,
+            },
+            None,
+            403,
+            "Your access scope is not compatible with this operation.",
+        ],
+        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "localization": None}, None, 422, None],
+        [
+            1,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": "hello",
+                "localization": None,
+            },
             None,
             422,
             None,
         ],
-        [1, {"device_id": 2, "media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": -5.0}, None, 422, None],
+        [
+            1,
+            {
+                "device_id": 2,
+                "media_id": 1,
+                "event_id": 2,
+                "lat": 10.0,
+                "lon": 8.0,
+                "azimuth": -5.0,
+                "localization": None,
+            },
+            None,
+            422,
+            None,
+        ],
     ],
 )
 @pytest.mark.asyncio
@@ -385,22 +456,28 @@ async def test_create_alert(
     [
         [
             0,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
         [
             1,
-            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0},
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
         ],
-        [2, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, None, 201, None],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 3, 201, None],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0}, 3, 201, None],
-        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0}, 4, 201, None],
+        [
+            2,
+            {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
+            None,
+            201,
+            None,
+        ],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 3, 201, None],
+        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "localization": None}, 3, 201, None],
+        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 4, 201, None],
     ],
 )
 @pytest.mark.asyncio
@@ -472,3 +549,10 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert response.json() == ALERT_TABLE[alert_id - 1]
         remaining_alerts = await test_app_asyncio.get("/alerts/", headers=auth)
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
+
+
+@pytest.mark.parametrize("device_id, expected_alert_id", [(2, None), (1, 4)])
+@pytest.mark.asyncio
+async def test_resolve_previous_alert(test_app_asyncio, init_test_db, device_id, expected_alert_id):
+    alert = await resolve_previous_alert(device_id)
+    assert expected_alert_id is None if alert is None else expected_alert_id == alert.id

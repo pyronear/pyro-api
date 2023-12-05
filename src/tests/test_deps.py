@@ -110,7 +110,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
     else:
         access = await deps.get_current_access(SecurityScopes([scope]), token=token)
         if isinstance(expected_access, int):
-            assert access.dict() == AccessRead(**ACCESS_TABLE[expected_access]).dict()
+            assert access.model_dump() == AccessRead(**ACCESS_TABLE[expected_access]).model_dump()
 
 
 @pytest.mark.parametrize(

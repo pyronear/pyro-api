@@ -1,0 +1,43 @@
+name: push
+on:
+  push:
+    branches: main
+
+jobs:
+  dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          architecture: x64
+      - uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.6.1"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+      - name: Build docker
+        run: docker build src/. -t pyronear/pyro-api:latest
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_LOGIN }}
+          password: ${{ secrets.DOCKERHUB_PW }}
+      - name: Push to hub
+        run: docker push pyronear/pyro-api:latest
+
+  deploy-dev:
+    needs: dockerhub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_DEV_HOST }}
+          username: ${{ secrets.SSH_DEV_USERNAME }}
+          key: ${{ secrets.SSH_DEPLOY_DEV }}
+          script: |
+            docker pull pyronear/pyro-api:latest
+            cd devops && docker compose down && docker compose up -d
+            docker inspect -f '{{ .Created }}' $(docker compose images -q backend)
+            docker rmi -f $(docker images -f "dangling=true" -q)

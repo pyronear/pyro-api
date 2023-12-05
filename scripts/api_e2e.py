@@ -4,11 +4,13 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import argparse
+import os
 import time
 from getpass import getpass
 from typing import Any, Dict, Optional
 
 import requests
+from dotenv import load_dotenv
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
@@ -37,9 +39,11 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
 def main(args):
     api_url = f"http://localhost:{args.port}"
 
+    load_dotenv()
+
     # Log as superuser
-    superuser_login = getpass("Login: ") if args.creds else "dummy_login"
-    superuser_pwd = getpass() if args.creds else "dummy&P@ssw0rd!"
+    superuser_login = input("Login: ") if args.creds else os.environ["SUPERUSER_LOGIN"]
+    superuser_pwd = getpass() if args.creds else os.environ["SUPERUSER_PWD"]
 
     start_ts = time.time()
     # Retrieve superuser token
@@ -91,7 +95,7 @@ def main(args):
     payload = {"lat": 44.1, "lon": 3.9, "type": "wildfire"}
     event_id = api_request("post", f"{api_url}/events/", superuser_auth, payload)["id"]
 
-    payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id}
+    payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id, "localization": None}
     alert_id = api_request("post", f"{api_url}/alerts/from-device", device_auth, payload)["id"]
 
     # Acknowledge it

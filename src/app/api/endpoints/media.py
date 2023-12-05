@@ -70,7 +70,7 @@ async def create_media_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    return await crud.create_entry(media, MediaIn(**payload.dict(), device_id=device.id))
+    return await crud.create_entry(media, MediaIn(**payload.model_dump(), device_id=device.id))
 
 
 @router.get("/{media_id}/", response_model=MediaOut, summary="Get information about a specific media")

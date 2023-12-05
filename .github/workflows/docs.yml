@@ -4,12 +4,12 @@ on:
     branches: main
 
 jobs:
-  docs-deploy:
+  gh-pages:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.8]
+        python: [3.9]
     steps:
       - uses: actions/checkout@v2
         with:

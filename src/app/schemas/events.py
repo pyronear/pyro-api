@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.models import EventType
 
@@ -19,15 +19,19 @@ __all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "Acknowledge
 class EventIn(_FlatLocation):
     type: EventType = Field(EventType.wildfire, description="event type")
     start_ts: Optional[datetime] = Field(
-        None, description="timestamp of event start", example=datetime.utcnow().replace(tzinfo=None)
+        None,
+        description="timestamp of event start",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     end_ts: Optional[datetime] = Field(
-        None, description="timestamp of event end", example=datetime.utcnow().replace(tzinfo=None)
+        None,
+        description="timestamp of event end",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     is_acknowledged: bool = Field(False, description="whether the event has been acknowledged")
 
-    _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
-    _validate_end_ts = validator("end_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_start_ts = field_validator("start_ts")(validate_datetime_none)
+    _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
 
 
 class EventOut(EventIn, _CreatedAt, _Id):
@@ -45,11 +49,15 @@ class AcknowledgementOut(Acknowledgement, _Id):
 class EventUpdate(_FlatLocation):
     type: EventType = Field(..., description="event type")
     start_ts: datetime = Field(
-        ..., description="timestamp of event start", example=datetime.utcnow().replace(tzinfo=None)
+        ...,
+        description="timestamp of event start",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     end_ts: Optional[datetime] = Field(
-        ..., description="timestamp of event end", example=datetime.utcnow().replace(tzinfo=None)
+        ...,
+        description="timestamp of event end",
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
     )
     is_acknowledged: bool = Field(..., description="whether the event has been acknowledged")
 
-    _validate_start_ts = validator("start_ts", pre=True, always=True, allow_reuse=True)(validate_datetime_none)
+    _validate_start_ts = field_validator("start_ts")(validate_datetime_none)

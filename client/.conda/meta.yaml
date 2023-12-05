@@ -6,11 +6,11 @@
 # {% set urls = pyproject.get('project', {}).get('urls') %}
 package:
   name: pyroclient
-  version: "{{ environ.get('BUILD_VERSION') }}"
+  version: "{{ environ.get('BUILD_VERSION', '0.2.0.dev0') }}"
 
 source:
-  fn: pyroclient-{{ environ.get('BUILD_VERSION') }}.tar.gz
-  url: ../dist/pyroclient-{{ environ.get('BUILD_VERSION') }}.tar.gz
+  fn: pyroclient-{{ environ.get('BUILD_VERSION', '0.2.0.dev0') }}.tar.gz
+  url: ../dist/pyroclient-{{ environ.get('BUILD_VERSION', '0.2.0.dev0') }}.tar.gz
 
 build:
   noarch: python
@@ -23,7 +23,7 @@ requirements:
 
   run:
     - python>=3.8, <4.0
-    - requests >=2.24.0, <3.0.0
+    - requests >=2.31.0, <3.0.0
 
 test:
   # Python imports

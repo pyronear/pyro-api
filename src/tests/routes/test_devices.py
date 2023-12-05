@@ -853,7 +853,7 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
     if response.status_code // 100 == 2:
         json_response = response.json()
         # Everything should be identical apart from ping
-        assert datetime.utcnow() > datetime.fromisoformat(json_response["last_ping"])
+        assert datetime.utcnow() > datetime.strptime(json_response["last_ping"], "%Y-%m-%dT%H:%M:%S.%f")
         assert utc_dt < datetime.fromisoformat(json_response["last_ping"])
 
         updated_device = await get_entry(test_db, db.devices, json_response["id"])

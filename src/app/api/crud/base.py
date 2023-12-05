@@ -27,7 +27,7 @@ __all__ = [
 
 
 async def post(payload: BaseModel, table: Table) -> int:
-    query = table.insert().values(**payload.dict())
+    query = table.insert().values(**payload.model_dump())
     return await database.execute(query=query)
 
 
@@ -72,7 +72,7 @@ async def delete(entry_id: int, table: Table) -> None:
 
 async def create_entry(table: Table, payload: BaseModel) -> Dict[str, Any]:
     entry_id = await post(payload, table)
-    return {**payload.dict(), "id": entry_id}
+    return {**payload.model_dump(), "id": entry_id}
 
 
 async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
@@ -86,16 +86,14 @@ async def get_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, 
 
 
 async def update_entry(table: Table, payload: BaseModel, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
-    payload_dict = payload.dict()
-
-    _id = await put(entry_id, payload_dict, table)
+    _id = await put(entry_id, payload.model_dump(), table)
 
     if not isinstance(_id, int):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Table {table.name} has no entry with id={entry_id}"
         )
 
-    return {**payload.dict(), "id": entry_id}
+    return {**payload.model_dump(), "id": entry_id}
 
 
 async def delete_entry(table: Table, entry_id: int = Path(..., gt=0)) -> Dict[str, Any]:
