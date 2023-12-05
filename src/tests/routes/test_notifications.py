@@ -25,6 +25,7 @@ NOTIFICATION_TABLE = [
         "recipient_id": 1,
         "subject": "New alert",
         "message": "Alert issued",
+        "media_id": 1,
         "created_at": "2020-10-13T08:18:45.447773",
     },
     {
@@ -33,6 +34,7 @@ NOTIFICATION_TABLE = [
         "recipient_id": 2,
         "subject": "New alert",
         "message": "Alert issued",
+        "media_id": None,
         "created_at": "2020-10-13T08:18:45.447773",
     },
 ]
@@ -53,7 +55,6 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
     await fill_table(test_db, db.events, EVENT_TABLE_FOR_DB)
     await fill_table(test_db, db.alerts, ALERT_TABLE_FOR_DB)
-    await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
     await fill_table(test_db, db.notifications, NOTIFICATION_TABLE_FOR_DB)
 

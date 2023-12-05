@@ -4,10 +4,9 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
-import requests
-from requests import Response
+import telegram
 
 import app.config as cfg
 
@@ -24,26 +23,33 @@ def resolve_bucket_key(file_name: str, bucket_folder: Optional[str] = None) -> s
     return f"{bucket_folder}/{file_name}" if isinstance(bucket_folder, str) else file_name
 
 
-def send_telegram_msg(chat_id: str, message: str, autodelete: bool = False) -> Optional[Response]:
+async def send_telegram_msg(
+    chat_id: str, text: str, photo: Union[None, str, bytes] = None, test: bool = False
+) -> Optional[telegram.Message]:
     """Send telegram message to the chat with the given id
 
     Args:
         chat_id (str): chat id
-        message (str): message to send
-        autodelete (bool, default=False): delete msg after sending. Used by unittests
+        text (str): message to send
+        photo (str, bytes or None, default=None): photo to send
+        test (bool, default=False): disable notification and delete msg after sending. Used by unittests
 
     Returns: response
     """
     if not cfg.TELEGRAM_TOKEN:
         logger.warning("Telegram token not set")
         return None
-    base_url = f"https://api.telegram.org/bot{cfg.TELEGRAM_TOKEN}"
-    response = requests.get(f"{base_url}/sendMessage?chat_id={chat_id}&text={message}", timeout=5)
-    if response.status_code != 200 or "ok" not in response.json() or not response.json()["ok"]:
-        logger.warning(f"Problem sending telegram message to {chat_id}: {response.status_code, response.text}")
-    elif autodelete and "result" in response.json() and "message_id" in response.json()["result"]:
-        requests.get(
-            f'{base_url}/deleteMessage?chat_id={chat_id}&message_id={response.json()["result"]["message_id"]}',
-            timeout=5,
-        )
-    return response
+    async with telegram.Bot(cfg.TELEGRAM_TOKEN) as bot:
+        try:
+            msg: telegram.Message = (
+                await bot.send_message(text=text, chat_id=chat_id, disable_notification=test)
+                if photo is None
+                else await bot.send_photo(chat_id=chat_id, photo=photo, caption=text, disable_notification=test)
+            )
+        except telegram.error.TelegramError as e:
+            logger.warning(f"Problem sending telegram message to {chat_id}: {e!s}")
+        else:
+            if test:
+                await msg.delete()
+            return msg
+    return None

@@ -51,4 +51,18 @@ async def test_db():
 @pytest.fixture(scope="function", autouse=True)
 def patch_send_telegram_msg(monkeypatch):
     """Patch send_telegram_msg -> do nothing"""
-    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", lambda *arg, **kwargs: None)
+
+    async def fake_send_telegram_msg(*arg, **kwargs):
+        return None
+
+    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", fake_send_telegram_msg)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def patch_get_media_url(monkeypatch):
+    """Patch get_temp_media_url for notifications"""
+
+    async def patched_get_media_url(*arg, **kwargs):
+        return "https://avatars.githubusercontent.com/u/61667887?s=200&v=4"
+
+    monkeypatch.setattr(endpoints.notifications, "get_temp_media_url", patched_get_media_url)

@@ -21,9 +21,11 @@ class Notification(Base):
     recipient_id = Column(Integer, ForeignKey("recipients.id"))
     subject = Column(String, nullable=False)
     message = Column(String, nullable=False)
+    media_id = Column(Integer, ForeignKey("media.id"))
 
     alert: RelationshipProperty = relationship("Alert", back_populates="notifications")
     recipient: RelationshipProperty = relationship("Recipient", back_populates="notifications")
+    media: RelationshipProperty = relationship("Media", back_populates="notifications")
 
     def __repr__(self):
         return (

@@ -178,9 +178,12 @@ async def get_media_url(
     """Resolve the temporary media image URL"""
     requested_group_id = await get_entity_group_id(media, media_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
+    return MediaUrl(url=await get_temp_media_url(media_id))
 
+
+async def get_temp_media_url(media_id: int) -> str:
+    """Return a temporary media URL"""
     # Check in DB
     media_instance = await check_media_registration(media_id)
     # Check in bucket
-    temp_public_url = await bucket_service.get_public_url(media_instance["bucket_key"])
-    return MediaUrl(url=temp_public_url)
+    return await bucket_service.get_public_url(media_instance["bucket_key"])
