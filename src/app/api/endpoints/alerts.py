@@ -82,7 +82,7 @@ async def create_alert(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(user.id, event="alerts-create")
+    telemetry_client.capture(user.id, event="alerts-create", properties={"device_id": payload.device_id})
     return await _create_alert(payload, background_tasks)
 
 
@@ -102,7 +102,11 @@ async def create_alert_from_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(device.id, event="alerts-create-from-device", properties={"owner_id": device.owner_id})
+    telemetry_client.capture(
+        device.id,
+        event="alerts-create-from-device",
+        properties={"owner_id": device.owner_id, "device_name": device.login},
+    )
     payload_dict = payload.model_dump()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth

@@ -26,7 +26,9 @@ async def create_site(payload: SiteIn, access=Security(get_current_access, scope
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(access.id, event="sites-create")
+    telemetry_client.capture(
+        access.id, event="sites-create", properties={"site_name": payload.name, "group_id": payload.group_id}
+    )
     return await crud.create_entry(sites, payload)
 
 
@@ -41,7 +43,9 @@ async def create_noalert_site(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(requester.id, event="sites-create-noalert")
+    telemetry_client.capture(
+        requester.id, event="sites-create-noalert", properties={"site_name": payload.name, "group_id": payload.group_id}
+    )
     await check_group_update(requester.id, payload.group_id)
     _payload = payload.model_dump()
 

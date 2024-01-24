@@ -38,7 +38,9 @@ async def register_device(payload: AdminDeviceAuth, access=Security(get_current_
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(access.id, event="devices-create")
+    telemetry_client.capture(
+        access.id, event="devices-create", properties={"device_login": payload.login, "group_id": payload.group_id}
+    )
     await crud.get_entry(users, payload.owner_id)
 
     if payload.group_id is None:
@@ -57,7 +59,9 @@ async def register_my_device(
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
-    telemetry_client.capture(me.id, event="devices-create-personal")
+    telemetry_client.capture(
+        me.id, event="devices-create-personal", properties={"device_id": payload.login, "owner_id": me.id}
+    )
     group_id = await get_entity_group_id(users, me.id)
     if group_id is None:  # for mypy to convert int | None -> int ; should never happen
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid group_id for user {me.id}")
@@ -66,11 +70,13 @@ async def register_my_device(
 
 
 @router.get("/{device_id}/", response_model=DeviceOut, summary="Get information about a specific device")
-async def get_device(device_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])):
+async def get_device(
+    device_id: int = Path(..., gt=0), user: UserRead = Security(get_current_user, scopes=[AccessType.admin])
+):
     """
     Based on a device_id, retrieves information about the specified device
     """
-    telemetry_client.capture(access.id, event="devices-get", properties={"device_id": device_id})
+    telemetry_client.capture(user.id, event="devices-get", properties={"device_id": device_id})
     return await crud.get_entry(devices, device_id)
 
 
@@ -140,7 +146,9 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=[Acc
     """
     Updates the last ping of the current device with the current datetime
     """
-    telemetry_client.capture(device.id, event="devices-hearbeat", properties={"owner_id": device.owner_id})
+    telemetry_client.capture(
+        device.id, event="devices-hearbeat", properties={"device_name": device.login, "owner_id": device.owner_id}
+    )
     device.last_ping = datetime.utcnow()
     await crud.update_entry(devices, device, device.id)
     return device
@@ -155,9 +163,13 @@ async def update_device_location(
     """
     Based on a device_id, updates the location of the specified device
     """
-    telemetry_client.capture(user.id, event="devices-update-location", properties={"device_id": device_id})
     # Check that device is accessible to this user
     device = await crud.get_entry(devices, device_id)
+    telemetry_client.capture(
+        user.id,
+        event="devices-update-location",
+        properties={"device_id": device_id, "device_name": device["login"], "owner_id": device["owner_id"]},
+    )
     if device["owner_id"] != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=f"Permission denied to modify device with id={device_id}."
@@ -176,7 +188,11 @@ async def update_my_location(
     """
     Updates the location of the current device
     """
-    telemetry_client.capture(device.id, event="devices-update-my-location", properties={"owner_id": device.owner_id})
+    telemetry_client.capture(
+        device.id,
+        event="devices-update-my-location",
+        properties={"owner_id": device.owner_id, "device_name": device.login},
+    )
     # Update only the position
     for k, v in payload.model_dump().items():
         setattr(device, k, v)
@@ -193,7 +209,11 @@ async def update_device_hash(
     """
     Updates the expected software hash of the device
     """
-    telemetry_client.capture(access.id, event="devices-update-hash", properties={"device_id": device_id})
+    telemetry_client.capture(
+        access.id,
+        event="devices-update-hash",
+        properties={"device_id": device_id, "software_hash": payload.software_hash},
+    )
     device = await crud.get_entry(devices, device_id)
     # Update only the corresponding field
     device.update(payload.model_dump())
