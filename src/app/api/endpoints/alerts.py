@@ -14,7 +14,7 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
-from app.api.endpoints.notifications import send_notification
+from app.api.endpoints.notifications import _send_notification
 from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
 from app.db import alerts, devices, events, media
@@ -53,7 +53,7 @@ async def alert_notification(payload: AlertOut):
         subject: str = Template(recipient.subject_template).safe_substitute(**info)
         message: str = Template(recipient.message_template).safe_substitute(**info)
         notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
-        await send_notification(notification)
+        await _send_notification(notification)
 
 
 async def _create_alert(payload: AlertIn, background_tasks: BackgroundTasks) -> AlertOut:
