@@ -41,7 +41,7 @@ async def send_notification(
     or "Example Value" to get a concrete idea of arguments
     """
     telemetry_client.capture(user.id, event="notifications-send", properties={"recipient_id": payload.recipient_id})
-    return _send_notification(payload)
+    return await _send_notification(payload)
 
 
 @router.get(
