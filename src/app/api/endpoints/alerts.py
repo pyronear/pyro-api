@@ -14,11 +14,10 @@ from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
-from app.api.endpoints.devices import get_device
 from app.api.endpoints.notifications import send_notification
 from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
-from app.db import alerts, events, media
+from app.db import alerts, devices, events, media
 from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut, UserRead
 from app.services.telemetry import telemetry_client
@@ -39,7 +38,7 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
     # Send notification to the recipients of the same group as the device that issued the alert
-    device: DeviceOut = DeviceOut.model_validate(await get_device(payload.device_id))
+    device: DeviceOut = DeviceOut.model_validate(await crud.get_entry(devices, payload.device_id))
     # N.B.: "or 0" is just for mypy, to convert Optional[int] -> int ; should never happen
     for item in await fetch_recipients_for_group(await get_entity_group_id(alerts, payload.id) or 0):
         recipient: RecipientOut = RecipientOut.model_validate(item)
