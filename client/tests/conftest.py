@@ -6,7 +6,7 @@ import requests
 from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestException
 
-API_URL = "http://localhost:8080"
+API_URL = "http://api.localhost:8050"
 
 
 @pytest.fixture(scope="session")

@@ -37,7 +37,7 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
 
 
 def main(args):
-    api_url = f"http://localhost:{args.port}"
+    api_url = f"http://api.localhost:{args.port}"
 
     load_dotenv()
 
