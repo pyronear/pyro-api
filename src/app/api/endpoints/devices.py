@@ -146,9 +146,9 @@ async def heartbeat(device: DeviceOut = Security(get_current_device, scopes=[Acc
     """
     Updates the last ping of the current device with the current datetime
     """
-    telemetry_client.capture(
-        device.id, event="devices-hearbeat", properties={"device_name": device.login, "owner_id": device.owner_id}
-    )
+    # telemetry_client.capture(
+    #     device.id, event="devices-hearbeat", properties={"device_name": device.login, "owner_id": device.owner_id}
+    # )
     device.last_ping = datetime.utcnow()
     await crud.update_entry(devices, device, device.id)
     return device
