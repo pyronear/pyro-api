@@ -16,6 +16,7 @@ from app.api.deps import get_current_access, get_db
 from app.db import installations
 from app.models import AccessType, Installation, Site
 from app.schemas import InstallationIn, InstallationOut, InstallationUpdate
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
@@ -23,12 +24,13 @@ router = APIRouter()
 @router.post(
     "/", response_model=InstallationOut, status_code=status.HTTP_201_CREATED, summary="Create a new installation"
 )
-async def create_installation(payload: InstallationIn, _=Security(get_current_access, scopes=[AccessType.admin])):
+async def create_installation(payload: InstallationIn, access=Security(get_current_access, scopes=[AccessType.admin])):
     """Creates a new installation based on the given information
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(access.id, event="installations-create")
     return await crud.create_entry(installations, payload)
 
 
@@ -42,6 +44,7 @@ async def get_installation(
     """
     Based on a installation_id, retrieves information about the specified installation
     """
+    telemetry_client.capture(requester.id, event="installations-get", properties={"installation_id": installation_id})
     requested_group_id = await get_entity_group_id(installations, installation_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(installations, installation_id)
@@ -54,6 +57,7 @@ async def fetch_installations(
     """
     Retrieves the list of all installations and their information
     """
+    telemetry_client.capture(requester.id, event="installations-fetch")
     if await is_admin_access(requester.id):
         return await crud.fetch_all(installations)
     else:
@@ -75,6 +79,9 @@ async def update_installation(
     """
     Based on a installation_id, updates information about the specified installation
     """
+    telemetry_client.capture(
+        requester.id, event="installations-update", properties={"installation_id": installation_id}
+    )
     requested_group_id = await get_entity_group_id(installations, installation_id)
     await check_group_update(requester.id, cast(int, requested_group_id))
     return await crud.update_entry(installations, payload, installation_id)
@@ -82,11 +89,12 @@ async def update_installation(
 
 @router.delete("/{installation_id}/", response_model=InstallationOut, summary="Delete a specific installation")
 async def delete_installation(
-    installation_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])
+    installation_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])
 ):
     """
     Based on a installation_id, deletes the specified installation
     """
+    telemetry_client.capture(access.id, event="installations-delete", properties={"installation_id": installation_id})
     return await crud.delete_entry(installations, installation_id)
 
 
@@ -99,6 +107,7 @@ async def get_active_devices_on_site(
     """
     Based on a site_id, retrieves the list of all the related devices and their information
     """
+    telemetry_client.capture(requester.id, event="installations-fetch-site-devices", properties={"site_id": site_id})
     current_ts = datetime.utcnow()
 
     query = (

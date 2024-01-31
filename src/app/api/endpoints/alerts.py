@@ -5,7 +5,7 @@
 
 from functools import partial
 from string import Template
-from typing import List, cast
+from typing import Annotated, List, cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Security, status
 from sqlalchemy import select
@@ -13,14 +13,14 @@ from sqlalchemy import select
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_db
-from app.api.endpoints.devices import get_device
-from app.api.endpoints.notifications import send_notification
+from app.api.deps import get_current_access, get_current_device, get_current_user, get_db
+from app.api.endpoints.notifications import _send_notification
 from app.api.endpoints.recipients import fetch_recipients_for_group
 from app.api.external import post_request
-from app.db import alerts, events, media
+from app.db import alerts, devices, events, media
 from app.models import Access, AccessType, Alert, Device, Event
-from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut
+from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut, UserRead
+from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
@@ -38,7 +38,7 @@ async def alert_notification(payload: AlertOut):
     map(partial(post_request, payload=payload), webhook_urls)
 
     # Send notification to the recipients of the same group as the device that issued the alert
-    device: DeviceOut = DeviceOut.model_validate(await get_device(payload.device_id))
+    device: DeviceOut = DeviceOut.model_validate(await crud.get_entry(devices, payload.device_id))
     # N.B.: "or 0" is just for mypy, to convert Optional[int] -> int ; should never happen
     for item in await fetch_recipients_for_group(await get_entity_group_id(alerts, payload.id) or 0):
         recipient: RecipientOut = RecipientOut.model_validate(item)
@@ -53,24 +53,12 @@ async def alert_notification(payload: AlertOut):
         subject: str = Template(recipient.subject_template).safe_substitute(**info)
         message: str = Template(recipient.message_template).safe_substitute(**info)
         notification = NotificationIn(alert_id=payload.id, recipient_id=recipient.id, subject=subject, message=message)
-        await send_notification(notification)
+        await _send_notification(notification)
 
 
-@router.post("/", response_model=AlertOut, status_code=status.HTTP_201_CREATED, summary="Create a new alert")
-async def create_alert(
-    payload: AlertIn,
-    background_tasks: BackgroundTasks,
-    _=Security(get_current_access, scopes=[AccessType.admin]),
-):
-    """
-    Creates a new alert based on the given information and send a notification if it is the first alert of the event
-
-    Below, click on "Schema" for more detailed information about arguments
-    or "Example Value" to get a concrete idea of arguments
-    """
+async def _create_alert(payload: AlertIn, background_tasks: BackgroundTasks) -> AlertOut:
     if payload.media_id is not None:
         await check_media_existence(payload.media_id)
-
     new_event: bool = False
     if payload.event_id is None:
         payload.event_id, new_event = await crud.alerts.create_event_if_inexistant(payload)
@@ -81,9 +69,24 @@ async def create_alert(
     return alert
 
 
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new alert")
+async def create_alert(
+    payload: AlertIn,
+    background_tasks: BackgroundTasks,
+    user: Annotated[UserRead, Security(get_current_user, scopes=[AccessType.admin])],
+) -> AlertOut:
+    """
+    Creates a new alert based on the given information and send a notification if it is the first alert of the event
+
+    Below, click on "Schema" for more detailed information about arguments
+    or "Example Value" to get a concrete idea of arguments
+    """
+    telemetry_client.capture(user.id, event="alerts-create", properties={"device_id": payload.device_id})
+    return await _create_alert(payload, background_tasks)
+
+
 @router.post(
     "/from-device",
-    response_model=AlertOut,
     status_code=status.HTTP_201_CREATED,
     summary="Create an alert related to the authentified device",
 )
@@ -91,13 +94,18 @@ async def create_alert_from_device(
     payload: AlertBase,
     background_tasks: BackgroundTasks,
     device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
-):
+) -> AlertOut:
     """
     Creates an alert related to the authentified device, uses its device_id as argument
 
     Below, click on "Schema" for more detailed information about arguments
     or "Example Value" to get a concrete idea of arguments
     """
+    telemetry_client.capture(
+        device.id,
+        event="alerts-create-from-device",
+        properties={"owner_id": device.owner_id, "device_name": device.login},
+    )
     payload_dict = payload.model_dump()
     # If no azimuth is specified, use the one from the device
     payload_dict["azimuth"] = payload_dict["azimuth"] if isinstance(payload_dict["azimuth"], float) else device.azimuth
@@ -106,7 +114,7 @@ async def create_alert_from_device(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Please specify a value for 'azimuth' in the payload, since this device's azimuth is not set.",
         )
-    return await create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
+    return await _create_alert(AlertIn(**payload_dict, device_id=device.id), background_tasks)
 
 
 @router.get("/{alert_id}/", response_model=AlertOut, summary="Get information about a specific alert")
@@ -116,6 +124,7 @@ async def get_alert(
     """
     Based on a alert_id, retrieves information about the specified alert
     """
+    telemetry_client.capture(requester.id, event="alerts-get", properties={"alert_id": alert_id})
     requested_group_id = await get_entity_group_id(alerts, alert_id)
     await check_group_read(requester.id, cast(int, requested_group_id))
     return await crud.get_entry(alerts, alert_id)
@@ -128,6 +137,7 @@ async def fetch_alerts(
     """
     Retrieves the list of all alerts and their information
     """
+    telemetry_client.capture(requester.id, event="alerts-fetch")
     if await is_admin_access(requester.id):
         return await crud.fetch_all(alerts)
     else:
@@ -144,10 +154,11 @@ async def fetch_alerts(
 
 
 @router.delete("/{alert_id}/", response_model=AlertOut, summary="Delete a specific alert")
-async def delete_alert(alert_id: int = Path(..., gt=0), _=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_alert(alert_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])):
     """
     Based on a alert_id, deletes the specified alert
     """
+    telemetry_client.capture(access.id, event="alerts-delete", properties={"alert_id": alert_id})
     return await crud.delete_entry(alerts, alert_id)
 
 
@@ -158,6 +169,7 @@ async def fetch_ongoing_alerts(
     """
     Retrieves the list of ongoing alerts and their information
     """
+    telemetry_client.capture(requester.id, event="alerts-fetch-ongoing")
     if await is_admin_access(requester.id):
         query = (
             alerts.select().where(alerts.c.event_id.in_(select([events.c.id]).where(events.c.end_ts.is_(None))))

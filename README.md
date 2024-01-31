@@ -121,6 +121,7 @@ Optionally, the following information can be added:
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
 - `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
 - `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
+- `POSTHOG_KEY`: to enable product analytics
 
 So your `.env` file should look like something similar to:
 ```
