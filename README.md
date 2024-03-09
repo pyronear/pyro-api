@@ -141,10 +141,6 @@ The file should be placed at the root folder of your local copy of the project.
 
 ## More goodies
 
-### Documentation
-
-The full package documentation is available [here](http://pyronear-api.herokuapp.com/docs) for detailed specifications.
-
 ### Python client
 
 This project is a REST-API, and you can interact with the service through HTTP requests. However, if you want to ease the integration into a Python project, take a look at our [Python client](client).
