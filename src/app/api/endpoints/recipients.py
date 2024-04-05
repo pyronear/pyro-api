@@ -13,7 +13,7 @@ from app.db import recipients
 from app.models import AccessType
 from app.schemas import RecipientIn, RecipientOut
 
-router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])])
+router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])], redirect_slashes=True)
 
 
 @router.post("/", response_model=RecipientOut, status_code=status.HTTP_201_CREATED, summary="Create a new recipient")

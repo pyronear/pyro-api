@@ -13,7 +13,7 @@ from app.db import accesses
 from app.models import AccessType
 from app.schemas.accesses import AccessRead
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.get("/{access_id}/", response_model=AccessRead, summary="Get information about a specific access")

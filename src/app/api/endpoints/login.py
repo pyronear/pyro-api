@@ -13,7 +13,7 @@ from app.api import crud, security
 from app.db import accesses
 from app.schemas import Token
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/access-token", response_model=Token)

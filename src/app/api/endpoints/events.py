@@ -18,7 +18,7 @@ from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AccessRead, Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new event")
