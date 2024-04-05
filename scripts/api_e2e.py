@@ -28,11 +28,7 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
-    try:
-        detail = response.json()["detail"]
-    except (requests.exceptions.JSONDecodeError, KeyError):
-        detail = response.text
-    assert response.status_code // 100 == 2, print(detail)
+    assert response.status_code // 100 == 2, print(response.text)
     return response.json()
 
 
