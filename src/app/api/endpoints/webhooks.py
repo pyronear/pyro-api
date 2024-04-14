@@ -12,7 +12,7 @@ from app.api.deps import get_current_access
 from app.db import webhooks
 from app.schemas import WebhookIn, WebhookOut
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", response_model=WebhookOut, status_code=status.HTTP_201_CREATED, summary="Create a new webhook")

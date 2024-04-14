@@ -15,7 +15,7 @@ from app.models import Access, AccessType, User
 from app.schemas import Cred, Login, UserAuth, UserCreation, UserRead
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.get("/me", response_model=UserRead, summary="Get information about the current user")

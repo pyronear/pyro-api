@@ -16,7 +16,7 @@ from app.schemas import NotificationIn, NotificationOut, RecipientOut, UserRead
 from app.services import send_telegram_msg
 from app.services.telemetry import telemetry_client
 
-router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])])
+router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])], redirect_slashes=True)
 
 
 async def _send_notification(payload: NotificationIn) -> NotificationOut:

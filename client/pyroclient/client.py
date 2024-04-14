@@ -30,7 +30,7 @@ ROUTES: Dict[str, str] = {
     #################
     # SITES
     #################
-    "get-sites": "/sites",
+    "get-sites": "/sites/",
     #################
     # EVENTS
     #################
@@ -52,7 +52,7 @@ ROUTES: Dict[str, str] = {
     # ALERTS
     #################
     "send-alert-from-device": "/alerts/from-device",
-    "get-alerts": "/alerts",
+    "get-alerts": "/alerts/",
     "get-ongoing-alerts": "/alerts/ongoing",
 }
 

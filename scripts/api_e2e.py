@@ -28,11 +28,7 @@ def api_request(method_type: str, route: str, headers=Dict[str, str], payload: O
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
-    try:
-        detail = response.json()["detail"]
-    except (requests.exceptions.JSONDecodeError, KeyError):
-        detail = response.text
-    assert response.status_code // 100 == 2, print(detail)
+    assert response.status_code // 100 == 2, print(response.text)
     return response.json()
 
 
@@ -67,6 +63,9 @@ def main(args):
     # Create a site
     payload = {"name": "first_site", "country": "FR", "geocode": "01", "lat": 44.1, "lon": 3.9, "group_id": 1}
     site_id = api_request("post", f"{api_url}/sites/", superuser_auth, payload)["id"]
+    # Check internal redirect of slashes
+    api_request("get", f"{api_url}/sites/", superuser_auth)
+    api_request("get", f"{api_url}/sites", superuser_auth)
 
     # Update the user password
     payload = {"password": "my_second_pwd"}  # nosec B106

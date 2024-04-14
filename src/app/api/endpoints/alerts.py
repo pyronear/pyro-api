@@ -22,7 +22,7 @@ from app.models import Access, AccessType, Alert, Device, Event
 from app.schemas import AlertBase, AlertIn, AlertOut, DeviceOut, NotificationIn, RecipientOut, UserRead
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 async def check_media_existence(media_id):

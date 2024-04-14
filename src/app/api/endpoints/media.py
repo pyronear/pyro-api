@@ -21,7 +21,7 @@ from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, 
 from app.services import resolve_bucket_key, s3_bucket
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 async def check_media_registration(media_id: int, device_id: Optional[int] = None) -> Dict[str, Any]:

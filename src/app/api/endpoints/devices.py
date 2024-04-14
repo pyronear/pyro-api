@@ -28,7 +28,7 @@ from app.schemas import (
 )
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", response_model=DeviceOut, status_code=status.HTTP_201_CREATED, summary="Create a new device")

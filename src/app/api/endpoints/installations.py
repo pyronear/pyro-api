@@ -18,7 +18,7 @@ from app.models import AccessType, Installation, Site
 from app.schemas import InstallationIn, InstallationOut, InstallationUpdate
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post(

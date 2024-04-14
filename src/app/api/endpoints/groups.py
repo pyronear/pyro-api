@@ -13,7 +13,7 @@ from app.db import groups
 from app.models import AccessType
 from app.schemas import GroupIn, GroupOut
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", response_model=GroupOut, status_code=status.HTTP_201_CREATED, summary="Create a new group")

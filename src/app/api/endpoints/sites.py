@@ -16,7 +16,7 @@ from app.models import AccessType, SiteType
 from app.schemas import SiteBase, SiteIn, SiteOut, SiteUpdate
 from app.services.telemetry import telemetry_client
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", response_model=SiteOut, status_code=status.HTTP_201_CREATED, summary="Create a new site")

@@ -13,7 +13,8 @@ COPY app/requirements.txt /app/requirements.txt
 # install dependencies
 RUN set -eux \
     && apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev libmagic \
-    && pip install -r /app/requirements.txt \
+    && pip install --no-cache-dir uv \
+    && uv pip install --no-cache --system -r /app/requirements.txt \
     && apk del --purge gcc musl-dev postgresql-dev \
     && rm -rf /root/.cache/pip
 
