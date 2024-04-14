@@ -24,9 +24,9 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
         run: |
-          docker compose -f docker-compose.test.yml up -d --build
-          docker compose exec localstack awslocal s3 mb s3://sample-bucket
-          docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
+          docker compose -f docker-compose.test.yml up -d --build --wait
+          docker compose -f docker-compose.test.yml exec localstack awslocal s3 mb s3://sample-bucket
+          docker compose -f docker-compose.test.yml exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
           docker compose -f docker-compose.test.yml exec -T backend pytest --cov=app --cov-report xml tests/
           docker compose -f docker-compose.test.yml cp backend:/app/coverage.xml ./coverage-src.xml
       - name: Upload coverage to Codecov
@@ -69,7 +69,7 @@ jobs:
           POSTGRES_DB: dummy_pg_db
         run: |
           docker volume prune -f
-          docker compose up -d --build
+          docker compose up -d --build --wait
           docker ps
       - name: Cache python modules
         uses: actions/cache@v2
