@@ -26,6 +26,7 @@ from app.api.endpoints import (
     sites,
     users,
     webhooks,
+    status,
 )
 from app.db import database, engine, metadata
 from app.db.init import init_db
@@ -63,6 +64,7 @@ async def shutdown():
 
 # Routing
 app.include_router(login.router, prefix="/login", tags=["login"])
+app.include_router(status.router, prefix="/status", tags=["status"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(groups.router, prefix="/groups", tags=["groups"])
 app.include_router(sites.router, prefix="/sites", tags=["sites"])
