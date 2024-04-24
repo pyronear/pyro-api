@@ -61,6 +61,15 @@ async def shutdown():
     await database.disconnect()
 
 
+@app.get("/status")
+async def get_api_status():
+    """
+    Returns the status of the API
+    """
+    # TODO : implement a more complex behavior to check if everything is initialized for example
+    return {"status": "API is running smoothly"}
+
+
 # Routing
 app.include_router(login.router, prefix="/login", tags=["login"])
 app.include_router(users.router, prefix="/users", tags=["users"])
