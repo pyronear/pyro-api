@@ -19,6 +19,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python -
+        echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+
     - name: Log in to Docker Hub
       run: echo "${{ secrets.DOCKERHUB_PW }}" | docker login -u "${{ secrets.DOCKERHUB_LOGIN }}" --password-stdin
 
