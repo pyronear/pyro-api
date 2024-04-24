@@ -1,0 +1,29 @@
+name: Build and Push Docker Image
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - rs/create-gitAction-push
+
+jobs:
+  build_and_push_image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKERHUB_PW }}" | docker login -u "${{ secrets.DOCKERHUB_LOGIN }}" --password-stdin
+
+    - name: Build Docker image
+      run: make build
+
+    - name: Push Docker image
+      run: docker push pyronear/pyro-api:latest
