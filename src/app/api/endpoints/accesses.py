@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023, Pyronear.
+# Copyright (C) 2020-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -13,7 +13,7 @@ from app.db import accesses
 from app.models import AccessType
 from app.schemas.accesses import AccessRead
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.get("/{access_id}/", response_model=AccessRead, summary="Get information about a specific access")

@@ -25,7 +25,7 @@ jobs:
           poetry-version: "1.6.1"
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-      - name: Build & run docker
+      - name: Run the backend & the test
         env:
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
@@ -47,15 +47,12 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-scripts-deps-${{ matrix.python }}-${{ hashFiles('scripts/requirements.txt') }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r scripts/requirements.txt
-
-      - name: End-to-End test
+      - name: Run end-to-end integration test
         env:
           SUPERUSER_LOGIN: dummy_login
           SUPERUSER_PWD: dummy&P@ssw0rd!
         run: |
+          python -m pip install --upgrade uv
+          uv pip install --system -r scripts/requirements.txt
           sleep 5
           python scripts/api_e2e.py 8080

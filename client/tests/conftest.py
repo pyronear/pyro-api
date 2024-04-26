@@ -71,12 +71,21 @@ def setup(admin_client):
     response = requests.post(urljoin(API_URL, "events"), json=payload, headers=admin_client.headers, timeout=5)
     assert response.status_code == 201
     event_id = response.json()["id"]
+    # User
+    response = requests.get(urljoin(API_URL, "users/me"), headers=admin_client.headers, timeout=5)
+    assert response.status_code == 200
+    user_id = response.json()["id"]
     # Media
-    payload = {"device_id": 1}
+    payload = {"owner_id": user_id, "login": "pyrodevice", "password": "my_pwd", "specs": "V0.1", "angle_of_view": 68.0}
+    response = requests.post(urljoin(API_URL, "devices"), json=payload, headers=admin_client.headers, timeout=5)
+    assert response.status_code == 201
+    device_id = response.json()["id"]
+    # Media
+    payload = {"device_id": device_id}
     response = requests.post(urljoin(API_URL, "media"), json=payload, headers=admin_client.headers, timeout=5)
     assert response.status_code == 201
     media_id = response.json()["id"]
     # Alert
-    payload = {"lat": 0.0, "lon": 0.0, "event_id": event_id, "media_id": media_id, "device_id": 1, "azimuth": 0}
+    payload = {"lat": 0.0, "lon": 0.0, "event_id": event_id, "media_id": media_id, "device_id": device_id, "azimuth": 0}
     response = requests.post(urljoin(API_URL, "alerts"), json=payload, headers=admin_client.headers, timeout=5)
     assert response.status_code == 201

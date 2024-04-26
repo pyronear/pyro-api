@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from app.services import bucket_service, resolve_bucket_key
-from app.services.bucket import S3Bucket
+from app.services import resolve_bucket_key
+from app.services.storage import S3Bucket, s3_bucket
 from app.services.utils import cfg, send_telegram_msg
 
 
@@ -25,8 +25,8 @@ def test_resolve_bucket_key(monkeypatch):
     monkeypatch.setattr(cfg, "BUCKET_MEDIA_FOLDER", origin_value)
 
 
-def test_bucket_service():
-    assert isinstance(bucket_service, S3Bucket)
+def test_s3_bucket():
+    assert isinstance(s3_bucket, S3Bucket)
 
 
 @pytest.fixture

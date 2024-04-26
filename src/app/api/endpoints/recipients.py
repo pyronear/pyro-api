@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023, Pyronear.
+# Copyright (C) 2020-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -13,7 +13,7 @@ from app.db import recipients
 from app.models import AccessType
 from app.schemas import RecipientIn, RecipientOut
 
-router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])])
+router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType.admin])], redirect_slashes=True)
 
 
 @router.post("/", response_model=RecipientOut, status_code=status.HTTP_201_CREATED, summary="Create a new recipient")

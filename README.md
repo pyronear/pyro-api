@@ -121,6 +121,7 @@ Optionally, the following information can be added:
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
 - `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
 - `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
+- `POSTHOG_KEY`: to enable product analytics
 
 So your `.env` file should look like something similar to:
 ```
@@ -139,10 +140,6 @@ SENTRY_SERVER_NAME=my_storage_bucket_name
 The file should be placed at the root folder of your local copy of the project.
 
 ## More goodies
-
-### Documentation
-
-The full package documentation is available [here](http://pyronear-api.herokuapp.com/docs) for detailed specifications.
 
 ### Python client
 

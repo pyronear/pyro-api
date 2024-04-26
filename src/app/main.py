@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023, Pyronear.
+# Copyright (C) 2020-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -59,6 +59,15 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
+
+
+@app.get("/status")
+async def get_api_status():
+    """
+    Returns the status of the API
+    """
+    # TODO : implement a more complex behavior to check if everything is initialized for example
+    return {"status": "API is running smoothly"}
 
 
 # Routing

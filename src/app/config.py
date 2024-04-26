@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023, Pyronear.
+# Copyright (C) 2020-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -56,6 +56,9 @@ DUMMY_BUCKET_FILE = (
 # Sentry
 SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
 SENTRY_SERVER_NAME: Optional[str] = os.getenv("SENTRY_SERVER_NAME")
+
+# Telemetry APM
+POSTHOG_KEY: Optional[str] = os.getenv("POSTHOG_KEY")
 
 # Telegram
 TELEGRAM_TOKEN: Optional[str] = os.getenv("TELEGRAM_TOKEN")

@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2023, Pyronear.
+# Copyright (C) 2021-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -13,7 +13,7 @@ from app.db import groups
 from app.models import AccessType
 from app.schemas import GroupIn, GroupOut
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/", response_model=GroupOut, status_code=status.HTTP_201_CREATED, summary="Create a new group")

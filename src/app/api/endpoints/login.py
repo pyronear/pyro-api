@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023, Pyronear.
+# Copyright (C) 2020-2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
@@ -13,7 +13,7 @@ from app.api import crud, security
 from app.db import accesses
 from app.schemas import Token
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=True)
 
 
 @router.post("/access-token", response_model=Token)
