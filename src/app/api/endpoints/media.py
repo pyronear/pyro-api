@@ -197,4 +197,4 @@ async def get_temp_media_url(media_id: int) -> str:
     media_instance = await check_media_registration(media_id)
     # Check in bucket
     temp_public_url = await s3_bucket.get_public_url(media_instance["bucket_key"])
-    return MediaUrl(url=temp_public_url)
+    return MediaUrl(url=temp_public_url).url
