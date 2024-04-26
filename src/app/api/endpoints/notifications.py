@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Path, Security, status
 
 from app.api import crud
 from app.api.deps import get_current_access, get_current_user
+from app.api.endpoints.media import get_temp_media_url
 from app.api.endpoints.recipients import get_recipient
 from app.db import notifications
 from app.models import AccessType, NotificationType
@@ -22,7 +23,11 @@ router = APIRouter(dependencies=[Security(get_current_access, scopes=[AccessType
 async def _send_notification(payload: NotificationIn) -> NotificationOut:
     recipient = RecipientOut(**(await get_recipient(recipient_id=payload.recipient_id)))
     if recipient.notification_type == NotificationType.telegram:
-        send_telegram_msg(recipient.address, payload.message)
+        await send_telegram_msg(
+            chat_id=recipient.address,
+            text=payload.message,
+            photo=await get_temp_media_url(payload.media_id) if payload.media_id is not None else None,
+        )
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid NotificationType, not treated")
 

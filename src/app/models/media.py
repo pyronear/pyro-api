@@ -30,6 +30,7 @@ class Media(Base):
 
     device: RelationshipProperty = relationship("Device", uselist=False, back_populates="media")
     alerts: RelationshipProperty = relationship("Alert", back_populates="media")
+    notifications: RelationshipProperty = relationship("Notification", back_populates="media")
 
     def __repr__(self):
         return f"<Media(device_id='{self.device_id}', bucket_key='{self.bucket_key}', type='{self.type}'>"

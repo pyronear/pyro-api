@@ -18,6 +18,7 @@ class RecipientIn(_GroupId):
     message_template: str = Field(
         description="template for notification message. Can contain fields like $date that are replaced when the notification is sent"
     )
+    send_image: bool = Field(description="send alert image together with notification message")
 
 
 class RecipientOut(RecipientIn, _Id, _CreatedAt):

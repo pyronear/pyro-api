@@ -34,26 +34,39 @@ def unset_telegram_token(monkeypatch):
     monkeypatch.setattr(cfg, "TELEGRAM_TOKEN", None)
 
 
-def test_no_send_telegram_msg(unset_telegram_token):
-    assert send_telegram_msg("invalid-chat-id", "Fake message") is None
+@pytest.mark.asyncio
+async def test_no_send_telegram_msg(unset_telegram_token):
+    assert await send_telegram_msg("invalid-chat-id", "Fake message") is None
 
 
 @pytest.mark.skipif(not cfg.TELEGRAM_TOKEN, reason="TELEGRAM_TOKEN not set")
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "chat_id, msg, expected_status_code",
+    "chat_id, text, photo, valid",
     [
-        ("invalid-chat-id", "Fake message", 400),
+        ("invalid-chat-id", "Fake message", None, False),
         pytest.param(
             os.environ.get("TELEGRAM_TEST_CHAT_ID"),
-            "Test message&disable_notification=true",
-            200,
+            "Test message",
+            None,
+            True,
+            marks=pytest.mark.skipif("TELEGRAM_TEST_CHAT_ID" not in os.environ, reason="TELEGRAM_TEST_CHAT_ID not set"),
+        ),
+        pytest.param(
+            os.environ.get("TELEGRAM_TEST_CHAT_ID"),
+            "Test message with photo",
+            "https://avatars.githubusercontent.com/u/61667887?s=200&v=4",
+            True,
             marks=pytest.mark.skipif("TELEGRAM_TEST_CHAT_ID" not in os.environ, reason="TELEGRAM_TEST_CHAT_ID not set"),
         ),
     ],
 )
-def test_send_telegram_msg(chat_id, msg, expected_status_code):
-    response = send_telegram_msg(chat_id=chat_id, message=msg, autodelete=expected_status_code == 200)
-    if expected_status_code is None:
-        assert response is None
+async def test_send_telegram_msg(chat_id, text, photo, valid):
+    msg = await send_telegram_msg(chat_id=chat_id, text=text, photo=photo, test=True)
+    if not valid:
+        assert msg is None
+    elif photo is None:
+        assert msg.text == text
     else:
-        assert response.status_code == expected_status_code, response.text
+        assert msg.caption == text
+        assert len(msg.photo)
