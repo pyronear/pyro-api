@@ -1,14 +1,13 @@
 # this target runs checks on all files
 quality:
+	ruff format --check .
 	ruff check .
 	mypy
-	black --check .
-	bandit -r . -c pyproject.toml
 
 # this target runs checks on all files and potentially modifies some of them
 style:
-	black .
-	ruff --fix .
+	ruff format .
+	ruff check --fix .
 
 # Pin the dependencies
 lock:
