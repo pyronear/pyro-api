@@ -12,38 +12,33 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.9"
           architecture: x64
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.6.1"
+          poetry-version: "1.8.2"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-      - name: Build & run docker
+        run: poetry export -f requirements.txt --without-hashes --output requirements.txt
+      - name: Build, run & check docker
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
+          S3_BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
           S3_REGION: ${{ secrets.S3_REGION }}
-          SUPERUSER_LOGIN: dummy_login
-          SUPERUSER_PWD: dummy&P@ssw0rd!
+          SUPERADMIN_LOGIN: dummy_login
+          SUPERADMIN_PWD: dummy&P@ssw0rd!
           POSTGRES_USER: dummy_pg_user
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
-        run: docker compose up -d --build
-      - name: Docker sanity check
-        run: sleep 20 && nc -vz localhost 8080
-      - name: Debug
-        run: docker compose logs
-      - name: Ping server
-        run: curl http://localhost:8080/docs
+        run: |
+          docker compose up -d --build --wait
+          docker compose logs
+          curl http://localhost:5050/status
 
   client:
     runs-on: ${{ matrix.os }}
@@ -53,20 +48,14 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: [3.8, 3.9, '3.10', 3.11, 3.12]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Cache python modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
       - name: Install project
         run: |
-          python -m pip install --upgrade pip
-          pip install -e client/.
+          python -m pip install --upgrade uv
+          uv pip install --system -e client/.
       - name: Import package
         run: python -c "import pyroclient; print(pyroclient.__version__)"

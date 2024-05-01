@@ -3,41 +3,70 @@ on:
   push:
     branches: main
 
+env:
+  BACKEND_IMAGE_NAME: alert-api
+  DOCKERHUB_USER: ${{ secrets.DOCKERHUB_LOGIN }}
+
 jobs:
-  dockerhub:
+  docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
           architecture: x64
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.6.1"
+          poetry-version: "1.8.2"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
+        run: poetry export -f requirements.txt --without-hashes --output requirements.txt
       - name: Build docker
-        run: docker build src/. -t pyronear/pyro-api:latest
+        run: docker build -f src/Dockerfile . -t $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_PW }}
       - name: Push to hub
-        run: docker push pyronear/pyro-api:latest
+        run: docker push $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push to container registry
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$BACKEND_IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          docker tag $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest $IMAGE_ID:latest
+          docker push $IMAGE_ID:latest
 
   deploy-dev:
     needs: dockerhub
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1.0.0
+      - uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_DEV_HOST }}
           username: ${{ secrets.SSH_DEV_USERNAME }}
           key: ${{ secrets.SSH_DEPLOY_DEV }}
           script: |
-            docker pull pyronear/pyro-api:latest
-            cd devops && docker compose down && docker compose up -d
-            docker inspect -f '{{ .Created }}' $(docker compose images -q backend)
+            # Ensure we have max disk space
+            docker rm -fv $(docker ps -aq)
             docker rmi -f $(docker images -f "dangling=true" -q)
+            docker volume rm -f $(docker volume ls -f "dangling=true" -q)
+            # Update the service
+            docker compose pull backend
+            docker compose stop backend && docker compose up -d --wait
+            # Check update
+            docker inspect -f '{{ .Created }}' $(docker compose images -q backend)
+            # Clean up
+            docker rm -fv $(docker ps -aq)
+            docker rmi -f $(docker images -f "dangling=true" -q)
+            docker volume rm -f $(docker volume ls -f "dangling=true" -q)
+      - name: Ping server
+        env:
+          DEV_ENDPOINT: ${{ secrets.DEV_ENDPOINT }}
+        run: sleep 10 && curl $DEV_ENDPOINT

@@ -9,21 +9,15 @@ jobs:
     if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.9
           architecture: x64
-      - name: Cache python modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-3.9-${{ hashFiles('client/pyproject.toml') }}-build
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install setuptools wheel twine --upgrade
+          python -m pip install --upgrade uv
+          uv pip install --system setuptools wheel twine --upgrade
       - name: Build and publish
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
@@ -43,25 +37,24 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: [3.8, 3.9, '3.10', 3.11, 3.12]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
       - name: Install package
         run: |
-          python -m pip install --upgrade pip
-          pip install pyroclient
+          python -m pip install --upgrade uv
+          uv pip install --system pyroclient
           python -c "import pyroclient; print(pyroclient.__version__)"
 
   conda:
     if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Miniconda setup
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           python-version: 3.9
@@ -89,9 +82,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: [3.8, 3.9, '3.10', 3.11, 3.12]
     steps:
-      - uses: actions/checkout@v2
       - name: Miniconda setup
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python }}
