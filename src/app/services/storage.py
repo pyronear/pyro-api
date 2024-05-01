@@ -81,5 +81,10 @@ class S3Bucket:
 
 
 s3_bucket = S3Bucket(
-    settings.S3_REGION, settings.S3_ENDPOINT_URL, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, settings.S3_BUCKET_NAME, settings.S3_PROXY_URL
+    settings.S3_REGION,
+    settings.S3_ENDPOINT_URL,
+    settings.S3_ACCESS_KEY,
+    settings.S3_SECRET_KEY,
+    settings.S3_BUCKET_NAME,
+    settings.S3_PROXY_URL,
 )

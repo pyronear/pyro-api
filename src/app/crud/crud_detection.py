@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Detection
-from app.schemas.detections import DetectionLabel, DetectionCreate
+from app.schemas.detections import DetectionCreate, DetectionLabel
 
 __all__ = ["DetectionCRUD"]
 

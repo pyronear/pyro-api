@@ -43,7 +43,6 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_REGION=${S3_REGION}
       - S3_PROXY_URL=${S3_PROXY_URL}
-      - SENTRY_DSN=${SENTRY_DSN}
       - SERVER_NAME=${SERVER_NAME}
     volumes:
       - ./src/:/app/

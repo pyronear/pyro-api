@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Camera
-from app.schemas.cameras import LastActive, CameraCreate
+from app.schemas.cameras import CameraCreate, LastActive
 
 __all__ = ["CameraCRUD"]
 
