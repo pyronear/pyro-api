@@ -7,7 +7,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from app.models import AccessType
+from app.models import UserRole
 
 __all__ = ["Token", "TokenPayload"]
 
@@ -23,5 +23,5 @@ class Token(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    access_id: int = Field(..., gt=0)
-    scopes: List[AccessType] = Field([], description="scopes of the token")
+    sub: int = Field(..., gt=0)
+    scopes: List[UserRole] = Field([], description="scopes of the token")

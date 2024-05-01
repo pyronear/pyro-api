@@ -7,83 +7,57 @@ import logging
 import time
 
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from prometheus_fastapi_instrumentator import Instrumentator
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 
-from app import config as cfg
-from app.api.endpoints import (
-    accesses,
-    alerts,
-    devices,
-    events,
-    groups,
-    installations,
-    login,
-    media,
-    notifications,
-    recipients,
-    sites,
-    users,
-    webhooks,
-)
-from app.db import database, engine, metadata
-from app.db.init import init_db
+from app.api.api_v1.router import api_router
+from app.core.config import settings
+from app.schemas.base import Status
 
 logger = logging.getLogger("uvicorn.error")
 
-metadata.create_all(bind=engine)
-
 # Sentry
-if isinstance(cfg.SENTRY_DSN, str):
+if isinstance(settings.SENTRY_DSN, str):
     sentry_sdk.init(
-        cfg.SENTRY_DSN,
-        release=cfg.VERSION,
-        server_name=cfg.SENTRY_SERVER_NAME,
-        environment="production" if isinstance(cfg.SENTRY_SERVER_NAME, str) else None,
+        settings.SENTRY_DSN,
+        enable_tracing=False,
         traces_sample_rate=0.0,
+        integrations=[
+            StarletteIntegration(transaction_style="url"),
+            FastApiIntegration(transaction_style="url"),
+        ],
+        release=settings.VERSION,
+        server_name=settings.SERVER_NAME,
+        debug=settings.DEBUG,
+        environment=None if settings.DEBUG else "production",
     )
-    logger.info(f"Sentry middleware enabled on server {cfg.SENTRY_SERVER_NAME}")
+    logger.info(f"Sentry middleware enabled on server {settings.SERVER_NAME}")
 
 
-app = FastAPI(title=cfg.PROJECT_NAME, description=cfg.PROJECT_DESCRIPTION, debug=cfg.DEBUG, version=cfg.VERSION)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description=settings.PROJECT_DESCRIPTION,
+    debug=settings.DEBUG,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    docs_url=None,
+)
 
 
-# Database connection
-@app.on_event("startup")
-async def startup():
-    await database.connect()
-    await init_db()
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
-
-
-@app.get("/status")
-async def get_api_status():
-    """
-    Returns the status of the API
-    """
-    # TODO : implement a more complex behavior to check if everything is initialized for example
-    return {"status": "API is running smoothly"}
+# Healthcheck
+@app.get("/status", status_code=status.HTTP_200_OK, summary="Healthcheck for the API", include_in_schema=False)
+def get_status() -> Status:
+    return Status(status="ok")
 
 
 # Routing
-app.include_router(login.router, prefix="/login", tags=["login"])
-app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(groups.router, prefix="/groups", tags=["groups"])
-app.include_router(sites.router, prefix="/sites", tags=["sites"])
-app.include_router(events.router, prefix="/events", tags=["events"])
-app.include_router(devices.router, prefix="/devices", tags=["devices"])
-app.include_router(media.router, prefix="/media", tags=["media"])
-app.include_router(installations.router, prefix="/installations", tags=["installations"])
-app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
-app.include_router(accesses.router, prefix="/accesses", tags=["accesses"])
-app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
-app.include_router(recipients.router, prefix="/recipients", tags=["recipients"])
-app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 # Middleware
@@ -96,23 +70,56 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-if isinstance(cfg.SENTRY_DSN, str):
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGIN,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+if isinstance(settings.SENTRY_DSN, str):
     app.add_middleware(SentryAsgiMiddleware)
 
 
-# Docs
+# Overrides swagger to include favicon
+@app.get("/docs", include_in_schema=False)
+def swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        title=settings.PROJECT_NAME,
+        swagger_favicon_url="https://pyronear.org/img/favicon.ico",
+        # Remove schemas from swagger
+        swagger_ui_parameters={"defaultModelsExpandDepth": -1},
+    )
+
+
+# OpenAPI config
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
+    # https://fastapi.tiangolo.com/tutorial/metadata/
     openapi_schema = get_openapi(
-        title=cfg.PROJECT_NAME,
-        version=cfg.VERSION,
-        description=cfg.PROJECT_DESCRIPTION,
+        title=settings.PROJECT_NAME,
+        version=settings.VERSION,
+        description=settings.PROJECT_DESCRIPTION,
         routes=app.routes,
+        license_info={"name": "Apache 2.0", "url": "http://www.apache.org/licenses/LICENSE-2.0.html"},
+        contact={
+            "name": "API support",
+            "email": settings.SUPPORT_EMAIL,
+            "url": "https://github.com/pyronear/pyro-api/issues",
+        },
     )
-    openapi_schema["info"]["x-logo"] = {"url": cfg.LOGO_URL}
+    openapi_schema["info"]["x-logo"] = {"url": "https://pyronear.org/img/logo_letters.png"}
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
 
 app.openapi = custom_openapi  # type: ignore[method-assign]
+if settings.PROMETHEUS_ENABLED:
+    Instrumentator(
+        excluded_handlers=["/metrics", "/docs", ".*openapi.json"],
+    ).instrument(app).expose(app, include_in_schema=False)
+    logger.info("Collecting performance data with Prometheus")
