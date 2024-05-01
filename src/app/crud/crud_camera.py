@@ -7,11 +7,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Camera
-from app.schemas.cameras import LastActive
+from app.schemas.cameras import LastActive, CameraCreate
 
 __all__ = ["CameraCRUD"]
 
 
-class CameraCRUD(BaseCRUD[Camera, Camera, LastActive]):
+class CameraCRUD(BaseCRUD[Camera, CameraCreate, LastActive]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Camera)

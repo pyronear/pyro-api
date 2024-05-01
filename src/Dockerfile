@@ -8,17 +8,16 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH "${PYTHONPATH}:/app"
 
 # copy requirements file
-COPY app/requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 
 # install dependencies
 RUN set -eux \
-    && apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev libmagic curl\
+    && apk add --no-cache curl libmagic \
     && pip install --no-cache-dir uv \
     && uv pip install --no-cache --system -r /app/requirements.txt \
-    && apk del --purge gcc musl-dev postgresql-dev \
-    && rm -rf /root/.cache/pip
+    && rm -rf /root/.cache
 
 # copy project
-COPY app /app/app
-COPY alembic.ini /app/alembic.ini
-COPY alembic /app/alembic
+COPY src/alembic.ini /app/alembic.ini
+COPY src/migrations /app/migrations
+COPY src/app /app/app

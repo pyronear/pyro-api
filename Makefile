@@ -15,35 +15,34 @@ lock:
 
 # Build the docker
 build:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker build src/. -t pyronear/pyro-api:python3.9-alpine3.14
-	docker build src/. -t pyronear/pyro-api:latest
+	poetry export -f requirements.txt --without-hashes --output requirements.txt
+	docker build -f src/Dockerfile . -t pyronear/alert-api:latest
 
 # Run the docker
 run:
-	poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-	docker compose up -d --build
+	poetry export -f requirements.txt --without-hashes --output requirements.txt
+	docker compose up -d --build --wait
 
 # Run the docker
 stop:
 	docker compose down
 
 run-dev:
-	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
-	docker compose -f docker-compose.test.yml up -d --build
+	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
+	docker compose -f docker-compose.dev.yml -f docker-compose.override.yml up -d --build --wait
 	docker compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
 
 stop-dev:
-	docker compose -f docker-compose.test.yml down
+	docker compose -f docker-compose.dev.yml down
 
 # Run tests for the library
 test:
-	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
-	docker compose -f docker-compose.test.yml up -d --build
+	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
+	docker compose -f docker-compose.dev.yml up -d --build
 	docker compose exec localstack awslocal s3 mb s3://sample-bucket
 	docker compose exec -T backend pytest --cov=app
-	docker compose -f docker-compose.test.yml down
+	docker compose -f docker-compose.dev.yml down
 
 # Run tests for the Python client
 test-client:

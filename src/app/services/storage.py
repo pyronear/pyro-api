@@ -9,7 +9,7 @@ from typing import Any, Dict
 import boto3
 from fastapi import HTTPException
 
-from app import config as cfg
+from app.core.config import settings
 
 __all__ = ["s3_bucket"]
 
@@ -81,5 +81,5 @@ class S3Bucket:
 
 
 s3_bucket = S3Bucket(
-    cfg.S3_REGION, cfg.S3_ENDPOINT_URL, cfg.S3_ACCESS_KEY, cfg.S3_SECRET_KEY, cfg.BUCKET_NAME, cfg.S3_PROXY_URL
+    settings.S3_REGION, settings.S3_ENDPOINT_URL, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, settings.S3_BUCKET_NAME, settings.S3_PROXY_URL
 )
