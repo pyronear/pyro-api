@@ -1,90 +1,100 @@
 'ext: client/tests':
-- client/tests/*
+- changed-files:
+  - any-glob-to-any-file: client/tests/*
 
 'ext: client/docs':
-- client/docs/*
+- changed-files:
+  - any-glob-to-any-file: client/docs/*
 
 'ext: client':
-- client/pyroclient/*
+- changed-files:
+  - any-glob-to-any-file: client/pyroclient/*
 
 'ext: tests':
-- src/tests/*
+- changed-files:
+  - any-glob-to-any-file: src/tests/*
+
+'ext: scripts':
+- changed-files:
+  - any-glob-to-any-file: scripts/*
+
+'module: core':
+- changed-files:
+  - any-glob-to-any-file:
+    - src/app/main.py
+    - src/app/core/*
 
 'module: database':
-- src/app/db/*
+- changed-files:
+  - any-glob-to-any-file: src/app/db.py
 
 'module: schemas':
-- src/app/schemas/*
+- changed-files:
+  - any-glob-to-any-file: src/app/schemas/*
 
 'module: models':
-- src/app/models/*
+- changed-files:
+  - any-glob-to-any-file: src/app/models.py
 
 'module: services':
-- src/app/services/*
+- changed-files:
+  - any-glob-to-any-file: src/app/services/*
 
-'route: accesses':
-- src/app/api/endpoints/accesses.py
-- src/app/api/crud/accesses.py
+'module: crud':
+- changed-files:
+  - any-glob-to-any-file: src/app/crud/*
 
-'route: alerts':
-- src/app/api/endpoints/alerts.py
-- src/app/api/crud/alerts.py
+'endpoint: cameras':
+- changed-files:
+  - any-glob-to-any-file: src/app/api/*/endpoints/cameras.py
 
-'route: devices':
-- src/app/api/endpoints/devices.py
+'endpoint: detections':
+- changed-files:
+  - any-glob-to-any-file: src/app/api/*/endpoints/detections.py
 
-'route: events':
-- src/app/api/endpoints/events.py
+'endpoint: login':
+- changed-files:
+  - any-glob-to-any-file: src/app/api/*/endpoints/login.py
 
-'route: groups':
-- src/app/api/endpoints/groups.py
-- src/app/api/crud/groups.py
+'endpoint: users':
+- changed-files:
+  - any-glob-to-any-file: src/app/api/*/endpoints/users.py
 
-'route: installations':
-- src/app/api/endpoints/installations.py
-
-'route: login':
-- src/app/api/endpoints/login.py
-
-'route: media':
-- src/app/api/endpoints/media.py
-
-'route: sites':
-- src/app/api/endpoints/sites.py
-
-'route: users':
-- src/app/api/endpoints/users.py
-
-'route: webhooks':
-- src/app/api/endpoints/webhooks.py
-- src/app/api/crud/webhooks.py
 
 'topic: build':
-- src/app/requirements.txt
-- src/requirements-dev.txt
-- pyproject.toml
-- client/pyproject.toml
-- client/setup.py
+- changed-files:
+  - any-glob-to-any-file: 
+    - pyproject.toml
+    - poetry.lock
+    - client/pyproject.toml
+    - client/setup.py
+
+'topic: migration':
+- changed-files:
+  - any-glob-to-any-file:
+    - src/alembic.ini
+    - src/migrations/*
 
 'topic: ci':
-- .github/*
+- changed-files:
+  - any-glob-to-any-file: .github/*
 
 'topic: docker':
-- docker-compose.yml
-- docker-compose.test.yml
-- src/Dockerfile
-- src/Dockerfile-dev
+- changed-files:
+  - any-glob-to-any-file: 
+    - docker-compose.*
+    - src/Dockerfile
+    - .env.example
 
-'topic: documentation':
-- README.md
-- CONTRIBUTING.md
-- CODE_OF_CONDUCT.md
-- client/README.md
-- client/CONTRIBUTING.md
+'topic: docs':
+- changed-files:
+  - any-glob-to-any-file: 
+    - README.md
+    - CONTRIBUTING.md
+    - CODE_OF_CONDUCT.md
+    - client/README.md
+    - client/CONTRIBUTING.md
 
-'topic: nginx':
-- nginx/*
-
-'topic: security':
-- src/app/api/deps.py
-- src/app/api/security.py
+'topic: style':
+- changed-files:
+  - any-glob-to-any-file: .pre-commit-config.yaml
