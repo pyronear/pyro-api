@@ -80,8 +80,7 @@ def convert_loc_to_str(
             f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
         )
         return f"[{','.join(box_list)}]"
-    else:
-        return "[]"
+    return "[]"
 
 
 class Client:
@@ -121,9 +120,8 @@ class Client:
         )
         if response.status_code == 200:
             return response.json()["access_token"]
-        else:
-            # Anyone has a better suggestion?
-            raise HTTPRequestException(response.status_code, response.text)
+        # Anyone has a better suggestion?
+        raise HTTPRequestException(response.status_code, response.text)
 
     # Device functions
     def heartbeat(self) -> Response:
