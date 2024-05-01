@@ -178,7 +178,7 @@ async def init_test_db(monkeypatch, test_db):
         [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details):
     auth = None
     if isinstance(access_idx, int):
@@ -202,7 +202,7 @@ async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, s
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
     # Create a custom access token
     auth = None
@@ -227,7 +227,7 @@ async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_c
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_past_events(
     test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results
 ):
@@ -261,7 +261,7 @@ async def test_fetch_past_events(
         [2, {"lat": 0.0, "type": "wildfire"}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -404,7 +404,7 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         ],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_event(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, event_id, status_code, status_details
 ):
@@ -442,7 +442,7 @@ async def test_update_event(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -469,7 +469,7 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
         [2, 1, 403, "Your access scope is not compatible with this operation."],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_acknowledge_event(
     test_app_asyncio, init_test_db, test_db, access_idx, event_id, status_code, status_details
 ):
@@ -499,7 +499,7 @@ async def test_acknowledge_event(
         [4, 200, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -536,7 +536,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
         [4, 2, 403, "This access can't read resources from group_id=1"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_alerts_for_event(
     test_app_asyncio, init_test_db, access_idx, event_id, status_code, status_details
 ):

@@ -77,7 +77,7 @@ async def init_test_db(monkeypatch, test_db):
         [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -103,7 +103,7 @@ async def test_get_site(test_app_asyncio, init_test_db, access_idx, site_id, sta
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_sites):
     # Create a custom access token
     auth = None
@@ -222,7 +222,7 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
         [1, {"name": "my_site", "group_id": 1, "lat": 0.0, "country": "FR", "geocode": "01"}, 1, False, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_site(
     test_app_asyncio,
     init_test_db,
@@ -318,7 +318,7 @@ async def test_create_site(
         ],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_site(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, site_id, status_code, status_details
 ):
@@ -350,7 +350,7 @@ async def test_update_site(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_site(test_app_asyncio, init_test_db, access_idx, site_id, status_code, status_details):
     # Create a custom access token
     auth = None

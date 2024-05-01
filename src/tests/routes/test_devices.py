@@ -103,7 +103,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -130,7 +130,7 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
         [3, 200, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -162,7 +162,7 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_devices):
     # Create a custom access token
     auth = None
@@ -189,7 +189,7 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
         [2, 403, "Your access scope is not compatible with this operation."],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -276,7 +276,7 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
         ],  # invalid angle_of_view
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_register_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
@@ -355,7 +355,7 @@ async def test_register_device(
         ],  # invalid angle_of_view
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_register_my_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
@@ -602,7 +602,7 @@ async def test_register_my_device(
         ],  # invalid angle_of_view
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
@@ -677,7 +677,7 @@ async def test_update_device(
         [1, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_device_location(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
@@ -716,7 +716,7 @@ async def test_update_device_location(
         [1, {"software_hash": "my_sha256hash"}, 999, 404, "Table devices has no entry with id=999"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_device_hash(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
@@ -758,7 +758,7 @@ async def test_update_device_hash(
         [2, {"lon": "position", "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_my_location(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
@@ -802,7 +802,7 @@ async def test_update_my_location(
         [1, {"password": "new_password"}, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_device_password(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, device_id, status_code, status_details
 ):
@@ -834,7 +834,7 @@ async def test_update_device_password(
         [2, 200, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -877,7 +877,7 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_device(test_app_asyncio, init_test_db, access_idx, device_id, status_code, status_details):
     # Create a custom access token
     auth = None

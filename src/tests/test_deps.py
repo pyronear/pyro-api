@@ -95,7 +95,7 @@ async def init_test_db(monkeypatch, test_db):
         [ACCESS_TABLE[3], "device", 3, False],  # Correct
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_current_access(init_test_db, token_data, scope, expected_access, exception):
     # Create a token for the access we'll want to retrieve
     if isinstance(token_data, str):
@@ -120,7 +120,7 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
         [2, None],  # Not a user access
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_current_user(init_test_db, access_idx, user_idx):
     if isinstance(user_idx, int):
         response = await deps.get_current_user(AccessRead(**ACCESS_TABLE[access_idx]))
@@ -137,7 +137,7 @@ async def test_get_current_user(init_test_db, access_idx, user_idx):
         [1, None],  # Not a device access
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_current_device(init_test_db, access_idx, device_idx):
     if isinstance(device_idx, int):
         response = await deps.get_current_device(AccessRead(**ACCESS_TABLE[access_idx]))

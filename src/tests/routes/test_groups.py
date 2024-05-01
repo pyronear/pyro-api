@@ -85,7 +85,7 @@ async def init_test_db(monkeypatch, test_db):
         [0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_group(test_app_asyncio, init_test_db, group_id, status_code, status_details):
     response = await test_app_asyncio.get(f"/groups/{group_id}")
     response_json = response.json()
@@ -97,7 +97,7 @@ async def test_get_group(test_app_asyncio, init_test_db, group_id, status_code, 
         assert response_json == GROUP_TABLE[group_id - 1]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_groups(test_app_asyncio, init_test_db):
     response = await test_app_asyncio.get("/groups/")
     assert response.status_code == 200
@@ -115,7 +115,7 @@ async def test_fetch_groups(test_app_asyncio, init_test_db):
         [1, {"names": "my_group"}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_group(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -149,7 +149,7 @@ async def test_create_group(test_app_asyncio, init_test_db, test_db, access_idx,
         [1, {"name": "foo"}, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_group(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, group_id, status_code, status_details
 ):
@@ -180,7 +180,7 @@ async def test_update_group(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_group(test_app_asyncio, init_test_db, access_idx, group_id, status_code, status_details):
     # Create a custom access token
     auth = None

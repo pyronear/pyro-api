@@ -194,7 +194,7 @@ async def init_test_db(monkeypatch, test_db):
         [2, db.sites, 2],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_entity_is_same_group(test_app_asyncio, init_test_db, entity_id, table, expected_group_id):
     should_be_same_group = await crud.authorizations.is_in_same_group(table, entity_id, expected_group_id)
     assert should_be_same_group
@@ -209,7 +209,7 @@ async def test_entity_is_same_group(test_app_asyncio, init_test_db, entity_id, t
         [4, 4],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_access_is_same_group(test_app_asyncio, init_test_db, access_id, expected_group_id):
     should_be_same_group = await crud.authorizations.is_access_in_group(access_id, expected_group_id)
     assert should_be_same_group
@@ -224,7 +224,7 @@ async def test_access_is_same_group(test_app_asyncio, init_test_db, access_id, e
         [4, False],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_result):
     admin_access_result = await crud.authorizations.is_admin_access(access_id)
     assert admin_access_result == expected_result
@@ -234,7 +234,7 @@ async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_
     "access_id, group_id, should_raise",
     [[1, 1, False], [1, 2, True], [2, 1, False], [2, 2, False]],  # Because Admin
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
     if should_raise:
         with pytest.raises(HTTPException):
@@ -247,7 +247,7 @@ async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group
     "access_id, group_id, should_raise",
     [[1, 1, False], [1, None, False], [1, 2, True], [2, 1, False], [2, 2, False], [2, None, False]],  # Because Admin
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_group_update(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
     if should_raise:
         with pytest.raises(HTTPException):

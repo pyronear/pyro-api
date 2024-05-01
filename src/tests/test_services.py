@@ -29,7 +29,7 @@ def test_s3_bucket():
     assert isinstance(s3_bucket, S3Bucket)
 
 
-@pytest.fixture
+@pytest.fixture()
 def unset_telegram_token(monkeypatch):
     monkeypatch.setattr(cfg, "TELEGRAM_TOKEN", None)
 

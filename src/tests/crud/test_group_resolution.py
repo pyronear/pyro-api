@@ -193,7 +193,7 @@ async def init_test_db(monkeypatch, test_db):
         [2, db.sites, 2],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_entity_group_retrieval(test_app_asyncio, init_test_db, entity_id, table, expected_group_id):
     retrieved_group_id = await crud.groups.get_entity_group_id(table, entity_id)
     assert retrieved_group_id == expected_group_id

@@ -47,7 +47,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -73,7 +73,7 @@ async def test_get_webhook(test_app_asyncio, init_test_db, access_idx, webhook_i
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_webhooks(
     test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_webhooks
 ):
@@ -111,7 +111,7 @@ async def test_fetch_webhooks(
         [1, {"callback": "create_alert", "url": "hello"}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_wedbhook(
     test_app_asyncio,
     init_test_db,
@@ -168,7 +168,7 @@ async def test_create_wedbhook(
         ],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_webhook(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, webhook_id, status_code, status_details
 ):
@@ -200,7 +200,7 @@ async def test_update_webhook(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_webhook(test_app_asyncio, init_test_db, access_idx, webhook_id, status_code, status_details):
     # Create a custom access token
     auth = None

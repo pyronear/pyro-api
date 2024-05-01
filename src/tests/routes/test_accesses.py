@@ -37,7 +37,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -67,7 +67,7 @@ async def test_get_access(init_test_db, test_app_asyncio, access_idx, access_id,
         [1, 200, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_accesses(init_test_db, test_app_asyncio, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None

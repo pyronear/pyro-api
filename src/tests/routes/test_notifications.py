@@ -69,7 +69,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_notification(
     test_app_asyncio, init_test_db, access_idx, notification_id, status_code, status_details
 ):
@@ -97,7 +97,7 @@ async def test_get_notification(
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_notifications(
     test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_notifications
 ):
@@ -135,7 +135,7 @@ async def test_fetch_notifications(
         [1, PAYLOAD_TABLE[1], 201, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_send_notification(
     test_app_asyncio,
     init_test_db,
@@ -174,7 +174,7 @@ async def test_send_notification(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_notification(
     test_app_asyncio, init_test_db, access_idx, notification_id, status_code, status_details
 ):

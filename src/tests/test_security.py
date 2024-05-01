@@ -8,7 +8,7 @@ from app import config as cfg
 from app.api import security
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_hash_password():
     pwd1 = "my_password"
     hash_pwd1 = await security.hash_password(pwd1)
@@ -19,7 +19,7 @@ async def test_hash_password():
     assert hash_pwd1 != await security.hash_password(pwd1)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_verify_password():
     pwd1 = "my_password"
     hash_pwd1 = await security.hash_password(pwd1)
@@ -49,7 +49,7 @@ def test_hash_content_file():
         [{"data": "my_data"}, None, cfg.ACCESS_TOKEN_EXPIRE_MINUTES],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_access_token(content, expiration, expected_delta):
     delta = timedelta(minutes=expiration) if isinstance(expiration, int) else None
     payload = await security.create_access_token(content, expires_delta=delta)

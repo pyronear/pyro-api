@@ -1,4 +1,5 @@
 import json
+import operator
 from datetime import datetime
 
 import pytest
@@ -50,7 +51,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, user_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -80,7 +81,7 @@ async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, use
         [2, None, 403, "Your access scope is not compatible with this operation."],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, user_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -108,7 +109,7 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_users):
     # Create a custom access token
     auth = None
@@ -151,7 +152,7 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
         [1, {"logins": "fourth_user", "password": "third_pwd", "group_id": 1}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_user(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, status_code, status_details
 ):
@@ -160,8 +161,8 @@ async def test_create_user(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    max_user_id = max(USER_TABLE_FOR_DB, key=lambda x: x["id"])["id"]
-    max_access_id = max(ACCESS_TABLE, key=lambda x: x["id"])["id"]
+    max_user_id = max(USER_TABLE_FOR_DB, key=operator.itemgetter("id"))["id"]
+    max_access_id = max(ACCESS_TABLE, key=operator.itemgetter("id"))["id"]
 
     utc_dt = datetime.utcnow()
 
@@ -203,7 +204,7 @@ async def test_create_user(
         [1, {"login": "second_login"}, 1, 409, "An entry with login='second_login' already exists."],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_user(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, user_id, status_code, status_details
 ):
@@ -244,7 +245,7 @@ async def test_update_user(
         [0, {"login": "second_login"}, 409, "An entry with login='second_login' already exists."],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_my_info(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
@@ -284,7 +285,7 @@ async def test_update_my_info(
         [1, {"password": "new_password"}, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_user_password(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, user_id, status_code, status_details
 ):
@@ -321,7 +322,7 @@ async def test_update_user_password(
         [0, {"password": "me"}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_my_password(
     test_app_asyncio, init_test_db, test_db, monkeypatch, access_idx, payload, status_code, status_details
 ):
@@ -353,7 +354,7 @@ async def test_update_my_password(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_user(
     test_app_asyncio, init_test_db, monkeypatch, access_idx, user_id, status_code, status_details
 ):

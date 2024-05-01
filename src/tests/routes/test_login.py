@@ -31,7 +31,7 @@ async def init_test_db(monkeypatch, test_db):
         [{"username": "first_login", "password": "first_pwd"}, 200, None],  # valid
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_access_token(test_app_asyncio, init_test_db, payload, status_code, status_detail):
     response = await test_app_asyncio.post("/login/access-token", data=payload)
 

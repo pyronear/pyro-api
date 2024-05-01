@@ -217,7 +217,7 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.recipients, RECIPIENT_TABLE_FOR_DB)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_check_media_existence_raise(init_test_db):
     with pytest.raises(HTTPException):
         await check_media_existence(-9999)
@@ -235,7 +235,7 @@ async def test_check_media_existence_raise(init_test_db):
         [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -261,7 +261,7 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
     # Create a custom access token
     auth = None
@@ -286,7 +286,7 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
         [4, 200, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -410,7 +410,7 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
         ],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_alert(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
@@ -470,7 +470,7 @@ async def test_create_alert(
         [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 4, 201, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_alert_by_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, expected_event_id, status_code, status_details
 ):
@@ -521,7 +521,7 @@ async def test_create_alert_by_device(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -540,7 +540,7 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
 
 
 @pytest.mark.parametrize("device_id, expected_alert_id", [(2, None), (1, 4)])
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_resolve_previous_alert(test_app_asyncio, init_test_db, device_id, expected_alert_id):
     alert = await resolve_previous_alert(device_id)
     assert expected_alert_id is None if alert is None else expected_alert_id == alert.id

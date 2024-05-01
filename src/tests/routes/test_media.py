@@ -99,7 +99,7 @@ async def init_test_db(monkeypatch, test_db):
         [4, 1, 403, "This access can't read resources from group_id=1"],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -124,7 +124,7 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
     # Create a custom access token
     auth = None
@@ -152,7 +152,7 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
         [1, {}, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -186,7 +186,7 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
         [2, {}, 201, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_media_from_device(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, status_code, status_details
 ):
@@ -228,7 +228,7 @@ async def test_create_media_from_device(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_media(
     test_app_asyncio, init_test_db, monkeypatch, access_idx, media_id, status_code, status_details
 ):
@@ -253,7 +253,7 @@ async def test_delete_media(
         assert all(entry["id"] != media_id for entry in remaining_media.json())
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
     device_idx = 2
     admin_idx = 1
@@ -318,7 +318,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     assert response.status_code == 200, print(response.json()["detail"])
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
     device_idx = 2
     admin_idx = 1

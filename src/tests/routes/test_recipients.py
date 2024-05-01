@@ -66,7 +66,7 @@ async def init_test_db(monkeypatch, test_db):
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_get_recipient(test_app_asyncio, init_test_db, access_idx, recipient_id, status_code, status_details):
     # Create a custom access token
     auth = None
@@ -92,7 +92,7 @@ async def test_get_recipient(test_app_asyncio, init_test_db, access_idx, recipie
         [2, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_recipients(
     test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_recipients
 ):
@@ -121,7 +121,7 @@ async def test_fetch_recipients(
         [2, 1, 403, "Your access scope is not compatible with this operation.", None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_fetch_recipients_for_group(
     test_app_asyncio, init_test_db, access_idx, group_id, status_code, status_details, expected_recipients
 ):
@@ -159,7 +159,7 @@ async def test_fetch_recipients_for_group(
         [1, PAYLOAD_TABLE[1], 201, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_recipient(
     test_app_asyncio,
     init_test_db,
@@ -217,7 +217,7 @@ async def test_create_recipient(
         ],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_update_recipient(
     test_app_asyncio, init_test_db, test_db, access_idx, payload, recipient_id, status_code, status_details
 ):
@@ -250,7 +250,7 @@ async def test_update_recipient(
         [1, 0, 422, None],
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_recipient(test_app_asyncio, init_test_db, access_idx, recipient_id, status_code, status_details):
     # Create a custom access token
     auth = None
