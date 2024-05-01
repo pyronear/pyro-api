@@ -40,7 +40,7 @@ def test_no_send_telegram_msg(unset_telegram_token):
 
 @pytest.mark.skipif(not cfg.TELEGRAM_TOKEN, reason="TELEGRAM_TOKEN not set")
 @pytest.mark.parametrize(
-    "chat_id, msg, expected_status_code",
+    ("chat_id", "msg", "expected_status_code"),
     [
         ("invalid-chat-id", "Fake message", 400),
         pytest.param(

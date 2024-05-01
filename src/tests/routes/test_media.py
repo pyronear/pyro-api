@@ -88,15 +88,15 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, media_id, status_code, status_details",
+    ("access_idx", "media_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table media has no entry with id=999"],
-        [1, 0, 422, None],
-        [4, 1, 403, "This access can't read resources from group_id=1"],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table media has no entry with id=999"),
+        (1, 0, 422, None),
+        (4, 1, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()
@@ -116,12 +116,12 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    ("access_idx", "status_code", "status_details", "expected_results"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [MEDIA_TABLE[0]]],
-        [1, 200, None, MEDIA_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [MEDIA_TABLE[0]]),
+        (1, 200, None, MEDIA_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -141,15 +141,15 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [0, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
-        [1, {"device_id": 1}, 201, None],
-        [1, {"device_id": 42}, 404, "Table devices has no entry with id=42"],
-        [2, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."],
-        [1, {"device_id": "device"}, 422, None],
-        [1, {}, 422, None],
+        (None, {}, 401, "Not authenticated"),
+        (0, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."),
+        (1, {"device_id": 1}, 201, None),
+        (1, {"device_id": 42}, 404, "Table devices has no entry with id=42"),
+        (2, {"device_id": 1}, 403, "Your access scope is not compatible with this operation."),
+        (1, {"device_id": "device"}, 422, None),
+        (1, {}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -174,16 +174,17 @@ async def test_create_media(test_app_asyncio, init_test_db, test_db, access_idx,
         new_media = dict(**new_media)
 
         # Timestamp consistency
-        assert new_media["created_at"] > utc_dt and new_media["created_at"] < datetime.utcnow()
+        assert new_media["created_at"] > utc_dt
+        assert new_media["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [0, {}, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 403, "Your access scope is not compatible with this operation."],
-        [2, {}, 201, None],
+        (None, {}, 401, "Not authenticated"),
+        (0, {}, 403, "Your access scope is not compatible with this operation."),
+        (1, {}, 403, "Your access scope is not compatible with this operation."),
+        (2, {}, 201, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -214,18 +215,19 @@ async def test_create_media_from_device(
         new_media = await get_entry(test_db, db.media, json_response["id"])
         new_media = dict(**new_media)
         # Timestamp consistency
-        assert new_media["created_at"] > utc_dt and new_media["created_at"] < datetime.utcnow()
+        assert new_media["created_at"] > utc_dt
+        assert new_media["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
-    "access_idx, media_id, status_code, status_details",
+    ("access_idx", "media_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table media has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table media has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -237,7 +239,7 @@ async def test_delete_media(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename) -> bool:
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
@@ -273,7 +275,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     assert response.status_code == 201
 
     # 2 - Upload something
-    async def mock_upload_file(bucket_key, file_binary):
+    async def mock_upload_file(bucket_key, file_binary) -> bool:
         return True
 
     monkeypatch.setattr(s3_bucket, "upload_file", mock_upload_file)
@@ -291,7 +293,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     monkeypatch.setattr(s3_bucket, "get_file_metadata", mock_get_file_metadata)
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename) -> bool:
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
@@ -338,7 +340,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
     assert response.status_code == 201
 
     # Sanitize bucket actions
-    async def mock_upload_file(bucket_key, file_binary):
+    async def mock_upload_file(bucket_key, file_binary) -> bool:
         return True
 
     monkeypatch.setattr(s3_bucket, "upload_file", mock_upload_file)
@@ -356,7 +358,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     monkeypatch.setattr(s3_bucket, "get_file_metadata", mock_get_file_metadata)
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename) -> bool:
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)

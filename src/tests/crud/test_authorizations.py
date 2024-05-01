@@ -183,15 +183,15 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "entity_id, table, expected_group_id",
+    ("entity_id", "table", "expected_group_id"),
     [
-        [1, db.accesses, 1],
-        [2, db.users, 2],
-        [1, db.devices, 3],
-        [1, db.media, 3],
-        [2, db.events, 4],
-        [3, db.alerts, 4],
-        [2, db.sites, 2],
+        (1, db.accesses, 1),
+        (2, db.users, 2),
+        (1, db.devices, 3),
+        (1, db.media, 3),
+        (2, db.events, 4),
+        (3, db.alerts, 4),
+        (2, db.sites, 2),
     ],
 )
 @pytest.mark.asyncio()
@@ -201,12 +201,12 @@ async def test_entity_is_same_group(test_app_asyncio, init_test_db, entity_id, t
 
 
 @pytest.mark.parametrize(
-    "access_id, expected_group_id",
+    ("access_id", "expected_group_id"),
     [
-        [1, 1],
-        [2, 2],
-        [3, 3],
-        [4, 4],
+        (1, 1),
+        (2, 2),
+        (3, 3),
+        (4, 4),
     ],
 )
 @pytest.mark.asyncio()
@@ -216,12 +216,12 @@ async def test_access_is_same_group(test_app_asyncio, init_test_db, access_id, e
 
 
 @pytest.mark.parametrize(
-    "access_id, expected_result",
+    ("access_id", "expected_result"),
     [
-        [1, False],
-        [2, True],
-        [3, False],
-        [4, False],
+        (1, False),
+        (2, True),
+        (3, False),
+        (4, False),
     ],
 )
 @pytest.mark.asyncio()
@@ -231,8 +231,8 @@ async def test_admin_access(test_app_asyncio, init_test_db, access_id, expected_
 
 
 @pytest.mark.parametrize(
-    "access_id, group_id, should_raise",
-    [[1, 1, False], [1, 2, True], [2, 1, False], [2, 2, False]],  # Because Admin
+    ("access_id", "group_id", "should_raise"),
+    [(1, 1, False), (1, 2, True), (2, 1, False), (2, 2, False)],  # Because Admin
 )
 @pytest.mark.asyncio()
 async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group_id, should_raise):
@@ -244,8 +244,8 @@ async def test_check_group_read(test_app_asyncio, init_test_db, access_id, group
 
 
 @pytest.mark.parametrize(
-    "access_id, group_id, should_raise",
-    [[1, 1, False], [1, None, False], [1, 2, True], [2, 1, False], [2, 2, False], [2, None, False]],  # Because Admin
+    ("access_id", "group_id", "should_raise"),
+    [(1, 1, False), (1, None, False), (1, 2, True), (2, 1, False), (2, 2, False), (2, None, False)],  # Because Admin
 )
 @pytest.mark.asyncio()
 async def test_check_group_update(test_app_asyncio, init_test_db, access_id, group_id, should_raise):

@@ -224,15 +224,15 @@ async def test_check_media_existence_raise(init_test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, alert_id, status_code, status_details",
+    ("access_idx", "alert_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table alerts has no entry with id=999"],
-        [1, 0, 422, None],
-        [4, 1, 403, "This access can't read resources from group_id=1"],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table alerts has no entry with id=999"),
+        (1, 0, 422, None),
+        (4, 1, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()
@@ -254,11 +254,11 @@ async def test_get_alert(test_app_asyncio, init_test_db, access_idx, alert_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    ("access_idx", "status_code", "status_details", "expected_results"),
     [
-        [0, 200, None, [ALERT_TABLE[0], ALERT_TABLE[1], ALERT_TABLE[3]]],
-        [1, 200, None, ALERT_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (0, 200, None, [ALERT_TABLE[0], ALERT_TABLE[1], ALERT_TABLE[3]]),
+        (1, 200, None, ALERT_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -278,12 +278,12 @@ async def test_fetch_alerts(test_app_asyncio, init_test_db, access_idx, status_c
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    ("access_idx", "status_code", "status_details"),
     [
-        [0, 200, None],
-        [1, 200, None],
-        [2, 403, "Your access scope is not compatible with this operation."],
-        [4, 200, None],
+        (0, 200, None),
+        (1, 200, None),
+        (2, 403, "Your access scope is not compatible with this operation."),
+        (4, 200, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -316,9 +316,9 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, expected_event_id, status_code, status_details",
+    ("access_idx", "payload", "expected_event_id", "status_code", "status_details"),
     [
-        [
+        (
             0,
             {
                 "device_id": 2,
@@ -332,8 +332,8 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             None,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "device_id": 2,
@@ -347,22 +347,22 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             None,
             201,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"device_id": 2, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
             4,
             201,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"device_id": 1, "media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 47.5, "localization": None},
             3,
             201,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {
                 "device_id": 2,
@@ -376,9 +376,9 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             None,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "localization": None}, None, 422, None],
-        [
+        ),
+        (1, {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "localization": None}, None, 422, None),
+        (
             1,
             {
                 "device_id": 2,
@@ -392,8 +392,8 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             None,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "device_id": 2,
@@ -407,7 +407,7 @@ async def test_fetch_ongoing_alerts(test_app_asyncio, init_test_db, access_idx, 
             None,
             422,
             None,
-        ],
+        ),
     ],
 )
 @pytest.mark.asyncio()
@@ -442,32 +442,32 @@ async def test_create_alert(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, expected_event_id, status_code, status_details",
+    ("access_idx", "payload", "expected_event_id", "status_code", "status_details"),
     [
-        [
+        (
             0,
             {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             2,
             {"media_id": 1, "event_id": 2, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None},
             None,
             201,
             None,
-        ],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 3, 201, None],
-        [2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "localization": None}, 3, 201, None],
-        [3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 4, 201, None],
+        ),
+        (2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 3, 201, None),
+        (2, {"media_id": 1, "lat": 10.0, "lon": 8.0, "localization": None}, 3, 201, None),
+        (3, {"media_id": 1, "lat": 10.0, "lon": 8.0, "azimuth": 0.0, "localization": None}, 4, 201, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -512,13 +512,13 @@ async def test_create_alert_by_device(
 
 
 @pytest.mark.parametrize(
-    "access_idx, alert_id, status_code, status_details",
+    ("access_idx", "alert_id", "status_code", "status_details"),
     [
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table alerts has no entry with id=999"],
-        [1, 0, 422, None],
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table alerts has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -539,7 +539,7 @@ async def test_delete_alert(test_app_asyncio, init_test_db, access_idx, alert_id
         assert all(entry["id"] != alert_id for entry in remaining_alerts.json())
 
 
-@pytest.mark.parametrize("device_id, expected_alert_id", [(2, None), (1, 4)])
+@pytest.mark.parametrize(("device_id", "expected_alert_id"), [(2, None), (1, 4)])
 @pytest.mark.asyncio()
 async def test_resolve_previous_alert(test_app_asyncio, init_test_db, device_id, expected_alert_id):
     alert = await resolve_previous_alert(device_id)

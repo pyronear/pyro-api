@@ -124,9 +124,7 @@ def parse_args():
         "--creds", dest="creds", help="Enter different credentials than the default ones", action="store_true"
     )
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

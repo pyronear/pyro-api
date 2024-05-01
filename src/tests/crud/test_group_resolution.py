@@ -182,15 +182,15 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "entity_id, table, expected_group_id",
+    ("entity_id", "table", "expected_group_id"),
     [
-        [1, db.accesses, 1],
-        [2, db.users, 2],
-        [1, db.devices, 3],
-        [1, db.media, 3],
-        [2, db.events, 4],
-        [3, db.alerts, 4],
-        [2, db.sites, 2],
+        (1, db.accesses, 1),
+        (2, db.users, 2),
+        (1, db.devices, 3),
+        (1, db.media, 3),
+        (2, db.events, 4),
+        (3, db.alerts, 4),
+        (2, db.sites, 2),
     ],
 )
 @pytest.mark.asyncio()

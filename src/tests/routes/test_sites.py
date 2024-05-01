@@ -67,14 +67,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, site_id, status_code, status_details",
+    ("access_idx", "site_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [1, 999, 404, "Table sites has no entry with id=999"],
-        [0, 0, 422, None],
-        [4, 1, 403, "This access can't read resources from group_id=1"],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (1, 999, 404, "Table sites has no entry with id=999"),
+        (0, 0, 422, None),
+        (4, 1, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()
@@ -95,12 +95,12 @@ async def test_get_site(test_app_asyncio, init_test_db, access_idx, site_id, sta
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_sites",
+    ("access_idx", "status_code", "status_details", "expected_sites"),
     [
-        [None, 401, "Not authenticated", []],
-        [0, 200, None, [SITE_TABLE[0]]],
-        [1, 200, None, SITE_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", []),
+        (0, 200, None, [SITE_TABLE[0]]),
+        (1, 200, None, SITE_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -121,10 +121,10 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, expected_group_id, no_alert, status_code, status_details",
+    ("access_idx", "payload", "expected_group_id", "no_alert", "status_code", "status_details"),
     [
-        [None, {}, None, False, 401, "Not authenticated"],
-        [
+        (None, {}, None, False, 401, "Not authenticated"),
+        (
             1,
             {
                 "name": "my_site",
@@ -139,8 +139,8 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
             False,
             201,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "name": "my_site",
@@ -155,8 +155,8 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
             False,
             201,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "name": "my_site",
@@ -170,56 +170,56 @@ async def test_fetch_sites(test_app_asyncio, init_test_db, access_idx, status_co
             True,
             201,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"name": "my_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             True,
             201,
             None,
-        ],
-        [
+        ),
+        (
             0,
             {"name": "my_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             False,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             0,
             {"name": "my_site", "group_id": 2, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             True,
             403,
             "This access can't update resources for group_id=2",
-        ],
-        [
+        ),
+        (
             0,
             {"name": "my_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             True,
             201,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {"name": "my_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             False,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"names": "my_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             False,
             422,
             None,
-        ],
-        [1, {"name": "my_site", "group_id": 1, "lat": 0.0, "country": "FR", "geocode": "01"}, 1, False, 422, None],
+        ),
+        (1, {"name": "my_site", "group_id": 1, "lat": 0.0, "country": "FR", "geocode": "01"}, 1, False, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -258,64 +258,65 @@ async def test_create_site(
         assert {k: v for k, v in json_response.items() if k != "created_at"} == test_response
         new_site_in_db = await get_entry(test_db, db.sites, json_response["id"])
         new_site_in_db = dict(**new_site_in_db)
-        assert new_site_in_db["created_at"] > utc_dt and new_site_in_db["created_at"] < datetime.utcnow()
+        assert new_site_in_db["created_at"] > utc_dt
+        assert new_site_in_db["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, site_id, status_code, status_details",
+    ("access_idx", "payload", "site_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [
+        (None, {}, 1, 401, "Not authenticated"),
+        (
             1,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             0,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {}, 1, 422, None],
-        [1, {"site_name": "foo"}, 1, 422, None],
-        [
+        ),
+        (1, {}, 1, 422, None),
+        (1, {"site_name": "foo"}, 1, 422, None),
+        (
             1,
             {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
             999,
             404,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"name": "1", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"name": "foo", "group_id": 1, "lat": 0.0, "lon": 0.0, "type": "tower", "country": "FR", "geocode": "01"},
             0,
             422,
             None,
-        ],
-        [
+        ),
+        (
             4,
             {"name": "renamed_site", "group_id": 1, "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "01"},
             1,
             403,
             "This access can't update resources for group_id=1",
-        ],
+        ),
     ],
 )
 @pytest.mark.asyncio()
@@ -341,13 +342,13 @@ async def test_update_site(
 
 
 @pytest.mark.parametrize(
-    "access_idx, site_id, status_code, status_details",
+    ("access_idx", "site_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [1, 1, 200, None],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table sites has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (1, 1, 200, None),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table sites has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()

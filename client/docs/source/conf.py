@@ -110,7 +110,7 @@ html_static_path = ["_static"]
 
 # Add googleanalytics id
 # ref: https://github.com/orenhecht/googleanalytics/blob/master/sphinxcontrib/googleanalytics.py
-def add_ga_javascript(app, pagename, templatename, context, doctree):
+def add_ga_javascript(app, pagename, templatename, context, doctree) -> None:
     metatags = context.get("metatags", "")
     metatags += """
     <!-- Global site tag (gtag.js) - Google Analytics -->
@@ -125,7 +125,7 @@ def add_ga_javascript(app, pagename, templatename, context, doctree):
     context["metatags"] = metatags
 
 
-def setup(app):
+def setup(app) -> None:
     # app.add_config_value("googleanalytics_id", "", "html")
     app.add_css_file("css/custom.css")
     app.add_js_file("js/custom.js")

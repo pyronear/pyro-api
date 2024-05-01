@@ -43,10 +43,10 @@ def test_hash_content_file():
 
 
 @pytest.mark.parametrize(
-    "content, expiration, expected_delta",
+    ("content", "expiration", "expected_delta"),
     [
-        [{"data": "my_data"}, 60, 60],
-        [{"data": "my_data"}, None, cfg.ACCESS_TOKEN_EXPIRE_MINUTES],
+        ({"data": "my_data"}, 60, 60),
+        ({"data": "my_data"}, None, cfg.ACCESS_TOKEN_EXPIRE_MINUTES),
     ],
 )
 @pytest.mark.asyncio()

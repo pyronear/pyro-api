@@ -56,14 +56,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, recipient_id, status_code, status_details",
+    ("access_idx", "recipient_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table recipients has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table recipients has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -84,12 +84,12 @@ async def test_get_recipient(test_app_asyncio, init_test_db, access_idx, recipie
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_recipients",
+    ("access_idx", "status_code", "status_details", "expected_recipients"),
     [
-        [None, 401, "Not authenticated", []],
-        [0, 403, "Your access scope is not compatible with this operation.", None],
-        [1, 200, None, RECIPIENT_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", []),
+        (0, 403, "Your access scope is not compatible with this operation.", None),
+        (1, 200, None, RECIPIENT_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -111,14 +111,14 @@ async def test_fetch_recipients(
 
 
 @pytest.mark.parametrize(
-    "access_idx, group_id, status_code, status_details, expected_recipients",
+    ("access_idx", "group_id", "status_code", "status_details", "expected_recipients"),
     [
-        [None, 1, 401, "Not authenticated", []],
-        [0, 1, 403, "Your access scope is not compatible with this operation.", None],
-        [1, 1, 200, None, RECIPIENT_TABLE[0:1]],
-        [1, 2, 200, None, RECIPIENT_TABLE[1:2]],
-        [1, 3, 200, None, []],
-        [2, 1, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 1, 401, "Not authenticated", []),
+        (0, 1, 403, "Your access scope is not compatible with this operation.", None),
+        (1, 1, 200, None, RECIPIENT_TABLE[0:1]),
+        (1, 2, 200, None, RECIPIENT_TABLE[1:2]),
+        (1, 3, 200, None, []),
+        (2, 1, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -140,23 +140,23 @@ async def test_fetch_recipients_for_group(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             PAYLOAD_TABLE[0],
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[0], 201, None],
-        [
+        ),
+        (1, PAYLOAD_TABLE[0], 201, None),
+        (
             2,
             PAYLOAD_TABLE[1],
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[1], 201, None],
+        ),
+        (1, PAYLOAD_TABLE[1], 201, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -189,32 +189,32 @@ async def test_create_recipient(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, recipient_id, status_code, status_details",
+    ("access_idx", "payload", "recipient_id", "status_code", "status_details"),
     [
-        [None, PAYLOAD_TABLE[0], 1, 401, "Not authenticated"],
-        [
+        (None, PAYLOAD_TABLE[0], 1, 401, "Not authenticated"),
+        (
             0,
             PAYLOAD_TABLE[0],
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[1], 1, 200, None],
-        [
+        ),
+        (1, PAYLOAD_TABLE[1], 1, 200, None),
+        (
             2,
             PAYLOAD_TABLE[0],
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[0], 0, 422, None],
-        [
+        ),
+        (1, PAYLOAD_TABLE[0], 0, 422, None),
+        (
             1,
             PAYLOAD_TABLE[0],
             999,
             404,
             "Table recipients has no entry with id=999",
-        ],
+        ),
     ],
 )
 @pytest.mark.asyncio()
@@ -241,13 +241,13 @@ async def test_update_recipient(
 
 
 @pytest.mark.parametrize(
-    "access_idx, recipient_id, status_code, status_details",
+    ("access_idx", "recipient_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [1, 1, 200, None],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table recipients has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (1, 1, 200, None),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table recipients has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()

@@ -41,14 +41,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, user_id, status_code, status_details",
+    ("access_idx", "user_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table users has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table users has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -73,12 +73,12 @@ async def test_get_user(test_app_asyncio, init_test_db, test_db, access_idx, use
 
 
 @pytest.mark.parametrize(
-    "access_idx, user_idx, status_code, status_details",
+    ("access_idx", "user_idx", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 0, 200, None],
-        [1, 1, 200, None],
-        [2, None, 403, "Your access scope is not compatible with this operation."],
+        (None, 1, 401, "Not authenticated"),
+        (0, 0, 200, None),
+        (1, 1, 200, None),
+        (2, None, 403, "Your access scope is not compatible with this operation."),
     ],
 )
 @pytest.mark.asyncio()
@@ -100,13 +100,13 @@ async def test_get_my_user(test_app_asyncio, init_test_db, test_db, access_idx, 
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_users",
+    ("access_idx", "status_code", "status_details", "expected_users"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [USER_TABLE[0], USER_TABLE[1]]],
-        [4, 200, None, [USER_TABLE[-1]]],
-        [1, 200, None, USER_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [USER_TABLE[0], USER_TABLE[1]]),
+        (4, 200, None, [USER_TABLE[-1]]),
+        (1, 200, None, USER_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -126,30 +126,30 @@ async def test_fetch_users(test_app_asyncio, init_test_db, access_idx, status_co
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             {"login": "fourth_user", "password": "third_pwd", "group_id": 1},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 201, None],
-        [
+        ),
+        (1, {"login": "fourth_user", "password": "third_pwd", "group_id": 1}, 201, None),
+        (
             2,
             {"login": "fourth_user", "password": "third_pwd", "group_id": 1},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"login": "first_login", "password": "pwd", "group_id": 1},
             409,
             "An entry with login='first_login' already exists.",
-        ],
-        [1, {"login": "fourth_user", "group_id": 1}, 422, None],
-        [1, {"logins": "fourth_user", "password": "third_pwd", "group_id": 1}, 422, None],
+        ),
+        (1, {"login": "fourth_user", "group_id": 1}, 422, None),
+        (1, {"logins": "fourth_user", "password": "third_pwd", "group_id": 1}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -180,7 +180,8 @@ async def test_create_user(
         # Timestamp consistency
         new_user_in_db = await get_entry(test_db, db.users, json_response["id"])
         new_user_in_db = dict(**new_user_in_db)
-        assert new_user_in_db["created_at"] > utc_dt and new_user_in_db["created_at"] < datetime.utcnow()
+        assert new_user_in_db["created_at"] > utc_dt
+        assert new_user_in_db["created_at"] < datetime.utcnow()
 
         # Access update
         new_access_in_db = await get_entry(test_db, db.accesses, max_access_id + 1)
@@ -190,18 +191,18 @@ async def test_create_user(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, user_id, status_code, status_details",
+    ("access_idx", "payload", "user_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"login": "renamed_user"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"login": "renamed_user"}, 1, 200, None],
-        [2, {"login": "renamed_user"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 1, 422, None],
-        [1, {"login": "renamed_user"}, 999, 404, "Table users has no entry with id=999"],
-        [1, {"login": 1}, 1, 422, None],
-        [1, {"login": "me"}, 1, 422, None],
-        [1, {"login": "renamed_user"}, 0, 422, None],
-        [1, {"login": "second_login"}, 1, 409, "An entry with login='second_login' already exists."],
+        (None, {}, 1, 401, "Not authenticated"),
+        (0, {"login": "renamed_user"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {"login": "renamed_user"}, 1, 200, None),
+        (2, {"login": "renamed_user"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {}, 1, 422, None),
+        (1, {"login": "renamed_user"}, 999, 404, "Table users has no entry with id=999"),
+        (1, {"login": 1}, 1, 422, None),
+        (1, {"login": "me"}, 1, 422, None),
+        (1, {"login": "renamed_user"}, 0, 422, None),
+        (1, {"login": "second_login"}, 1, 409, "An entry with login='second_login' already exists."),
     ],
 )
 @pytest.mark.asyncio()
@@ -233,16 +234,16 @@ async def test_update_user(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [0, {"login": "renamed_user"}, 200, None],
-        [1, {"login": "renamed_user"}, 200, None],
-        [2, {"login": "renamed_user"}, 403, "Your access scope is not compatible with this operation."],
-        [0, {}, 422, None],
-        [0, {"login": 1}, 422, None],
-        [0, {"login": "me"}, 422, None],
-        [0, {"login": "second_login"}, 409, "An entry with login='second_login' already exists."],
+        (None, {}, 401, "Not authenticated"),
+        (0, {"login": "renamed_user"}, 200, None),
+        (1, {"login": "renamed_user"}, 200, None),
+        (2, {"login": "renamed_user"}, 403, "Your access scope is not compatible with this operation."),
+        (0, {}, 422, None),
+        (0, {"login": 1}, 422, None),
+        (0, {"login": "me"}, 422, None),
+        (0, {"login": "second_login"}, 409, "An entry with login='second_login' already exists."),
     ],
 )
 @pytest.mark.asyncio()
@@ -272,17 +273,17 @@ async def test_update_my_info(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, user_id, status_code, status_details",
+    ("access_idx", "payload", "user_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"password": "new_password"}, 1, 200, None],
-        [2, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 1, 422, None],
-        [1, {"password": "new_password"}, 999, 404, "Table users has no entry with id=999"],
-        [1, {"password": 1}, 1, 422, None],
-        [1, {"password": "me"}, 1, 422, None],
-        [1, {"password": "new_password"}, 0, 422, None],
+        (None, {}, 1, 401, "Not authenticated"),
+        (0, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {"password": "new_password"}, 1, 200, None),
+        (2, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {}, 1, 422, None),
+        (1, {"password": "new_password"}, 999, 404, "Table users has no entry with id=999"),
+        (1, {"password": 1}, 1, 422, None),
+        (1, {"password": "me"}, 1, 422, None),
+        (1, {"password": "new_password"}, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -311,15 +312,15 @@ async def test_update_user_password(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [0, {"password": "new_password"}, 200, None],
-        [1, {"password": "new_password"}, 200, None],
-        [2, {"password": "new_password"}, 403, "Your access scope is not compatible with this operation."],
-        [0, {}, 422, None],
-        [0, {"password": 1}, 422, None],
-        [0, {"password": "me"}, 422, None],
+        (None, {}, 401, "Not authenticated"),
+        (0, {"password": "new_password"}, 200, None),
+        (1, {"password": "new_password"}, 200, None),
+        (2, {"password": "new_password"}, 403, "Your access scope is not compatible with this operation."),
+        (0, {}, 422, None),
+        (0, {"password": 1}, 422, None),
+        (0, {"password": "me"}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -344,14 +345,14 @@ async def test_update_my_password(
 
 
 @pytest.mark.parametrize(
-    "access_idx, user_id, status_code, status_details",
+    ("access_idx", "user_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table users has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table users has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()

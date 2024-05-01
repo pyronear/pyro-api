@@ -87,12 +87,12 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "token_data, scope, expected_access, exception",
+    ("token_data", "scope", "expected_access", "exception"),
     [
-        [ACCESS_TABLE[3], "admin", None, True],  # Unsufficient scope
-        ["my_false_token", "admin", None, True],  # Decoding failure
-        [{"id": 100, "scope": "admin"}, "admin", None, True],  # Unable to find access in table
-        [ACCESS_TABLE[3], "device", 3, False],  # Correct
+        (ACCESS_TABLE[3], "admin", None, True),  # Unsufficient scope
+        ("my_false_token", "admin", None, True),  # Decoding failure
+        ({"id": 100, "scope": "admin"}, "admin", None, True),  # Unable to find access in table
+        (ACCESS_TABLE[3], "device", 3, False),  # Correct
     ],
 )
 @pytest.mark.asyncio()
@@ -114,10 +114,10 @@ async def test_get_current_access(init_test_db, token_data, scope, expected_acce
 
 
 @pytest.mark.parametrize(
-    "access_idx, user_idx",
+    ("access_idx", "user_idx"),
     [
-        [1, 1],  # Correct
-        [2, None],  # Not a user access
+        (1, 1),  # Correct
+        (2, None),  # Not a user access
     ],
 )
 @pytest.mark.asyncio()
@@ -131,10 +131,10 @@ async def test_get_current_user(init_test_db, access_idx, user_idx):
 
 
 @pytest.mark.parametrize(
-    "access_idx, device_idx",
+    ("access_idx", "device_idx"),
     [
-        [2, 0],  # Correct
-        [1, None],  # Not a device access
+        (2, 0),  # Correct
+        (1, None),  # Not a device access
     ],
 )
 @pytest.mark.asyncio()

@@ -16,12 +16,12 @@ def mock_img():
     return requests.get(URL, timeout=5).content
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def admin_client():
     return Client(API_URL, "dummy_login", "dummy&P@ssw0rd!")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def user_client(admin_client):
     user_creds = ("dummy_user", "dummy_pwd")
     try:
@@ -37,7 +37,7 @@ def user_client(admin_client):
     return client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def device_client(admin_client):
     device_creds = ("dummy_device", "dummy_pwd")
     try:
@@ -60,7 +60,7 @@ def device_client(admin_client):
     return client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def setup(admin_client):
     # Create a site
     payload = {"name": "dummy_site", "lat": 0.0, "lon": 0.0, "country": "FR", "geocode": "code", "group_id": 1}

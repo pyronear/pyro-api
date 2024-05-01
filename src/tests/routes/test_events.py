@@ -168,14 +168,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, event_id, status_code, status_details",
+    ("access_idx", "event_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [1, 999, 404, "Table events has no entry with id=999"],
-        [1, 0, 422, None],
-        [4, 1, 403, "This access can't read resources from group_id=1"],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (1, 999, 404, "Table events has no entry with id=999"),
+        (1, 0, 422, None),
+        (4, 1, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()
@@ -194,12 +194,12 @@ async def test_get_event(test_app_asyncio, init_test_db, access_idx, event_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    ("access_idx", "status_code", "status_details", "expected_results"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [EVENT_TABLE[0], EVENT_TABLE[1]]],
-        [1, 200, None, EVENT_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [EVENT_TABLE[0], EVENT_TABLE[1]]),
+        (1, 200, None, EVENT_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -219,12 +219,12 @@ async def test_fetch_events(test_app_asyncio, init_test_db, access_idx, status_c
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    ("access_idx", "status_code", "status_details", "expected_results"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [EVENT_TABLE[0]]],
-        [1, 200, None, [entry for entry in EVENT_TABLE if entry["end_ts"] is not None]],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [EVENT_TABLE[0]]),
+        (1, 200, None, [entry for entry in EVENT_TABLE if entry["end_ts"] is not None]),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -246,19 +246,19 @@ async def test_fetch_past_events(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             {"lat": 0.0, "lon": 0.0, "type": "wildfire"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
-        [2, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None],
-        [1, {"lat": 0.0, "lon": 0.0, "type": "lightning"}, 422, None],
-        [2, {"lat": 0.0, "type": "wildfire"}, 422, None],
+        ),
+        (1, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None),
+        (2, {"lat": 0.0, "lon": 0.0, "type": "wildfire"}, 201, None),
+        (1, {"lat": 0.0, "lon": 0.0, "type": "lightning"}, 422, None),
+        (2, {"lat": 0.0, "type": "wildfire"}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -281,14 +281,15 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
         assert {k: v for k, v in json_response.items() if k not in ("created_at", "start_ts")} == test_response
         new_event_in_db = await get_entry(test_db, db.events, json_response["id"])
         new_event_in_db = dict(**new_event_in_db)
-        assert new_event_in_db["created_at"] > utc_dt and new_event_in_db["created_at"] < datetime.utcnow()
+        assert new_event_in_db["created_at"] > utc_dt
+        assert new_event_in_db["created_at"] < datetime.utcnow()
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, event_id, status_code, status_details",
+    ("access_idx", "payload", "event_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [
+        (None, {}, 1, 401, "Not authenticated"),
+        (
             0,
             {
                 "lat": 5.0,
@@ -301,8 +302,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "lat": 5.0,
@@ -315,8 +316,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {
                 "lat": 5.0,
@@ -329,10 +330,10 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             200,
             None,
-        ],
-        [1, {}, 1, 422, None],
-        [1, {"type": "wildfire"}, 1, 422, None],
-        [
+        ),
+        (1, {}, 1, 422, None),
+        (1, {"type": "wildfire"}, 1, 422, None),
+        (
             1,
             {
                 "lat": 0.0,
@@ -345,8 +346,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             999,
             404,
             "Table events has no entry with id=999",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "lat": 0.0,
@@ -359,8 +360,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "lat": 0.0,
@@ -373,8 +374,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "lat": 0.0,
@@ -387,8 +388,8 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             0,
             422,
             None,
-        ],
-        [
+        ),
+        (
             3,
             {
                 "lat": 0.0,
@@ -401,7 +402,7 @@ async def test_create_event(test_app_asyncio, init_test_db, test_db, access_idx,
             1,
             403,
             "This access can't update resources for group_id=1",
-        ],
+        ),
     ],
 )
 @pytest.mark.asyncio()
@@ -432,14 +433,14 @@ async def test_update_event(
 
 
 @pytest.mark.parametrize(
-    "access_idx, event_id, status_code, status_details",
+    ("access_idx", "event_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table events has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table events has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -461,12 +462,12 @@ async def test_delete_event(test_app_asyncio, init_test_db, access_idx, event_id
 
 
 @pytest.mark.parametrize(
-    "access_idx, event_id, status_code, status_details",
+    ("access_idx", "event_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
     ],
 )
 @pytest.mark.asyncio()
@@ -490,13 +491,13 @@ async def test_acknowledge_event(
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    ("access_idx", "status_code", "status_details"),
     [
-        [None, 401, "Not authenticated"],
-        [0, 200, None],
-        [1, 200, None],
-        [2, 403, "Your access scope is not compatible with this operation."],
-        [4, 200, None],
+        (None, 401, "Not authenticated"),
+        (0, 200, None),
+        (1, 200, None),
+        (2, 403, "Your access scope is not compatible with this operation."),
+        (4, 200, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -528,12 +529,12 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
 
 
 @pytest.mark.parametrize(
-    "access_idx, event_id, status_code, status_details",
+    ("access_idx", "event_id", "status_code", "status_details"),
     [
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [4, 2, 403, "This access can't read resources from group_id=1"],
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (4, 2, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()

@@ -125,15 +125,15 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, installation_id, status_code, status_details",
+    ("access_idx", "installation_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 200, None],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table installations has no entry with id=999"],
-        [1, 0, 422, None],
-        [4, 1, 403, "This access can't read resources from group_id=1"],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table installations has no entry with id=999"),
+        (1, 0, 422, None),
+        (4, 1, 403, "This access can't read resources from group_id=1"),
     ],
 )
 @pytest.mark.asyncio()
@@ -154,12 +154,12 @@ async def test_get_installation(
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    ("access_idx", "status_code", "status_details", "expected_results"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [INSTALLATION_TABLE[0]]],
-        [1, 200, None, INSTALLATION_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [INSTALLATION_TABLE[0]]),
+        (1, 200, None, INSTALLATION_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -180,17 +180,17 @@ async def test_fetch_installations(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None],
-        [
+        ),
+        (1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"}, 201, None),
+        (
             1,
             {
                 "device_id": 1,
@@ -200,9 +200,9 @@ async def test_fetch_installations(
             },
             201,
             None,
-        ],
-        [1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773Z"}, 201, None],
-        [
+        ),
+        (1, {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773Z"}, 201, None),
+        (
             1,
             {
                 "device_id": 1,
@@ -212,15 +212,15 @@ async def test_fetch_installations(
             },
             201,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {"device_id": 1, "site_id": 1, "start_ts": "2020-10-13T08:18:45.447773"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {"device_id": 1, "site_id": "my_site"}, 422, None],
-        [1, {"device_id": 1}, 422, None],
+        ),
+        (1, {"device_id": 1, "site_id": "my_site"}, 422, None),
+        (1, {"device_id": 1}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -250,16 +250,17 @@ async def test_create_installation(
         new_installation = dict(**new_installation)
 
         # Timestamp consistency
-        assert new_installation["created_at"] > utc_dt and new_installation["created_at"] < datetime.utcnow()
+        assert new_installation["created_at"] > utc_dt
+        assert new_installation["created_at"] < datetime.utcnow()
         # Check default value of is_trustworthy
         assert new_installation["is_trustworthy"]
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, installation_id, status_code, status_details",
+    ("access_idx", "payload", "installation_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [
+        (None, {}, 1, 401, "Not authenticated"),
+        (
             0,
             {
                 "device_id": 1,
@@ -271,8 +272,8 @@ async def test_create_installation(
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "device_id": 1,
@@ -284,8 +285,8 @@ async def test_create_installation(
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {
                 "device_id": 1,
@@ -297,8 +298,8 @@ async def test_create_installation(
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             4,
             {
                 "device_id": 1,
@@ -310,10 +311,10 @@ async def test_create_installation(
             1,
             403,
             "This access can't update resources for group_id=1",
-        ],
-        [1, {}, 1, 422, None],
-        [1, {"device_id": 1}, 1, 422, None],
-        [
+        ),
+        (1, {}, 1, 422, None),
+        (1, {"device_id": 1}, 1, 422, None),
+        (
             1,
             {
                 "device_id": 1,
@@ -325,8 +326,8 @@ async def test_create_installation(
             999,
             404,
             "Table installations has no entry with id=999",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "device_id": 1,
@@ -338,15 +339,15 @@ async def test_create_installation(
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {"device_id": 1, "site_id": 1, "is_trustworthy": 5.0, "end_ts": None},
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "device_id": 1,
@@ -358,7 +359,7 @@ async def test_create_installation(
             0,
             422,
             None,
-        ],
+        ),
     ],
 )
 @pytest.mark.asyncio()
@@ -388,14 +389,14 @@ async def test_update_installation(
 
 
 @pytest.mark.parametrize(
-    "access_idx, installation_id, status_code, status_details",
+    ("access_idx", "installation_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table installations has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table installations has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -419,15 +420,15 @@ async def test_delete_installation(
 
 
 @pytest.mark.parametrize(
-    "access_idx, installation_id, device_ids, status_code, status_details",
+    ("access_idx", "installation_id", "device_ids", "status_code", "status_details"),
     [
-        [None, 1, [], 401, "Not authenticated"],
-        [0, 1, [1], 200, None],
-        [1, 1, [1], 200, None],
-        [4, 2, [2], 200, None],
-        [1, 999, [], 200, None],  # TODO: this should fail since the site doesn't exist
-        [1, 0, [], 422, None],
-        [2, 1, [], 403, "Your access scope is not compatible with this operation."],
+        (None, 1, [], 401, "Not authenticated"),
+        (0, 1, [1], 200, None),
+        (1, 1, [1], 200, None),
+        (4, 2, [2], 200, None),
+        (1, 999, [], 200, None),  # TODO: this should fail since the site doesn't exist
+        (1, 0, [], 422, None),
+        (2, 1, [], 403, "Your access scope is not compatible with this operation."),
     ],
 )
 @pytest.mark.asyncio()

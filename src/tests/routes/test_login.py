@@ -22,13 +22,13 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "payload, status_code, status_detail",
+    ("payload", "status_code", "status_detail"),
     [
-        [{"username": "foo"}, 422, None],
-        [{"password": "foo"}, 422, None],
-        [{"username": "unknown", "password": "foo"}, 401, "Invalid credentials."],  # unknown username
-        [{"username": "first", "password": "second"}, 401, "Invalid credentials."],  # wrong pwd
-        [{"username": "first_login", "password": "first_pwd"}, 200, None],  # valid
+        ({"username": "foo"}, 422, None),
+        ({"password": "foo"}, 422, None),
+        ({"username": "unknown", "password": "foo"}, 401, "Invalid credentials."),  # unknown username
+        ({"username": "first", "password": "second"}, 401, "Invalid credentials."),  # wrong pwd
+        ({"username": "first_login", "password": "first_pwd"}, 200, None),  # valid
     ],
 )
 @pytest.mark.asyncio()

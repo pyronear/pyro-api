@@ -93,14 +93,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, device_id, status_code, status_details",
+    ("access_idx", "device_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table devices has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table devices has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -121,13 +121,13 @@ async def test_get_device(test_app_asyncio, init_test_db, access_idx, device_id,
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    ("access_idx", "status_code", "status_details"),
     [
-        [None, 401, "Not authenticated"],
-        [0, 403, "Your access scope is not compatible with this operation."],
-        [1, 403, "Your access scope is not compatible with this operation."],
-        [2, 200, None],
-        [3, 200, None],
+        (None, 401, "Not authenticated"),
+        (0, 403, "Your access scope is not compatible with this operation."),
+        (1, 403, "Your access scope is not compatible with this operation."),
+        (2, 200, None),
+        (3, 200, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -153,13 +153,13 @@ async def test_get_my_device(test_app_asyncio, init_test_db, access_idx, status_
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_devices",
+    ("access_idx", "status_code", "status_details", "expected_devices"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [DEVICE_TABLE[0], DEVICE_TABLE[1]]],
-        [5, 200, None, [DEVICE_TABLE[-1]]],
-        [1, 200, None, DEVICE_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [DEVICE_TABLE[0], DEVICE_TABLE[1]]),
+        (5, 200, None, [DEVICE_TABLE[-1]]),
+        (1, 200, None, DEVICE_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -181,12 +181,12 @@ async def test_fetch_devices(test_app_asyncio, init_test_db, access_idx, status_
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    ("access_idx", "status_code", "status_details"),
     [
-        [None, 401, "Not authenticated"],
-        [0, 200, None],
-        [1, 200, None],
-        [2, 403, "Your access scope is not compatible with this operation."],
+        (None, 401, "Not authenticated"),
+        (0, 200, None),
+        (1, 200, None),
+        (2, 403, "Your access scope is not compatible with this operation."),
     ],
 )
 @pytest.mark.asyncio()
@@ -217,63 +217,63 @@ async def test_fetch_my_devices(test_app_asyncio, init_test_db, access_idx, stat
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             201,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"login": "third_login", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             409,
             "An entry with login='third_login' already exists.",
-        ],  # existing device
-        [
+        ),  # existing device
+        (
             1,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": 68.0, "password": "pw"},
             422,
             None,
-        ],  # password too short
-        [
+        ),  # password too short
+        (
             1,
             {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             422,
             None,
-        ],  # missing owner
-        [
+        ),  # missing owner
+        (
             1,
             {"login": "third_device", "owner_id": 10, "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             404,
             "Table users has no entry with id=10",
-        ],  # unknown owner
-        [
+        ),  # unknown owner
+        (
             1,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
             422,
             None,
-        ],  # invalid angle_of_view
-        [
+        ),  # invalid angle_of_view
+        (
             1,
             {"login": "third_device", "owner_id": 1, "specs": "v0.2", "angle_of_view": -45.0, "password": "my_pwd"},
             422,
             None,
-        ],  # invalid angle_of_view
+        ),  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio()
@@ -308,7 +308,8 @@ async def test_register_device(
         # Timestamp consistency
         new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
-        assert new_device_in_db["created_at"] > utc_dt and new_device_in_db["created_at"] < datetime.utcnow()
+        assert new_device_in_db["created_at"] > utc_dt
+        assert new_device_in_db["created_at"] < datetime.utcnow()
 
         # Access table updated
         new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
@@ -318,41 +319,41 @@ async def test_register_device(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None],
-        [1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (0, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None),
+        (1, {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"}, 201, None),
+        (
             2,
             {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             0,
             {"login": "third_login", "specs": "v0.2", "angle_of_view": 68.0, "password": "my_pwd"},
             409,
             "An entry with login='third_login' already exists.",
-        ],  # existing device
-        [
+        ),  # existing device
+        (
             1,
             {"login": "third_device", "specs": "v0.2", "angle_of_view": 68.0, "password": "pw"},
             422,
             None,
-        ],  # password too short
-        [
+        ),  # password too short
+        (
             1,
             {"login": "third_device", "specs": "v0.2", "angle_of_view": "alpha", "password": "my_pwd"},
             422,
             None,
-        ],  # invalid angle_of_view
-        [
+        ),  # invalid angle_of_view
+        (
             1,
             {"login": "third_device", "specs": "v0.2", "angle_of_view": -45.0, "password": "my_pwd"},
             422,
             None,
-        ],  # invalid angle_of_view
+        ),  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio()
@@ -393,7 +394,8 @@ async def test_register_my_device(
         # Timestamp consistency
         new_device_in_db = await get_entry(test_db, db.devices, json_response["id"])
         new_device_in_db = dict(**new_device_in_db)
-        assert new_device_in_db["created_at"] > utc_dt and new_device_in_db["created_at"] < datetime.utcnow()
+        assert new_device_in_db["created_at"] > utc_dt
+        assert new_device_in_db["created_at"] < datetime.utcnow()
 
         # Access table updated
         new_access_in_db = await get_entry(test_db, db.accesses, len(ACCESS_TABLE) + 1)
@@ -403,10 +405,10 @@ async def test_register_my_device(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, device_id, status_code, status_details",
+    ("access_idx", "payload", "device_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [
+        (None, {}, 1, 401, "Not authenticated"),
+        (
             0,
             {
                 "login": "renamed_device",
@@ -424,8 +426,8 @@ async def test_register_my_device(
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "login": "renamed_device",
@@ -443,8 +445,8 @@ async def test_register_my_device(
             1,
             200,
             None,
-        ],
-        [
+        ),
+        (
             2,
             {
                 "login": "renamed_device",
@@ -462,9 +464,9 @@ async def test_register_my_device(
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, {}, 1, 422, None],
-        [
+        ),
+        (1, {}, 1, 422, None),
+        (
             1,
             {
                 "login": "new_device",
@@ -482,8 +484,8 @@ async def test_register_my_device(
             999,
             404,
             "Table devices has no entry with id=999",
-        ],
-        [
+        ),
+        (
             1,
             {
                 "login": 1,
@@ -502,8 +504,8 @@ async def test_register_my_device(
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "login": "renamed_device",
@@ -519,8 +521,8 @@ async def test_register_my_device(
             1,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "login": "renamed_device",
@@ -539,8 +541,8 @@ async def test_register_my_device(
             0,
             422,
             None,
-        ],
-        [
+        ),
+        (
             1,
             {
                 "login": "fourth_login",
@@ -559,8 +561,8 @@ async def test_register_my_device(
             1,
             409,
             "An entry with login='fourth_login' already exists.",
-        ],  # renamed to already existing login
-        [
+        ),  # renamed to already existing login
+        (
             1,
             {
                 "login": "renamed_device",
@@ -579,8 +581,8 @@ async def test_register_my_device(
             1,
             422,
             None,
-        ],  # invalid angle_of_view
-        [
+        ),  # invalid angle_of_view
+        (
             1,
             {
                 "login": "renamed_device",
@@ -599,7 +601,7 @@ async def test_register_my_device(
             1,
             422,
             None,
-        ],  # invalid angle_of_view
+        ),  # invalid angle_of_view
     ],
 )
 @pytest.mark.asyncio()
@@ -632,49 +634,49 @@ async def test_update_device(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, device_id, status_code, status_details",
+    ("access_idx", "payload", "device_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 1, 200, None],
-        [
+        (None, {}, 1, 401, "Not authenticated"),
+        (0, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 1, 200, None),
+        (
             0,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             2,
             403,
             "Permission denied to modify device with id=2.",
-        ],
+        ),
         # TODO: admin should have permission without being owner
-        [
+        (
             1,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             1,
             403,
             "Permission denied to modify device with id=1.",
-        ],
-        [1, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 2, 200, None],
-        [
+        ),
+        (1, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 2, 200, None),
+        (
             2,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             1,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             2,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             2,
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             999,
             404,
             "Table devices has no entry with id=999",
-        ],
-        [1, {"lon": "position", "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 1, 422, None],
-        [1, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 0, 422, None],
+        ),
+        (1, {"lon": "position", "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 1, 422, None),
+        (1, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -702,18 +704,18 @@ async def test_update_device_location(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, device_id, status_code, status_details",
+    ("access_idx", "payload", "device_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"software_hash": "my_sha256hash"}, 1, 200, None],
-        [2, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [3, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 1, 422, None],
-        [1, {"software_hash": "my_hash"}, 1, 422, None],
-        [1, {"software_hash": "my_way_too_long_sha26_hash"}, 1, 422, None],
-        [1, {"software_hash": "my_sha256hash"}, 0, 422, None],
-        [1, {"software_hash": "my_sha256hash"}, 999, 404, "Table devices has no entry with id=999"],
+        (None, {}, 1, 401, "Not authenticated"),
+        (0, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {"software_hash": "my_sha256hash"}, 1, 200, None),
+        (2, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (3, {"software_hash": "my_sha256hash"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {}, 1, 422, None),
+        (1, {"software_hash": "my_hash"}, 1, 422, None),
+        (1, {"software_hash": "my_way_too_long_sha26_hash"}, 1, 422, None),
+        (1, {"software_hash": "my_sha256hash"}, 0, 422, None),
+        (1, {"software_hash": "my_sha256hash"}, 999, 404, "Table devices has no entry with id=999"),
     ],
 )
 @pytest.mark.asyncio()
@@ -739,23 +741,23 @@ async def test_update_device_hash(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [
+        ),
+        (
             1,
             {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0},
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [2, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 200, None],
-        [2, {"lon": "position", "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 422, None],
+        ),
+        (2, {"lon": 5.0, "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 200, None),
+        (2, {"lon": "position", "lat": 5.0, "elevation": 100, "azimuth": 0, "pitch": 0}, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -789,17 +791,17 @@ async def test_update_my_location(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, device_id, status_code, status_details",
+    ("access_idx", "payload", "device_id", "status_code", "status_details"),
     [
-        [None, {}, 1, 401, "Not authenticated"],
-        [0, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {"password": "new_password"}, 1, 200, None],
-        [2, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, {}, 1, 422, None],
-        [1, {"password": "new_password"}, 999, 404, "Table devices has no entry with id=999"],
-        [1, {"password": 1}, 1, 422, None],
-        [1, {"password": "me"}, 1, 422, None],
-        [1, {"password": "new_password"}, 0, 422, None],
+        (None, {}, 1, 401, "Not authenticated"),
+        (0, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {"password": "new_password"}, 1, 200, None),
+        (2, {"password": "new_password"}, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, {}, 1, 422, None),
+        (1, {"password": "new_password"}, 999, 404, "Table devices has no entry with id=999"),
+        (1, {"password": 1}, 1, 422, None),
+        (1, {"password": "me"}, 1, 422, None),
+        (1, {"password": "new_password"}, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -826,12 +828,12 @@ async def test_update_device_password(
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details",
+    ("access_idx", "status_code", "status_details"),
     [
-        [None, 401, "Not authenticated"],
-        [0, 403, "Your access scope is not compatible with this operation."],
-        [1, 403, "Your access scope is not compatible with this operation."],
-        [2, 200, None],
+        (None, 401, "Not authenticated"),
+        (0, 403, "Your access scope is not compatible with this operation."),
+        (1, 403, "Your access scope is not compatible with this operation."),
+        (2, 200, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -866,15 +868,15 @@ async def test_heartbeat(test_app_asyncio, init_test_db, test_db, access_idx, st
 
 
 @pytest.mark.parametrize(
-    "access_idx, device_id, status_code, status_details",
+    ("access_idx", "device_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [3, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table devices has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (3, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table devices has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()

@@ -59,14 +59,14 @@ async def init_test_db(monkeypatch, test_db):
 
 
 @pytest.mark.parametrize(
-    "access_idx, notification_id, status_code, status_details",
+    ("access_idx", "notification_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 1, 200, None],
-        [2, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table notifications has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 1, 200, None),
+        (2, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table notifications has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -89,12 +89,12 @@ async def test_get_notification(
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_notifications",
+    ("access_idx", "status_code", "status_details", "expected_notifications"),
     [
-        [None, 401, "Not authenticated", None],
-        [0, 403, "Your access scope is not compatible with this operation.", None],
-        [1, 200, None, NOTIFICATION_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        (None, 401, "Not authenticated", None),
+        (0, 403, "Your access scope is not compatible with this operation.", None),
+        (1, 200, None, NOTIFICATION_TABLE),
+        (2, 403, "Your access scope is not compatible with this operation.", None),
     ],
 )
 @pytest.mark.asyncio()
@@ -116,23 +116,23 @@ async def test_fetch_notifications(
 
 
 @pytest.mark.parametrize(
-    "access_idx, payload, status_code, status_details",
+    ("access_idx", "payload", "status_code", "status_details"),
     [
-        [None, {}, 401, "Not authenticated"],
-        [
+        (None, {}, 401, "Not authenticated"),
+        (
             0,
             PAYLOAD_TABLE[0],
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[0], 201, None],
-        [
+        ),
+        (1, PAYLOAD_TABLE[0], 201, None),
+        (
             2,
             PAYLOAD_TABLE[1],
             403,
             "Your access scope is not compatible with this operation.",
-        ],
-        [1, PAYLOAD_TABLE[1], 201, None],
+        ),
+        (1, PAYLOAD_TABLE[1], 201, None),
     ],
 )
 @pytest.mark.asyncio()
@@ -165,13 +165,13 @@ async def test_send_notification(
 
 
 @pytest.mark.parametrize(
-    "access_idx, notification_id, status_code, status_details",
+    ("access_idx", "notification_id", "status_code", "status_details"),
     [
-        [None, 1, 401, "Not authenticated"],
-        [1, 1, 200, None],
-        [0, 1, 403, "Your access scope is not compatible with this operation."],
-        [1, 999, 404, "Table notifications has no entry with id=999"],
-        [1, 0, 422, None],
+        (None, 1, 401, "Not authenticated"),
+        (1, 1, 200, None),
+        (0, 1, 403, "Your access scope is not compatible with this operation."),
+        (1, 999, 404, "Table notifications has no entry with id=999"),
+        (1, 0, 422, None),
     ],
 )
 @pytest.mark.asyncio()
