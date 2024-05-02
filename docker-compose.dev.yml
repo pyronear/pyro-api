@@ -31,7 +31,7 @@ services:
       test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://bucket"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build:
