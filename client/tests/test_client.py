@@ -7,7 +7,7 @@ import requests
 from requests.exceptions import ConnectionError, ReadTimeout
 
 from pyroclient.client import Client
-from pyroclient.exceptions import HTTPRequestException
+from pyroclient.exceptions import HTTPRequestError
 
 
 def _test_route_return(response, return_type, status_code=200):
@@ -21,7 +21,7 @@ def _test_route_return(response, return_type, status_code=200):
     ("url", "login", "pwd", "timeout", "expected_error"),
     [
         # Wrong credentials
-        ("http://localhost:8080", "invalid_login", "invalid_pwd", 10, HTTPRequestException),
+        ("http://localhost:8080", "invalid_login", "invalid_pwd", 10, HTTPRequestError),
         # Incorrect URL port
         ("http://localhost:8003", "dummy_login", "dummy&P@ssw0rd!", 10, ConnectionError),
         # Timeout

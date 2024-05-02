@@ -5,13 +5,13 @@
 
 import io
 import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
 from requests.models import Response
 
-from .exceptions import HTTPRequestException
+from .exceptions import HTTPRequestError
 
 __all__ = ["Client"]
 
@@ -99,7 +99,12 @@ class Client:
     token: str
 
     def __init__(
-        self, api_url: str, credentials_login: str, credentials_password: str, timeout: int = 10, **kwargs: Any
+        self,
+        api_url: str,
+        credentials_login: str,
+        credentials_password: str,
+        timeout: int = 10,
+        **kwargs,
     ) -> None:
         self.api = api_url
         # Prepend API url to each route
@@ -111,17 +116,17 @@ class Client:
     def headers(self) -> Dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
-    def refresh_token(self, login: str, password: str, **kwargs: Any) -> None:
+    def refresh_token(self, login: str, password: str, **kwargs) -> None:
         self.token = self._retrieve_token(login, password, **kwargs)
 
-    def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
+    def _retrieve_token(self, login: str, password: str, **kwargs) -> str:
         response = requests.post(
             self.routes["token"], data={"username": login, "password": password}, timeout=self.timeout, **kwargs
         )
         if response.status_code == 200:
             return response.json()["access_token"]
         # Anyone has a better suggestion?
-        raise HTTPRequestException(response.status_code, response.text)
+        raise HTTPRequestError(response.status_code, response.text)
 
     # Device functions
     def heartbeat(self) -> Response:
@@ -173,7 +178,7 @@ class Client:
             self.routes["send-alert-from-device"], headers=self.headers, json=payload, timeout=self.timeout
         )
 
-    def create_media_from_device(self):
+    def create_media_from_device(self) -> Response:
         """Create a media entry from a device (no need to specify device ID).
 
         >>> from pyroclient import client

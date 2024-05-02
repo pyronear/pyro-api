@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     # Dynamically set the __version__ attribute
     cwd = Path(__file__).parent.absolute()
-    with open(cwd.joinpath("pyroclient", "version.py"), "w", encoding="utf-8") as f:
+    with cwd.joinpath("pyroclient", "version.py").open("w", encoding="utf-8") as f:
         f.write(f"__version__ = '{VERSION}'\n")
 
     setup(name=PKG_NAME, version=VERSION)

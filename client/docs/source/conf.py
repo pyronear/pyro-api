@@ -15,20 +15,18 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import sys
-
-sys.path.insert(0, os.path.abspath("../.."))
 from datetime import datetime
+from pathlib import Path
 
+sys.path.insert(0, Path().cwd().parent.parent)
 import pyroclient
 
 # -- Project information -----------------------------------------------------
 
 master_doc = "index"
 project = "pyroclient"
-_copyright_str = f"-{datetime.now().year}" if datetime.now().year > 2020 else ""
-copyright = f"2020{_copyright_str}, Pyronear"
+copyright = f"2020-{datetime.now().year}, Pyronear"
 author = "Pyronear"
 
 # The full version, including alpha/beta/rc tags
