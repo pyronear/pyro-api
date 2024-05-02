@@ -17,6 +17,26 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+  
+  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.4.0
+    ports:
+      - 4566:4566
+    # environment variables details: https://docs.localstack.cloud/references/configuration/
+    environment:
+      - EDGE_PORT=4566
+      - SERVICES=s3
+      - DATA_DIR=/tmp/localstack/data
+      - AWS_DEFAULT_REGION=${S3_REGION:-'us-east-1'}
+    volumes:
+      - ./scripts/localstack:/etc/localstack/init/ready.d
+      - localstack_data:/tmp/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://sample-bucket"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: pyronear/alert-api:latest
@@ -25,6 +45,8 @@ services:
       dockerfile: ./src/Dockerfile
     depends_on:
       db:
+        condition: service_healthy
+      localstack:
         condition: service_healthy
     ports:
       - "5050:5050"
@@ -37,11 +59,11 @@ services:
       - DEBUG=true
       - PROMETHEUS_ENABLED=true
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_REGION=${S3_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-bucket}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://localstack:4566}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-na}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-na}
+      - S3_REGION=${S3_REGION:-'us-east-1'}
       - S3_PROXY_URL=${S3_PROXY_URL}
       - SERVER_NAME=${SERVER_NAME}
     volumes:
@@ -56,3 +78,4 @@ services:
 
 volumes:
   postgres_data:
+  localstack_data:
