@@ -5,6 +5,33 @@ Everything you need to know to contribute efficiently to the project!
 Whatever the way you wish to contribute to the project, please respect the [code of conduct](CODE_OF_CONDUCT.md).
 
 
+## Data model
+
+The back-end core feature is to interact with the metadata tables. For the service to be useful for wildfire detection, multiple tables/object types are introduced and described as follows:
+
+#### Access-related tables
+
+- Users: stores the hashed credentials and access level for users.
+- Cameras: stores the camera metadata.
+
+#### Core worklow tables
+
+- Detection: association of a picture and a camera.
+
+![UML diagram](https://github.com/pyronear/pyro-api/assets/26927750/a6207b69-87df-46a5-9294-a66ea4c797f9)
+
+### What is the full detection workflow through the API
+
+The API has been designed to provide, for each wildfire detection, the alert metadata:
+- timestamp
+- the picture that was used for detection
+- the camera that detected the event
+
+With the previously described tables, here are all the steps to send a wildfire alert:
+- Prerequisites (ask the instance administrator): register user
+- Register a camera: declare your camera on the API, using your new user credentials.
+- Create a camera token: create non-user token for the camera to access the API.
+- Create a detection: using the camera credentials, upload the image content and the detection metadata.
 
 ## Codebase structure
 

@@ -51,47 +51,6 @@ In order to stop the service, run:
 make stop
 ```
 
-### How is the database organized
-
-The back-end core feature is to interact with the metadata tables. For the service to be useful for wildfire detection, multiple tables/object types are introduced and described as follows:
-
-#### Access-related tables
-
-- Groups: defines collections of credentials that share a similar scope (e.g. you won't be able to access the same data as the local firefighters).
-- Accesses: stores the hashed credentials and access level for users & devices.
-- Users: actual humans registered in the database.
-- Devices: the registered cameras.
-
-#### Setup-specific tables
-
-- Sites: specific locations (firefighter watchtowers, fire stations, etc.).
-- Installations: association linking a device & a site over a given timespan.
-
-#### Core detection worklow tables
-
-- Events: wildfire events.
-- Media: metadata of a picture and its storage bucket key.
-- Alerts: association of a picture, a device, and an event.
-
-#### Advanced tables
-
-- Webhooks: advanced mechanisms to introduce callbacks on specific routes.
-
-![UML diagram](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/pyroapi_diagram.png)
-
-### What is the full detection workflow through the API
-
-The API has been designed to provide, for each wildfire detection, the alert metadata:
-- timestamp
-- the picture that was used for detection
-- the location is was taken at, and the direction it was taken from
-
-With the previously described tables, here are all the steps to send a wildfire alert:
-- Prerequisites (ask the instance administrator): register user
-- Register a device: declare your device on the API, using your new user credentials.
-- Create a media object & upload content: using the device credentials, save the picture metadata and upload the image content.
-- Create an alert: using the device credentials, send all the wildfire metadata.
-
 ## Installation
 
 ### Prerequisites
