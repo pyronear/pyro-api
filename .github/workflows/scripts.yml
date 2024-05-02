@@ -27,12 +27,6 @@ jobs:
         run: poetry export -f requirements.txt --without-hashes --output requirements.txt
       - name: Run the backend & the test
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_REGION: ${{ secrets.S3_REGION }}
           SUPERUSER_LOGIN: dummy_login
           SUPERUSER_PWD: dummy&P@ssw0rd!
           POSTGRES_USER: dummy_pg_user
