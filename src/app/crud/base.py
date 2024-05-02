@@ -62,7 +62,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         statement = select(self.model)
         if isinstance(filter_pair, tuple):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
-        return await self.session.exec(statement=statement)  # type: ignore[return-value]
+        return await self.session.exec(statement=statement)
 
     async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
         access = cast(ModelType, await self.get(entry_id, strict=True))
@@ -79,7 +79,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def delete(self, entry_id: int) -> None:
         await self.get(entry_id, strict=True)
-        statement = delete(self.model).where(self.model.id == entry_id)  # type: ignore[attr-defined]
+        statement = delete(self.model).where(self.model.id == entry_id)
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
