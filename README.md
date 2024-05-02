@@ -96,48 +96,33 @@ With the previously described tables, here are all the steps to send a wildfire 
 
 ### Prerequisites
 
+- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Docker](https://docs.docker.com/engine/install/)
 - [Docker compose](https://docs.docker.com/compose/)
-- [Poetry](https://python-poetry.org/)
-- [Make](https://www.gnu.org/software/make/) (optional)
 
-The project was designed so that everything runs with Docker orchestration (standalone virtual environment), so you won't need to install any additional libraries.
+### Starting your service
 
-## Configuration
-
-In order to run the project, you will need to specific some information, which can be done using a `.env` file.
-This file will have to hold the following information:
-- `S3_ACCESS_KEY`: public key to access to the [S3 storage service](https://docs.aws.amazon.com/powershell/latest/userguide/pstools-appendix-sign-up.html)
-- `S3_SECRET_KEY`: private key to access the resource.
-- `S3_REGION`: your S3 bucket is geographically identified by its location's region
-- `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
-- `BUCKET_NAME`: the name of the storage bucket
-- `POSTGRES_DB`: name of postgres database
-- `POSTGRES_USER`: user of postgres database
-- `POSTGRES_PASSWORD`: user password of postgres database
-- `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
-Optionally, the following information can be added:
-- `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
-- `SENTRY_SERVER_NAME`: the server tag to apply to events.
-- `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
-- `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
-- `POSTHOG_KEY`: to enable product analytics
-
-So your `.env` file should look like something similar to:
+#### 1 - Clone the repository
+```shell
+git clone https://github.com/pyronear/pyro-api.git && cd pyro-api
 ```
-S3_ACCESS_KEY=YOUR_ACCESS_KEY
-S3_SECRET_KEY=YOUR_SECRET_KEY
-S3_REGION=bucket-region
-S3_ENDPOINT_URL='https://s3.mydomain.com/'
-BUCKET_NAME=my_storage_bucket_name
-POSTGRES_USER=dummy_pg_user
-POSTGRES_PASSWORD=dummy_pg_pwd
-POSTGRES_DB=dummy_pg_db
-SENTRY_DSN='https://replace.with.you.sentry.dsn/'
-SENTRY_SERVER_NAME=my_storage_bucket_name
+#### 2 - Set your environment variables
+First copy the example environment setup
+```shell
+cp .env.example .env
 ```
 
-The file should be placed at the root folder of your local copy of the project.
+#### 3 - Start the services
+
+```shell
+docker compose pull
+docker compose up
+```
+
+#### 4 - Check how what you've deployed
+
+You can now access your backend API at [http://localhost:5050/docs](http://localhost:5050/docs)
+
 
 ## More goodies
 
