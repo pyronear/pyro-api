@@ -51,3 +51,11 @@ test-client:
 # Check that docs can build for client
 docs-client:
 	sphinx-build client/docs/source client/docs/_build -a
+
+
+e2e:
+	poetry export -f requirements.txt --without-hashes --output requirements.txt
+	docker compose -f docker-compose.dev.yml up -d --build --wait
+	docker compose exec localstack awslocal s3 mb s3://sample-bucket
+	python scripts/test_e2e.py
+	docker compose -f docker-compose.dev.yml down

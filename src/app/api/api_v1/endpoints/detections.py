@@ -9,7 +9,7 @@ from mimetypes import guess_extension
 from typing import List
 
 import magic
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
 from app.api.dependencies import get_detection_crud, get_jwt
 from app.crud import DetectionCRUD
@@ -24,7 +24,6 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
@@ -76,7 +75,7 @@ async def get_detection_url(
     detection_id: int = Path(..., gt=0),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
-):
+) -> DetectionUrl:
     """Resolve the temporary media image URL"""
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     # Check in DB

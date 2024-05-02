@@ -1,0 +1,66 @@
+name: pyronear
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15-alpine
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USER=dummy_pg_user
+      - POSTGRES_PASSWORD=dummy_pg_pwd
+      - POSTGRES_DB=dummy_pg_db
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U dummy_pg_user -d dummy_pg_db'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  
+  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.4.0
+    ports:
+      - 4566:4566
+    # environment variables details: https://docs.localstack.cloud/references/configuration/
+    environment:
+      - EDGE_PORT=4566
+      - SERVICES=s3
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    ports:
+      - "5050:5050"
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
+      - SUPERADMIN_LOGIN=superadmin_login
+      - SUPERADMIN_PWD=superadmin_pwd
+      - JWT_SECRET=${JWT_SECRET}
+      - SUPPORT_EMAIL=${SUPPORT_EMAIL}
+      - DEBUG=true
+      - SQLALCHEMY_SILENCE_UBER_WARNING=1
+      - S3_BUCKET_NAME=sample-bucket
+      - S3_ENDPOINT_URL=http://s3.localhost.localstack.cloud:4566
+      - S3_ACCESS_KEY=fake
+      - S3_SECRET_KEY=fake
+      - S3_REGION=us-east-1
+    volumes:
+      - ./src/:/app/
+    command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:5050/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 3    

@@ -34,7 +34,7 @@ async def login_with_creds(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
     telemetry_client.capture(user.id, event="user-login", properties={"method": "credentials"})
     # create access token using user user_id/user_scopes
-    token_data = {"sub": str(user.id), "scopes": user.scope.split()}
+    token_data = {"sub": str(user.id), "scopes": user.role.split()}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
 
     return Token(access_token=token, token_type="bearer")  # S106

@@ -33,9 +33,7 @@ async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union
     )
 
     # Enrich user data
-    telemetry_client.identify(user.id, properties={"login": payload.login})
-    if isinstance(payload.provider_user_id, int):
-        telemetry_client.alias(user.id, payload.login)
+    telemetry_client.alias(user.id, payload.login)
 
     # Assume the requester is the new user if none was specified
     telemetry_client.capture(
