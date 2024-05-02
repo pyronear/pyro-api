@@ -37,7 +37,7 @@ async def login_with_creds(
     token_data = {"sub": str(user.id), "scopes": user.role.split()}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
 
-    return Token(access_token=token, token_type="bearer")  # S106
+    return Token(access_token=token, token_type="bearer")  # noqa S106
 
 
 @router.get("/validate", status_code=status.HTTP_200_OK, summary="Check token validity")

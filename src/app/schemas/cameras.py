@@ -22,7 +22,6 @@ class CameraCreate(BaseModel):
         ...,
         min_length=3,
         max_length=50,
-        nullable=False,
         description="name of the camera",
         json_schema_extra={"examples": ["pyro-camera-01"]},
     )
@@ -30,7 +29,6 @@ class CameraCreate(BaseModel):
         ...,
         gt=0,
         le=360,
-        nullable=False,
         description="angle between left and right camera view",
         json_schema_extra={"examples": [120.0]},
     )
@@ -38,7 +36,6 @@ class CameraCreate(BaseModel):
         ...,
         gt=0,
         lt=10000,
-        nullable=False,
         description="number of meters from sea level",
         json_schema_extra={"examples": [1582]},
     )
