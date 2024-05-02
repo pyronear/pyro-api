@@ -5,7 +5,6 @@
 
 import argparse
 import time
-from io import BytesIO
 from typing import Any, Dict, Optional
 
 import requests
@@ -46,12 +45,12 @@ def main(args):
     }
 
     user_login = "my_user"
-    user_pwd = "my_pwd"  # nosec B105
+    user_pwd = "my_pwd"  # noqa S105
 
     # create a user
     payload = {"login": user_login, "password": user_pwd, "scope": "agent"}
     user_id = api_request("post", f"{args.endpoint}/users/", superuser_auth, payload)["id"]
-    user_auth = {
+    agent_auth = {
         "Authorization": f"Bearer {get_token(args.endpoint, user_login, user_pwd)}",
         "Content-Type": "application/json",
     }
@@ -75,24 +74,24 @@ def main(args):
         headers=superuser_auth,
     ).json()["access_token"]
 
-    cam_auth = {
-        "Authorization": f"Bearer {cam_token}",
-        "Content-Type": "application/json",
-    }
+    cam_auth = {"Authorization": f"Bearer {cam_token}"}
 
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
-    detection = requests.post(f"{args.endpoint}/detections", headers=cam_auth, files={"file": ("logo.png", file_bytes, "image/png")}, timeout=5).json()
-    print(detection)
-    detection_id = detection["id"]
+    detection_id = requests.post(
+        f"{args.endpoint}/detections",
+        headers=cam_auth,
+        files={"file": ("logo.png", file_bytes, "image/png")},
+        timeout=5,
+    ).json()["id"]
 
     # Acknowledge it
     api_request("patch", f"{args.endpoint}/detections/{detection_id}/label", superuser_auth, {"is_wildfire": True})
 
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
-    api_request("delete", f"{args.endpoint}/devices/{cam_id}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
 
     print(f"SUCCESS in {time.time() - start_ts:.3}s")
