@@ -123,14 +123,15 @@ known-third-party = ["fastapi"]
 "**/__init__.py" = ["I001", "F401", "CPY001"]
 "scripts/**.py" = ["D", "T201", "S101", "ANN"]
 ".github/**.py" = ["D", "T201", "ANN"]
-"client/docs/**.py" = ["E402"]
 "src/tests/**.py" = ["D103", "CPY001", "S101", "T201", "ANN001", "ANN201", "ANN202", "ARG001"]
-"client/tests/**.py" = ["D103", "CPY001", "S101", "T201", "ANN001", "ANN201", "ARG001"]
 "src/migrations/versions/**.py" = ["CPY001"]
 "src/migrations/**.py" = ["ANN"]
 "src/app/main.py" = ["ANN"]
 "src/app/schemas/**.py" = ["A"]
 "src/app/models.py" = ["A"]
+"client/docs/**.py" = ["E402", "D103", "ANN", "A001", "ARG001"]
+"client/setup.py" = ["T201"]
+"client/tests/**.py" = ["D103", "CPY001", "S101", "T201", "ANN", "ARG001"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -154,6 +155,7 @@ plugins = ["pydantic.mypy"]
 module = [
     "magic",
     "boto3",
+    "botocore.*",
     "databases",
     "posthog",
 ]
