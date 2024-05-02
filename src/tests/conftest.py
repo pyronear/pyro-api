@@ -2,24 +2,23 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-from app.api import endpoints
-from app.api.security import create_unlimited_access_token
+from app.core.security import create_access_token
 from app.main import app
 from tests.db_utils import database as test_database
 from tests.db_utils import reset_test_db
 
 
-async def mock_hash_password(password):
+def mock_hash_password(password):
     return f"hashed_{password}"
 
 
-async def mock_verify_password(plain_password, hashed_password):
+def mock_verify_password(plain_password, hashed_password):
     return hashed_password == f"hashed_{plain_password}"
 
 
-async def get_token(access_id, scopes):
+def get_token(access_id, scopes):
     token_data = {"sub": str(access_id), "scopes": scopes}
-    token = await create_unlimited_access_token(token_data)
+    token = create_access_token(token_data)
 
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
@@ -46,9 +45,3 @@ async def test_db():
         yield test_database
     finally:
         await test_database.disconnect()
-
-
-@pytest.fixture(autouse=True)
-def patch_send_telegram_msg(monkeypatch):
-    """Patch send_telegram_msg -> do nothing"""
-    monkeypatch.setattr(endpoints.notifications, "send_telegram_msg", lambda *arg, **kwargs: None)
