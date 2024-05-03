@@ -20,12 +20,78 @@ USER_TABLE = [
     {"id": 3, "login": "fifth_login", "access_id": 5, "created_at": "2020-11-13T08:18:45.447773"},
 ]
 
+SITE_TABLE = [
+    {
+        "id": 1,
+        "name": "my_first_tower",
+        "group_id": 1,
+        "lat": 44.1,
+        "lon": -0.7,
+        "type": "tower",
+        "country": "FR",
+        "geocode": "40",
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "name": "my_first_station",
+        "group_id": 2,
+        "lat": 44.1,
+        "lon": 3.9,
+        "type": "station",
+        "country": "FR",
+        "geocode": "30",
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "name": "my_scd_station",
+        "group_id": 2,
+        "lat": 44.1,
+        "lon": 3.9,
+        "type": "station",
+        "country": "FR",
+        "geocode": "30",
+        "created_at": "2020-09-13T08:18:45.447773",
+    },
+]
+
+INSTALLATION_TABLE = [
+    {
+        "id": 1,
+        "device_id": 1,
+        "site_id": 1,
+        "start_ts": "2019-10-13T08:18:45.447773",
+        "end_ts": None,
+        "is_trustworthy": True,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 2,
+        "device_id": 2,
+        "site_id": 2,
+        "start_ts": "2019-10-13T08:18:45.447773",
+        "end_ts": None,
+        "is_trustworthy": False,
+        "created_at": "2020-11-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
+        "device_id": 4,
+        "site_id": 3,
+        "start_ts": "2019-10-13T08:18:45.447773",
+        "end_ts": None,
+        "is_trustworthy": False,
+        "created_at": "2020-11-13T08:18:45.447773",
+    },
+]
+
 DEVICE_TABLE = [
     {
         "id": 1,
         "login": "third_login",
         "owner_id": 1,
-        "access_id": 3,
+        "access_id": 1,
         "specs": "v0.1",
         "elevation": None,
         "lat": None,
@@ -39,9 +105,41 @@ DEVICE_TABLE = [
     },
     {
         "id": 2,
+        "login": "scd_login",
+        "owner_id": 2,
+        "access_id": 2,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "azimuth": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 3,
         "login": "fourth_login",
         "owner_id": 2,
         "access_id": 4,
+        "specs": "v0.1",
+        "elevation": None,
+        "lat": None,
+        "lon": None,
+        "azimuth": None,
+        "pitch": None,
+        "last_ping": None,
+        "angle_of_view": 68.0,
+        "software_hash": None,
+        "created_at": "2020-10-13T08:18:45.447773",
+    },
+    {
+        "id": 4,
+        "login": "first_login",
+        "owner_id": 2,
+        "access_id": 3,
         "specs": "v0.1",
         "elevation": None,
         "lat": None,
@@ -67,13 +165,15 @@ ACCESS_TABLE = [
 
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 2, "device_id": 3, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
 ]
 
 
 USER_TABLE_FOR_DB = list(map(update_only_datetime, USER_TABLE))
 DEVICE_TABLE_FOR_DB = list(map(update_only_datetime, DEVICE_TABLE))
 MEDIA_TABLE_FOR_DB = list(map(update_only_datetime, MEDIA_TABLE))
+SITE_TABLE_FOR_DB = list(map(update_only_datetime, SITE_TABLE))
+INSTALLATION_TABLE_FOR_DB = list(map(update_only_datetime, INSTALLATION_TABLE))
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -85,6 +185,8 @@ async def init_test_db(monkeypatch, test_db):
     await fill_table(test_db, db.users, USER_TABLE_FOR_DB)
     await fill_table(test_db, db.devices, DEVICE_TABLE_FOR_DB)
     await fill_table(test_db, db.media, MEDIA_TABLE_FOR_DB)
+    await fill_table(test_db, db.sites, SITE_TABLE_FOR_DB)
+    await fill_table(test_db, db.installations, INSTALLATION_TABLE_FOR_DB)
 
 
 @pytest.mark.parametrize(
@@ -132,6 +234,7 @@ async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_co
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
     response = await test_app_asyncio.get("/media/", headers=auth)
+
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -237,12 +340,13 @@ async def test_delete_media(
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename, bucket_name):
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
 
     response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
+
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -273,7 +377,7 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
     assert response.status_code == 201
 
     # 2 - Upload something
-    async def mock_upload_file(bucket_key, file_binary):
+    async def mock_upload_file(bucket_key, file_binary, bucket_name):
         return True
 
     monkeypatch.setattr(s3_bucket, "upload_file", mock_upload_file)
@@ -286,12 +390,12 @@ async def test_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch
 
     md5_hash = hash_content_file(img_content, use_md5=True)
 
-    async def mock_get_file_metadata(bucket_key):
+    async def mock_get_file_metadata(bucket_key, bucket_name):
         return {"ETag": md5_hash}
 
     monkeypatch.setattr(s3_bucket, "get_file_metadata", mock_get_file_metadata)
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename, bucket_name):
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
@@ -338,7 +442,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
     assert response.status_code == 201
 
     # Sanitize bucket actions
-    async def mock_upload_file(bucket_key, file_binary):
+    async def mock_upload_file(bucket_key, file_binary, bucket_name):
         return True
 
     monkeypatch.setattr(s3_bucket, "upload_file", mock_upload_file)
@@ -356,7 +460,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
 
     monkeypatch.setattr(s3_bucket, "get_file_metadata", mock_get_file_metadata)
 
-    async def mock_delete_file(filename):
+    async def mock_delete_file(filename, bucket_name):
         return True
 
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
@@ -365,7 +469,7 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
     del device_auth["Content-Type"]
 
     # Upload failing
-    async def failing_upload(bucket_key: str, file_binary: bytes) -> bool:
+    async def failing_upload(bucket_key: str, file_binary: bytes, bucket_name: str) -> bool:
         return False
 
     monkeypatch.setattr(s3_bucket, "upload_file", failing_upload)

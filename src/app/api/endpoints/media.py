@@ -13,11 +13,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Pa
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
 from app.api.crud.groups import get_entity_group_id
-from app.api.deps import get_current_access, get_current_device, get_db
+from app.api.deps import get_current_access, get_current_device, get_current_site, get_db
 from app.api.security import hash_content_file
 from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
-from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
+from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl, SiteOut
 from app.services import resolve_bucket_key, s3_bucket
 from app.services.telemetry import telemetry_client
 
@@ -109,7 +109,11 @@ async def fetch_media(
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
-async def delete_media(media_id: int = Path(..., gt=0), access=Security(get_current_access, scopes=[AccessType.admin])):
+async def delete_media(
+    media_id: int = Path(..., gt=0),
+    access=Security(get_current_access, scopes=[AccessType.admin]),
+    site=Security(get_current_site, scopes=[AccessType.admin]),
+):
     """
     Based on a media_id, deletes the specified media
     """
@@ -118,7 +122,7 @@ async def delete_media(media_id: int = Path(..., gt=0), access=Security(get_curr
     entry = await crud.delete_entry(media, media_id)
     # Delete media file if one exists
     if isinstance(entry["bucket_key"], str) and len(entry["bucket_key"]) > 0:
-        await s3_bucket.delete_file(entry["bucket_key"])
+        await s3_bucket.delete_file(entry["bucket_key"], site.name)
     return entry
 
 
@@ -128,6 +132,7 @@ async def upload_media_from_device(
     media_id: int = Path(..., gt=0),
     file: UploadFile = File(...),
     device: DeviceOut = Security(get_current_device, scopes=[AccessType.device]),
+    site: SiteOut = Security(get_current_site, scopes=[AccessType.device]),
 ):
     """
     Upload a media (image or video) linked to an existing media object in the DB
@@ -147,10 +152,11 @@ async def upload_media_from_device(
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash
-    file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    file_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{device.login}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     # If files are in a subfolder of the bucket, prepend the folder path
+    bucket_name = site.name
     bucket_key = resolve_bucket_key(file_name)
 
     # Upload if bucket_key is different (otherwise the content is the exact same)
@@ -158,14 +164,14 @@ async def upload_media_from_device(
         return await crud.get_entry(media, media_id)
     else:
         # Failed upload
-        if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
+        if not (await s3_bucket.upload_file(bucket_key, file.file, bucket_name)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        file_meta = await s3_bucket.get_file_metadata(bucket_key)
+        file_meta = await s3_bucket.get_file_metadata(bucket_key, bucket_name)
         # Corrupted file
         if md5_hash != file_meta["ETag"].replace('"', ""):
             # Delete the corrupted upload
-            await s3_bucket.delete_file(bucket_key)
+            await s3_bucket.delete_file(bucket_key, bucket_name)
             # Raise the exception
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -173,7 +179,7 @@ async def upload_media_from_device(
             )
         # If a file was previously uploaded, delete it
         if isinstance(entry["bucket_key"], str):
-            await s3_bucket.delete_file(entry["bucket_key"])
+            await s3_bucket.delete_file(entry["bucket_key"], bucket_name)
 
         entry_dict = dict(**entry)
         entry_dict["bucket_key"] = bucket_key
@@ -182,7 +188,9 @@ async def upload_media_from_device(
 
 @router.get("/{media_id}/url", response_model=MediaUrl, status_code=200)
 async def get_media_url(
-    media_id: int = Path(..., gt=0), requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user])
+    media_id: int = Path(..., gt=0),
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    site=Security(get_current_site, scopes=[AccessType.admin]),
 ):
     """Resolve the temporary media image URL"""
     telemetry_client.capture(requester.id, event="media-get-url", properties={"media_id": media_id})
@@ -192,5 +200,5 @@ async def get_media_url(
     # Check in DB
     media_instance = await check_media_registration(media_id)
     # Check in bucket
-    temp_public_url = await s3_bucket.get_public_url(media_instance["bucket_key"])
+    temp_public_url = await s3_bucket.get_public_url(media_instance["bucket_key"], site.name)
     return MediaUrl(url=temp_public_url)

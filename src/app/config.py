@@ -40,8 +40,6 @@ JWT_ENCODING_ALGORITHM = "HS256"
 SUPERUSER_LOGIN: str = os.environ["SUPERUSER_LOGIN"]
 SUPERUSER_PWD: str = os.environ["SUPERUSER_PWD"]
 
-BUCKET_NAME: str = os.environ["BUCKET_NAME"]
-BUCKET_MEDIA_FOLDER: Optional[str] = os.getenv("BUCKET_MEDIA_FOLDER")
 S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]
 S3_SECRET_KEY: str = os.environ["S3_SECRET_KEY"]
 S3_REGION: str = os.environ["S3_REGION"]

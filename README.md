@@ -111,7 +111,6 @@ This file will have to hold the following information:
 - `S3_SECRET_KEY`: private key to access the resource.
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
-- `BUCKET_NAME`: the name of the storage bucket
 - `POSTGRES_DB`: name of postgres database
 - `POSTGRES_USER`: user of postgres database
 - `POSTGRES_PASSWORD`: user password of postgres database
@@ -119,7 +118,6 @@ This file will have to hold the following information:
 Optionally, the following information can be added:
 - `SENTRY_DSN`: the URL of the [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SENTRY_SERVER_NAME`: the server tag to apply to events.
-- `BUCKET_MEDIA_FOLDER`: the optional subfolder to put the media files in
 - `TELEGRAM_TOKEN`: to send notifications via telegram for a new alert (once per event)
 - `POSTHOG_KEY`: to enable product analytics
 
@@ -129,7 +127,6 @@ S3_ACCESS_KEY=YOUR_ACCESS_KEY
 S3_SECRET_KEY=YOUR_SECRET_KEY
 S3_REGION=bucket-region
 S3_ENDPOINT_URL='https://s3.mydomain.com/'
-BUCKET_NAME=my_storage_bucket_name
 POSTGRES_USER=dummy_pg_user
 POSTGRES_PASSWORD=dummy_pg_pwd
 POSTGRES_DB=dummy_pg_db

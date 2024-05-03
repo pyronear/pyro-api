@@ -10,10 +10,10 @@ from pydantic import ValidationError
 
 import app.config as cfg
 from app.api import crud
-from app.db import accesses, devices, users
+from app.db import accesses, devices, installations, sites, users
 from app.db.session import SessionLocal
 from app.models import AccessType
-from app.schemas import AccessRead, DeviceOut, TokenPayload, UserRead
+from app.schemas import AccessRead, DeviceOut, InstallationOut, SiteOut, TokenPayload, UserRead
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
@@ -94,7 +94,29 @@ async def get_current_device(access: AccessRead = Depends(get_current_access)) -
     if device is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No matching device with this credentials.",
+            detail="No matching device with this credentials access_id: " + str(access.id),
         )
 
     return DeviceOut(**device)
+
+
+async def get_current_installation(device: DeviceOut = Depends(get_current_device)) -> InstallationOut:
+    installation = await crud.fetch_one(installations, {"device_id": device.id})
+    if installation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matching installation with this credentials, device_id:" + str(device.id),
+        )
+
+    return InstallationOut(**installation)
+
+
+async def get_current_site(installation: InstallationOut = Depends(get_current_installation)) -> SiteOut:
+    site = await crud.fetch_one(sites, {"id": installation.site_id})
+    if site is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matching site with this credentials, id:" + str(installation.site_id),
+        )
+
+    return SiteOut(**site)

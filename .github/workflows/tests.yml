@@ -56,8 +56,6 @@ jobs:
         run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
       - name: Run backend
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
           S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}

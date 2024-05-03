@@ -9,20 +9,9 @@ from app.services.utils import cfg, send_telegram_msg
 
 def test_resolve_bucket_key(monkeypatch):
     file_name = "myfile.jpg"
-    bucket_subfolder = "my/bucket/subfolder"
 
     # Same if the bucket folder is specified
-    assert resolve_bucket_key(file_name, bucket_subfolder) == f"{bucket_subfolder}/{file_name}"
-
-    # Check that bucket folder is prepended in bucket key if set
-    origin_value = cfg.BUCKET_MEDIA_FOLDER
-    monkeypatch.setattr(cfg, "BUCKET_MEDIA_FOLDER", bucket_subfolder)
-    assert resolve_bucket_key(file_name) == f"{bucket_subfolder}/{file_name}"
-
-    # Check that it returns the same thing when bucket folder is not set
-    monkeypatch.setattr(cfg, "BUCKET_MEDIA_FOLDER", None)
-    assert resolve_bucket_key(file_name) == file_name
-    monkeypatch.setattr(cfg, "BUCKET_MEDIA_FOLDER", origin_value)
+    assert resolve_bucket_key(file_name) == f"{file_name}"
 
 
 def test_s3_bucket():
