@@ -107,6 +107,10 @@ async def fetch_media(
     query = session.query(Media)
     if start_date and end_date:
         query = query.filter(and_(Media.created_at >= start_date, Media.created_at <= end_date))
+    if start_date and end_date is None:
+        query = query.filter(Media.created_at >= start_date)
+    if start_date is None and end_date:
+        query = query.filter(Media.created_at <= end_date)
     if await is_admin_access(requester.id):
         total_items = query.count()
         retrieved_media = query.offset((page - 1) * per_page).limit(per_page).all()
