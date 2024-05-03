@@ -5,10 +5,11 @@
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, Optional, cast
 
 import magic
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, Security, UploadFile, status
+from sqlalchemy import and_
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, is_admin_access
@@ -17,7 +18,7 @@ from app.api.deps import get_current_access, get_current_device, get_db
 from app.api.security import hash_content_file
 from app.db import devices, media
 from app.models import Access, AccessType, Device, Media
-from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaUrl
+from app.schemas import BaseMedia, DeviceOut, MediaCreation, MediaIn, MediaOut, MediaPageResponse, MediaUrl
 from app.services import resolve_bucket_key, s3_bucket
 from app.services.telemetry import telemetry_client
 
@@ -90,22 +91,36 @@ async def get_media(
     return await crud.get_entry(media, media_id)
 
 
-@router.get("/", response_model=List[MediaOut], summary="Get the list of all media")
+@router.get("/", response_model=MediaPageResponse, summary="Get the list of all media")
 async def fetch_media(
-    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    page: int = 1,
+    per_page: int = 10,
+    requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]),
+    session=Depends(get_db),
 ):
     """
-    Retrieves the list of all media and their information
+    Retrieves the list of media based on start_date, end_date, pagination, and requester info.
     """
     telemetry_client.capture(requester.id, event="media-fetch")
+    query = session.query(Media)
+    if start_date and end_date:
+        query = query.filter(and_(Media.created_at >= start_date, Media.created_at <= end_date))
     if await is_admin_access(requester.id):
-        return await crud.fetch_all(media)
+        total_items = query.count()
+        retrieved_media = query.offset((page - 1) * per_page).limit(per_page).all()
     else:
-        retrieved_media = (
-            session.query(Media).join(Device).join(Access).filter(Access.group_id == requester.group_id).all()
-        )
-        retrieved_media = [x.__dict__ for x in retrieved_media]
-        return retrieved_media
+        query = query.join(Device).join(Access).filter(Access.group_id == requester.group_id)
+        total_items = query.count()
+        retrieved_media = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return {
+        "total_items": total_items,
+        "page": page,
+        "per_page": per_page,
+        "media": [x.__dict__ for x in retrieved_media],  # Convert SQLAlchemy objects to dictionaries
+    }
 
 
 @router.delete("/{media_id}/", response_model=MediaOut, summary="Delete a specific media")
