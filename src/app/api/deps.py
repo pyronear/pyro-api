@@ -83,7 +83,7 @@ async def get_current_user(access: AccessRead = Depends(get_current_access)) -> 
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No matching user with this credentials.",
+            detail="No matching user with this credentials access_id: " + str(access.id),
         )
 
     return UserRead(**user)
