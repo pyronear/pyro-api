@@ -4,13 +4,15 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
+from typing import List
+
 from pydantic import BaseModel, Field
 
 from app.models import MediaType
 
 from .base import _CreatedAt, _Id
 
-__all__ = ["MediaIn", "MediaCreation", "MediaOut", "MediaUrl", "BaseMedia"]
+__all__ = ["MediaIn", "MediaCreation", "MediaOut", "MediaUrl", "BaseMedia", "MediaPageResponse"]
 
 
 # Media
@@ -32,3 +34,10 @@ class MediaOut(MediaIn, _CreatedAt, _Id):
 
 class MediaUrl(BaseModel):
     url: str = Field(..., description="temporary URL to access the media content")
+
+
+class MediaPageResponse(BaseModel):
+    total_items: int
+    page: int
+    per_page: int
+    media: List[MediaOut]

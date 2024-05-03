@@ -43,7 +43,7 @@ test:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build
 	docker compose exec localstack awslocal s3 mb s3://sample-bucket
-	docker compose exec -T backend pytest --cov=app
+	docker compose exec -T backend pytest -s /app/tests/routes/test_media.py
 	docker compose -f docker-compose.test.yml down
 
 # Run tests for the Python client

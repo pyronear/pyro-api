@@ -68,6 +68,11 @@ ACCESS_TABLE = [
 MEDIA_TABLE = [
     {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
     {"id": 2, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 3, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:25:45.447773"},
+    {"id": 4, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:34:45.447773"},
+    {"id": 5, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:42:45.447773"},
+    {"id": 6, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:51:45.447773"},
+    {"id": 7, "device_id": 2, "type": "video", "created_at": "2020-10-13T09:59:45.447773"},
 ]
 
 
@@ -116,28 +121,49 @@ async def test_get_media(test_app_asyncio, init_test_db, access_idx, media_id, s
 
 
 @pytest.mark.parametrize(
-    "access_idx, status_code, status_details, expected_results",
+    "access_idx, status_code, status_details, start_date, end_date, page, per_page, expected_results",
     [
-        [None, 401, "Not authenticated", None],
-        [0, 200, None, [MEDIA_TABLE[0]]],
-        [1, 200, None, MEDIA_TABLE],
-        [2, 403, "Your access scope is not compatible with this operation.", None],
+        [None, 401, "Not authenticated", None, None, 1, 10, None],
+        [0, 200, None, None, None, 1, 10, [MEDIA_TABLE[0]]],
+        [1, 200, None, None, None, 1, 10, MEDIA_TABLE],
+        [2, 403, "Your access scope is not compatible with this operation.", None, None, 1, 10, None],
+        [1, 200, None, "2020-10-13T09:25:00", "2020-10-13T09:43:00", 1, 2, [MEDIA_TABLE[2], MEDIA_TABLE[3]]],
     ],
 )
 @pytest.mark.asyncio
-async def test_fetch_media(test_app_asyncio, init_test_db, access_idx, status_code, status_details, expected_results):
+async def test_fetch_media(
+    test_app_asyncio,
+    init_test_db,
+    access_idx,
+    status_code,
+    status_details,
+    start_date,
+    end_date,
+    page,
+    per_page,
+    expected_results,
+):
     # Create a custom access token
     auth = None
     if isinstance(access_idx, int):
         auth = await pytest.get_token(ACCESS_TABLE[access_idx]["id"], ACCESS_TABLE[access_idx]["scope"].split())
 
-    response = await test_app_asyncio.get("/media/", headers=auth)
+    params = {}
+    if start_date and end_date:
+        params["start_date"] = start_date
+        params["end_date"] = end_date
+    if page and per_page:
+        params["page"] = page
+        params["per_page"] = per_page
+
+    response = await test_app_asyncio.get("/media/", headers=auth, params=params)
+
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
 
     if response.status_code // 100 == 2:
-        assert response.json() == expected_results
+        assert response.json()["media"] == expected_results
 
 
 @pytest.mark.parametrize(
@@ -243,6 +269,7 @@ async def test_delete_media(
     monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
 
     response = await test_app_asyncio.delete(f"/media/{media_id}/", headers=auth)
+
     assert response.status_code == status_code
     if isinstance(status_details, str):
         assert response.json()["detail"] == status_details
@@ -250,7 +277,7 @@ async def test_delete_media(
     if response.status_code // 100 == 2:
         assert response.json() == MEDIA_TABLE[media_id - 1]
         remaining_media = await test_app_asyncio.get("/media/", headers=auth)
-        assert all(entry["id"] != media_id for entry in remaining_media.json())
+        assert all(entry["id"] != media_id for entry in remaining_media.json()["media"])
 
 
 @pytest.mark.asyncio
