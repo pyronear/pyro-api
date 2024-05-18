@@ -28,7 +28,7 @@ services:
       - EDGE_PORT=4566
       - SERVICES=s3
       - DATA_DIR=/tmp/localstack/data
-      - AWS_DEFAULT_REGION=${S3_REGION:-'us-east-1'}
+      - AWS_DEFAULT_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
       - localstack_data:/tmp/localstack
