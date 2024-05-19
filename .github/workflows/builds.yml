@@ -31,9 +31,6 @@ jobs:
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
         run: |
-          docker compose up -d --build localstack
-          sleep 30 && docker compose logs localstack && docker compose up -d --build backend
-          sleep 10 && docker compose logs backend
           docker compose up -d --build --wait
           docker compose logs
           curl http://localhost:5050/status
