@@ -79,7 +79,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def delete(self, entry_id: int) -> None:
         await self.get(entry_id, strict=True)
-        statement = delete(self.model).where(self.model.id == entry_id)
+        statement = delete(self.model).where(self.model.id == entry_id)  # type: ignore[attr-defined]
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
