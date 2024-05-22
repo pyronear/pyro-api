@@ -70,7 +70,7 @@ class S3Bucket:
         try:
             self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
         except Exception as e:
-            logger.warning(e)
+            logger.error(e)
             return False
         return True
 
