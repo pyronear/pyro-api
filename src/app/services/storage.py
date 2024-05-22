@@ -71,7 +71,7 @@ class S3Bucket:
             self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
         except Exception as e:
             logger.error(e)
-            raise
+            return False
         return True
 
     async def delete_file(self, bucket_key: str) -> None:

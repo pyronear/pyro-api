@@ -384,3 +384,51 @@ async def test_failing_upload_media(test_app_asyncio, init_test_db, test_db, mon
         f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
     )
     assert response.status_code == 500, print(response.json()["detail"])
+
+
+@pytest.mark.asyncio
+async def test_connection_issue_upload_media(test_app_asyncio, init_test_db, test_db, monkeypatch):
+    device_idx = 2
+    admin_idx = 1
+    device_id = None
+    for entry in DEVICE_TABLE:
+        if entry["access_id"] == ACCESS_TABLE[device_idx]["id"]:
+            device_id = entry["id"]
+            break
+    # Create a custom access token
+    device_auth = await pytest.get_token(ACCESS_TABLE[device_idx]["id"], ACCESS_TABLE[device_idx]["scope"].split())
+    admin_auth = await pytest.get_token(ACCESS_TABLE[admin_idx]["id"], ACCESS_TABLE[admin_idx]["scope"].split())
+
+    # Create a media that will have an upload
+    payload = {"device_id": device_id}
+    new_media_id = len(MEDIA_TABLE_FOR_DB) + 1
+    response = await test_app_asyncio.post("/media/", content=json.dumps(payload), headers=admin_auth)
+    assert response.status_code == 201
+
+    # Download and save a temporary file
+    local_tmp_path = os.path.join(tempfile.gettempdir(), "my_temp_image.jpg")
+    img_content = requests.get("https://pyronear.org/img/logo_letters.png", timeout=5).content
+    with open(local_tmp_path, "wb") as f:
+        f.write(img_content)
+
+    md5_hash = hash_content_file(img_content, use_md5=True)
+
+    async def mock_get_file_metadata(bucket_key):
+        return {"ETag": md5_hash}
+
+    monkeypatch.setattr(s3_bucket, "get_file_metadata", mock_get_file_metadata)
+
+    async def mock_delete_file(filename):
+        return True
+
+    monkeypatch.setattr(s3_bucket, "delete_file", mock_delete_file)
+
+    # Switch content-type from JSON to multipart
+    del device_auth["Content-Type"]
+
+    response = await test_app_asyncio.post(
+        f"/media/{new_media_id}/upload", files={"file": img_content}, headers=device_auth
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Failed upload"
