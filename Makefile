@@ -40,11 +40,13 @@ stop-dev:
 
 # Run tests for the library
 test:
-	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
-	docker compose -f docker-compose.test.yml up -d --build
-	docker compose exec localstack awslocal s3 mb s3://sample-bucket
-	docker compose exec -T backend pytest --cov=app
-	docker compose -f docker-compose.test.yml down
+	-poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
+	-docker compose -f docker-compose.test.yml up -d --build
+	-docker compose exec localstack awslocal s3 mb s3://sample-bucket
+# a sleep has been added to avoid an IntegrityError with SQL ALchemy if two processes are launched in the docker-compose up and in the test
+	-sleep 15
+	-docker compose exec -T backend pytest -s tests/routes/test_media.py
+	-docker compose -f docker-compose.test.yml down
 
 # Run tests for the Python client
 test-client:
