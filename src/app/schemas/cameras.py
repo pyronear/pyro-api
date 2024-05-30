@@ -41,11 +41,4 @@ class CameraCreate(BaseModel):
     )
     lat: float = Field(..., gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]})
     lon: float = Field(..., gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]})
-    azimuth: float = Field(
-        ...,
-        gt=0,
-        lt=360,
-        description="angle between north and direction in degrees",
-        json_schema_extra={"examples": [110]},
-    )
     is_trustable: bool = Field(True, description="whether the detection from this camera can be trusted")
