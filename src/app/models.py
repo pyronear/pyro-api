@@ -28,7 +28,7 @@ class Role(str, Enum):
 class User(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     role: UserRole = Field(UserRole.USER, nullable=False)
-    # Allow sign-up/in via provider or login + password
+    # Allow sign-up/in via login + password
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)
     hashed_password: str = Field(..., min_length=5, max_length=70, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
@@ -41,7 +41,6 @@ class Camera(SQLModel, table=True):
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
     lat: float = Field(..., gt=-90, lt=90)
     lon: float = Field(..., gt=-180, lt=180)
-    azimuth: float = Field(..., gt=0, lt=360)
     is_trustable: bool = True
     last_active_at: Union[datetime, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
@@ -50,6 +49,7 @@ class Camera(SQLModel, table=True):
 class Detection(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
+    azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
     is_wildfire: Union[bool, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
