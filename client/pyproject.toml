@@ -41,7 +41,6 @@ test = [
 quality = [
     "ruff==0.0.290",
     "mypy==1.4.1",
-    "black==23.3.0",
 ]
 docs = [
     "sphinx>=3.0.0,!=3.5.0",
