@@ -15,7 +15,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-  
+
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
     image: localstack/localstack:1.4.0
@@ -65,4 +65,4 @@ services:
       test: ["CMD-SHELL", "curl http://localhost:5050/status"]
       interval: 10s
       timeout: 3s
-      retries: 3    
+      retries: 3

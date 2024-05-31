@@ -63,7 +63,7 @@
 
 'topic: build':
 - changed-files:
-  - any-glob-to-any-file: 
+  - any-glob-to-any-file:
     - pyproject.toml
     - poetry.lock
     - client/pyproject.toml
@@ -81,14 +81,14 @@
 
 'topic: docker':
 - changed-files:
-  - any-glob-to-any-file: 
+  - any-glob-to-any-file:
     - docker-compose.*
     - src/Dockerfile
     - .env.example
 
 'topic: docs':
 - changed-files:
-  - any-glob-to-any-file: 
+  - any-glob-to-any-file:
     - README.md
     - CONTRIBUTING.md
     - CODE_OF_CONDUCT.md
