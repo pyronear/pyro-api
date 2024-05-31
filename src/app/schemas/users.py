@@ -23,14 +23,14 @@ class CredHash(BaseModel):
     hashed_password: str
 
 
-class Scope(BaseModel):
-    scope: UserRole = Field(UserRole.USER)
+class Role(BaseModel):
+    role: UserRole = Field(UserRole.USER)
 
 
-class UserCreate(Scope):
+class UserCreate(Role):
     login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
     password: str = Field(..., min_length=3, examples=["PickARobustOne"])
 
 
-class UserCreation(Scope):
+class UserCreation(Role):
     login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
