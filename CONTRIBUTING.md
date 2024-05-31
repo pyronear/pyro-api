@@ -18,7 +18,7 @@ The back-end core feature is to interact with the metadata tables. For the servi
 
 - Detection: association of a picture and a camera.
 
-![UML diagram](https://github.com/pyronear/pyro-api/assets/26927750/a6207b69-87df-46a5-9294-a66ea4c797f9)
+![UML diagram](https://github.com/pyronear/pyro-api/assets/26927750/bf48f757-7cb0-45fd-aea1-b832e969a705)
 
 ### What is the full detection workflow through the API
 
