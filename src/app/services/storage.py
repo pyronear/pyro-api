@@ -78,7 +78,7 @@ class S3Bucket:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
         try:
             self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
-        except Exception as e:
+        except Exception as e:  # noqa BLE001
             logger.warning(e)
             return False
         return True
