@@ -35,7 +35,6 @@ dependencies = [
 test = [
     "pytest>=5.3.2",
     "pytest-cov>=3.0.0,<5.0.0",
-    "pytest-xdist>=2.0.0,<4.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
 ]
 quality = [
@@ -54,7 +53,6 @@ dev = [
     # test
     "pytest>=5.3.2",
     "pytest-cov>=3.0.0,<5.0.0",
-    "pytest-xdist>=2.0.0,<4.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
     # style
     "mypy==1.4.1",
