@@ -67,7 +67,7 @@ jobs:
           POSTGRES_DB: dummy_pg_db
         run: |
           docker compose -f docker-compose.dev.yml up -d --build --wait
-          cd client && pytest --cov=pyroclient --cov-report xml tests/ -n auto
+          cd client && pytest --cov=pyroclient --cov-report xml tests/
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
