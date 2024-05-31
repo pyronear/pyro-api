@@ -39,7 +39,6 @@ test = [
     "pytest-pretty>=1.0.0,<2.0.0",
 ]
 quality = [
-    "ruff==0.0.290",
     "mypy==1.4.1",
 ]
 docs = [
@@ -58,9 +57,7 @@ dev = [
     "pytest-xdist>=2.0.0,<4.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
     # style
-    "ruff==0.0.290",
     "mypy==1.4.1",
-    "black==23.3.0",
     # docs
     "sphinx>=3.0.0,!=3.5.0",
     "sphinxemoji>=0.1.8",
@@ -99,7 +96,3 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["pyroclient/"]
-
-[tool.black]
-line-length = 120
-target-version = ['py38']
