@@ -76,11 +76,7 @@ class S3Bucket:
     async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        try:
-            self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
-        except Exception as e:  # noqa BLE001
-            logger.warning(e)
-            return False
+        self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
         return True
 
     async def delete_file(self, bucket_key: str) -> None:
