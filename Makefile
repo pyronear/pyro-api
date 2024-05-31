@@ -38,7 +38,7 @@ test:
 test-client:
 	poetry export -f requirements.txt --without-hashes --output requirements.txt
 	docker compose -f docker-compose.dev.yml up -d --build --wait
-	cd client && pytest --cov=pyroclient tests/ -n auto && cd ..
+	cd client && pytest --cov=pyroclient tests/ && cd ..
 	docker compose -f docker-compose.dev.yml down
 
 # Check that docs can build for client
