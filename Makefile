@@ -27,26 +27,19 @@ run:
 stop:
 	docker compose down
 
-run-dev:
-	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
-	docker compose -f docker-compose.dev.yml -f docker-compose.override.yml up -d --build --wait
-	docker compose exec localstack awslocal s3 mb s3://sample-bucket
-	docker compose exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
-
-stop-dev:
-	docker compose -f docker-compose.dev.yml down
-
 # Run tests for the library
 test:
 	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build
-	docker compose exec localstack awslocal s3 mb s3://sample-bucket
+	docker compose -f docker-compose.dev.yml up -d --build --wait
 	docker compose exec -T backend pytest --cov=app
 	docker compose -f docker-compose.dev.yml down
 
 # Run tests for the Python client
 test-client:
-	cd client && pytest --cov=pyroclient tests/ -n auto
+	poetry export -f requirements.txt --without-hashes --output requirements.txt
+	docker compose -f docker-compose.dev.yml up -d --build --wait
+	cd client && pytest --cov=pyroclient tests/ -n auto && cd ..
+	docker compose -f docker-compose.dev.yml down
 
 # Check that docs can build for client
 docs-client:
