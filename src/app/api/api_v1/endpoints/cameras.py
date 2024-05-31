@@ -67,7 +67,7 @@ async def create_camera_token(
 ) -> Token:
     telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
     # Verify camera
-    await cameras.get(camera_id)
+    await cameras.get(camera_id, strict=True)
     # create access token using user user_id/user_scopes
     token_data = {"sub": str(camera_id), "scopes": ["camera"]}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
