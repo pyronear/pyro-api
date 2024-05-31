@@ -82,6 +82,7 @@ def main(args):
     detection_id = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
+        data={"azimuth": 45.6},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
@@ -108,7 +109,7 @@ def parse_args():
         description="Pyronear API End-to-End test", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("--endpoint", type=str, default="http://localhost:5050/api", help="the API endpoint")
+    parser.add_argument("--endpoint", type=str, default="http://localhost:5050/api/v1", help="the API endpoint")
 
     return parser.parse_args()
 
