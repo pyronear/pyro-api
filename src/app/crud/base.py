@@ -50,7 +50,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def get_by(self, field_name: str, val: Union[str, int], strict: bool = False) -> Union[ModelType, None]:
         statement: Select = select(self.model).where(getattr(self.model, field_name) == val)
-        results = await self.session.execute(statement=statement)
+        results = await self.session.exec(statement=statement)  # type: ignore
         entry = results.one_or_none()
         if strict and entry is None:
             raise HTTPException(
@@ -63,7 +63,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         statement: Select = select(self.model)
         if isinstance(filter_pair, tuple):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
-        return await self.session.execute(statement=statement)
+        return await self.session.exec(statement=statement)  # type: ignore
 
     async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
         access = cast(ModelType, await self.get(entry_id, strict=True))
@@ -82,5 +82,5 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.get(entry_id, strict=True)
         statement = delete(self.model).where(self.model.id == entry_id)
 
-        await self.session.execute(statement=statement)
+        await self.session.exec(statement=statement)  # type: ignore
         await self.session.commit()
