@@ -8,7 +8,6 @@ import logging
 
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.selectable import Select
 from sqlmodel import SQLModel, create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +22,7 @@ engine = AsyncEngine(create_engine(settings.POSTGRES_URL, echo=False))
 
 
 async def get_session() -> AsyncSession:  # type: ignore[misc]
-    async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
     async with async_session() as session:
         yield session
 
@@ -34,8 +33,8 @@ async def init_db() -> None:
 
     async with AsyncSession(engine) as session:
         # Check if admin exists
-        statement: Select = select(User).where(User.login == settings.SUPERADMIN_LOGIN)
-        results = await session.exec(statement=statement)  # type: ignore
+        statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)
+        results = await session.exec(statement=statement)
         user = results.one_or_none()
         if not user:
             logger.info("Initializing PostgreSQL database...")

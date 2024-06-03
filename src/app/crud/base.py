@@ -8,7 +8,6 @@ from typing import Any, Generic, List, Tuple, Type, TypeVar, Union, cast
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import exc
-from sqlalchemy.sql.selectable import Select
 from sqlmodel import SQLModel, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -49,8 +48,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return entry
 
     async def get_by(self, field_name: str, val: Union[str, int], strict: bool = False) -> Union[ModelType, None]:
-        statement: Select = select(self.model).where(getattr(self.model, field_name) == val)
-        results = await self.session.exec(statement=statement)  # type: ignore
+        statement = select(self.model).where(getattr(self.model, field_name) == val)
+        results = await self.session.exec(statement=statement)
         entry = results.one_or_none()
         if strict and entry is None:
             raise HTTPException(
@@ -60,10 +59,10 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return entry
 
     async def fetch_all(self, filter_pair: Union[Tuple[str, Any], None] = None) -> List[ModelType]:
-        statement: Select = select(self.model)
+        statement = select(self.model)
         if isinstance(filter_pair, tuple):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
-        return await self.session.exec(statement=statement)  # type: ignore
+        return await self.session.exec(statement=statement)  # type: ignore[return-value]
 
     async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
         access = cast(ModelType, await self.get(entry_id, strict=True))
@@ -80,7 +79,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def delete(self, entry_id: int) -> None:
         await self.get(entry_id, strict=True)
-        statement = delete(self.model).where(self.model.id == entry_id)
+        statement = delete(self.model).where(self.model.id == entry_id)  # type: ignore[attr-defined]
 
-        await self.session.exec(statement=statement)  # type: ignore
+        await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
