@@ -207,365 +207,185 @@
 <span class="c1"># This program is licensed under the Apache License 2.0.</span>
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
-<span class="kn">import</span> <span class="nn">io</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">from</span> <span class="nn">requests.models</span> <span class="kn">import</span> <span class="n">Response</span>
 
-<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">HTTPRequestException</span>
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="n">HTTPRequestError</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Client&quot;</span><span class="p">]</span>
 
-<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">()</span>
-
 <span class="n">ROUTES</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="s2">&quot;/login/access-token&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
-    <span class="c1"># DEVICES</span>
+    <span class="c1"># LOGIN</span>
     <span class="c1">#################</span>
-    <span class="c1"># Device-logged</span>
-    <span class="s2">&quot;heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/heartbeat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-self-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/me&quot;</span><span class="p">,</span>
-    <span class="c1"># User-logged</span>
-    <span class="s2">&quot;get-user-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/devices/my-devices&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;login-validate&quot;</span><span class="p">:</span> <span class="s2">&quot;/login/validate&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
-    <span class="c1"># SITES</span>
+    <span class="c1"># CAMERAS</span>
     <span class="c1">#################</span>
-    <span class="s2">&quot;get-sites&quot;</span><span class="p">:</span> <span class="s2">&quot;/sites/&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/heartbeat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cameras-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
-    <span class="c1"># EVENTS</span>
+    <span class="c1"># DETECTIONS</span>
     <span class="c1">#################</span>
-    <span class="s2">&quot;get-unacknowledged-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/unacknowledged&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-past-events&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/past&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;acknowledge-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/acknowledge&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-alerts-for-event&quot;</span><span class="p">:</span> <span class="s2">&quot;/events/</span><span class="si">{event_id}</span><span class="s2">/alerts&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
-    <span class="c1"># INSTALLATIONS</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;get-site-devices&quot;</span><span class="p">:</span> <span class="s2">&quot;/installations/site-devices/</span><span class="si">{site_id}</span><span class="s2">&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
-    <span class="c1"># MEDIA</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;create-media-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/from-device&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;upload-media&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/upload&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-media-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/media/</span><span class="si">{media_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
-    <span class="c1"># ALERTS</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;send-alert-from-device&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/from-device&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;get-ongoing-alerts&quot;</span><span class="p">:</span> <span class="s2">&quot;/alerts/ongoing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detections-create&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detections-label&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/label&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detections-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detections-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 
-<span class="k">def</span> <span class="nf">convert_loc_to_str</span><span class="p">(</span>
-    <span class="n">localization</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">max_num_boxes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs a custom JSON dump for list of coordinates</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
-<span class="sd">        max_num_boxes: maximum allowed number of bounding boxes</span>
-<span class="sd">    Returns:</span>
-<span class="sd">        the JSON string dump with 2 decimal precision</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">localization</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">localization</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">coord</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coord</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">localization</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">bbox</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coordinates are expected to be relative&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bbox</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">localization</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">localization</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_num_boxes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please limit the number of boxes to </span><span class="si">{</span><span class="n">max_num_boxes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">box_list</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">xmin</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">ymin</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">xmax</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">ymax</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">conf</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">for</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">conf</span> <span class="ow">in</span> <span class="n">localization</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">box_list</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;[]&quot;</span>
-
-
 <div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Client class to interact with the PyroNear API</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Isometric Python client for Pyronear wildfire detection API</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        api_url (str): url of the pyronear API</span>
-<span class="sd">        credentials_login (str): Login (e.g: username)</span>
-<span class="sd">        credentials_password (str): Password (e.g: 123456 (don&#39;t do this))</span>
+<span class="sd">        token: your personal API token</span>
+<span class="sd">        endpoint: the host for your instance of pyronear API</span>
 <span class="sd">        timeout (int): number of seconds before request timeout</span>
 <span class="sd">        kwargs: optional parameters of `requests.post`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">api</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">routes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
-    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">api_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">credentials_login</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">credentials_password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://api.pyronear.org&quot;</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">api</span> <span class="o">=</span> <span class="n">api_url</span>
+        <span class="c1"># Check host</span>
+        <span class="k">if</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unable to reach host </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="c1"># Prepend API url to each route</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">routes</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">api</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ROUTES</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routes</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;api/v1</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ROUTES</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="c1"># Check token</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;login-validate&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">HTTPRequestError</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="n">token</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">refresh_token</span><span class="p">(</span><span class="n">credentials_login</span><span class="p">,</span> <span class="n">credentials_password</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">headers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">refresh_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">login</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retrieve_token</span><span class="p">(</span><span class="n">login</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_retrieve_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">login</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;token&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">login</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;access_token&quot;</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Anyone has a better suggestion?</span>
-            <span class="k">raise</span> <span class="n">HTTPRequestException</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-
-    <span class="c1"># Device functions</span>
+    <span class="c1"># CAMERAS</span>
 <div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span> <span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates the last ping of the device</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last ping of the camera</span>
 
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.heartbeat()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;heartbeat&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.send_alert_from_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.send_alert_from_device">[docs]</a>    <span class="k">def</span> <span class="nf">send_alert_from_device</span><span class="p">(</span>
+    <span class="c1"># DETECTIONS</span>
+<div class="viewcode-block" id="Client.create_detection"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_detection">[docs]</a>    <span class="k">def</span> <span class="nf">create_detection</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-        <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-        <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">azimuth</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">localization</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">event_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+        <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise an alert to the API from a device (no need to specify device ID).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Notify the detection of a wildfire on the picture taken by a camera.</span>
 
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.send_alert_from_device(lat=10., lon=-5.45)</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            lat: the latitude of the alert</span>
-<span class="sd">            lon: the longitude of the alert</span>
-<span class="sd">            media_id: media ID linked to this alert</span>
-<span class="sd">            azimuth: the azimuth of the alert</span>
-<span class="sd">            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax, conf</span>
-<span class="sd">            event_id: the ID of the event this alerts relates to</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the created alert</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span> <span class="s2">&quot;event_id&quot;</span><span class="p">:</span> <span class="n">event_id</span><span class="p">,</span> <span class="s2">&quot;localization&quot;</span><span class="p">:</span> <span class="n">convert_loc_to_str</span><span class="p">(</span><span class="n">localization</span><span class="p">)}</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">media_id</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;media_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">media_id</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">azimuth</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;azimuth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">azimuth</span>
-
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;send-alert-from-device&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.create_media_from_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_media_from_device">[docs]</a>    <span class="k">def</span> <span class="nf">create_media_from_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a media entry from a device (no need to specify device ID).</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;DEVICE_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.create_media_from_device()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the created media</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;create-media-from-device&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{},</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.upload_media"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.upload_media">[docs]</a>    <span class="k">def</span> <span class="nf">upload_media</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">media_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Upload the media content</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.upload_media(media_id=1, media_data=data)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, azimuth=124.2)</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            media_id: ID of the associated media entry</span>
-<span class="sd">            media_data: byte data</span>
+<span class="sd">            media: byte data of the picture</span>
+<span class="sd">            azimuth: the azimuth of the camera when the picture was taken</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the updated media</span>
+<span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;upload-media&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">media_id</span><span class="o">=</span><span class="n">media_id</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-create&quot;</span><span class="p">],</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">media_data</span><span class="p">)},</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.label_detection"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_detection">[docs]</a>    <span class="k">def</span> <span class="nf">label_detection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detection_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the label of a detection made by a camera</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.label_detection(1, is_wildfire=True)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            detection_id: ID of the associated detection entry</span>
+<span class="sd">            is_wildfire: whether this detection is confirmed as a wildfire</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-label&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_wildfire&quot;</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-    <span class="c1"># User functions</span>
-<div class="viewcode-block" id="Client.get_user_devices"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_user_devices">[docs]</a>    <span class="k">def</span> <span class="nf">get_user_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the devices who are owned by the logged user</span>
+<div class="viewcode-block" id="Client.fetch_cameras"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_cameras">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_cameras</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_user_devices()</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_cameras()</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of owned devices</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-user-devices&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_sites"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_sites">[docs]</a>    <span class="k">def</span> <span class="nf">get_sites</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the existing sites in the DB</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_sites()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of sites</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-sites&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_all_alerts"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_all_alerts">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_alerts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the existing alerts in the DB</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_all_alerts()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of all alerts</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-alerts&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_ongoing_alerts"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_ongoing_alerts">[docs]</a>    <span class="k">def</span> <span class="nf">get_ongoing_alerts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the existing alerts in the DB that have the status &#39;start&#39;</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_ongoing_alerts()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of all ongoing alerts</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-ongoing-alerts&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_alerts_for_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_alerts_for_event">[docs]</a>    <span class="k">def</span> <span class="nf">get_alerts_for_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the alerts in the DB for the given event</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_alerts_for_event()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of all alerts for the given event</span>
+<span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-alerts-for-event&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">event_id</span><span class="o">=</span><span class="n">event_id</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-fetch&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.get_unacknowledged_events"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_unacknowledged_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_unacknowledged_events</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all the existing events in the DB that have the field &quot;is_acknowledged&quot; set to `False`</span>
+<div class="viewcode-block" id="Client.get_detection_url"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_detection_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_detection_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detection_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the URL of the media linked to a detection</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_unacknowledged_events()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of all events that haven&#39;t been acknowledged</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-unacknowledged-events&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.acknowledge_event"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.acknowledge_event">[docs]</a>    <span class="k">def</span> <span class="nf">acknowledge_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Switch the `is_acknowledged` field value of the event to `True`</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.acknowledge_event(event_id=1)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.get_detection_url(1)</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            event_id: ID of the associated event entry</span>
+<span class="sd">            detection_id: ID of the associated detection entry</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the updated event</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;acknowledge-event&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">event_id</span><span class="o">=</span><span class="n">event_id</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_site_devices"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_site_devices">[docs]</a>    <span class="k">def</span> <span class="nf">get_site_devices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch the devices that are installed on a specific site</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_site_devices(1)</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            site_id: the identifier of the site</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of corresponding devices</span>
+<span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-site-devices&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">site_id</span><span class="o">=</span><span class="n">site_id</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.get_media_url"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_media_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_media_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the image as a URL</span>
+<div class="viewcode-block" id="Client.fetch_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_detections">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections accessible to the authenticated user</span>
 
-<span class="sd">        &gt;&gt;&gt; import requests</span>
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_media_url(1)</span>
-<span class="sd">        &gt;&gt;&gt; file_response = requests.get(response.json()[&quot;url&quot;])</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            media_id: the identifier of the media entry</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_detections()</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the URL to the media content</span>
+<span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-media-url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">media_id</span><span class="o">=</span><span class="n">media_id</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_past_events"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_past_events">[docs]</a>    <span class="k">def</span> <span class="nf">get_past_events</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all past events</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_past_events()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the list of past events</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-past-events&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.get_self_device"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_self_device">[docs]</a>    <span class="k">def</span> <span class="nf">get_self_device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get information about the current device</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = client.Client(&quot;http://pyronear-api.herokuapp.com&quot;, &quot;MY_LOGIN&quot;, &quot;MY_PWD&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.get_self_device()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response containing the device information</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;get-self-device&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
 </pre></div>
         </article>
       </div>
