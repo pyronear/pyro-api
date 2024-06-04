@@ -3,26 +3,34 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from pydantic import BaseModel, Field
 
-from pydantic import Field
+from app.models import UserRole
 
-from app.models import AccessType
-
-from .base import Cred, Login, _CreatedAt, _GroupId, _Id
-
-__all__ = ["UserRead", "UserAuth", "UserCreation"]
+__all__ = ["Cred", "CredHash", "UserCreate", "UserCreation"]
 
 
-class UserRead(Login, _CreatedAt, _Id):
-    # Visible info
-    pass
+# Accesses
+class Login(BaseModel):
+    login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
 
 
-class UserAuth(Login, Cred, _GroupId):
-    # Authentication request
-    scope: AccessType = Field(AccessType.user, description="access level")
+class Cred(BaseModel):
+    password: str = Field(..., min_length=3, examples=["PickARobustOne"])
 
 
-class UserCreation(Login):
-    # Creation payload
-    access_id: int = Field(..., gt=0, description="linked access entry")
+class CredHash(BaseModel):
+    hashed_password: str
+
+
+class Role(BaseModel):
+    role: UserRole = Field(UserRole.USER)
+
+
+class UserCreate(Role):
+    login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
+    password: str = Field(..., min_length=3, examples=["PickARobustOne"])
+
+
+class UserCreation(Role):
+    login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])

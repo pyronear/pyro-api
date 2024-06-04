@@ -6,7 +6,7 @@
 from typing import Union
 
 
-class HTTPRequestException(Exception):
+class HTTPRequestError(Exception):
     def __init__(self, status_code: int, response_message: Union[str, None] = None) -> None:
         self.status_code = status_code
         self.response_message = response_message

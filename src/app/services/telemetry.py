@@ -8,7 +8,7 @@ from typing import Union
 
 from posthog import Posthog
 
-from app import config as cfg
+from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -30,5 +30,9 @@ class TelemetryClient:
         if self.is_enabled:
             self.ph_client.identify(*args, **kwargs)
 
+    def alias(self, *args, **kwargs) -> None:
+        if self.is_enabled:
+            self.ph_client.alias(*args, **kwargs)
 
-telemetry_client = TelemetryClient(api_key=cfg.POSTHOG_KEY)
+
+telemetry_client = TelemetryClient(api_key=settings.POSTHOG_KEY)

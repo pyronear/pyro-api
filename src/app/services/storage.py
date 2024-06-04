@@ -7,9 +7,10 @@ import logging
 from typing import Any, Dict
 
 import boto3
+from botocore.exceptions import ClientError, EndpointConnectionError
 from fastapi import HTTPException
 
-from app import config as cfg
+from app.core.config import settings
 
 __all__ = ["s3_bucket"]
 
@@ -34,6 +35,14 @@ class S3Bucket:
     ) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
+        # Ensure S3 is connected
+        try:
+            self._s3.head_bucket(Bucket=bucket_name)
+        except EndpointConnectionError:
+            raise ValueError(f"unable to access endpoint {endpoint_url}")
+        except ClientError:
+            raise ValueError(f"unable to access bucket {bucket_name}")
+        logger.info(f"S3 bucket {bucket_name} connected on {endpoint_url}")
         self.bucket_name = bucket_name
         self.proxy_url = proxy_url
 
@@ -47,7 +56,7 @@ class S3Bucket:
             # Use boto3 head_object method using the Qarnot private connection attribute
             head_object = await self.get_file_metadata(bucket_key)
             return head_object["ResponseMetadata"]["HTTPStatusCode"] == 200
-        except Exception as e:
+        except ClientError as e:
             logger.warning(e)
             return False
 
@@ -67,11 +76,7 @@ class S3Bucket:
     async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        try:
-            self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
-        except Exception as e:
-            logger.warning(e)
-            return False
+        self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
         return True
 
     async def delete_file(self, bucket_key: str) -> None:
@@ -81,5 +86,10 @@ class S3Bucket:
 
 
 s3_bucket = S3Bucket(
-    cfg.S3_REGION, cfg.S3_ENDPOINT_URL, cfg.S3_ACCESS_KEY, cfg.S3_SECRET_KEY, cfg.BUCKET_NAME, cfg.S3_PROXY_URL
+    settings.S3_REGION,
+    settings.S3_ENDPOINT_URL,
+    settings.S3_ACCESS_KEY,
+    settings.S3_SECRET_KEY,
+    settings.S3_BUCKET_NAME,
+    settings.S3_PROXY_URL,
 )

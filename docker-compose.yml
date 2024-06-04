@@ -1,49 +1,79 @@
-version: '3.7'
-
+name: pyronear
 services:
-  backend:
-    build: src
-    restart: always
-    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
-    volumes:
-      - ./src/:/app/
-    ports:
-      - 8080:8080
-    environment:
-      - DEBUG=false
-      - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
-      - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
-      - SUPERUSER_PWD=${SUPERUSER_PWD}
-      - QARNOT_TOKEN=${QARNOT_TOKEN}
-      - BUCKET_NAME=${BUCKET_NAME}
-      - BUCKET_MEDIA_FOLDER=${BUCKET_MEDIA_FOLDER}
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_REGION=${S3_REGION}
-      - S3_PROXY_URL=${S3_PROXY_URL}
-      - SENTRY_DSN=${SENTRY_DSN}
-      - SENTRY_SERVER_NAME=${SENTRY_SERVER_NAME}
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-    depends_on:
-      db:
-        condition: service_healthy
   db:
     image: postgres:15-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
     expose:
       - 5432
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
       interval: 10s
       timeout: 3s
       retries: 3
 
+  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.4.0
+    ports:
+      - 4566:4566
+    # environment variables details: https://docs.localstack.cloud/references/configuration/
+    environment:
+      - EDGE_PORT=4566
+      - SERVICES=s3
+      - DATA_DIR=/tmp/localstack/data
+      - AWS_DEFAULT_REGION=${S3_REGION:-us-east-1}
+    volumes:
+      - ./scripts/localstack:/etc/localstack/init/ready.d
+      - localstack_data:/tmp/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://bucket"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: pyronear/alert-api:latest
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    ports:
+      - "5050:5050"
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
+      - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+      - JWT_SECRET=${JWT_SECRET}
+      - SUPPORT_EMAIL=${SUPPORT_EMAIL}
+      - DEBUG=true
+      - PROMETHEUS_ENABLED=true
+      - SQLALCHEMY_SILENCE_UBER_WARNING=1
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-bucket}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://localstack:4566}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-na}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-na}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_PROXY_URL=${S3_PROXY_URL}
+      - SERVER_NAME=${SERVER_NAME}
+    volumes:
+      - ./src/:/app/
+    command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:5050/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
 volumes:
   postgres_data:
+  localstack_data:

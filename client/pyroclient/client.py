@@ -3,362 +3,182 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-import io
-import logging
-from typing import Any, Dict, List, Tuple, Union
+from typing import Dict
 from urllib.parse import urljoin
 
 import requests
 from requests.models import Response
 
-from .exceptions import HTTPRequestException
+from .exceptions import HTTPRequestError
 
 __all__ = ["Client"]
 
-logging.basicConfig()
-
 ROUTES: Dict[str, str] = {
-    "token": "/login/access-token",
     #################
-    # DEVICES
+    # LOGIN
     #################
-    # Device-logged
-    "heartbeat": "/devices/heartbeat",
-    "get-self-device": "/devices/me",
-    # User-logged
-    "get-user-devices": "/devices/my-devices",
+    "login-validate": "/login/validate",
     #################
-    # SITES
+    # CAMERAS
     #################
-    "get-sites": "/sites/",
+    "cameras-heartbeat": "/cameras/heartbeat",
+    "cameras-fetch": "/cameras",
     #################
-    # EVENTS
+    # DETECTIONS
     #################
-    "get-unacknowledged-events": "/events/unacknowledged",
-    "get-past-events": "/events/past",
-    "acknowledge-event": "/events/{event_id}/acknowledge",
-    "get-alerts-for-event": "/events/{event_id}/alerts",
-    #################
-    # INSTALLATIONS
-    #################
-    "get-site-devices": "/installations/site-devices/{site_id}",
-    #################
-    # MEDIA
-    #################
-    "create-media-from-device": "/media/from-device",
-    "upload-media": "/media/{media_id}/upload",
-    "get-media-url": "/media/{media_id}/url",
-    #################
-    # ALERTS
-    #################
-    "send-alert-from-device": "/alerts/from-device",
-    "get-alerts": "/alerts/",
-    "get-ongoing-alerts": "/alerts/ongoing",
+    "detections-create": "/detections",
+    "detections-label": "/detections/{det_id}/label",
+    "detections-fetch": "/detections",
+    "detections-url": "/detections/{det_id}/url",
 }
 
 
-def convert_loc_to_str(
-    localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
-    max_num_boxes: int = 5,
-) -> str:
-    """Performs a custom JSON dump for list of coordinates
-
-    Args:
-        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
-        max_num_boxes: maximum allowed number of bounding boxes
-    Returns:
-        the JSON string dump with 2 decimal precision
-    """
-    if isinstance(localization, list) and len(localization) > 0:
-        if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
-            raise ValueError("coordinates are expected to be relative")
-        if any(len(bbox) != 5 for bbox in localization):
-            raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
-        if len(localization) > max_num_boxes:
-            raise ValueError(f"Please limit the number of boxes to {max_num_boxes}")
-        box_list = tuple(
-            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
-        )
-        return f"[{','.join(box_list)}]"
-    else:
-        return "[]"
-
-
 class Client:
-    """Client class to interact with the PyroNear API
+    """Isometric Python client for Pyronear wildfire detection API
 
     Args:
-        api_url (str): url of the pyronear API
-        credentials_login (str): Login (e.g: username)
-        credentials_password (str): Password (e.g: 123456 (don't do this))
+        token: your personal API token
+        endpoint: the host for your instance of pyronear API
         timeout (int): number of seconds before request timeout
         kwargs: optional parameters of `requests.post`
     """
 
-    api: str
     routes: Dict[str, str]
-    token: str
 
     def __init__(
-        self, api_url: str, credentials_login: str, credentials_password: str, timeout: int = 10, **kwargs: Any
+        self,
+        token: str,
+        host: str = "https://api.pyronear.org",
+        timeout: int = 10,
+        **kwargs,
     ) -> None:
-        self.api = api_url
+        # Check host
+        if requests.get(urljoin(host, "status"), timeout=timeout, **kwargs).status_code != 200:
+            raise ValueError(f"unable to reach host {host}")
         # Prepend API url to each route
-        self.routes = {k: urljoin(self.api, v) for k, v in ROUTES.items()}
+        self.routes = {k: urljoin(host, f"api/v1{v}") for k, v in ROUTES.items()}
+        # Check token
+        response = requests.get(
+            self.routes["login-validate"], headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
+        )
+        if response.status_code != 200:
+            raise HTTPRequestError(response.status_code, response.text)
+        self.token = token
         self.timeout = timeout
-        self.refresh_token(credentials_login, credentials_password, **kwargs)
 
     @property
     def headers(self) -> Dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
-    def refresh_token(self, login: str, password: str, **kwargs: Any) -> None:
-        self.token = self._retrieve_token(login, password, **kwargs)
-
-    def _retrieve_token(self, login: str, password: str, **kwargs: Any) -> str:
-        response = requests.post(
-            self.routes["token"], data={"username": login, "password": password}, timeout=self.timeout, **kwargs
-        )
-        if response.status_code == 200:
-            return response.json()["access_token"]
-        else:
-            # Anyone has a better suggestion?
-            raise HTTPRequestException(response.status_code, response.text)
-
-    # Device functions
+    # CAMERAS
     def heartbeat(self) -> Response:
-        """Updates the last ping of the device
+        """Update the last ping of the camera
 
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
+        >>> from pyroclient import Client
+        >>> api_client = Client("MY_CAM_TOKEN")
         >>> response = api_client.heartbeat()
 
         Returns:
             HTTP response containing the update device info
         """
-        return requests.put(self.routes["heartbeat"], headers=self.headers, timeout=self.timeout)
+        return requests.patch(self.routes["cameras-heartbeat"], headers=self.headers, timeout=self.timeout)
 
-    def send_alert_from_device(
+    # DETECTIONS
+    def create_detection(
         self,
-        lat: float,
-        lon: float,
-        media_id: int,
-        azimuth: Union[float, None] = None,
-        localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
-        event_id: Union[int, None] = None,
+        media: bytes,
+        azimuth: float,
     ) -> Response:
-        """Raise an alert to the API from a device (no need to specify device ID).
+        """Notify the detection of a wildfire on the picture taken by a camera.
 
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-        >>> response = api_client.send_alert_from_device(lat=10., lon=-5.45)
-
-        Args:
-            lat: the latitude of the alert
-            lon: the longitude of the alert
-            media_id: media ID linked to this alert
-            azimuth: the azimuth of the alert
-            localization: list of relative bounding boxes in format xmin, ymin, xmax, ymax, conf
-            event_id: the ID of the event this alerts relates to
-
-        Returns:
-            HTTP response containing the created alert
-        """
-        payload = {"lat": lat, "lon": lon, "event_id": event_id, "localization": convert_loc_to_str(localization)}
-        if isinstance(media_id, int):
-            payload["media_id"] = media_id
-
-        if isinstance(azimuth, float):
-            payload["azimuth"] = azimuth
-
-        return requests.post(
-            self.routes["send-alert-from-device"], headers=self.headers, json=payload, timeout=self.timeout
-        )
-
-    def create_media_from_device(self):
-        """Create a media entry from a device (no need to specify device ID).
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "DEVICE_LOGIN", "MY_PWD")
-        >>> response = api_client.create_media_from_device()
-
-        Returns:
-            HTTP response containing the created media
-        """
-        return requests.post(
-            self.routes["create-media-from-device"], headers=self.headers, json={}, timeout=self.timeout
-        )
-
-    def upload_media(self, media_id: int, media_data: bytes) -> Response:
-        """Upload the media content
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
+        >>> from pyroclient import Client
+        >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.upload_media(media_id=1, media_data=data)
+        >>> response = api_client.create_detection(data, azimuth=124.2)
 
         Args:
-            media_id: ID of the associated media entry
-            media_data: byte data
+            media: byte data of the picture
+            azimuth: the azimuth of the camera when the picture was taken
 
         Returns:
-            HTTP response containing the updated media
+            HTTP response
         """
         return requests.post(
-            self.routes["upload-media"].format(media_id=media_id),
+            self.routes["detections-create"],
             headers=self.headers,
-            files={"file": io.BytesIO(media_data)},
+            data={"azimuth": azimuth},
+            timeout=self.timeout,
+            files={"file": ("logo.png", media, "image/png")},
+        )
+
+    def label_detection(self, detection_id: int, is_wildfire: bool) -> Response:
+        """Update the label of a detection made by a camera
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.label_detection(1, is_wildfire=True)
+
+        Args:
+            detection_id: ID of the associated detection entry
+            is_wildfire: whether this detection is confirmed as a wildfire
+
+        Returns:
+            HTTP response
+        """
+        return requests.patch(
+            self.routes["detections-label"].format(det_id=detection_id),
+            headers=self.headers,
+            json={"is_wildfire": is_wildfire},
             timeout=self.timeout,
         )
 
-    # User functions
-    def get_user_devices(self) -> Response:
-        """Get the devices who are owned by the logged user
+    def fetch_cameras(self) -> Response:
+        """List the cameras accessible to the authenticated user
 
         >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_user_devices()
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_cameras()
 
         Returns:
-            HTTP response containing the list of owned devices
-        """
-        return requests.get(self.routes["get-user-devices"], headers=self.headers, timeout=self.timeout)
-
-    def get_sites(self) -> Response:
-        """Get all the existing sites in the DB
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_sites()
-
-        Returns:
-            HTTP response containing the list of sites
-        """
-        return requests.get(self.routes["get-sites"], headers=self.headers, timeout=self.timeout)
-
-    def get_all_alerts(self) -> Response:
-        """Get all the existing alerts in the DB
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_all_alerts()
-
-        Returns:
-            HTTP response containing the list of all alerts
-        """
-        return requests.get(self.routes["get-alerts"], headers=self.headers, timeout=self.timeout)
-
-    def get_ongoing_alerts(self) -> Response:
-        """Get all the existing alerts in the DB that have the status 'start'
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_ongoing_alerts()
-
-        Returns:
-            HTTP response containing the list of all ongoing alerts
-        """
-        return requests.get(self.routes["get-ongoing-alerts"], headers=self.headers, timeout=self.timeout)
-
-    def get_alerts_for_event(self, event_id: int) -> Response:
-        """Get all the alerts in the DB for the given event
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_alerts_for_event()
-
-        Returns:
-            HTTP response containing the list of all alerts for the given event
+            HTTP response
         """
         return requests.get(
-            self.routes["get-alerts-for-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
+            self.routes["cameras-fetch"],
+            headers=self.headers,
+            timeout=self.timeout,
         )
 
-    def get_unacknowledged_events(self) -> Response:
-        """Get all the existing events in the DB that have the field "is_acknowledged" set to `False`
+    def get_detection_url(self, detection_id: int) -> Response:
+        """Retrieve the URL of the media linked to a detection
 
         >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_unacknowledged_events()
-
-        Returns:
-            HTTP response containing the list of all events that haven't been acknowledged
-        """
-        return requests.get(self.routes["get-unacknowledged-events"], headers=self.headers, timeout=self.timeout)
-
-    def acknowledge_event(self, event_id: int) -> Response:
-        """Switch the `is_acknowledged` field value of the event to `True`
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.acknowledge_event(event_id=1)
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.get_detection_url(1)
 
         Args:
-            event_id: ID of the associated event entry
+            detection_id: ID of the associated detection entry
 
         Returns:
-            HTTP response containing the updated event
-        """
-        return requests.put(
-            self.routes["acknowledge-event"].format(event_id=event_id), headers=self.headers, timeout=self.timeout
-        )
-
-    def get_site_devices(self, site_id: int) -> Response:
-        """Fetch the devices that are installed on a specific site
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_site_devices(1)
-
-        Args:
-            site_id: the identifier of the site
-
-        Returns:
-            HTTP response containing the list of corresponding devices
+            HTTP response
         """
         return requests.get(
-            self.routes["get-site-devices"].format(site_id=site_id), headers=self.headers, timeout=self.timeout
+            self.routes["detections-url"].format(det_id=detection_id),
+            headers=self.headers,
+            timeout=self.timeout,
         )
 
-    def get_media_url(self, media_id: int) -> Response:
-        """Get the image as a URL
+    def fetch_detections(self) -> Response:
+        """List the detections accessible to the authenticated user
 
-        >>> import requests
         >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_media_url(1)
-        >>> file_response = requests.get(response.json()["url"])
-
-        Args:
-            media_id: the identifier of the media entry
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_detections()
 
         Returns:
-            HTTP response containing the URL to the media content
+            HTTP response
         """
         return requests.get(
-            self.routes["get-media-url"].format(media_id=media_id), headers=self.headers, timeout=self.timeout
+            self.routes["detections-fetch"],
+            headers=self.headers,
+            timeout=self.timeout,
         )
-
-    def get_past_events(self) -> Response:
-        """Get all past events
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_past_events()
-
-        Returns:
-            HTTP response containing the list of past events
-        """
-        return requests.get(self.routes["get-past-events"], headers=self.headers, timeout=self.timeout)
-
-    def get_self_device(self) -> Response:
-        """Get information about the current device
-
-        >>> from pyroclient import client
-        >>> api_client = client.Client("http://pyronear-api.herokuapp.com", "MY_LOGIN", "MY_PWD")
-        >>> response = api_client.get_self_device()
-
-        Returns:
-            HTTP response containing the device information
-        """
-        return requests.get(self.routes["get-self-device"], headers=self.headers, timeout=self.timeout)

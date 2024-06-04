@@ -14,15 +14,22 @@ jobs:
         os: [ubuntu-latest]
         python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
+      - uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: "1.8.2"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade uv
+          uv pip install --system -r requirements.txt
       - name: Run ruff
         run: |
-          pip install ruff==0.0.290
           ruff --version
           ruff check --diff .
 
@@ -33,26 +40,20 @@ jobs:
         os: [ubuntu-latest]
         python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.6.1"
+          poetry-version: "1.8.2"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --with quality --output src/app/requirements.txt
-      - name: Cache python modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('src/app/requirements.txt') }}
+        run: poetry export -f requirements.txt --without-hashes --with quality --output requirements.txt
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r src/app/requirements.txt
+          python -m pip install --upgrade uv
+          uv pip install --system -r requirements.txt
       - name: Run mypy
         run: |
           mypy --version
@@ -86,41 +87,56 @@ jobs:
           mypy --version
           cd client && mypy
 
-  black:
+  ruff-format:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
         python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Install deps
-        run: pip install "black==23.3.0"
-      - name: Run black
+      - uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: "1.8.2"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
+      - name: Install dependencies
         run: |
-          black --version
-          black --check --diff .
+          python -m pip install --upgrade uv
+          uv pip install --system -r requirements.txt
+      - name: Run ruff
+        run: |
+          ruff --version
+          ruff format --check --diff .
 
-  bandit:
+  precommit-hooks:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
         python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Run bandit
+      - uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: "1.8.2"
+      - name: Resolve dependencies
+        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
+      - name: Install dependencies
         run: |
-          pip install bandit[toml]
-          bandit --version
-          bandit -r . -c pyproject.toml
+          python -m pip install --upgrade uv
+          uv pip install --system -r requirements.txt
+      - name: Run pre-commit hooks
+        run: |
+          git checkout -b temp
+          pre-commit install
+          pre-commit --version
+          pre-commit run --all-files

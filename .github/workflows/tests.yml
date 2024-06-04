@@ -10,31 +10,32 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.6.1"
+          poetry-version: "1.8.2"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
-      - name: Run the backend & the tests
+        run: poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
+      - name: Run the backend & the test
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_TEST_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          SUPERUSER_LOGIN: dummy_login
+          SUPERUSER_PWD: dummy&P@ssw0rd!
+          POSTGRES_USER: dummy_pg_user
+          POSTGRES_PASSWORD: dummy_pg_pwd
+          POSTGRES_DB: dummy_pg_db
         run: |
-          docker compose -f docker-compose.test.yml up -d --build --wait
-          docker compose -f docker-compose.test.yml exec localstack awslocal s3 mb s3://sample-bucket
-          docker compose -f docker-compose.test.yml exec localstack awslocal s3api put-object --bucket sample-bucket --key media-folder
-          docker compose -f docker-compose.test.yml exec -T backend pytest --cov=app --cov-report xml tests/
-          docker compose -f docker-compose.test.yml cp backend:/app/coverage.xml ./coverage-src.xml
+          docker compose -f docker-compose.dev.yml up -d --build --wait
+          docker compose -f docker-compose.dev.yml exec -T backend pytest --cov=app --cov-report xml tests/
+          docker compose -f docker-compose.dev.yml cp backend:/app/coverage.xml ./coverage-src.xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage-src.xml
-          flags: unittests
+          flags: backend
           fail_ci_if_error: true
 
   pytest-client:
@@ -44,47 +45,29 @@ jobs:
         os: [ubuntu-latest]
         python: [3.9]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v2
+      - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.6.1"
+          poetry-version: "1.8.2"
       - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output src/app/requirements.txt
-      - name: Run backend
+        run: |
+          poetry export -f requirements.txt --without-hashes --output requirements.txt
+          python -m pip install --upgrade uv
+          uv pip install --system -e "client/.[test]"
+      - name: Run the backend & the test
         env:
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
-          BUCKET_MEDIA_FOLDER: ${{ secrets.BUCKET_MEDIA_FOLDER }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_REGION: ${{ secrets.S3_REGION }}
           SUPERUSER_LOGIN: dummy_login
           SUPERUSER_PWD: dummy&P@ssw0rd!
           POSTGRES_USER: dummy_pg_user
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
         run: |
-          docker volume prune -f
-          docker compose up -d --build --wait
-          docker ps
-      - name: Cache python modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
-      - name: Run client tests
-        env:
-          SUPERUSER_LOGIN: dummy_login
-          SUPERUSER_PWD: dummy&P@ssw0rd!
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system -e "client/.[test]"
-          sleep 15
-          cd client && pytest --cov=pyroclient --cov-report xml tests/ -n auto
+          docker compose -f docker-compose.dev.yml up -d --build --wait
+          cd client && pytest --cov=pyroclient --cov-report xml tests/
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -110,4 +93,4 @@ jobs:
           starting-year: 2020
           folders: 'src,client,.github'
           ignore-files: 'version.py,__init__.py'
-          ignore-folders: 'client/tests/,src/tests/,src/alembic/versions/'
+          ignore-folders: 'client/tests/,src/tests/,src/migrations/versions/'
