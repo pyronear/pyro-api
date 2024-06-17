@@ -25,6 +25,11 @@ class Role(str, Enum):
     USER: str = "user"
 
 
+class SiteType(str, Enum):
+    SDIS: str = "sdis"
+    PARTICULIER: str = "particulier"
+
+
 class User(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     role: UserRole = Field(UserRole.USER, nullable=False)
@@ -36,6 +41,7 @@ class User(SQLModel, table=True):
 
 class Camera(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
+    site_id = int = Field(..., foreign_key="site.id", nullable=False)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     angle_of_view: float = Field(..., gt=0, le=360, nullable=False)
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
@@ -54,3 +60,9 @@ class Detection(SQLModel, table=True):
     is_wildfire: Union[bool, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class Site(SQLModel, table=True):
+    id: int = Field(None, primary_key=True)
+    name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
+    type: SiteType = Field(SiteType.SDIS, nullable=False)
