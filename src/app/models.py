@@ -41,7 +41,7 @@ class User(SQLModel, table=True):
 
 class Camera(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
-    site_id = int = Field(..., foreign_key="site.id", nullable=False)
+    site_id: int = Field(..., foreign_key="site.id", nullable=False)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     angle_of_view: float = Field(..., gt=0, le=360, nullable=False)
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)

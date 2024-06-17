@@ -20,7 +20,7 @@ router = APIRouter()
 async def register_camera(
     payload: SiteCreate,
     sites: SiteCRUD = Depends(get_site_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Site:
     telemetry_client.capture(token_payload.sub, event="site-create", properties={"device_login": payload.name})
     return await sites.create(payload)
