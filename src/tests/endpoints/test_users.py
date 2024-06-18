@@ -51,7 +51,11 @@ async def test_create_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["test_id"],
+        )
 
     response = await async_client.post("/users", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -89,7 +93,11 @@ async def test_get_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["test_id"],
+        )
 
     response = await async_client.get(f"/users/{user_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -117,7 +125,11 @@ async def test_fetch_users(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get("/users/", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -148,7 +160,11 @@ async def test_delete_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["test_id"],
+        )
 
     response = await async_client.delete(f"/users/{user_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -182,7 +198,11 @@ async def test_update_user_password(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["test_id"],
+        )
 
     response = await async_client.patch(f"/users/{user_id}", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)

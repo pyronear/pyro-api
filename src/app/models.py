@@ -28,10 +28,12 @@ class Role(str, Enum):
 class SiteType(str, Enum):
     SDIS: str = "sdis"
     PARTICULIER: str = "particulier"
+    ADMIN: str = "admin"
 
 
 class User(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
+    site_id: int = Field(..., foreign_key="site.id", nullable=False)
     role: UserRole = Field(UserRole.USER, nullable=False)
     # Allow sign-up/in via login + password
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)

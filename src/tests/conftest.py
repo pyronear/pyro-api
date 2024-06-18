@@ -22,6 +22,7 @@ dt_format = "%Y-%m-%dT%H:%M:%S.%f"
 USER_TABLE = [
     {
         "id": 1,
+        "site_id": 1,
         "role": "admin",
         "login": "first_login",
         "hashed_password": "hashed_first_pwd",
@@ -29,6 +30,7 @@ USER_TABLE = [
     },
     {
         "id": 2,
+        "site_id": 1,
         "role": "agent",
         "login": "second_login",
         "hashed_password": "hashed_second_pwd",
@@ -36,6 +38,7 @@ USER_TABLE = [
     },
     {
         "id": 3,
+        "site_id": 2,
         "role": "user",
         "login": "third_login",
         "hashed_password": "hashed_third_pwd",
@@ -215,8 +218,8 @@ async def detection_session(user_session: AsyncSession, camera_session: AsyncSes
     yield user_session
 
 
-def get_token(access_id: int, scopes: str) -> Dict[str, str]:
-    token_data = {"sub": str(access_id), "scopes": scopes}
+def get_token(access_id: int, scopes: str, siteid: int) -> Dict[str, str]:
+    token_data = {"sub": str(access_id), "scopes": scopes, "site_id": siteid}
     token = create_access_token(token_data)
     return {"Authorization": f"Bearer {token}"}
 

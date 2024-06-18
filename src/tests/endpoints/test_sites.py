@@ -43,7 +43,11 @@ async def test_create_site(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.post("/sites", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)

@@ -32,9 +32,13 @@ async def test_create_detection(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
     elif isinstance(cam_idx, int):
-        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"])
+        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"], pytest.camera_table[cam_idx]["site_id"])
 
     response = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
@@ -77,7 +81,11 @@ async def test_get_detection(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get(f"/detections/{detection_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -106,7 +114,11 @@ async def test_fetch_detections(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get("/detections", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -144,7 +156,11 @@ async def test_label_detection(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.patch(f"/detections/{detection_id}/label", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -179,7 +195,7 @@ async def test_get_detection_url(
 ):
     # We aren't actually putting files in the bucket during conftest. So we create some here to retrieve the URL
     if detection_id is None:
-        auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"])
+        auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["site_id"])
         response = await async_client.post(
             "/detections", data={"azimuth": 45.6}, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
         )
@@ -187,7 +203,11 @@ async def test_get_detection_url(
     det_id = detection_id or response.json()["id"]
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get(f"/detections/{det_id}/url", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -221,7 +241,11 @@ async def test_delete_detection(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.delete(f"/detections/{detection_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)

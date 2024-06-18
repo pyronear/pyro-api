@@ -46,7 +46,11 @@ async def test_create_camera(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.post("/cameras", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -66,7 +70,7 @@ async def test_create_camera(
         (0, 100, 404, "Table Camera has no corresponding entry.", None),
         (0, 1, 200, None, 0),
         (1, 1, 200, None, 0),
-        (2, 1, 200, None, 0),
+        (2, 1, 403, "Access forbidden.", 0),
     ],
 )
 @pytest.mark.asyncio()
@@ -81,7 +85,11 @@ async def test_get_camera(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get(f"/cameras/{cam_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -95,9 +103,9 @@ async def test_get_camera(
     ("user_idx", "status_code", "status_detail", "expected_response"),
     [
         (None, 401, "Not authenticated", None),
-        (0, 200, None, pytest.camera_table),
-        (1, 200, None, pytest.camera_table),
-        (2, 200, None, pytest.camera_table),
+        (0, 200, None, pytest.camera_table[0]),
+        (1, 200, None, pytest.camera_table[0]),
+        (2, 200, None, pytest.camera_table[1]),
     ],
 )
 @pytest.mark.asyncio()
@@ -111,14 +119,18 @@ async def test_fetch_cameras(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.get("/cameras", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == expected_response
+        assert response.json()[0] == expected_response
 
 
 @pytest.mark.parametrize(
@@ -128,7 +140,7 @@ async def test_fetch_cameras(
         (0, 0, 422, None),
         (0, 100, 404, "Table Camera has no corresponding entry."),
         (0, 1, 200, None),
-        (0, 2, 200, None),
+        (0, 2, 403, "Access forbidden."),
         (1, 1, 403, "Incompatible token scope."),
         (1, 2, 403, "Incompatible token scope."),
         (2, 1, 403, "Incompatible token scope."),
@@ -146,7 +158,11 @@ async def test_delete_camera(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.delete(f"/cameras/{cam_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -178,7 +194,11 @@ async def test_create_camera_token(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["site_id"],
+        )
 
     response = await async_client.post(f"/cameras/{cam_id}/token", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -209,7 +229,7 @@ async def test_heartbeat(
 ):
     auth = None
     if isinstance(cam_idx, int):
-        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"])
+        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"], pytest.camera_table[cam_idx]["site_id"])
 
     response = await async_client.patch("/cameras/heartbeat", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
