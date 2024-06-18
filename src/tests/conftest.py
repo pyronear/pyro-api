@@ -15,10 +15,9 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, User
+from app.models import Camera, Detection, Site, User
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
-
 
 USER_TABLE = [
     {
@@ -44,9 +43,23 @@ USER_TABLE = [
     },
 ]
 
+SITE_TABLE = [
+    {
+        "id": 1,
+        "name": "site-1",
+        "type": "sdis",
+    },
+    {
+        "id": 2,
+        "name": "site-2",
+        "type": "particulier",
+    },
+]
+
 CAM_TABLE = [
     {
         "id": 1,
+        "site_id": 1,
         "name": "cam-1",
         "angle_of_view": 91.3,
         "elevation": 110.6,
@@ -58,6 +71,7 @@ CAM_TABLE = [
     },
     {
         "id": 2,
+        "site_id": 2,
         "name": "cam-2",
         "angle_of_view": 91.3,
         "elevation": 110.6,
@@ -163,7 +177,20 @@ async def user_session(async_session: AsyncSession, monkeypatch):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def camera_session(user_session: AsyncSession):
+async def site_session(async_session: AsyncSession):
+    for entry in SITE_TABLE:
+        async_session.add(Site(**entry))
+    await async_session.commit()
+    await async_session.exec(
+        text(f"ALTER SEQUENCE site_id_seq RESTART WITH {max(entry['id'] for entry in SITE_TABLE) + 1}")
+    )
+    await async_session.commit()
+    yield async_session
+    await async_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def camera_session(user_session: AsyncSession, site_session: AsyncSession):
     for entry in CAM_TABLE:
         user_session.add(Camera(**entry))
     await user_session.commit()
@@ -176,7 +203,7 @@ async def camera_session(user_session: AsyncSession):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(user_session: AsyncSession, camera_session: AsyncSession):
+async def detection_session(user_session: AsyncSession, camera_session: AsyncSession, site_session: AsyncSession):
     for entry in DET_TABLE:
         user_session.add(Detection(**entry))
     await user_session.commit()

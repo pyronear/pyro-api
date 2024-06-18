@@ -10,26 +10,26 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"name": "pyro-cam", "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
             401,
             "Not authenticated",
         ),
-        (0, {"name": "pyro-cam", "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5}, 422, None),
+        (0, {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5}, 422, None),
         (
             0,
-            {"name": "pyro-cam", "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
             201,
             None,
         ),
         (
             1,
-            {"name": "pyro-cam", "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
             201,
             None,
         ),
         (
             2,
-            {"name": "pyro-cam", "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {"name": "pyro-cam", "site_id": 2, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
             403,
             "Incompatible token scope.",
         ),
