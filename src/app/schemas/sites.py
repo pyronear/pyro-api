@@ -9,7 +9,6 @@ __all__ = ["SiteCreate", "SiteUpdate"]
 
 
 class SiteCreate(BaseModel):
-    site_id: int = Field(..., gt=0)
     name: str = Field(
         ...,
         min_length=3,
@@ -17,6 +16,7 @@ class SiteCreate(BaseModel):
         description="name of the camera",
         json_schema_extra={"examples": ["pyro-camera-01"]},
     )
+    type: str
 
 
 class SiteUpdate(BaseModel):
