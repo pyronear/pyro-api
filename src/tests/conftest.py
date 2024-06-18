@@ -162,21 +162,6 @@ def mock_img():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def user_session(async_session: AsyncSession, monkeypatch):
-    monkeypatch.setattr(users, "hash_password", mock_hash_password)
-    monkeypatch.setattr(login, "verify_password", mock_verify_password)
-    for entry in USER_TABLE:
-        async_session.add(User(**entry))
-    await async_session.commit()
-    await async_session.exec(
-        text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
-    )
-    await async_session.commit()
-    yield async_session
-    await async_session.rollback()
-
-
-@pytest_asyncio.fixture(scope="function")
 async def site_session(async_session: AsyncSession):
     for entry in SITE_TABLE:
         async_session.add(Site(**entry))
@@ -187,6 +172,21 @@ async def site_session(async_session: AsyncSession):
     await async_session.commit()
     yield async_session
     await async_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def user_session(site_session: AsyncSession, monkeypatch):
+    monkeypatch.setattr(users, "hash_password", mock_hash_password)
+    monkeypatch.setattr(login, "verify_password", mock_verify_password)
+    for entry in USER_TABLE:
+        site_session.add(User(**entry))
+    await site_session.commit()
+    await site_session.exec(
+        text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
+    )
+    await site_session.commit()
+    yield site_session
+    await site_session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")

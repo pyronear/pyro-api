@@ -10,31 +10,31 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "site_id": 1},
             401,
             "Not authenticated",
         ),
         (
             1,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "site_id": 1},
             403,
             "Incompatible token scope.",
         ),
         (
             2,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "site_id": 2},
             403,
             "Incompatible token scope.",
         ),
         (
             0,
-            {"login": "first_login", "password": "bar", "role": "user"},
+            {"login": "first_login", "password": "bar", "role": "user", "site_id": 1},
             409,
             "Login already taken",
         ),
         (
             0,
-            {"login": "pyro_user"},
+            {"login": "pyro_user", "site_id": 1},
             422,
             None,
         ),

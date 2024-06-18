@@ -29,13 +29,17 @@ def upgrade() -> None:  # TODO : create an index ?
         sa.UniqueConstraint("name"),
     )
 
-    # Add the 'site_id' column to the 'camera' table and create a foreign key constraint
+    # Add the 'site_id' column to the 'camera' and 'user' tables and create  foreign key constraints
     op.add_column("camera", sa.Column("site_id", sa.Integer(), nullable=True))
     op.create_foreign_key("fk_camera_site", "camera", "site", ["site_id"], ["id"])
+    op.add_column("user", sa.Column("site_id", sa.Integer(), nullable=True))
+    op.create_foreign_key("fk_user_site", "camera", "site", ["site_id"], ["id"])
 
 
 def downgrade() -> None:
     # Remove the foreign key constraint and the 'site_id' column from the 'camera' table
     op.drop_constraint("fk_camera_site", "camera", type_="foreignkey")
+    op.drop_constraint("fk_user_site", "user", type_="foreignkey")
     op.drop_column("camera", "site_id")
+    op.drop_column("user", "site_id")
     op.drop_table("detection")
