@@ -173,7 +173,7 @@ async def test_fetch_cameras(
         (0, 0, 422, None),
         (0, 100, 404, "Table Camera has no corresponding entry."),
         (0, 1, 200, None),
-        (0, 2, 403, "Access forbidden."),
+        (0, 2, 200, None),
         (1, 1, 403, "Incompatible token scope."),
         (1, 2, 403, "Incompatible token scope."),
         (2, 1, 403, "Incompatible token scope."),

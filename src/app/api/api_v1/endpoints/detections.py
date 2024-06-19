@@ -11,8 +11,8 @@ from typing import List, cast
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_detection_crud, get_jwt
-from app.crud import DetectionCRUD
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
+from app.crud import CameraCRUD, DetectionCRUD
 from app.models import Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
@@ -26,10 +26,14 @@ router = APIRouter()
 async def create_detection(
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
+    camera = await cameras.get(token_payload.sub, strict=True)
+    if token_payload.organization_id != camera.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
@@ -64,23 +68,32 @@ async def create_detection(
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
     detection_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
-    return cast(Detection, await detections.get(detection_id, strict=True))
+    detection = cast(Detection, await detections.get(detection_id, strict=True))
+    camera = await cameras.get(detection.camera_id, strict=True)
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    return detection
 
 
 @router.get("/{detection_id}/url", response_model=DetectionUrl, status_code=200)
 async def get_detection_url(
     detection_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> DetectionUrl:
     """Resolve the temporary media image URL"""
-    telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     # Check in DB
+    telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+    camera = await cameras.get(detection.camera_id, strict=True)
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     temp_public_url = await s3_bucket.get_public_url(detection.bucket_key)
     return DetectionUrl(url=temp_public_url)
@@ -89,20 +102,34 @@ async def get_detection_url(
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
 async def fetch_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Detection]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    return [elt for elt in await detections.fetch_all()]
+    all_detections = [elt for elt in await detections.fetch_all()]
+    if UserRole.ADMIN in token_payload.scopes:
+        return all_detections
+    filtered_detections = []
+    for detection in all_detections:
+        camera = await cameras.get(detection.camera_id, strict=True)
+        if camera.organization_id == token_payload.organization_id:
+            filtered_detections.append(detection)
+    return filtered_detections
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
 async def label_detection(
     payload: DetectionLabel,
     detection_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-label", properties={"detection_id": detection_id})
+    detection = cast(Detection, await detections.get(detection_id, strict=True))
+    camera = await cameras.get(detection.camera_id, strict=True)
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return await detections.update(detection_id, payload)
 
 

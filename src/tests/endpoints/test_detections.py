@@ -104,7 +104,7 @@ async def test_get_detection(
     [
         (None, 401, "Not authenticated", None),
         (0, 200, None, pytest.detection_table),
-        (1, 200, None, pytest.detection_table),
+        (1, 200, None, [pytest.detection_table[0], pytest.detection_table[1]]),
     ],
 )
 @pytest.mark.asyncio()
@@ -184,7 +184,7 @@ async def test_label_detection(
         (0, 100, 404, "Table Detection has no corresponding entry."),
         (0, None, 200, None),
         (1, None, 200, None),
-        (2, None, 200, None),
+        (2, None, 403, "Access forbidden."),
     ],
 )
 @pytest.mark.asyncio()
