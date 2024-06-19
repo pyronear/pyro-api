@@ -3,4 +3,4 @@ from .detections import *
 from .cameras import *
 from .login import *
 from .users import *
-from .sites import *
+from .organizations import *

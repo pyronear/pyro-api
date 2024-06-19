@@ -46,7 +46,7 @@ services:
       - POSTGRES_URL=postgresql+asyncpg://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
       - SUPERADMIN_LOGIN=superadmin_login
       - SUPERADMIN_PWD=superadmin_pwd
-      - SUPERADMIN_SITE=superadmin_site
+      - SUPERADMIN_ORGANIZATION=superadmin_organization
       - JWT_SECRET=${JWT_SECRET}
       - SUPPORT_EMAIL=${SUPPORT_EMAIL}
       - DEBUG=true

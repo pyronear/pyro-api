@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD, SiteCRUD, UserCRUD
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, UserCRUD
 from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
@@ -45,8 +45,8 @@ def get_detection_crud(session: AsyncSession = Depends(get_session)) -> Detectio
     return DetectionCRUD(session=session)
 
 
-def get_site_crud(session: AsyncSession = Depends(get_session)) -> SiteCRUD:
-    return SiteCRUD(session=session)
+def get_organization_crud(session: AsyncSession = Depends(get_session)) -> OrganizationCRUD:
+    return OrganizationCRUD(session=session)
 
 
 def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:

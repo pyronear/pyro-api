@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models import Site, User, UserRole
+from app.models import Organization, User, UserRole
 
 __all__ = ["get_session", "init_db"]
 
@@ -34,17 +34,17 @@ async def init_db() -> None:
     async with AsyncSession(engine) as session:
         logger.info("Initializing PostgreSQL database...")
 
-        statement = select(Site).where(Site.name == settings.SUPERADMIN_SITE)  # type: ignore[var-annotated]
+        statement = select(Organization).where(Organization.name == settings.SUPERADMIN_ORGANIZATION)  # type: ignore[var-annotated]
         results = await session.execute(statement=statement)
-        site = results.scalar_one_or_none()
-        if not site:
-            new_site = Site(name=settings.SUPERADMIN_SITE, type="admin")
-            session.add(new_site)
+        organization = results.scalar_one_or_none()
+        if not organization:
+            new_orga = Organization(name=settings.SUPERADMIN_ORGANIZATION, type="admin")
+            session.add(new_orga)
             await session.commit()
-            await session.refresh(new_site)  # Refresh to get the new site ID
-            site_id = new_site.id
+            await session.refresh(new_orga)  # Refresh to get the new organization ID
+            organization_id = new_orga.id
         else:
-            site_id = site.id
+            organization_id = organization.id
 
         # Check if admin exists
         statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)
@@ -57,7 +57,7 @@ async def init_db() -> None:
                     login=settings.SUPERADMIN_LOGIN,
                     hashed_password=pwd,
                     role=UserRole.ADMIN,
-                    site_id=site_id,  # Use the correct site_id
+                    organization_id=organization_id,  # Use the correct organization_id
                 )
             )
         await session.commit()

@@ -10,26 +10,59 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {
+                "name": "pyro-cam",
+                "organization_id": 1,
+                "angle_of_view": 90.0,
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
             401,
             "Not authenticated",
         ),
-        (0, {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5}, 422, None),
         (
             0,
-            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {"name": "pyro-cam", "organization_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5},
+            422,
+            None,
+        ),
+        (
+            0,
+            {
+                "name": "pyro-cam",
+                "organization_id": 1,
+                "angle_of_view": 90.0,
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
             201,
             None,
         ),
         (
             1,
-            {"name": "pyro-cam", "site_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {
+                "name": "pyro-cam",
+                "organization_id": 1,
+                "angle_of_view": 90.0,
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
             201,
             None,
         ),
         (
             2,
-            {"name": "pyro-cam", "site_id": 2, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5, "lon": 7.8},
+            {
+                "name": "pyro-cam",
+                "organization_id": 2,
+                "angle_of_view": 90.0,
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
             403,
             "Incompatible token scope.",
         ),
@@ -49,7 +82,7 @@ async def test_create_camera(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.post("/cameras", json=payload, headers=auth)
@@ -88,7 +121,7 @@ async def test_get_camera(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get(f"/cameras/{cam_id}", headers=auth)
@@ -122,7 +155,7 @@ async def test_fetch_cameras(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get("/cameras", headers=auth)
@@ -161,7 +194,7 @@ async def test_delete_camera(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.delete(f"/cameras/{cam_id}", headers=auth)
@@ -197,7 +230,7 @@ async def test_create_camera_token(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.post(f"/cameras/{cam_id}/token", headers=auth)
@@ -229,7 +262,11 @@ async def test_heartbeat(
 ):
     auth = None
     if isinstance(cam_idx, int):
-        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"], pytest.camera_table[cam_idx]["site_id"])
+        auth = pytest.get_token(
+            pytest.camera_table[cam_idx]["id"],
+            ["camera"],
+            pytest.camera_table[cam_idx]["organization_id"],
+        )
 
     response = await async_client.patch("/cameras/heartbeat", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)

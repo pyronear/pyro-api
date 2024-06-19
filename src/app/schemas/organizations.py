@@ -5,10 +5,10 @@
 
 from pydantic import BaseModel, Field
 
-__all__ = ["SiteCreate", "SiteUpdate"]
+__all__ = ["OrganizationCreate", "OrganizationUpdate"]
 
 
-class SiteCreate(BaseModel):
+class OrganizationCreate(BaseModel):
     name: str = Field(
         ...,
         min_length=3,
@@ -19,7 +19,7 @@ class SiteCreate(BaseModel):
     type: str
 
 
-class SiteUpdate(BaseModel):
+class OrganizationUpdate(BaseModel):
     name: str = Field(
         ...,
         min_length=3,

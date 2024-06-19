@@ -7,10 +7,10 @@ import requests
 API_URL = os.getenv("API_URL", "http://localhost:5050/api/v1/")
 SUPERADMIN_LOGIN = os.getenv("SUPERADMIN_LOGIN", "superadmin_login")
 SUPERADMIN_PWD = os.getenv("SUPERADMIN_PWD", "superadmin_pwd")
-SUPERADMIN_SITE = os.getenv("SUPERADMIN_SITE", "superadmin_site")
+SUPERADMIN_ORGANIZATION = os.getenv("SUPERADMIN_ORGANIZATION", "superadmin_organization")
 SUPERADMIN_TOKEN = requests.post(
     urljoin(API_URL, "login/creds"),
-    data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD, "site": SUPERADMIN_SITE},
+    data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD, "organization": SUPERADMIN_ORGANIZATION},
     timeout=5,
 ).json()["access_token"]
 

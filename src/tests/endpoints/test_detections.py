@@ -35,10 +35,14 @@ async def test_create_detection(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
     elif isinstance(cam_idx, int):
-        auth = pytest.get_token(pytest.camera_table[cam_idx]["id"], ["camera"], pytest.camera_table[cam_idx]["site_id"])
+        auth = pytest.get_token(
+            pytest.camera_table[cam_idx]["id"],
+            ["camera"],
+            pytest.camera_table[cam_idx]["organization_id"],
+        )
 
     response = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
@@ -84,7 +88,7 @@ async def test_get_detection(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get(f"/detections/{detection_id}", headers=auth)
@@ -117,7 +121,7 @@ async def test_fetch_detections(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get("/detections", headers=auth)
@@ -159,7 +163,7 @@ async def test_label_detection(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.patch(f"/detections/{detection_id}/label", json=payload, headers=auth)
@@ -195,7 +199,7 @@ async def test_get_detection_url(
 ):
     # We aren't actually putting files in the bucket during conftest. So we create some here to retrieve the URL
     if detection_id is None:
-        auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["site_id"])
+        auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
         response = await async_client.post(
             "/detections", data={"azimuth": 45.6}, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
         )
@@ -206,7 +210,7 @@ async def test_get_detection_url(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get(f"/detections/{det_id}/url", headers=auth)
@@ -244,7 +248,7 @@ async def test_delete_detection(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.delete(f"/detections/{detection_id}", headers=auth)

@@ -10,32 +10,32 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"name": "pyro-site", "type": "sdis"},
+            {"name": "pyro-organization", "type": "sdis"},
             401,
             "Not authenticated",
         ),
         (
             0,
-            {"name": "pyro-site", "type": "sdis"},
+            {"name": "pyro-organization", "type": "sdis"},
             201,
             None,
         ),
         (
             1,
-            {"name": "pyro-site2", "type": "sdis"},
+            {"name": "pyro-organization2", "type": "sdis"},
             403,
             "Incompatible token scope.",
         ),
         (
             2,
-            {"name": "pyro-site", "type": "sdis"},
+            {"name": "pyro-organization", "type": "sdis"},
             403,
             "Incompatible token scope.",
         ),
     ],
 )
 @pytest.mark.asyncio()
-async def test_create_site(
+async def test_create_organization(
     async_client: AsyncClient,
     user_idx: Union[int, None],
     payload: Dict[str, Any],
@@ -47,10 +47,10 @@ async def test_create_site(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.post("/sites", json=payload, headers=auth)
+    response = await async_client.post("/organizations", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
@@ -61,7 +61,7 @@ async def test_create_site(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "site_id", "status_code", "status_detail", "expected_idx"),
+    ("user_idx", "organization_id", "status_code", "status_detail", "expected_idx"),
     [
         (None, 1, 401, "Not authenticated", None),
         (0, 1, 200, None, 0),
@@ -70,45 +70,45 @@ async def test_create_site(
     ],
 )
 @pytest.mark.asyncio()
-async def test_get_site(
+async def test_get_organization(
     async_client: AsyncClient,
-    site_session: AsyncSession,
+    organization_session: AsyncSession,
     user_idx: Union[int, None],
-    site_id: int,
+    organization_id: int,
     status_code: int,
     status_detail: Union[str, None],
     expected_idx: Union[int, None],
 ):
     auth = None
-    site_id_from_table = pytest.user_table[user_idx]["site_id"] if user_idx is not None else None
+    organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
     if isinstance(user_idx, int):
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            site_id_from_table,
+            organization_id_from_table,
         )
 
-    response = await async_client.get(f"/sites/{site_id}", headers=auth)
+    response = await async_client.get(f"/organizations/{organization_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == pytest.site_table[expected_idx]
+        assert response.json() == pytest.organization_table[expected_idx]
 
 
 @pytest.mark.parametrize(
     ("user_idx", "status_code", "status_detail", "expected_response"),
     [
         (None, 401, "Not authenticated", None),
-        (0, 200, None, pytest.site_table[0]),
-        (1, 200, None, pytest.site_table[0]),
-        (2, 200, None, pytest.site_table[1]),
+        (0, 200, None, pytest.organization_table[0]),
+        (1, 200, None, pytest.organization_table[0]),
+        (2, 200, None, pytest.organization_table[1]),
     ],
 )
 @pytest.mark.asyncio()
-async def test_fetch_sites(
+async def test_fetch_organizations(
     async_client: AsyncClient,
-    site_session: AsyncSession,
+    organization_session: AsyncSession,
     user_idx: Union[int, None],
     status_code: int,
     status_detail: Union[str, None],
@@ -119,10 +119,10 @@ async def test_fetch_sites(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["site_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/sites", headers=auth)
+    response = await async_client.get("/organizations", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
@@ -131,7 +131,7 @@ async def test_fetch_sites(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "site_id", "status_code", "status_detail"),
+    ("user_idx", "organization_id", "status_code", "status_detail"),
     [
         (None, 1, 401, "Not authenticated"),
         (0, 1, 200, None),
@@ -141,24 +141,24 @@ async def test_fetch_sites(
     ],
 )
 @pytest.mark.asyncio()
-async def test_delete_site(
+async def test_delete_organization(
     async_client: AsyncClient,
-    site_session: AsyncSession,
+    organization_session: AsyncSession,
     user_idx: Union[int, None],
-    site_id: int,
+    organization_id: int,
     status_code: int,
     status_detail: Union[str, None],
 ):
     auth = None
-    site_id_from_table = pytest.user_table[user_idx]["site_id"] if user_idx is not None else None
+    organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
     if isinstance(user_idx, int):
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            site_id_from_table,
+            organization_id_from_table,
         )
 
-    response = await async_client.delete(f"/sites/{site_id}", headers=auth)
+    response = await async_client.delete(f"/organizations/{organization_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
