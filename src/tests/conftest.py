@@ -228,6 +228,10 @@ def pytest_configure():
     # api.security patching
     pytest.get_token = get_token
     # Table
+    pytest.site_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in SITE_TABLE
+    ]
     pytest.user_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in USER_TABLE

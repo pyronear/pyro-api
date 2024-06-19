@@ -34,11 +34,11 @@ async def init_db() -> None:
     async with AsyncSession(engine) as session:
         logger.info("Initializing PostgreSQL database...")
 
-        statement = select(Site).where(Site.name == "pyronear")
+        statement = select(Site).where(Site.name == settings.SUPERADMIN_SITE)  # type: ignore[var-annotated]
         results = await session.execute(statement=statement)
         site = results.scalar_one_or_none()
         if not site:
-            new_site = Site(name="pyronear", type="admin")
+            new_site = Site(name=settings.SUPERADMIN_SITE, type="admin")
             session.add(new_site)
             await session.commit()
             await session.refresh(new_site)  # Refresh to get the new site ID

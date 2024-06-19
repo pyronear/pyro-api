@@ -38,10 +38,10 @@ async def get_camera(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Camera:
-    telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.site_id != camera.site_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     return camera
 
 
@@ -73,12 +73,12 @@ async def create_camera_token(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Token:
-    telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
     # Verify camera
     camera = await cameras.get(camera_id, strict=True)
     if camera is not None and token_payload.site_id != camera.site_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # create access token using user user_id/user_scopes
+    telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
     token_data = {"sub": str(camera_id), "scopes": ["camera"], "site_id": token_payload.site_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
     return Token(access_token=token, token_type="bearer")  # noqa S106
@@ -90,8 +90,8 @@ async def delete_camera(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
-    telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
     camera = await cameras.get(camera_id, strict=True)
     if camera is not None and token_payload.site_id != camera.site_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
     await cameras.delete(camera_id)

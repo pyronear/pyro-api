@@ -125,6 +125,7 @@ None :)
 - `POSTGRES_PASSWORD`: a password for the PostgreSQL database
 - `SUPERADMIN_LOGIN`: the login of the initial admin user
 - `SUPERADMIN_PWD`: the password of the initial admin user
+- `SUPERADMIN_SITE`: the site of the initial admin user
 
 #### Other optional values
 - `JWT_SECRET`: if set, tokens can be reused between sessions. All instances sharing the same secret key can use the same token.
