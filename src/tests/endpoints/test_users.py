@@ -54,7 +54,7 @@ async def test_create_user(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["test_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.post("/users", json=payload, headers=auth)
@@ -96,7 +96,7 @@ async def test_get_user(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["test_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.get(f"/users/{user_id}", headers=auth)
@@ -163,7 +163,7 @@ async def test_delete_user(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["test_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.delete(f"/users/{user_id}", headers=auth)
@@ -201,7 +201,7 @@ async def test_update_user_password(
         auth = pytest.get_token(
             pytest.user_table[user_idx]["id"],
             pytest.user_table[user_idx]["role"].split(),
-            pytest.user_table[user_idx]["test_id"],
+            pytest.user_table[user_idx]["organization_id"],
         )
 
     response = await async_client.patch(f"/users/{user_id}", json=payload, headers=auth)
@@ -215,4 +215,5 @@ async def test_update_user_password(
             "login": pytest.user_table[expected_idx]["login"],
             "hashed_password": f"hashed_{payload['password']}",
             "role": pytest.user_table[expected_idx]["role"],
+            "organization_id": pytest.user_table[expected_idx]["organization_id"],
         }

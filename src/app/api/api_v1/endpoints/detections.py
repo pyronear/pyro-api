@@ -32,7 +32,7 @@ async def create_detection(
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
     camera = await cameras.get(token_payload.sub, strict=True)
-    if token_payload.organization_id != camera.organization_id:
+    if camera is not None and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
@@ -75,7 +75,11 @@ async def get_detection(
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = await cameras.get(detection.camera_id, strict=True)
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if (
+        camera is not None
+        and token_payload.organization_id != camera.organization_id
+        and UserRole.ADMIN not in token_payload.scopes
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return detection
 
@@ -92,7 +96,11 @@ async def get_detection_url(
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = await cameras.get(detection.camera_id, strict=True)
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if (
+        camera is not None
+        and token_payload.organization_id != camera.organization_id
+        and UserRole.ADMIN not in token_payload.scopes
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     temp_public_url = await s3_bucket.get_public_url(detection.bucket_key)
@@ -112,7 +120,7 @@ async def fetch_detections(
     filtered_detections = []
     for detection in all_detections:
         camera = await cameras.get(detection.camera_id, strict=True)
-        if camera.organization_id == token_payload.organization_id:
+        if camera is not None and camera.organization_id == token_payload.organization_id:
             filtered_detections.append(detection)
     return filtered_detections
 
@@ -128,7 +136,11 @@ async def label_detection(
     telemetry_client.capture(token_payload.sub, event="detections-label", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = await cameras.get(detection.camera_id, strict=True)
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if (
+        camera is not None
+        and token_payload.organization_id != camera.organization_id
+        and UserRole.ADMIN not in token_payload.scopes
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return await detections.update(detection_id, payload)
 
