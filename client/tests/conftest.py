@@ -31,6 +31,7 @@ def cam_token():
     admin_headers = {"Authorization": f"Bearer {SUPERADMIN_TOKEN}"}
     payload = {
         "name": "pyro-camera-01",
+        "organization_id": 1,
         "angle_of_view": 120,
         "elevation": 1582,
         "lat": 44.765181,
@@ -54,6 +55,7 @@ def agent_token():
         "role": "agent",
         "login": agent_login,
         "password": agent_pwd,
+        "organization_id": 1,
     }
     response = requests.post(urljoin(API_URL, "users"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201
@@ -71,6 +73,7 @@ def user_token():
         "role": "user",
         "login": user_login,
         "password": user_pwd,
+        "organization_id": 1,
     }
     response = requests.post(urljoin(API_URL, "users"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201
