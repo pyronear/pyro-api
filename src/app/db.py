@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models import Organization, User, UserRole
+from app.models import Organization, OrganizationType, User, UserRole
 
 __all__ = ["get_session", "init_db"]
 
@@ -38,7 +38,7 @@ async def init_db() -> None:
         results = await session.execute(statement=statement)
         organization = results.scalar_one_or_none()
         if not organization:
-            new_orga = Organization(name=settings.SUPERADMIN_ORGANIZATION, type="admin")
+            new_orga = Organization(name=settings.SUPERADMIN_ORGANIZATION, type=OrganizationType.ADMIN)
             session.add(new_orga)
             await session.commit()
             await session.refresh(new_orga)  # Refresh to get the new organization ID
@@ -57,7 +57,7 @@ async def init_db() -> None:
                     login=settings.SUPERADMIN_LOGIN,
                     hashed_password=pwd,
                     role=UserRole.ADMIN,
-                    organization_id=organization_id,  # Use the correct organization_id
+                    organization_id=organization_id,
                 )
             )
         await session.commit()
