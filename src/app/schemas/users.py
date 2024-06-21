@@ -35,3 +35,4 @@ class UserCreate(Role):
 
 class UserCreation(Role):
     login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
+    organization_id: int = Field(..., gt=0)

@@ -19,7 +19,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:  # TODO : create an index ?
+def upgrade() -> None:
     op.create_table(
         "organization",
         sa.Column("id", sa.Integer(), nullable=False),

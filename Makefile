@@ -31,16 +31,15 @@ stop:
 test:
 	- poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
 	- docker compose -f docker-compose.dev.yml up -d --build --wait
-	- sleep 30
 	- docker compose exec -T backend pytest --cov=app
 	- docker compose -f docker-compose.dev.yml down
 
 # Run tests for the Python client
 test-client:
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	cd client && pytest --cov=pyroclient tests/ && cd ..
-	docker compose -f docker-compose.dev.yml down
+	- poetry export -f requirements.txt --without-hashes --output requirements.txt
+	- docker compose -f docker-compose.dev.yml up -d --build --wait
+	- cd client && pytest --cov=pyroclient tests/ && cd ..
+	- docker compose -f docker-compose.dev.yml down
 
 # Check that docs can build for client
 docs-client:
@@ -48,7 +47,7 @@ docs-client:
 
 
 e2e:
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	python scripts/test_e2e.py
-	docker compose -f docker-compose.dev.yml down
+	- poetry export -f requirements.txt --without-hashes --output requirements.txt
+	- docker compose -f docker-compose.dev.yml up -d --build --wait
+	- python scripts/test_e2e.py
+	- docker compose -f docker-compose.dev.yml down

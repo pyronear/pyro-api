@@ -28,11 +28,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         try:
             self.session.add(entry)
             await self.session.commit()
-        except exc.IntegrityError:
+        except exc.IntegrityError as error:
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An entry with the same index already exists.",
+                detail="An entry with the same index already exists : " + str(error),
             )
         await self.session.refresh(entry)
 
