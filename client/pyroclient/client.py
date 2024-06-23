@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Dict
+from typing import Dict, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -71,17 +71,21 @@ class Client:
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
-    def heartbeat(self) -> Response:
+    def heartbeat(self, timeout: Optional[float] = None) -> Response:
         """Update the last ping of the camera
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> response = api_client.heartbeat()
 
+        Args:
+            timeout: Optional timeout value for the request. If not provided, defaults to self.timeout.
+
         Returns:
-            HTTP response containing the update device info
+            HTTP response containing the updated device info
         """
-        return requests.patch(self.routes["cameras-heartbeat"], headers=self.headers, timeout=self.timeout)
+        request_timeout = timeout if timeout is not None else self.timeout
+        return requests.patch(self.routes["cameras-heartbeat"], headers=self.headers, timeout=request_timeout)
 
     # DETECTIONS
     def create_detection(
