@@ -68,3 +68,10 @@ class Organization(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     type: OrganizationType = Field(OrganizationType.SDIS, nullable=False)
+
+
+class Wildfire(SQLModel, table=True):
+    id: int = Field(None, primary_key=True)
+    camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
+    starting_time: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    ending_time: datetime = Field(default_factory=datetime.utcnow, nullable=True)
