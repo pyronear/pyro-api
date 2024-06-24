@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Authentication
     SUPERADMIN_LOGIN: str = os.environ["SUPERADMIN_LOGIN"]
     SUPERADMIN_PWD: str = os.environ["SUPERADMIN_PWD"]
+    SUPERADMIN_ORGANIZATION: str = os.environ["SUPERADMIN_ORGANIZATION"]
     # DB
     POSTGRES_URL: str = os.environ["POSTGRES_URL"]
 

@@ -7,8 +7,11 @@ import requests
 API_URL = os.getenv("API_URL", "http://localhost:5050/api/v1/")
 SUPERADMIN_LOGIN = os.getenv("SUPERADMIN_LOGIN", "superadmin_login")
 SUPERADMIN_PWD = os.getenv("SUPERADMIN_PWD", "superadmin_pwd")
+SUPERADMIN_ORGANIZATION = os.getenv("SUPERADMIN_ORGANIZATION", "superadmin_organization")
 SUPERADMIN_TOKEN = requests.post(
-    urljoin(API_URL, "login/creds"), data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD}, timeout=5
+    urljoin(API_URL, "login/creds"),
+    data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD, "organization": SUPERADMIN_ORGANIZATION},
+    timeout=5,
 ).json()["access_token"]
 
 
@@ -28,6 +31,7 @@ def cam_token():
     admin_headers = {"Authorization": f"Bearer {SUPERADMIN_TOKEN}"}
     payload = {
         "name": "pyro-camera-01",
+        "organization_id": 1,
         "angle_of_view": 120,
         "elevation": 1582,
         "lat": 44.765181,
@@ -51,6 +55,7 @@ def agent_token():
         "role": "agent",
         "login": agent_login,
         "password": agent_pwd,
+        "organization_id": 1,
     }
     response = requests.post(urljoin(API_URL, "users"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201
@@ -68,6 +73,7 @@ def user_token():
         "role": "user",
         "login": user_login,
         "password": user_pwd,
+        "organization_id": 1,
     }
     response = requests.post(urljoin(API_URL, "users"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201

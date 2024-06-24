@@ -10,31 +10,31 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "organization_id": 1},
             401,
             "Not authenticated",
         ),
         (
             1,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "organization_id": 1},
             403,
             "Incompatible token scope.",
         ),
         (
             2,
-            {"login": "pyro_user", "password": "bar", "role": "user"},
+            {"login": "pyro_user", "password": "bar", "role": "user", "organization_id": 2},
             403,
             "Incompatible token scope.",
         ),
         (
             0,
-            {"login": "first_login", "password": "bar", "role": "user"},
+            {"login": "first_login", "password": "bar", "role": "user", "organization_id": 1},
             409,
             "Login already taken",
         ),
         (
             0,
-            {"login": "pyro_user"},
+            {"login": "pyro_user", "organization_id": 1},
             422,
             None,
         ),
@@ -51,7 +51,11 @@ async def test_create_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
 
     response = await async_client.post("/users", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -89,7 +93,11 @@ async def test_get_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
 
     response = await async_client.get(f"/users/{user_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -117,7 +125,11 @@ async def test_fetch_users(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
 
     response = await async_client.get("/users/", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -148,7 +160,11 @@ async def test_delete_user(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
 
     response = await async_client.delete(f"/users/{user_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -182,7 +198,11 @@ async def test_update_user_password(
 ):
     auth = None
     if isinstance(user_idx, int):
-        auth = pytest.get_token(pytest.user_table[user_idx]["id"], pytest.user_table[user_idx]["role"].split())
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
 
     response = await async_client.patch(f"/users/{user_id}", json=payload, headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -195,4 +215,5 @@ async def test_update_user_password(
             "login": pytest.user_table[expected_idx]["login"],
             "hashed_password": f"hashed_{payload['password']}",
             "role": pytest.user_table[expected_idx]["role"],
+            "organization_id": pytest.user_table[expected_idx]["organization_id"],
         }

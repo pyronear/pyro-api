@@ -30,4 +30,4 @@ async def test_login_with_creds(
         response_json = response.json()
         assert response_json["token_type"] == "bearer"  # noqa: S105
         assert isinstance(response_json["access_token"], str)
-        assert len(response_json["access_token"]) == 144
+        assert len(response_json["access_token"]) == 171

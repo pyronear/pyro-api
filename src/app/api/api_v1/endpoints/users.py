@@ -27,6 +27,7 @@ async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union
     user = await users.create(
         User(
             login=payload.login,
+            organization_id=payload.organization_id,
             hashed_password=hash_password(payload.password),
             role=payload.role,
         )

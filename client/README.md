@@ -39,8 +39,8 @@ api_client = client.Client(API_URL, USER_LOGIN, USER_PASSWORD)
 
 # List your registered devices
 devices = api_client.get_my_devices().json()
-# List sites accessible in your scope
-sites = api_client.get_sites().json()
+# List organizations accessible in your scope
+organizations = api_client.get_organizations().json()
 # List all past events in your scope
 events = api_client.get_past_events().json()
 # List all alerts in your scope
