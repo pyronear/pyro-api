@@ -74,4 +74,4 @@ class Wildfire(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
     starting_time: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    ending_time: datetime = Field(default_factory=datetime.utcnow, nullable=True)
+    ending_time: datetime = Field(default_factory=None, nullable=True)

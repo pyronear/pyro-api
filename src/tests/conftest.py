@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, User
+from app.models import Camera, Detection, Organization, User, Wildfire
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
 
@@ -113,6 +113,27 @@ DET_TABLE = [
         "is_wildfire": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+    },
+]
+
+WILDFIRE_TABLE = [
+    {
+        "id": 1,
+        "camera_id": 1,
+        "starting_time": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "ending_time": datetime.strptime("2023-11-08T10:08:19.226673", dt_format),
+    },
+    {
+        "id": 2,
+        "camera_id": 1,
+        "starting_time": datetime.strptime("2023-12-07T15:08:19.226673", dt_format),
+        "ending_time": None,
+    },
+    {
+        "id": 3,
+        "camera_id": 2,
+        "starting_time": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "ending_time": datetime.strptime("2023-11-08T10:08:19.226673", dt_format),
     },
 ]
 
@@ -220,6 +241,21 @@ async def detection_session(
     yield user_session
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wildfire_session(
+    user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
+):
+    for entry in WILDFIRE_TABLE:
+        user_session.add(Wildfire(**entry))
+    await user_session.commit()
+    # Update the detection index count
+    await user_session.exec(
+        text(f"ALTER SEQUENCE wildfire_id_seq RESTART WITH {max(entry['id'] for entry in WILDFIRE_TABLE) + 1}")
+    )
+    await user_session.commit()
+    yield user_session
+
+
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
     token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
     token = create_access_token(token_data)
@@ -245,4 +281,8 @@ def pytest_configure():
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in DET_TABLE
+    ]
+    pytest.wildfire_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in WILDFIRE_TABLE
     ]

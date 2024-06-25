@@ -25,6 +25,9 @@ async def register_wildfire(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Wildfire:
     telemetry_client.capture(token_payload.sub, event="wildfire-create", properties={"device_login": payload.camera_id})
+    if await wildfires.get_ending_time_null(payload.camera_id):  # check that the last wildfire has ended
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Unclosed Wildfire in the database.")
+
     return await wildfires.create(payload)
 
 
@@ -68,10 +71,19 @@ async def fetch_wildfires(
 @router.delete("/{wildfire_id}", status_code=status.HTTP_200_OK, summary="Delete a wildfire")
 async def delete_wildfire(
     wildfire_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     wildfires: WildfireCRUD = Depends(get_wildfire_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="wildfires-deletion", properties={"wildfire_id": wildfire_id})
+    wildfire = cast(Wildfire, await wildfires.get(wildfire_id, strict=True))
+    camera = await cameras.get(wildfire.camera_id, strict=True)
+    if (
+        camera is not None
+        and token_payload.organization_id != camera.organization_id
+        and UserRole.ADMIN not in token_payload.scopes
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     await wildfires.delete(wildfire_id)
 
 
@@ -81,7 +93,7 @@ async def update_wildfire(
     wildfire_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     wildfires: WildfireCRUD = Depends(get_wildfire_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="wildfires-deletion", properties={"wildfire_id": wildfire_id})
     wildfire = cast(Wildfire, await wildfires.get(wildfire_id, strict=True))

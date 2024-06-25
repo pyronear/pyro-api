@@ -12,7 +12,8 @@ __all__ = ["WildfireCreate", "WildfireUpdate"]
 class WildfireCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
     starting_time: datetime = Field(default_factory=datetime.utcnow)
+    ending_time: datetime = Field(default_factory=None)
 
 
 class WildfireUpdate(BaseModel):
-    ending_time: datetime = Field(default_factory=datetime.utcnow)
+    ending_time: datetime
