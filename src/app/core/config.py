@@ -37,6 +37,8 @@ class Settings(BaseSettings):
             return v.replace("postgres://", "postgresql+asyncpg://", 1)
         return v
 
+    ALERT_RELAXATION_SECONDS: int = 30 * 60
+
     # Security
     JWT_SECRET: str = os.environ.get("JWT_SECRET") or secrets.token_urlsafe(32)
     JWT_EXPIRE_MINUTES: int = 60

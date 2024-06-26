@@ -20,3 +20,5 @@ class UserCRUD(BaseCRUD[User, User, CredHash]):
 
     async def get_by_login(self, login: str, **kwargs) -> Union[User, None]:
         return await self.get_by("login", login, **kwargs)
+
+    # TODO : is this secured ? not need to send the organization_id ?

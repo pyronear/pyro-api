@@ -11,11 +11,12 @@ from typing import List, cast
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
-from app.crud import CameraCRUD, DetectionCRUD
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_wildfire_crud
+from app.crud import CameraCRUD, DetectionCRUD, WildfireCRUD
 from app.models import Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
+from app.schemas.wildfires import WildfireCreate
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
@@ -26,6 +27,7 @@ router = APIRouter()
 async def create_detection(
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
+    wildfires: WildfireCRUD = Depends(get_wildfire_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
@@ -58,7 +60,13 @@ async def create_detection(
             detail="Data was corrupted during upload",
         )
 
-    return await detections.create(DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth))
+    (wildfire_id, _) = await wildfires.create_or_update_wildfire(
+        WildfireCreate(camera_id=token_payload.sub, azimuth=azimuth)
+    )
+    # No need to create the Wildfire and Detection in the same commit
+    return await detections.create(
+        DetectionCreate(camera_id=token_payload.sub, wildfire_id=wildfire_id, bucket_key=bucket_key, azimuth=azimuth)
+    )
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")

@@ -2,17 +2,15 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
+__all__ = ["WildfireCreate", "WildfireUpdate"]
 
 
-class DetectionLabel(BaseModel):
-    is_wildfire: bool
-
-
-class Azimuth(BaseModel):
+class WildfireCreate(BaseModel):
+    camera_id: int = Field(..., gt=0)
     azimuth: float = Field(
         ...,
         gt=0,
@@ -20,13 +18,8 @@ class Azimuth(BaseModel):
         description="angle between north and direction in degrees",
         json_schema_extra={"examples": [110]},
     )
+    starting_time: datetime = Field(default_factory=datetime.utcnow)
 
 
-class DetectionCreate(Azimuth):
-    camera_id: int = Field(..., gt=0)
-    wildfire_id: int = Field(..., gt=0)
-    bucket_key: str
-
-
-class DetectionUrl(BaseModel):
-    url: str = Field(..., description="temporary URL to access the media content")
+class WildfireUpdate(BaseModel):
+    ending_time: datetime

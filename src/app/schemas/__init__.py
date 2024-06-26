@@ -4,3 +4,4 @@ from .cameras import *
 from .login import *
 from .users import *
 from .organizations import *
+from .wildfires import *

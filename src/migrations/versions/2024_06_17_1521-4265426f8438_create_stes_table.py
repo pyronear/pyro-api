@@ -41,5 +41,5 @@ def downgrade() -> None:
     op.drop_constraint("fk_camera_orga", "camera", type_="foreignkey")
     op.drop_constraint("fk_user_orga", "user", type_="foreignkey")
     op.drop_column("camera", "organization_id")
-    op.drop_column("user", "organization_idation_id")
-    op.drop_table("detection")
+    op.drop_column("user", "organization_id")
+    op.drop_table("organization")

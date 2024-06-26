@@ -15,8 +15,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {"azimuth": "hello"}, 422, None),
         # (None, 0, {"azimuth": "45.6"}, 422, None),  # This is odd, it works
         (None, 0, {}, 422, None),
-        (None, 0, {"azimuth": 45.6}, 201, None),
-        (None, 1, {"azimuth": 45.6}, 201, None),
+        (None, 0, {"azimuth": 45.6, "wildfire_id": 4}, 201, None),
+        (None, 1, {"azimuth": 45.6, "wildfire_id": 4}, 201, None),
     ],
 )
 @pytest.mark.asyncio()
