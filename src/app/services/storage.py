@@ -86,6 +86,7 @@ class S3Bucket:
         self._s3.delete_object(Bucket=self.bucket_name, Key=bucket_key)
 
 
+
 s3_bucket = S3Bucket(
     settings.S3_REGION,
     settings.S3_ENDPOINT_URL,

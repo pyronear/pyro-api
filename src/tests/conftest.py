@@ -54,7 +54,7 @@ ORGANIZATION_TABLE = [
     {
         "id": 2,
         "name": "organization-2",
-    },
+    }
 ]
 
 CAM_TABLE = [
