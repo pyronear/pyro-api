@@ -97,6 +97,8 @@ async def update_wildfire(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="wildfires-deletion", properties={"wildfire_id": wildfire_id})
     wildfire = cast(Wildfire, await wildfires.get(wildfire_id, strict=True))
+    if wildfire.ending_time is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This wildfire has already been closed.")
     camera = await cameras.get(wildfire.camera_id, strict=True)
     if (
         camera is not None
