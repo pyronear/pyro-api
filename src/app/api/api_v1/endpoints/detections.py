@@ -12,9 +12,9 @@ from typing import List, Optional, cast
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
-from app.crud import CameraCRUD, DetectionCRUD
-from app.models import Detection, Role, UserRole
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_organization_crud
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD
+from app.models import Detection,Role, UserRole, Organization
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
@@ -31,6 +31,7 @@ async def create_detection(
     localization: Optional[str] = Form(None),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
+    organizations: OrganizationCRUD = Depends(get_detection_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
@@ -49,13 +50,16 @@ async def create_detection(
         bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
         # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
         await file.seek(0)
-
+        # Failed upload
+        organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+        if not (await s3_bucket.upload_file(bucket_key, organization.name, file.file)):  # type: ignore[arg-type]
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        file_meta = await s3_bucket.get_file_metadata(bucket_key)
+        file_meta = await s3_bucket.get_file_metadata(bucket_key, organization.name)
         # Corrupted file
         if md5_hash != file_meta["ETag"].replace('"', ""):
             # Delete the corrupted upload
-            await s3_bucket.delete_file(bucket_key)
+            await s3_bucket.delete_file(bucket_key, organization.name)
             # Raise the exception
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -73,9 +77,8 @@ async def create_detection(
         logging.exception(f"Error occurred: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Data was corrupted during upload",
+            detail=str(e),
         )
-
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
@@ -205,10 +208,12 @@ async def label_detection(
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key)
+    organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+    await s3_bucket.delete_file(detection.bucket_key, organization.name)
     await detections.delete(detection_id)
