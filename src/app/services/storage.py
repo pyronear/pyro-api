@@ -26,35 +26,31 @@ class S3Bucket:
         endpoint_url: the S3 storage endpoint
         access_key: the S3 access key
         secret_key: the S3 secret key
-        bucket_name: the bucket name
         proxy_url: the proxy url
     """
 
-    def __init__(
-        self, region: str, endpoint_url: str, access_key: str, secret_key: str, bucket_name: str, proxy_url: str
-    ) -> None:
+    def __init__(self, region: str, endpoint_url: str, access_key: str, secret_key: str, proxy_url: str) -> None:
         _session = boto3.Session(access_key, secret_key, region_name=region)
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         # Ensure S3 is connected
         try:
-            self._s3.head_bucket(Bucket=bucket_name)
+            self._s3.head_bucket(Bucket="admin")
         except EndpointConnectionError:
             raise ValueError(f"unable to access endpoint {endpoint_url}")
         except ClientError:
-            raise ValueError(f"unable to access bucket {bucket_name}")
-        logger.info(f"S3 bucket {bucket_name} connected on {endpoint_url}")
-        self.bucket_name = bucket_name
+            raise ValueError("unable to access bucket admin")
+        logger.info(f"S3 bucket admin connected on {endpoint_url}")
         self.proxy_url = proxy_url
 
-    async def get_file_metadata(self, bucket_key: str) -> Dict[str, Any]:
+    async def get_file_metadata(self, bucket_key: str, bucket_name: str) -> Dict[str, Any]:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.head_object
-        return self._s3.head_object(Bucket=self.bucket_name, Key=bucket_key)
+        return self._s3.head_object(Bucket=bucket_name, Key=bucket_key)
 
-    async def check_file_existence(self, bucket_key: str) -> bool:
+    async def check_file_existence(self, bucket_key: str, bucket_name: str) -> bool:
         """Check whether a file exists on the bucket"""
         try:
             # Use boto3 head_object method using the Qarnot private connection attribute
-            head_object = await self.get_file_metadata(bucket_key)
+            head_object = await self.get_file_metadata(bucket_key, bucket_name)
             return head_object["ResponseMetadata"]["HTTPStatusCode"] == 200
         except ClientError as e:
             logger.warning(e)
@@ -62,27 +58,27 @@ class S3Bucket:
 
     async def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
         """Generate a temporary public URL for a bucket file"""
-        if not (await self.check_file_existence(bucket_key)):
+        if not (await self.check_file_existence(bucket_key, bucket_name)):
             raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
 
         # Point to the bucket file
-        file_params = {"Bucket": self.bucket_name, "Key": bucket_key}
+        file_params = {"Bucket": bucket_name, "Key": bucket_key}
         # Generate a public URL for it using boto3 presign URL generation\
         presigned_url = self._s3.generate_presigned_url("get_object", Params=file_params, ExpiresIn=url_expiration)
         if len(self.proxy_url) > 0:
             return presigned_url.replace(self._s3.meta.endpoint_url, self.proxy_url)
         return presigned_url
 
-    async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
+    async def upload_file(self, bucket_key: str, bucket_name: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
+        self._s3.upload_fileobj(file_binary, bucket_name, bucket_key)
         return True
 
-    async def delete_file(self, bucket_key: str) -> None:
+    async def delete_file(self, bucket_key: str, bucket_name: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
-        self._s3.delete_object(Bucket=self.bucket_name, Key=bucket_key)
+        self._s3.delete_object(Bucket=bucket_name, Key=bucket_key)
 
 
 s3_bucket = S3Bucket(
@@ -90,6 +86,5 @@ s3_bucket = S3Bucket(
     settings.S3_ENDPOINT_URL,
     settings.S3_ACCESS_KEY,
     settings.S3_SECRET_KEY,
-    settings.S3_BUCKET_NAME,
     settings.S3_PROXY_URL,
 )

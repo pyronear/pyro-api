@@ -26,7 +26,7 @@ services:
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
     healthcheck:
-      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://bucket"]
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -51,7 +51,6 @@ services:
       - SUPPORT_EMAIL=${SUPPORT_EMAIL}
       - DEBUG=true
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - S3_BUCKET_NAME=bucket
       - S3_ENDPOINT_URL=http://localstack:4566
       - S3_ACCESS_KEY=fake
       - S3_SECRET_KEY=fake
