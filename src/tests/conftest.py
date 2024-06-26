@@ -90,6 +90,7 @@ DET_TABLE = [
     {
         "id": 1,
         "camera_id": 1,
+        "wildfire_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": True,
@@ -99,15 +100,17 @@ DET_TABLE = [
     {
         "id": 2,
         "camera_id": 1,
+        "wildfire_id": 2,
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": False,
-        "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "created_at": datetime.strptime("2023-12-07T15:08:19.226673", dt_format),
+        "updated_at": datetime.strptime("2023-12-07T15:08:19.226673", dt_format),
     },
     {
         "id": 3,
         "camera_id": 2,
+        "wildfire_id": 3,
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": None,
@@ -120,18 +123,21 @@ WILDFIRE_TABLE = [
     {
         "id": 1,
         "camera_id": 1,
+        "azimuth": 43.7,
         "starting_time": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "ending_time": datetime.strptime("2023-11-08T10:08:19.226673", dt_format),
     },
     {
         "id": 2,
         "camera_id": 1,
+        "azimuth": 43.7,
         "starting_time": datetime.strptime("2023-12-07T15:08:19.226673", dt_format),
         "ending_time": None,
     },
     {
         "id": 3,
         "camera_id": 2,
+        "azimuth": 43.7,
         "starting_time": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "ending_time": datetime.strptime("2023-11-08T10:08:19.226673", dt_format),
     },
@@ -227,21 +233,6 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(
-    user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
-):
-    for entry in DET_TABLE:
-        user_session.add(Detection(**entry))
-    await user_session.commit()
-    # Update the detection index count
-    await user_session.exec(
-        text(f"ALTER SEQUENCE detection_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}")
-    )
-    await user_session.commit()
-    yield user_session
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wildfire_session(
     user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
 ):
@@ -251,6 +242,24 @@ async def wildfire_session(
     # Update the detection index count
     await user_session.exec(
         text(f"ALTER SEQUENCE wildfire_id_seq RESTART WITH {max(entry['id'] for entry in WILDFIRE_TABLE) + 1}")
+    )
+    await user_session.commit()
+    yield user_session
+
+
+@pytest_asyncio.fixture(scope="function")
+async def detection_session(
+    user_session: AsyncSession,
+    camera_session: AsyncSession,
+    organization_session: AsyncSession,
+    wildfire_session: AsyncSession,
+):
+    for entry in DET_TABLE:
+        user_session.add(Detection(**entry))
+    await user_session.commit()
+    # Update the detection index count
+    await user_session.exec(
+        text(f"ALTER SEQUENCE detection_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}")
     )
     await user_session.commit()
     yield user_session

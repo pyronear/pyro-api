@@ -23,6 +23,7 @@ def upgrade() -> None:
         "wildfire",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("camera_id", sa.Integer(), nullable=False),
+        sa.Column("azimuth", sa.Float(), nullable=False),
         sa.Column("starting_time", sa.DateTime(), nullable=False),
         sa.Column("ending_time", sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
@@ -32,6 +33,12 @@ def upgrade() -> None:
         ),
     )
 
+    op.add_column("detection", sa.Column("wildfire_id", sa.Integer(), nullable=False))
+    op.create_foreign_key("fk_detection_wildfire", "detection", "wildfire", ["wildfire_id"], ["id"])
+
 
 def downgrade() -> None:
     op.drop_table("wildfire")
+
+    op.drop_constraint("fk_detection_wildfire", "detection", type_="foreignkey")
+    op.drop_column("detection", "wildfire_id")

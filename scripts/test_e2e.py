@@ -84,6 +84,13 @@ def main(args):
 
     cam_auth = {"Authorization": f"Bearer {cam_token}"}
 
+    # payload = {
+    #    "camera_id": cam_id,
+    #    "azimuth": 110,
+    #    "starting_time": "2023-11-07T15:08:19.226673",
+    # }
+    # wildfire_id = api_request("post", f"{args.endpoint}/wildfires/", cam_auth, payload)["id"]
+
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
@@ -95,6 +102,8 @@ def main(args):
         timeout=5,
     ).json()["id"]
 
+    wildfire_id = api_request("get", f"{args.endpoint}/wildfires", superuser_auth)[0]["id"]
+
     # Acknowledge it
     api_request("patch", f"{args.endpoint}/detections/{detection_id}/label", agent_auth, {"is_wildfire": True})
 
@@ -104,6 +113,7 @@ def main(args):
 
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/wildfires/{wildfire_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
 

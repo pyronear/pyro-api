@@ -57,6 +57,7 @@ class Camera(SQLModel, table=True):
 class Detection(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
+    wildfire_id: int = Field(..., foreign_key="wildfire.id", nullable=False)
     azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
     is_wildfire: Union[bool, None] = None
@@ -73,5 +74,6 @@ class Organization(SQLModel, table=True):
 class Wildfire(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
+    azimuth: float = Field(..., gt=0, lt=360)
     starting_time: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     ending_time: datetime = Field(default_factory=None, nullable=True)

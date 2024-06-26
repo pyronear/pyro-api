@@ -24,6 +24,7 @@ class Azimuth(BaseModel):
 
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
+    wildfire_id: int = Field(..., gt=0)
     bucket_key: str
 
 
