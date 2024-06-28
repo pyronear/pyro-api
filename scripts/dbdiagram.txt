@@ -1,4 +1,3 @@
-
 Enum "userrole" {
   "admin"
   "agent"
@@ -8,6 +7,7 @@ Enum "userrole" {
 Table "User" as U {
   "id" int [not null]
   "role" userrole [not null]
+  "organization_id" int [ref: > S.id, not null]
   "login" str [not null]
   "hashed_password" str [not null]
   "created_at" timestamp [not null]
@@ -18,6 +18,7 @@ Table "User" as U {
 
 Table "Camera" as C {
   "id" int [not null]
+  "organization_id" int [ref: > S.id, not null]
   "name" str [not null]
   "angle_of_view" float [not null]
   "elevation" float [not null]
@@ -34,12 +35,33 @@ Table "Camera" as C {
 Table "Detection" as D {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
+  "wildfire_id" int [ref: > W.id, not null]
   "azimuth" float [not null]
   "bucket_key" str [not null]
   "is_wildfire" bool
+  "bbox" boxes [not null]
   "created_at" timestamp [not null]
   "updated_at" timestamp [not null]
   Indexes {
     (id) [pk]
   }
+}
+
+Table "Wildfire" as W {
+    "id" int [not null]
+    "camera_id" int [ref: > C.id, not null]
+    "azimuth" float [not null]
+    "starting_time" timestamp [not null]
+    "ending_time" timestamp [not null]
+}
+
+Enum typesite {
+  "particulier"
+    "sdis"
+}
+
+Table "Organization" as S {
+  "id" int [not null]
+  "name" str [not null]
+  "type" type_site [not null]
 }
