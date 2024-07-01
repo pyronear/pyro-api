@@ -10,7 +10,7 @@ SUPERADMIN_PWD = os.getenv("SUPERADMIN_PWD", "superadmin_pwd")
 SUPERADMIN_ORGANIZATION = os.getenv("SUPERADMIN_ORGANIZATION", "superadmin_organization")
 SUPERADMIN_TOKEN = requests.post(
     urljoin(API_URL, "login/creds"),
-    data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD, "organization": SUPERADMIN_ORGANIZATION},
+    data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD},
     timeout=5,
 ).json()["access_token"]
 
