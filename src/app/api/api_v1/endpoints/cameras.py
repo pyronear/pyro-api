@@ -76,9 +76,11 @@ async def create_camera_token(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Token:
     telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
-    await cameras.get(camera_id, strict=True)
+    camera = await cameras.get(camera_id, strict=True)
     # create access token using user user_id/user_scopes
-    token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": token_payload.organization_id}
+    if camera is None:
+        HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Camera not found.")
+    token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": camera.organization_id}  # type: ignore[union-attr]
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
     return Token(access_token=token, token_type="bearer")  # noqa S106
 
