@@ -49,12 +49,12 @@ USER_TABLE = [
 ORGANIZATION_TABLE = [
     {
         "id": 1,
-        "name": "organization-1",
+        "name": "organization1",
         "type": "sdis",
     },
     {
         "id": 2,
-        "name": "organization-2",
+        "name": "organization2",
         "type": "particulier",
     },
 ]

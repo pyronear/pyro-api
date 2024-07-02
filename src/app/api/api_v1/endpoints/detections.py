@@ -11,9 +11,9 @@ from typing import List, cast
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_wildfire_crud
-from app.crud import CameraCRUD, DetectionCRUD, WildfireCRUD
-from app.models import Detection, Role, UserRole
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_organization_crud, get_wildfire_crud
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, WildfireCRUD
+from app.models import Detection, Organization, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.schemas.wildfires import WildfireCreate
@@ -28,45 +28,55 @@ async def create_detection(
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     wildfires: WildfireCRUD = Depends(get_wildfire_crud),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
-    # Upload media
-    # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    sha_hash = hashlib.sha256(file.file.read()).hexdigest()
-    await file.seek(0)
-    # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
-    await file.seek(0)
-    # guess_extension will return none if this fails
-    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
-    # Concatenate timestamp & hash
-    bucket_key = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
-    # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
-    await file.seek(0)
-    # Failed upload
-    if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
-    # Data integrity check
-    file_meta = await s3_bucket.get_file_metadata(bucket_key)
-    # Corrupted file
-    if md5_hash != file_meta["ETag"].replace('"', ""):
-        # Delete the corrupted upload
-        await s3_bucket.delete_file(bucket_key)
-        # Raise the exception
+    try:
+        # Upload media
+        # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
+        sha_hash = hashlib.sha256(file.file.read()).hexdigest()
+        await file.seek(0)
+        # Use MD5 to verify upload
+        md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+        await file.seek(0)
+        # guess_extension will return none if this fails
+        extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
+        # Concatenate timestamp & hash
+        bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+        # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
+        await file.seek(0)
+        # Failed upload
+        organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+        if not (await s3_bucket.upload_file(bucket_key, organization.name, file.file)):  # type: ignore[arg-type]
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
+        # Data integrity check
+        file_meta = await s3_bucket.get_file_metadata(bucket_key, organization.name)
+        # Corrupted file
+        if md5_hash != file_meta["ETag"].replace('"', ""):
+            # Delete the corrupted upload
+            await s3_bucket.delete_file(bucket_key, organization.name)
+            # Raise the exception
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Data was corrupted during upload",
+            )
+
+        (wildfire_id, _) = await wildfires.create_or_update_wildfire(
+            WildfireCreate(camera_id=token_payload.sub, azimuth=azimuth)
+        )
+        # No need to create the Wildfire and Detection in the same commit
+        return await detections.create(
+            DetectionCreate(
+                camera_id=token_payload.sub, wildfire_id=wildfire_id, bucket_key=bucket_key, azimuth=azimuth
+            )
+        )
+    except Exception as e:  # noqa : BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Data was corrupted during upload",
+            detail=str(e),
         )
-
-    (wildfire_id, _) = await wildfires.create_or_update_wildfire(
-        WildfireCreate(camera_id=token_payload.sub, azimuth=azimuth)
-    )
-    # No need to create the Wildfire and Detection in the same commit
-    return await detections.create(
-        DetectionCreate(camera_id=token_payload.sub, wildfire_id=wildfire_id, bucket_key=bucket_key, azimuth=azimuth)
-    )
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
@@ -92,6 +102,7 @@ async def get_detection(
 async def get_detection_url(
     detection_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> DetectionUrl:
@@ -99,6 +110,7 @@ async def get_detection_url(
     # Check in DB
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+    organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
     camera = await cameras.get(detection.camera_id, strict=True)
     if (
         camera is not None
@@ -107,7 +119,7 @@ async def get_detection_url(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
-    temp_public_url = await s3_bucket.get_public_url(detection.bucket_key)
+    temp_public_url = await s3_bucket.get_public_url(detection.bucket_key, organization.name)
     return DetectionUrl(url=temp_public_url)
 
 
@@ -152,10 +164,12 @@ async def label_detection(
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key)
+    organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+    await s3_bucket.delete_file(detection.bucket_key, organization.name)
     await detections.delete(detection_id)
