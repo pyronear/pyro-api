@@ -70,6 +70,10 @@ async def get_detection(
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+
+    if UserRole.ADMIN in token_payload.scopes:
+        return detection
+
     camera = await cameras.get(detection.camera_id, strict=True)
     if (
         camera is not None
@@ -91,6 +95,10 @@ async def get_detection_url(
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     # Check in DB
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+
+    if UserRole.ADMIN in token_payload.scopes:
+        return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
+
     camera = await cameras.get(detection.camera_id, strict=True)
     if (
         camera is not None
@@ -99,8 +107,7 @@ async def get_detection_url(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
-    temp_public_url = await s3_bucket.get_public_url(detection.bucket_key)
-    return DetectionUrl(url=temp_public_url)
+    return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -131,6 +138,10 @@ async def label_detection(
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-label", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+
+    if UserRole.ADMIN in token_payload.scopes:
+        return await detections.update(detection_id, payload)
+
     camera = await cameras.get(detection.camera_id, strict=True)
     if (
         camera is not None
