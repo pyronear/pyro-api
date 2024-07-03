@@ -25,12 +25,6 @@ class Role(str, Enum):
     USER: str = "user"
 
 
-class OrganizationType(str, Enum):
-    SDIS: str = "sdis"
-    PARTICULIER: str = "particulier"
-    ADMIN: str = "admin"
-
-
 class User(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     organization_id: int = Field(..., foreign_key="organization.id", nullable=False)
@@ -67,4 +61,3 @@ class Detection(SQLModel, table=True):
 class Organization(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
-    type: OrganizationType = Field(OrganizationType.SDIS, nullable=False)

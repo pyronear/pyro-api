@@ -13,10 +13,9 @@ class OrganizationCreate(BaseModel):
         ...,
         min_length=3,
         max_length=50,
-        description="name of the camera",
-        json_schema_extra={"examples": ["pyro-camera-01"]},
+        description="name of the organization",
+        json_schema_extra={"examples": ["pyro-org-01"]},
     )
-    type: str
 
 
 class OrganizationUpdate(BaseModel):
@@ -24,6 +23,6 @@ class OrganizationUpdate(BaseModel):
         ...,
         min_length=3,
         max_length=50,
-        description="name of the camera",
-        json_schema_extra={"examples": ["pyro-camera-01"]},
+        description="name of the organization",
+        json_schema_extra={"examples": ["pyro-org-01"]},
     )

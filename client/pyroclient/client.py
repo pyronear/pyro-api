@@ -31,7 +31,7 @@ ROUTES: Dict[str, str] = {
     "detections-fetch": "/detections",
     "detections-url": "/detections/{det_id}/url",
     #################
-    # DETECTIONS
+    # ORGS
     #################
     "organizations-fetch": "/organizations",
 }

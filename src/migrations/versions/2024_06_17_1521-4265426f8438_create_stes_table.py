@@ -24,7 +24,6 @@ def upgrade() -> None:
         "organization",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("type", sa.Enum("SDIS", "PARTICULIER", "ADMIN", name="organizationtype"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )

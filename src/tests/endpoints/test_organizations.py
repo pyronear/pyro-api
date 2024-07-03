@@ -10,25 +10,25 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"name": "pyro-organization", "type": "sdis"},
+            {"name": "pyro-organization"},
             401,
             "Not authenticated",
         ),
         (
             0,
-            {"name": "pyro-organization", "type": "sdis"},
+            {"name": "pyro-organization"},
             201,
             None,
         ),
         (
             1,
-            {"name": "pyro-organization2", "type": "sdis"},
+            {"name": "pyro-organization2"},
             403,
             "Incompatible token scope.",
         ),
         (
             2,
-            {"name": "pyro-organization", "type": "sdis"},
+            {"name": "pyro-organization"},
             403,
             "Incompatible token scope.",
         ),
@@ -65,8 +65,8 @@ async def test_create_organization(
     [
         (None, 1, 401, "Not authenticated", None),
         (0, 1, 200, None, 0),
-        (1, 1, 200, None, 0),
-        (2, 1, 403, "Access forbidden.", 0),
+        (1, 1, 403, "Incompatible token scope.", 0),
+        (2, 1, 403, "Incompatible token scope.", 0),
     ],
 )
 @pytest.mark.asyncio()
@@ -101,8 +101,8 @@ async def test_get_organization(
     [
         (None, 401, "Not authenticated", None),
         (0, 200, None, pytest.organization_table[0]),
-        (1, 200, None, pytest.organization_table[0]),
-        (2, 200, None, pytest.organization_table[1]),
+        (1, 403, "Incompatible token scope.", None),
+        (2, 403, "Incompatible token scope.", None),
     ],
 )
 @pytest.mark.asyncio()

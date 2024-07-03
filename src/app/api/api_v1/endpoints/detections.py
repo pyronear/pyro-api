@@ -88,8 +88,8 @@ async def get_detection_url(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> DetectionUrl:
     """Resolve the temporary media image URL"""
-    # Check in DB
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
+    # Check in DB
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = await cameras.get(detection.camera_id, strict=True)
     if (

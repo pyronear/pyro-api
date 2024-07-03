@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.models import Organization, OrganizationType, User, UserRole
+from app.models import Organization, User, UserRole
 
 __all__ = ["get_session", "init_db"]
 
@@ -34,11 +34,11 @@ async def init_db() -> None:
     async with AsyncSession(engine) as session:
         logger.info("Initializing PostgreSQL database...")
 
-        statement = select(Organization).where(Organization.name == settings.SUPERADMIN_ORGANIZATION)  # type: ignore[var-annotated]
+        statement = select(Organization).where(Organization.name == settings.SUPERADMIN_ORG)  # type: ignore[var-annotated]
         results = await session.execute(statement=statement)
         organization = results.scalar_one_or_none()
         if not organization:
-            new_orga = Organization(name=settings.SUPERADMIN_ORGANIZATION, type=OrganizationType.ADMIN)
+            new_orga = Organization(name=settings.SUPERADMIN_ORG)
             session.add(new_orga)
             await session.commit()
             await session.refresh(new_orga)  # Refresh to get the new organization ID

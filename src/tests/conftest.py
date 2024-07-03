@@ -50,12 +50,10 @@ ORGANIZATION_TABLE = [
     {
         "id": 1,
         "name": "organization-1",
-        "type": "sdis",
     },
     {
         "id": 2,
         "name": "organization-2",
-        "type": "particulier",
     },
 ]
 

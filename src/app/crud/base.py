@@ -32,7 +32,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An entry with the same index already exists : " + str(error),
+                detail=f"An entry with the same index already exists : {error!s}",
             )
         await self.session.refresh(entry)
 

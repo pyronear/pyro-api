@@ -28,6 +28,7 @@ stop:
 	docker compose down
 
 # Run tests for the library
+# the "-" are used to launch the next command even if a command fail
 test:
 	- poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
 	- docker compose -f docker-compose.dev.yml up -d --build --wait
@@ -38,6 +39,7 @@ build-client:
 	pip install -e client/.
 
 # Run tests for the Python client
+# the "-" are used to launch the next command even if a command fail
 test-client:
 	- poetry export -f requirements.txt --without-hashes --output requirements.txt
 	- docker compose -f docker-compose.dev.yml up -d --build --wait

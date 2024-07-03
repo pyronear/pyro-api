@@ -6,7 +6,7 @@
 
 from typing import List, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
+from fastapi import APIRouter, Depends, Path, Security, status
 
 from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
@@ -24,7 +24,9 @@ async def register_organization(
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Organization:
-    telemetry_client.capture(token_payload.sub, event="organization-create", properties={"device_login": payload.name})
+    telemetry_client.capture(
+        token_payload.sub, event="organization-create", properties={"organization_name": payload.name}
+    )
     return await organizations.create(payload)
 
 
@@ -34,27 +36,21 @@ async def register_organization(
 async def get_organization(
     organization_id: int = Path(..., gt=0),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Organization:
     telemetry_client.capture(
         token_payload.sub, event="organizations-get", properties={"organization_id": organization_id}
     )
-    organization = cast(Organization, await organizations.get(organization_id, strict=True))
-    if token_payload.organization_id != organization.id and UserRole.ADMIN not in token_payload.scopes:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return organization
+    return cast(Organization, await organizations.get(organization_id, strict=True))
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the organizations")
 async def fetch_organizations(
     organizations: OrganizationCRUD = Depends(get_organization_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> List[Organization]:
     telemetry_client.capture(token_payload.sub, event="organizations-fetch")
-    all_orgas = [elt for elt in await organizations.fetch_all()]
-    if UserRole.ADMIN in token_payload.scopes:
-        return all_orgas
-    return [organization for organization in all_orgas if organization.id == token_payload.organization_id]
+    return [elt for elt in await organizations.fetch_all()]
 
 
 @router.delete("/{organization_id}", status_code=status.HTTP_200_OK, summary="Delete a organization")
