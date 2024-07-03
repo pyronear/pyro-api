@@ -26,6 +26,10 @@ logging.getLogger("uvicorn.error")
 router = APIRouter()
 
 
+def get_bucket_name(organization_id: int) -> str:
+    return f"alert-api-{organization_id!s}"
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     localization: Optional[str] = Form(None),
@@ -51,15 +55,15 @@ async def create_detection(
         # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
         await file.seek(0)
         # Failed upload
-        organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-        if not (await s3_bucket.upload_file(bucket_key, organization.name, file.file)):  # type: ignore[arg-type]
+        bucket_name = get_bucket_name(token_payload.organization_id)
+        if not (await s3_bucket.upload_file(bucket_key, bucket_name, file.file)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
         # Data integrity check
-        file_meta = await s3_bucket.get_file_metadata(bucket_key, organization.name)
+        file_meta = await s3_bucket.get_file_metadata(bucket_key, bucket_name)
         # Corrupted file
         if md5_hash != file_meta["ETag"].replace('"', ""):
             # Delete the corrupted upload
-            await s3_bucket.delete_file(bucket_key, organization.name)
+            await s3_bucket.delete_file(bucket_key, bucket_name)
             # Raise the exception
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -208,12 +212,10 @@ async def label_detection(
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key, organization.name)
+    await s3_bucket.delete_file(detection.bucket_key, get_bucket_name(token_payload.organization_id))
     await detections.delete(detection_id)
