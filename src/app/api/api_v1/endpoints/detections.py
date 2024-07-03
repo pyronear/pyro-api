@@ -13,8 +13,6 @@ from typing import List, Union, cast
 import magic
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path,Query, Security, UploadFile, status
-from pydantic import ValidationError
-
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_organization_crud
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD
@@ -26,6 +24,10 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
+
+def get_bucket_name(organization_id: int) -> str:
+    return f"alert-api-{organization_id!s}"
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
@@ -87,7 +89,6 @@ async def create_detection(
     return await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
     )
-
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
@@ -193,12 +194,10 @@ async def label_detection(
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    organization = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key, organization.name)
+    await s3_bucket.delete_file(detection.bucket_key, get_bucket_name(token_payload.organization_id))
     await detections.delete(detection_id)
