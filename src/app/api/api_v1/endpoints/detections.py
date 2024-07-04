@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, 
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 
-from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD
-from app.models import Detection,Role, UserRole,Camera
+from app.crud import CameraCRUD, DetectionCRUD
+from app.models import Detection, Role, UserRole, Camera
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
@@ -33,7 +33,6 @@ async def create_detection(
     localization: Union[str, None] = Form(None),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
-    organizations: OrganizationCRUD = Depends(get_detection_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
