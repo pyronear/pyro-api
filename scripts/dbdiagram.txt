@@ -35,24 +35,14 @@ Table "Camera" as C {
 Table "Detection" as D {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
-  "wildfire_id" int [ref: > W.id, not null]
   "azimuth" float [not null]
   "bucket_key" str [not null]
   "is_wildfire" bool
-  "bbox" boxes [not null]
   "created_at" timestamp [not null]
   "updated_at" timestamp [not null]
   Indexes {
     (id) [pk]
   }
-}
-
-Table "Wildfire" as W {
-    "id" int [not null]
-    "camera_id" int [ref: > C.id, not null]
-    "azimuth" float [not null]
-    "starting_time" timestamp [not null]
-    "ending_time" timestamp [not null]
 }
 
 Enum typesite {
