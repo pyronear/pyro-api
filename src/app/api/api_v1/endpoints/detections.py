@@ -12,9 +12,9 @@ from typing import List, Optional, cast
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_organization_crud
-from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD
-from app.models import Detection,Role, UserRole, Organization
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
+from app.crud import CameraCRUD, DetectionCRUD
+from app.models import Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
@@ -35,7 +35,6 @@ async def create_detection(
     localization: Optional[str] = Form(None),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
-    organizations: OrganizationCRUD = Depends(get_detection_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
@@ -120,7 +119,9 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     if UserRole.ADMIN in token_payload.scopes:
-        return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
+        return DetectionUrl(
+            url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+        )
 
     camera = await cameras.get(detection.camera_id, strict=True)
     if (
@@ -130,7 +131,9 @@ async def get_detection_url(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
-    return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
+    return DetectionUrl(
+        url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+    )
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
