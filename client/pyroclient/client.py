@@ -29,6 +29,7 @@ ROUTES: Dict[str, str] = {
     "detections-create": "/detections",
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
+    "detections-fetch-unck": "/detections/unacknowledged/from",
     "detections-url": "/detections/{det_id}/url",
     #################
     # ORGS
@@ -183,6 +184,22 @@ class Client:
         """
         return requests.get(
             self.routes["detections-fetch"],
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def fetch_unacknowledged_detections(self) -> Response:
+        """List the detections accessible to the authenticated user
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_unacknowledged_detections()
+
+        Returns:
+            HTTP response
+        """
+        return requests.get(
+            self.routes["detections-fetch-unck"],
             headers=self.headers,
             timeout=self.timeout,
         )
