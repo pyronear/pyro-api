@@ -54,7 +54,7 @@ async def test_create_detection(
         assert {
             k: v
             for k, v in response.json().items()
-            if k not in {"created_at", "updated_at", "id", "is_wildfire", "bucket_key", "camera_id"}
+            if k not in {"created_at", "updated_at", "id", "is_wildfire", "bucket_key", "camera_id", "acknowledged"}
         } == payload
         assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
@@ -125,6 +125,40 @@ async def test_fetch_detections(
         )
 
     response = await async_client.get("/detections", headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        assert response.json() == expected_result
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "status_code", "status_detail", "expected_result"),
+    [
+        (None, 401, "Not authenticated", None),
+        (0, 200, None, [pytest.detection_table[0], pytest.detection_table[2]]),
+        (1, 200, None, [pytest.detection_table[0]]),
+    ],
+)
+@pytest.mark.asyncio()
+async def test_fetch_unacknowledged_detections(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_idx: Union[int, None],
+    status_code: int,
+    status_detail: Union[str, None],
+    expected_result: Union[List[Dict[str, Any]], None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.get("/detections/unacknowledged/from", headers=auth)
+
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail

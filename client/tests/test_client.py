@@ -45,3 +45,5 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert response.status_code == 200, print(response.__dict__)
     response = user_client.fetch_detections()
     assert response.status_code == 200, print(response.__dict__)
+    response = user_client.fetch_unacknowledged_detections()
+    assert response.status_code == 200, print(response.__dict__)
