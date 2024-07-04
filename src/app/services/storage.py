@@ -79,6 +79,7 @@ class S3Bucket:
         self._s3.upload_fileobj(file_binary, self.bucket_name, bucket_key)
         return True
 
+
     async def delete_file(self, bucket_key: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
