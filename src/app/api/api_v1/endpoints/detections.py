@@ -53,10 +53,20 @@ async def create_detection(
         bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
         # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
         await file.seek(0)
-        # Failed upload
+
+        # Check if bucket exists, if not, create it
         bucket_name = get_bucket_name(token_payload.organization_id)
+        if not (await s3_bucket.check_bucket(bucket_name)):
+            logging.info(f"Bucket {bucket_name} does not exist. Creating bucket.")
+            if not (await s3_bucket.create_bucket(bucket_name)):
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
+            logging.info(f"Bucket {bucket_name} created successfully.")
+
+        # Upload the file
         if not (await s3_bucket.upload_file(bucket_key, bucket_name, file.file)):  # type: ignore[arg-type]
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
+        logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
+
         # Data integrity check
         file_meta = await s3_bucket.get_file_metadata(bucket_key, bucket_name)
         # Corrupted file
