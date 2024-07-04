@@ -72,13 +72,35 @@ class S3Bucket:
     async def upload_file(self, bucket_key: str, bucket_name: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        self._s3.upload_fileobj(file_binary, bucket_name, bucket_key)
-        return True
+        try:
+            self._s3.upload_fileobj(file_binary, bucket_name, bucket_key)
+            return True
+        except:
+            raise
 
     async def delete_file(self, bucket_key: str, bucket_name: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=bucket_name, Key=bucket_key)
+
+    async def create_bucket(self, bucket_name: str) -> bool:
+        """Create a new bucket in S3 storage"""
+        try:
+            self._s3.create_bucket(
+                Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": self._s3.meta.region_name}
+            )
+            return True
+        except ClientError as e:
+            logger.error(e)
+            return False
+
+    async def check_bucket(self, bucket_name: str) -> bool:
+        """List all S3 buckets"""
+        try:
+            response = self._s3.list_buckets()
+            return bucket_name in response["Buckets"]
+        except Exception:
+            raise
 
 
 s3_bucket = S3Bucket(
