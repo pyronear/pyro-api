@@ -20,8 +20,8 @@ from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
-logging.basicConfig(level=logging.WARNING)
-logging.getLogger("uvicorn.warning")
+logging.basicConfig(level=logging.ERROR)
+logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
