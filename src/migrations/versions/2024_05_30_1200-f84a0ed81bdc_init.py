@@ -52,7 +52,6 @@ def upgrade() -> None:
         sa.Column("azimuth", sa.Float(), nullable=False),
         sa.Column("bucket_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("is_wildfire", sa.Boolean(), nullable=True),
-        sa.Column("acknowledged", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(

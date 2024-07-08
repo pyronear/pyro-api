@@ -54,7 +54,6 @@ class Detection(SQLModel, table=True):
     azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
     is_wildfire: Union[bool, None] = None
-    acknowledged: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

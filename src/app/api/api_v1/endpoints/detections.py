@@ -142,7 +142,7 @@ async def fetch_unacknowledged_detections(
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
     try:
-        all_unck_detections = [elt for elt in await detections.fetch_all() if not elt.acknowledged]
+        all_unck_detections = [elt for elt in await detections.fetch_all() if elt.is_wildfire is None]
         if from_date is not None:
             all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
     except Exception as e:  # noqa
