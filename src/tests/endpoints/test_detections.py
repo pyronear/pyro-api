@@ -54,7 +54,7 @@ async def test_create_detection(
         assert {
             k: v
             for k, v in response.json().items()
-            if k not in {"created_at", "updated_at", "id", "is_wildfire", "bucket_key", "camera_id", "acknowledged"}
+            if k not in {"created_at", "updated_at", "id", "is_wildfire", "bucket_key", "camera_id"}
         } == payload
         assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
@@ -136,8 +136,8 @@ async def test_fetch_detections(
     ("user_idx", "status_code", "status_detail", "expected_result"),
     [
         (None, 401, "Not authenticated", None),
-        (0, 200, None, [pytest.detection_table[0], pytest.detection_table[2]]),
-        (1, 200, None, [pytest.detection_table[0]]),
+        (0, 200, None, [pytest.detection_table[2]]),
+        (1, 200, None, []),
     ],
 )
 @pytest.mark.asyncio()

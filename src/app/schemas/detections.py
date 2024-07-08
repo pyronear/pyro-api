@@ -24,7 +24,6 @@ class Azimuth(BaseModel):
 
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
-    acknowledged: bool = Field(default=False)
     bucket_key: str
 
 
