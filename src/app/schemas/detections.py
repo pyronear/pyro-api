@@ -4,6 +4,8 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 __all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]

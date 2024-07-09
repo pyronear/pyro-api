@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from typing import Dict
+
 from urllib.parse import urljoin
 
 import requests
