@@ -93,6 +93,7 @@ async def create_detection(
             detail=str(e),
         )
 
+
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
     detection_id: int = Path(..., gt=0),
