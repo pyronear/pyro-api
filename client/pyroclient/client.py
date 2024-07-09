@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -36,6 +36,32 @@ ROUTES: Dict[str, str] = {
     #################
     "organizations-fetch": "/organizations",
 }
+
+
+def convert_loc_to_str(
+    localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
+    max_num_boxes: int = 5,
+) -> str:
+    """Performs a custom JSON dump for list of coordinates
+
+    Args:
+        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+        max_num_boxes: maximum allowed number of bounding boxes
+    Returns:
+        the JSON string dump with 2 decimal precision
+    """
+    if isinstance(localization, list) and len(localization) > 0:
+        if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
+            raise ValueError("coordinates are expected to be relative")
+        if any(len(bbox) != 5 for bbox in localization):
+            raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
+        if len(localization) > max_num_boxes:
+            raise ValueError(f"Please limit the number of boxes to {max_num_boxes}")
+        box_list = tuple(
+            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
+        )
+        return f"[{','.join(box_list)}]"
+    return "[]"
 
 
 class Client:
@@ -113,7 +139,7 @@ class Client:
         return requests.post(
             self.routes["detections-create"],
             headers=self.headers,
-            data={"azimuth": azimuth, "localization": localization},
+            data={"azimuth": azimuth, "localization": convert_loc_to_str(localization)},
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )

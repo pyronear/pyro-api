@@ -110,7 +110,7 @@ DET_TABLE = [
         "camera_id": 2,
         "azimuth": 43.7,
         "bucket_key": "my_file",
-        "localization": "[]",
+        "localization": None,
         "is_wildfire": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
