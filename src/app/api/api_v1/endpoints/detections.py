@@ -7,7 +7,7 @@ import hashlib
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, cast
+from typing import List, cast,Union
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -25,6 +25,7 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
+    localization: Union[str, None] = Form(None),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -58,8 +59,10 @@ async def create_detection(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Data was corrupted during upload",
         )
-
-    return await detections.create(DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth))
+    # No need to create the Wildfire and Detection in the same commit
+    return await detections.create(
+        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
+    )
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
