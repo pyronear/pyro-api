@@ -5,6 +5,8 @@
 
 from typing import Union
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 __all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
@@ -28,6 +30,7 @@ class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
     localization: Union[str, None]
+
 
 
 class DetectionUrl(BaseModel):
