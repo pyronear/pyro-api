@@ -27,6 +27,5 @@ class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
 
-
 class DetectionUrl(BaseModel):
     url: str = Field(..., description="temporary URL to access the media content")
