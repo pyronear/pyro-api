@@ -24,41 +24,53 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
+    localization: Optional[str] = Form(None),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
-    # Upload media
-    # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    sha_hash = hashlib.sha256(file.file.read()).hexdigest()
-    await file.seek(0)
-    # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
-    await file.seek(0)
-    # guess_extension will return none if this fails
-    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
-    # Concatenate timestamp & hash
-    bucket_key = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
-    # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
-    await file.seek(0)
-    # Failed upload
-    if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
-    # Data integrity check
-    file_meta = await s3_bucket.get_file_metadata(bucket_key)
-    # Corrupted file
-    if md5_hash != file_meta["ETag"].replace('"', ""):
-        # Delete the corrupted upload
-        await s3_bucket.delete_file(bucket_key)
-        # Raise the exception
+    try:
+        # Upload media
+        # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
+        sha_hash = hashlib.sha256(file.file.read()).hexdigest()
+        await file.seek(0)
+        # Use MD5 to verify upload
+        md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+        await file.seek(0)
+        # guess_extension will return none if this fails
+        extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
+        # Concatenate timestamp & hash
+        bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+        # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
+        await file.seek(0)
+
+        # Data integrity check
+        file_meta = await s3_bucket.get_file_metadata(bucket_key)
+        # Corrupted file
+        if md5_hash != file_meta["ETag"].replace('"', ""):
+            # Delete the corrupted upload
+            await s3_bucket.delete_file(bucket_key)
+            # Raise the exception
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Data was corrupted during upload",
+            )
+        logging.info(f"Data integrity check passed for file {bucket_key}.")
+
+        # No need to create the Wildfire and Detection in the same commit
+        return await detections.create(
+            DetectionCreate(
+                camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization
+            )
+        )
+    except Exception as e:  # : BLE001
+        logging.exception(f"Error occurred: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Data was corrupted during upload",
         )
-
-    return await detections.create(DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth))
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")

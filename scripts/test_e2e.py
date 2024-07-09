@@ -90,7 +90,7 @@ def main(args):
     detection_id = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6},
+        data={"azimuth": 45.6, "localization": None},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
