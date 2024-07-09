@@ -93,17 +93,19 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
+        localization: str,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2)
+        >>> response = api_client.create_detection(data, azimuth=124.2, localizationn"xyxy")
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
+            localization: bounding box of the detected fire
 
         Returns:
             HTTP response
@@ -111,7 +113,7 @@ class Client:
         return requests.post(
             self.routes["detections-create"],
             headers=self.headers,
-            data={"azimuth": azimuth},
+            data={"azimuth": azimuth, "localization": localization},
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )
