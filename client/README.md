@@ -49,6 +49,15 @@ url = api_client.get_detection_url(detection_id)
 ```
 
 
+```python
+cam_token = requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
+        "access_token"
+    ]
+
+camera_client = Client(cam_token, "http://localhost:5050", timeout=10)
+response = cam_client.create_detection(image, 123.2)
+```
+
 ## Installation
 
 ### Prerequisites

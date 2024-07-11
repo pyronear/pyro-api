@@ -100,7 +100,7 @@ async def test_get_organization(
     ("user_idx", "status_code", "status_detail", "expected_response"),
     [
         (None, 401, "Not authenticated", None),
-        (0, 200, None, pytest.organization_table[0]),
+        (0, 200, None, pytest.organization_table),
         (1, 403, "Incompatible token scope.", None),
         (2, 403, "Incompatible token scope.", None),
     ],
@@ -127,7 +127,7 @@ async def test_fetch_organizations(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json()[0] == expected_response
+        assert response.json() == expected_response
 
 
 @pytest.mark.parametrize(

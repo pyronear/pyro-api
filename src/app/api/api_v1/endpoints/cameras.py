@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024, Pyronear.
+# Copyright (C) 2024, Pyronear.
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
@@ -63,8 +63,8 @@ async def heartbeat(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat", properties={"camera_id": camera_id})
-    camera = await cameras.get(token_payload.sub, strict=True)
-    if camera is not None and token_payload.organization_id != camera.organization_id:
+    camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
 

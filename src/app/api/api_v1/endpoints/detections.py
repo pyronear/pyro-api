@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Securit
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
-from app.models import Detection, Role, UserRole
+from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
@@ -74,12 +74,8 @@ async def get_detection(
     if UserRole.ADMIN in token_payload.scopes:
         return detection
 
-    camera = await cameras.get(detection.camera_id, strict=True)
-    if (
-        camera is not None
-        and token_payload.organization_id != camera.organization_id
-        and UserRole.ADMIN not in token_payload.scopes
-    ):
+    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return detection
 
@@ -99,12 +95,8 @@ async def get_detection_url(
     if UserRole.ADMIN in token_payload.scopes:
         return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
 
-    camera = await cameras.get(detection.camera_id, strict=True)
-    if (
-        camera is not None
-        and token_payload.organization_id != camera.organization_id
-        and UserRole.ADMIN not in token_payload.scopes
-    ):
+    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
@@ -122,8 +114,8 @@ async def fetch_detections(
         return all_detections
     filtered_detections = []
     for detection in all_detections:
-        camera = await cameras.get(detection.camera_id, strict=True)
-        if camera is not None and camera.organization_id == token_payload.organization_id:
+        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+        if camera.organization_id == token_payload.organization_id:
             filtered_detections.append(detection)
     return filtered_detections
 
@@ -142,12 +134,8 @@ async def label_detection(
     if UserRole.ADMIN in token_payload.scopes:
         return await detections.update(detection_id, payload)
 
-    camera = await cameras.get(detection.camera_id, strict=True)
-    if (
-        camera is not None
-        and token_payload.organization_id != camera.organization_id
-        and UserRole.ADMIN not in token_payload.scopes
-    ):
+    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return await detections.update(detection_id, payload)
 
