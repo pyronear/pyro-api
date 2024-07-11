@@ -24,10 +24,6 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
-def get_bucket_name(organization_id: int) -> str:
-    return f"alert-api-{organization_id!s}"
-
-
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     localization: Union[str, None] = Form(None),
@@ -189,3 +185,4 @@ async def delete_detection(
     await detections.delete(detection_id)
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     await s3_bucket.delete_file(detection.bucket_key, s3_bucket.get_bucket_name(camera.organization_id))
+    await detections.delete(detection_id)
