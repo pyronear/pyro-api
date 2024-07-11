@@ -116,10 +116,10 @@ async def fetch_detections(
     if UserRole.ADMIN in token_payload.scopes:
         return [elt for elt in await detections.fetch_all()]
 
-    cameras_list = await cameras.fetch_all(("organization_id", token_payload.organization_id))
+    cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
-    return await detections.get_in(camera_ids, "camera_id")
+    return await detections.fetch_all(in_pair=("camera_id", camera_ids))
 
 
 @router.get("/unacknowledged/from", status_code=status.HTTP_200_OK, summary="Fetch all the unacknowledged detections")
@@ -132,7 +132,7 @@ async def fetch_unacknowledged_detections(
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
     try:
-        all_unck_detections = [elt for elt in await detections.fetch_all() if elt.is_wildfire is None]
+        all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
         if from_date is not None:
             all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
     except Exception as e:  # noqa
@@ -142,18 +142,14 @@ async def fetch_unacknowledged_detections(
     if UserRole.ADMIN in token_payload.scopes:
         return all_unck_detections
 
-    filtered_detections = []
-    for detection in all_unck_detections:
-        try:
-            camera = await cameras.get(detection.camera_id, strict=True)
-        except Exception as e:  # noqa
-            logging.error(f"Error fetching camera with ID {detection.camera_id}: {e}")
-            continue
-
-        if camera is not None and camera.organization_id == token_payload.organization_id:
-            filtered_detections.append(detection)
-
-    return filtered_detections
+    cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
+    camera_ids = [camera.id for camera in cameras_list]
+    all_unck_detections = await detections.fetch_all(
+        filter_pair=("is_wildfire", None), in_pair=("camera_id", camera_ids)
+    )
+    if from_date is not None:
+        all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
+    return all_unck_detections
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")

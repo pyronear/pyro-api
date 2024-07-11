@@ -58,10 +58,14 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
         return entry
 
-    async def fetch_all(self, filter_pair: Union[Tuple[str, Any], None] = None) -> List[ModelType]:
+    async def fetch_all(
+        self, filter_pair: Union[Tuple[str, Any], None] = None, in_pair: Union[Tuple[str, List], None] = None
+    ) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
         if isinstance(filter_pair, tuple):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
+        if isinstance(in_pair, tuple):
+            statement = statement.where(getattr(self.model, in_pair[0]).in_(in_pair[1]))
         return await self.session.exec(statement=statement)
 
     async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
@@ -83,8 +87,3 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
-
-    async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
-        statement = select(self.model).where(getattr(self.model, field_name).in_(list_))  # type: ignore[var-annotated]
-        results = await self.session.exec(statement)
-        return results.all()
