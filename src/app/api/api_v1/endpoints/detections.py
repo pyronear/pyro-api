@@ -20,6 +20,7 @@ from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
+
 router = APIRouter()
 
 
