@@ -94,13 +94,8 @@ class S3Bucket:
             logger.error(e)
             return False
 
-    async def check_bucket(self, bucket_name: str) -> bool:
-        """List all S3 buckets"""
-        try:
-            response = self._s3.list_buckets()
-            return bucket_name in response["Buckets"]
-        except Exception:
-            raise
+    def get_bucket_name(self, organization_id: int) -> str:
+        return f"alert-api-{organization_id!s}"
 
 
 s3_bucket = S3Bucket(

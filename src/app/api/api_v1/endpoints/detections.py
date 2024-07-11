@@ -28,10 +28,6 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
 
-def get_bucket_name(organization_id: int) -> str:
-    return f"alert-api-{organization_id!s}"
-
-
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     localization: Union[str, None] = Form(None),
@@ -127,7 +123,9 @@ async def get_detection_url(
 
     if UserRole.ADMIN in token_payload.scopes:
         return DetectionUrl(
-            url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+            url=await s3_bucket.get_public_url(
+                detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
+            )
         )
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
@@ -135,7 +133,9 @@ async def get_detection_url(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     return DetectionUrl(
-        url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+        url=await s3_bucket.get_public_url(
+            detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
+        )
     )
 
 
@@ -206,5 +206,5 @@ async def delete_detection(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+    await s3_bucket.delete_file(detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id))
     await detections.delete(detection_id)
