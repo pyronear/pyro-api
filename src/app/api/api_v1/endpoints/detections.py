@@ -75,7 +75,7 @@ async def get_detection(
         return detection
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return detection
 
@@ -112,7 +112,7 @@ async def fetch_detections(
     if UserRole.ADMIN in token_payload.scopes:
         return [elt for elt in await detections.fetch_all()]
 
-    cameras_list = await cameras.get_all_by("organization_id", token_payload.organization_id, strict=True)
+    cameras_list = await cameras.fetch_all(("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
     return await detections.get_in(camera_ids, "camera_id")
