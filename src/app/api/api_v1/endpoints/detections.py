@@ -109,15 +109,13 @@ async def fetch_detections(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Detection]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    all_detections = [elt for elt in await detections.fetch_all()]
     if UserRole.ADMIN in token_payload.scopes:
-        return all_detections
-    filtered_detections = []
-    for detection in all_detections:
-        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-        if camera.organization_id == token_payload.organization_id:
-            filtered_detections.append(detection)
-    return filtered_detections
+        return [elt for elt in await detections.fetch_all()]
+
+    cameras_list = await cameras.get_all_by("organization_id", token_payload.organization_id, strict=True)
+    camera_ids = [camera.id for camera in cameras_list]
+
+    return await detections.get_in(camera_ids, "camera_id")
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")

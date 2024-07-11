@@ -58,6 +58,18 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
         return entry
 
+    async def get_all_by(self, field_name: str, val: Union[str, int], strict: bool = False) -> List[ModelType]:
+        statement = select(self.model).where(getattr(self.model, field_name) == val)  # type: ignore[var-annotated]
+        results = await self.session.exec(statement=statement)
+        entries = results.all()
+
+        if strict and not entries:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Table {self.model.__name__} has no corresponding entry.",
+            )
+        return entries
+
     async def fetch_all(self, filter_pair: Union[Tuple[str, Any], None] = None) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
         if isinstance(filter_pair, tuple):
@@ -83,3 +95,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
+
+    async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
+        statement = select(self.model).where(getattr(self.model, field_name).in_(list_))  # type: ignore[var-annotated]
+        results = await self.session.exec(statement)
+        return results.all()
