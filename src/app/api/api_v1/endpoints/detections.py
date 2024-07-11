@@ -17,11 +17,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path,Query, S
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
-from app.models import Detection, Role, UserRole, Camera
+
+from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
+
 
 router = APIRouter()
 localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")

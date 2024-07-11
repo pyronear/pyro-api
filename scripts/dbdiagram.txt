@@ -45,13 +45,7 @@ Table "Detection" as D {
   }
 }
 
-Enum typesite {
-  "particulier"
-    "sdis"
-}
-
 Table "Organization" as S {
   "id" int [not null]
   "name" str [not null]
-  "type" type_site [not null]
 }
