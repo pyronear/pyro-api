@@ -30,6 +30,7 @@ async def register_organization(
     return await organizations.create(payload)
 
 
+
 @router.get(
     "/{organization_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific organization"
 )

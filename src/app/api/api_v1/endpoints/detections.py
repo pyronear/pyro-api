@@ -23,7 +23,6 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
-
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     localization: Union[str, None] = Form(None),
