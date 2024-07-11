@@ -59,7 +59,10 @@ class S3Bucket:
     async def get_public_url(self, bucket_key: str, bucket_name: str, url_expiration: int = 3600) -> str:
         """Generate a temporary public URL for a bucket file"""
         if not (await self.check_file_existence(bucket_key, bucket_name)):
-            raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")
+            raise HTTPException(
+                status_code=404,
+                detail=f"File cannot be found on the bucket storage : bucket_key : {bucket_key}, bucket_name : {bucket_name}",
+            )
 
         # Point to the bucket file
         file_params = {"Bucket": bucket_name, "Key": bucket_key}

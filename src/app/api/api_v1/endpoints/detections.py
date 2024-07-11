@@ -130,8 +130,14 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     if UserRole.ADMIN in token_payload.scopes:
-        return DetectionUrl(
-            url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(token_payload.organization_id))
+        camera = await cameras.get(detection.camera_id)
+        if camera is not None:
+            return DetectionUrl(
+                url=await s3_bucket.get_public_url(detection.bucket_key, get_bucket_name(camera.organization_id))
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No Camera found",
         )
 
     camera = await cameras.get(detection.camera_id, strict=True)
