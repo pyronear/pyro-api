@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     S3_REGION: str = os.environ["S3_REGION"]
     S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
-    S3_URL_EXPIRATION: int = 24 * 3600
+    S3_URL_EXPIRATION: int = os.environ.get("S3_URL_EXPIRATION", 24 * 3600)
 
     # Error monitoring
     SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")
