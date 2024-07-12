@@ -131,13 +131,9 @@ async def fetch_unacknowledged_detections(
 ) -> List[Detection]:
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
-    try:
-        all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
-        if from_date is not None:
-            all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
-    except Exception as e:  # noqa
-        logging.error(f"Error fetching detections: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
+    if from_date is not None:
+        all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
 
     if UserRole.ADMIN in token_payload.scopes:
         return all_unck_detections
