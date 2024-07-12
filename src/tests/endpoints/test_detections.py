@@ -19,7 +19,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 1, {"azimuth": 45.6}, 201, None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_create_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -65,7 +65,7 @@ async def test_create_detection(
         (1, 2, 200, None, 1),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -95,7 +95,7 @@ async def test_get_detection(
         (1, 200, None, pytest.detection_table),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_fetch_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -131,7 +131,7 @@ async def test_fetch_detections(
         (2, 1, {"is_wildfire": True}, 403, None, 0),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_label_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -167,7 +167,7 @@ async def test_label_detection(
         (2, None, 200, None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_detection_url(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -210,7 +210,7 @@ async def test_get_detection_url(
         (1, 2, 403, None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_delete_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
