@@ -34,7 +34,7 @@ class S3Bucket:
         self._s3 = _session.client("s3", endpoint_url=endpoint_url)
         # Ensure S3 is connected
         try:
-            self._s3.head_bucket(Bucket="admin")
+            self._s3.head_bucket(Bucket=settings.SUPERADMIN_ORG)
         except EndpointConnectionError:
             raise ValueError(f"unable to access endpoint {endpoint_url}")
         except ClientError:
@@ -72,11 +72,8 @@ class S3Bucket:
     async def upload_file(self, bucket_key: str, bucket_name: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        try:
-            self._s3.upload_fileobj(file_binary, bucket_name, bucket_key)
-            return True
-        except:
-            raise
+        self._s3.upload_fileobj(file_binary, bucket_name, bucket_key)
+        return True
 
     async def delete_file(self, bucket_key: str, bucket_name: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
