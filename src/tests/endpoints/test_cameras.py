@@ -35,7 +35,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         ),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_create_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
@@ -69,7 +69,7 @@ async def test_create_camera(
         (2, 1, 200, None, 0),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
@@ -100,7 +100,7 @@ async def test_get_camera(
         (2, 200, None, pytest.camera_table),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_fetch_cameras(
     async_client: AsyncClient,
     camera_session: AsyncSession,
@@ -135,7 +135,7 @@ async def test_fetch_cameras(
         (2, 2, 403, "Incompatible token scope."),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_delete_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
@@ -167,7 +167,7 @@ async def test_delete_camera(
         (2, 1, 403, "Incompatible token scope."),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_create_camera_token(
     async_client: AsyncClient,
     camera_session: AsyncSession,
@@ -199,7 +199,7 @@ async def test_create_camera_token(
         (1, 200, None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_heartbeat(
     async_client: AsyncClient,
     camera_session: AsyncSession,

@@ -40,7 +40,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         ),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_create_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
@@ -77,7 +77,7 @@ async def test_create_user(
         (0, 2, 200, None, 1),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
@@ -107,7 +107,7 @@ async def test_get_user(
         (1, 403, "Incompatible token scope."),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_fetch_users(
     async_client: AsyncClient,
     user_session: AsyncSession,
@@ -137,7 +137,7 @@ async def test_fetch_users(
         (1, 2, 403, "Incompatible token scope."),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_delete_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
@@ -169,7 +169,7 @@ async def test_delete_user(
         (1, 2, {"password": "HeyPyro!"}, 403, "Incompatible token scope.", None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_update_user_password(
     async_client: AsyncClient,
     user_session: AsyncSession,
