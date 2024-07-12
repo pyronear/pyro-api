@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
-from typing import Optional
+from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +28,7 @@ class Azimuth(BaseModel):
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
-    localization: Optional[str]
+    localization: Union[str, None]
 
 
 class DetectionUrl(BaseModel):

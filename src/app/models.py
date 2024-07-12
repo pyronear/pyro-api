@@ -5,7 +5,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Union
+from typing import Union
 
 from sqlmodel import Field, SQLModel
 
@@ -53,7 +53,7 @@ class Detection(SQLModel, table=True):
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
     azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
-    localization: Optional[str]
+    localization: Union[str, None]
     is_wildfire: Union[bool, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
