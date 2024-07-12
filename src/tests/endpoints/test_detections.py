@@ -141,7 +141,7 @@ async def test_fetch_detections(
     ],
 )
 @pytest.mark.asyncio()
-async def test_fetch_unacknowledged_detections(
+async def test_fetch_unlabeled_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     user_idx: Union[int, None],
@@ -157,7 +157,7 @@ async def test_fetch_unacknowledged_detections(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/detections/unacknowledged/from", headers=auth)
+    response = await async_client.get("/detections/unlabeled/fromdate", headers=auth)
 
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):

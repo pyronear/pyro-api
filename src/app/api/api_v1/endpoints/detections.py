@@ -4,10 +4,9 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import hashlib
-import logging
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Optional, cast
+from typing import List, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
@@ -19,9 +18,6 @@ from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
-
-logging.basicConfig(level=logging.ERROR)
-logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
@@ -122,14 +118,14 @@ async def fetch_detections(
     return await detections.fetch_all(in_pair=("camera_id", camera_ids))
 
 
-@router.get("/unacknowledged/from", status_code=status.HTTP_200_OK, summary="Fetch all the unacknowledged detections")
-async def fetch_unacknowledged_detections(
-    from_date: Optional[datetime] = None,
+@router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
+async def fetch_unlabeled_detections(
+    from_date: Union[datetime, None] = Form(None),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Detection]:
-    telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
+    telemetry_client.capture(token_payload.sub, event="unlabeled-fetch")
 
     all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
     if from_date is not None:

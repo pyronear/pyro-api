@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Dict, Optional
+from typing import Dict, Union
 from urllib.parse import urljoin
 
 import requests
@@ -29,7 +29,7 @@ ROUTES: Dict[str, str] = {
     "detections-create": "/detections",
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
-    "detections-fetch-unck": "/detections/unacknowledged/from",
+    "detections-fetch-unl": "/detections/unlabeled/fromdate",
     "detections-url": "/detections/{det_id}/url",
     #################
     # ORGS
@@ -188,7 +188,7 @@ class Client:
             timeout=self.timeout,
         )
 
-    def fetch_unacknowledged_detections(self, from_date: Optional[str] = None) -> Response:
+    def fetch_unacknowledged_detections(self, from_date: Union[str, None] = None) -> Response:
         """List the detections accessible to the authenticated user
 
         >>> from pyroclient import client
@@ -200,7 +200,7 @@ class Client:
         """
         params = {"from_date": from_date}
         return requests.get(
-            self.routes["detections-fetch-unck"],
+            self.routes["detections-fetch-unl"],
             headers=self.headers,
             params=params,
             timeout=self.timeout,
