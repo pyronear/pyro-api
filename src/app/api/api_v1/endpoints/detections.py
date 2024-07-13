@@ -7,7 +7,7 @@ import hashlib
 import logging
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, cast
+from typing import List, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
