@@ -34,7 +34,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         ),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_create_organization(
     async_client: AsyncClient,
     user_idx: Union[int, None],
@@ -69,7 +69,7 @@ async def test_create_organization(
         (2, 1, 403, "Incompatible token scope.", 0),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_organization(
     async_client: AsyncClient,
     organization_session: AsyncSession,
@@ -105,7 +105,7 @@ async def test_get_organization(
         (2, 403, "Incompatible token scope.", None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_fetch_organizations(
     async_client: AsyncClient,
     organization_session: AsyncSession,
@@ -140,7 +140,7 @@ async def test_fetch_organizations(
         (2, 2, 403, "Incompatible token scope."),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_delete_organization(
     async_client: AsyncClient,
     organization_session: AsyncSession,
