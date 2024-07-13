@@ -60,7 +60,7 @@ class S3Bucket:
             logger.warning(e)
             return False
 
-    async def get_public_url(self, bucket_key: str, url_expiration: int = 3600) -> str:
+    async def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
         """Generate a temporary public URL for a bucket file"""
         if not (await self.check_file_existence(bucket_key)):
             raise HTTPException(status_code=404, detail="File cannot be found on the bucket storage")

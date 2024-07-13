@@ -47,9 +47,9 @@ async def init_db() -> None:
             organization_id = organization.id
 
         # Check if admin exists
-        statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)
-        results = await session.execute(statement=statement)
-        user = results.scalar_one_or_none()
+        statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)  # type: ignore[var-annotated]
+        results = await session.exec(statement=statement)
+        user = results.one_or_none()
         if not user:
             pwd = hash_password(settings.SUPERADMIN_PWD)
             session.add(

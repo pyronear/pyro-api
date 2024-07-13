@@ -14,7 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         ({"username": "first_login", "password": "first_pwd"}, 200, None),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_login_with_creds(
     async_client: AsyncClient,
     user_session: AsyncSession,
