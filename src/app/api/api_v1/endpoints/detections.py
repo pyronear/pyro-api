@@ -7,7 +7,7 @@ import hashlib
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Union, Tuple, cast
+from typing import List, Tuple, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -67,10 +67,9 @@ async def create_detection(
 
     # No need to create the Wildfire and Detection in the same commit
     return await detections.create(
-        DetectionCreate(
-            camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization
-        )
+        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
     )
+
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
