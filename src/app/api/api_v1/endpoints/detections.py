@@ -5,12 +5,14 @@
 
 import hashlib
 import logging
+import re
 from datetime import datetime
 from mimetypes import guess_extension
 from typing import List, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
+from pydantic import ValidationError
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
@@ -32,6 +34,9 @@ async def create_detection(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
+    localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
+    if localization and not localization_pattern.match(localization):
+        raise ValidationError(f"Invalid localization format: {localization}")
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
