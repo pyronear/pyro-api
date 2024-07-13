@@ -6,7 +6,7 @@
 import hashlib
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Union, cast
+from typing import List, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Security, UploadFile, status
@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Securit
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
 from app.models import Camera, Detection, Role, UserRole
-from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
+from app.schemas.detections import DetectionCreate, DetectionFromDate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
@@ -120,7 +120,7 @@ async def fetch_detections(
 
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(
-    from_date: Union[datetime, None] = Form(None),
+    payload: DetectionFromDate,
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -128,8 +128,7 @@ async def fetch_unlabeled_detections(
     telemetry_client.capture(token_payload.sub, event="unlabeled-fetch")
 
     all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
-    if from_date is not None:
-        all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
+    all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= payload.from_date]
 
     if UserRole.ADMIN in token_payload.scopes:
         return all_unck_detections
@@ -139,9 +138,7 @@ async def fetch_unlabeled_detections(
     all_unck_detections = await detections.fetch_all(
         filter_pair=("is_wildfire", None), in_pair=("camera_id", camera_ids)
     )
-    if from_date is not None:
-        all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
-    return all_unck_detections
+    return [detection for detection in all_unck_detections if detection.created_at >= payload.from_date]
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
