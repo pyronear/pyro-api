@@ -35,7 +35,7 @@ async def create_detection(
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
     localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
-    if localization and not localization_pattern.match(localization):
+    if localization and localization != "[]" and not localization_pattern.match(localization):
         raise ValidationError(f"Invalid localization format: {localization}")
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
