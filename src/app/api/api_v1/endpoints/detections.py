@@ -7,22 +7,21 @@ import hashlib
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Tuple, Union, cast
+from typing import List, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
-
 from app.crud import CameraCRUD, DetectionCRUD
-from app.models import Detection, Role, UserRole, Camera
+from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
-
 router = APIRouter()
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
