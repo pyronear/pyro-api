@@ -18,7 +18,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {"azimuth": 45.6, "localization": None}, 201, None),
         (None, 1, {"azimuth": 45.6, "localization": "xyxyconf"}, 400, "Invalid localization format: xyxyconf"),
         (None, 1, {"azimuth": 45.6, "localization": "[0.6,0.6,0.6,0.6,0.6]"}, 201, None),
-
     ],
 )
 @pytest.mark.asyncio

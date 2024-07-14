@@ -11,13 +11,10 @@ from mimetypes import guess_extension
 from typing import List, Union, cast
 
 import magic
-
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path,Query, Security, UploadFile, status
-
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
-
 from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
@@ -25,18 +22,8 @@ from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
-localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
-async def create_detection(
-    localization: Union[str, None] = Form(None),
-    azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
-    file: UploadFile = File(..., alias="file"),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
-) -> Detection:
-    telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     localization: Union[str, None] = Form(None),
