@@ -19,6 +19,7 @@ from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
+import re
 
 router = APIRouter()
 
@@ -32,6 +33,12 @@ async def create_detection(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
+
+    localization_pattern = re.compile(r"^\[\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]\]$")
+    if localization and localization != "[]" and not localization_pattern.match(localization):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid localization format: {localization}"
+        )
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
@@ -63,12 +70,6 @@ async def create_detection(
     return await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
     )
-
-    # No need to create the Wildfire and Detection in the same commit
-    return await detections.create(
-        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
-    )
-
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
