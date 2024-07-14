@@ -7,7 +7,7 @@ import hashlib
 
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Union, cast
+from typing import List, Tuple, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -21,6 +21,7 @@ from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
@@ -124,6 +125,7 @@ async def fetch_detections(
     camera_ids = [camera.id for camera in cameras_list]
 
     return await detections.fetch_all(in_pair=("camera_id", camera_ids))
+
 
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(

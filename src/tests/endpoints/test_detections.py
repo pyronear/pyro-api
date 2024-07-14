@@ -159,7 +159,7 @@ async def test_fetch_unlabeled_detections(
         )
 
     response = await async_client.get("/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", headers=auth)
-    
+
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
