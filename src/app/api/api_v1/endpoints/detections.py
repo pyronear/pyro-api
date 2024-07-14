@@ -12,7 +12,6 @@ from typing import List, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
-from pydantic import ValidationError
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
@@ -36,8 +35,9 @@ async def create_detection(
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
     localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
     if localization and localization != "[]" and not localization_pattern.match(localization):
-        raise ValidationError(f"Invalid localization format: {localization}")
-    # Upload media
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid localization format: {localization}"
+        )  # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
     await file.seek(0)
@@ -50,7 +50,9 @@ async def create_detection(
     bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
-
+    # Failed upload
+    if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     # Data integrity check
     file_meta = await s3_bucket.get_file_metadata(bucket_key)
     # Corrupted file
