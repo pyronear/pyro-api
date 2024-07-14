@@ -157,7 +157,7 @@ async def test_fetch_unlabeled_detections(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/detections/unlabeled/fromdate", json={"from_date": "2018-06-06"}, headers=auth)
+    response = await async_client.get("/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", headers=auth)
 
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):

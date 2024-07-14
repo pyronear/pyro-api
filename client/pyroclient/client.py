@@ -198,11 +198,11 @@ class Client:
         Returns:
             HTTP response
         """
-        payload = {"from_date": from_date}
+        params = {"from_date": from_date}
         return requests.get(
             self.routes["detections-fetch-unl"],
             headers=self.headers,
-            json=payload,
+            params=params,
             timeout=self.timeout,
         )
 
