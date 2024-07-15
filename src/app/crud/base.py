@@ -28,11 +28,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         try:
             self.session.add(entry)
             await self.session.commit()
-        except exc.IntegrityError:
+        except exc.IntegrityError as error:
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An entry with the same index already exists.",
+                detail=f"An entry with the same index already exists : {error!s}",
             )
         await self.session.refresh(entry)
 
@@ -83,3 +83,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
+
+    async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
+        statement = select(self.model).where(getattr(self.model, field_name).in_(list_))  # type: ignore[var-annotated]
+        results = await self.session.exec(statement)
+        return results.all()

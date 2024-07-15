@@ -15,14 +15,14 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, User
+from app.models import Camera, Detection, Organization, User
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
-
 
 USER_TABLE = [
     {
         "id": 1,
+        "organization_id": 1,
         "role": "admin",
         "login": "first_login",
         "hashed_password": "hashed_first_pwd",
@@ -30,6 +30,7 @@ USER_TABLE = [
     },
     {
         "id": 2,
+        "organization_id": 1,
         "role": "agent",
         "login": "second_login",
         "hashed_password": "hashed_second_pwd",
@@ -37,6 +38,7 @@ USER_TABLE = [
     },
     {
         "id": 3,
+        "organization_id": 2,
         "role": "user",
         "login": "third_login",
         "hashed_password": "hashed_third_pwd",
@@ -44,9 +46,21 @@ USER_TABLE = [
     },
 ]
 
+ORGANIZATION_TABLE = [
+    {
+        "id": 1,
+        "name": "organization-1",
+    },
+    {
+        "id": 2,
+        "name": "organization-2",
+    },
+]
+
 CAM_TABLE = [
     {
         "id": 1,
+        "organization_id": 1,
         "name": "cam-1",
         "angle_of_view": 91.3,
         "elevation": 110.6,
@@ -58,6 +72,7 @@ CAM_TABLE = [
     },
     {
         "id": 2,
+        "organization_id": 2,
         "name": "cam-2",
         "angle_of_view": 91.3,
         "elevation": 110.6,
@@ -148,14 +163,12 @@ def mock_img():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def user_session(async_session: AsyncSession, monkeypatch):
-    monkeypatch.setattr(users, "hash_password", mock_hash_password)
-    monkeypatch.setattr(login, "verify_password", mock_verify_password)
-    for entry in USER_TABLE:
-        async_session.add(User(**entry))
+async def organization_session(async_session: AsyncSession):
+    for entry in ORGANIZATION_TABLE:
+        async_session.add(Organization(**entry))
     await async_session.commit()
     await async_session.exec(
-        text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
+        text(f"ALTER SEQUENCE organization_id_seq RESTART WITH {max(entry['id'] for entry in ORGANIZATION_TABLE) + 1}")
     )
     await async_session.commit()
     yield async_session
@@ -163,7 +176,22 @@ async def user_session(async_session: AsyncSession, monkeypatch):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def camera_session(user_session: AsyncSession):
+async def user_session(organization_session: AsyncSession, monkeypatch):
+    monkeypatch.setattr(users, "hash_password", mock_hash_password)
+    monkeypatch.setattr(login, "verify_password", mock_verify_password)
+    for entry in USER_TABLE:
+        organization_session.add(User(**entry))
+    await organization_session.commit()
+    await organization_session.exec(
+        text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
+    )
+    await organization_session.commit()
+    yield organization_session
+    await organization_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def camera_session(user_session: AsyncSession, organization_session: AsyncSession):
     for entry in CAM_TABLE:
         user_session.add(Camera(**entry))
     await user_session.commit()
@@ -176,7 +204,9 @@ async def camera_session(user_session: AsyncSession):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(user_session: AsyncSession, camera_session: AsyncSession):
+async def detection_session(
+    user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
+):
     for entry in DET_TABLE:
         user_session.add(Detection(**entry))
     await user_session.commit()
@@ -188,8 +218,8 @@ async def detection_session(user_session: AsyncSession, camera_session: AsyncSes
     yield user_session
 
 
-def get_token(access_id: int, scopes: str) -> Dict[str, str]:
-    token_data = {"sub": str(access_id), "scopes": scopes}
+def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
+    token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
     token = create_access_token(token_data)
     return {"Authorization": f"Bearer {token}"}
 
@@ -198,6 +228,10 @@ def pytest_configure():
     # api.security patching
     pytest.get_token = get_token
     # Table
+    pytest.organization_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in ORGANIZATION_TABLE
+    ]
     pytest.user_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in USER_TABLE

@@ -27,6 +27,7 @@ jobs:
         env:
           SUPERADMIN_LOGIN: dummy_login
           SUPERADMIN_PWD: dummy&P@ssw0rd!
+          SUPERADMIN_ORG: dummyorga
           POSTGRES_USER: dummy_pg_user
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db

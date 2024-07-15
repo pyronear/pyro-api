@@ -30,6 +30,10 @@ ROUTES: Dict[str, str] = {
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
     "detections-url": "/detections/{det_id}/url",
+    #################
+    # ORGS
+    #################
+    "organizations-fetch": "/organizations",
 }
 
 
@@ -179,6 +183,24 @@ class Client:
         """
         return requests.get(
             self.routes["detections-fetch"],
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    # ORGANIZATIONS
+
+    def fetch_organizations(self) -> Response:
+        """List the organizations accessible to the authenticated user
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_organizations()
+
+        Returns:
+            HTTP response
+        """
+        return requests.get(
+            self.routes["organizations-fetch"],
             headers=self.headers,
             timeout=self.timeout,
         )

@@ -32,52 +32,30 @@ Client for the [Alert management API](https://github.com/pyronear/pyro-api)
 General users can use the API client to request available data within their respective scope (i.e. as a private individual, you won't have access to the data from devices of firefighters; however you will have access to all the data related to your devices). You can find several examples below:
 
 ```python
-API_URL = "http://pyronear-api.herokuapp.com"
-USER_LOGIN = "George Abitbol"
-USER_PASSWORD = "AStrong Password"
-api_client = client.Client(API_URL, USER_LOGIN, USER_PASSWORD)
+API_URL = os.getenv("API_URL", "http://localhost:5050/api/v1/")
+login = os.getenv("USER_LOGIN", "superadmin_login")
+pwd = os.getenv("USER_PWD", "superadmin_pwd")
+token = requests.post(
+    urljoin(API_URL, "login/creds"),
+    data={"username": login, "password": pwd},
+    timeout=5,
+).json()["access_token"]
+api_client = Client(token, "http://localhost:5050", timeout=10)
 
-# List your registered devices
-devices = api_client.get_my_devices().json()
-# List sites accessible in your scope
-sites = api_client.get_sites().json()
-# List all past events in your scope
-events = api_client.get_past_events().json()
-# List all alerts in your scope
-alerts = api_client.get_alerts().json()
+# List organizations accessible in your scope
+organizations = api_client.fetch_organizations()
+# Get the url of the image of a detection
+url = api_client.get_detection_url(detection_id)
 ```
 
-### Using the client for your local device
-
-If you have a registered device, there are several different interactions (some client methods are restricted to specific access type):
 
 ```python
-API_URL = "http://pyronear-api.herokuapp.com"
-DEVICE_LOGIN = "R2D2"
-DEVICE_PASSWORD = "C3POIsTheBest"
-api_client = client.Client(API_URL, DEVICE_LOGIN, DEVICE_PASSWORD)
+cam_token = requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
+        "access_token"
+    ]
 
-# Retrieve the registered information about your device
-api_client.get_my_device()
-# Notify the instance that your device is still active
-api_client.heartbeat()
-## Create an event
-event_id = api_client.create_event(lat=10, lon=10).json()["id"]
-## Create a media
-media_id = api_client.create_media_from_device().json()["id"]
-## Create an alert linked to the media and the event
-api_client.send_alert_from_device(lat=10, lon=10, event_id=event_id, media_id=media_id)
-
-## Upload an image linked to the media
-dummy_image = "https://ec.europa.eu/jrc/sites/jrcsh/files/styles/normal-responsive/" \
-                + "public/growing-risk-future-wildfires_adobestock_199370851.jpeg"
-image_data = requests.get(dummy_image).content
-api_client.upload_media(media_id=media_id, image_data=image_data)
-
-## Update your position:
-api_client.update_my_location(lat=1, lon=2, elevation=50, azimuth=30, pitch=3)
-# Update your software hash
-api_client.update_my_hash("MyNewHash")
+camera_client = Client(cam_token, "http://localhost:5050", timeout=10)
+response = cam_client.create_detection(image, 123.2)
 ```
 
 ## Installation

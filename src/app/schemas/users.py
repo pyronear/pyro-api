@@ -30,7 +30,9 @@ class Role(BaseModel):
 class UserCreate(Role):
     login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
     password: str = Field(..., min_length=3, examples=["PickARobustOne"])
+    organization_id: int = Field(..., gt=0)
 
 
 class UserCreation(Role):
     login: str = Field(..., min_length=3, max_length=50, examples=["JohnDoe"])
+    organization_id: int = Field(..., gt=0)

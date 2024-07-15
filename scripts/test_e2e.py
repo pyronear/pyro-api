@@ -48,7 +48,7 @@ def main(args):
     user_pwd = "my_pwd"  # noqa S105
 
     # create a user
-    payload = {"login": user_login, "password": user_pwd, "role": "agent"}
+    payload = {"organization_id": 1, "login": user_login, "password": user_pwd, "role": "agent"}
     user_id = api_request("post", f"{args.endpoint}/users/", superuser_auth, payload)["id"]
     agent_auth = {
         "Authorization": f"Bearer {get_token(args.endpoint, user_login, user_pwd)}",
@@ -65,7 +65,15 @@ def main(args):
 
     # Create a camera (as admin until #79 is closed)
     camera_name = "my_device"
-    payload = {"name": camera_name, "angle_of_view": 70.0, "elevation": 100, "lat": 44.7, "lon": 4.5, "azimuth": 110}
+    payload = {
+        "name": camera_name,
+        "organization_id": 1,
+        "angle_of_view": 70.0,
+        "elevation": 100,
+        "lat": 44.7,
+        "lon": 4.5,
+        "azimuth": 110,
+    }
     cam_id = api_request("post", f"{args.endpoint}/cameras/", agent_auth, payload)["id"]
 
     cam_token = requests.post(

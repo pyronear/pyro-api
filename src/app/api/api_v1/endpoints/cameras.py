@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import List, cast
 
-from fastapi import APIRouter, Depends, Path, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
 from app.api.dependencies import get_camera_crud, get_jwt
 from app.core.config import settings
@@ -27,6 +27,8 @@ async def register_camera(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-create", properties={"device_login": payload.name})
+    if token_payload.organization_id != payload.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return await cameras.create(payload)
 
 
@@ -37,7 +39,10 @@ async def get_camera(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
-    return cast(Camera, await cameras.get(camera_id, strict=True))
+    camera = cast(Camera, await cameras.get(camera_id, strict=True))
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    return camera
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
@@ -46,7 +51,10 @@ async def fetch_cameras(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Camera]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
-    return [elt for elt in await cameras.fetch_all()]
+    all_cameras = [elt for elt in await cameras.fetch_all()]
+    if UserRole.ADMIN in token_payload.scopes:
+        return all_cameras
+    return [camera for camera in all_cameras if camera.organization_id == token_payload.organization_id]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
@@ -55,7 +63,6 @@ async def heartbeat(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat", properties={"camera_id": camera_id})
-    await cameras.get(token_payload.sub, strict=True)
     return await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
 
 
@@ -66,10 +73,9 @@ async def create_camera_token(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Token:
     telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
-    # Verify camera
-    await cameras.get(camera_id, strict=True)
+    camera = cast(Camera, await cameras.get(camera_id, strict=True))
     # create access token using user user_id/user_scopes
-    token_data = {"sub": str(camera_id), "scopes": ["camera"]}
+    token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": camera.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
     return Token(access_token=token, token_type="bearer")  # noqa S106
 
