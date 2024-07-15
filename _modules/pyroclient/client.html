@@ -234,6 +234,10 @@
     <span class="s2">&quot;detections-label&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/label&quot;</span><span class="p">,</span>
     <span class="s2">&quot;detections-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
     <span class="s2">&quot;detections-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
+    <span class="c1">#################</span>
+    <span class="c1"># ORGS</span>
+    <span class="c1">#################</span>
+    <span class="s2">&quot;organizations-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/organizations&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -383,6 +387,24 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># ORGANIZATIONS</span>
+
+<div class="viewcode-block" id="Client.fetch_organizations"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_organizations">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_organizations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the organizations accessible to the authenticated user</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_organizations()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;organizations-fetch&quot;</span><span class="p">],</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div></div>
