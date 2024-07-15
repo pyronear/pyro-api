@@ -7,6 +7,7 @@ Enum "userrole" {
 
 Table "User" as U {
   "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
   "role" userrole [not null]
   "login" str [not null]
   "hashed_password" str [not null]
@@ -18,6 +19,7 @@ Table "User" as U {
 
 Table "Camera" as C {
   "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
   "name" str [not null]
   "angle_of_view" float [not null]
   "elevation" float [not null]
@@ -39,6 +41,14 @@ Table "Detection" as D {
   "is_wildfire" bool
   "created_at" timestamp [not null]
   "updated_at" timestamp [not null]
+  Indexes {
+    (id) [pk]
+  }
+}
+
+Table "Organization" as O {
+  "id" int [not null]
+  "name" str [not null]
   Indexes {
     (id) [pk]
   }
