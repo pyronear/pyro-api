@@ -42,15 +42,19 @@
 
 'module: crud':
 - changed-files:
-  - any-glob-to-any-file: src/app/crud/*
+  - any-glob-to-any-file: src/app/crud/base.py
 
 'endpoint: cameras':
 - changed-files:
-  - any-glob-to-any-file: src/app/api/*/endpoints/cameras.py
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/cameras.py
+    - src/app/crud/cameras.py
 
 'endpoint: detections':
 - changed-files:
-  - any-glob-to-any-file: src/app/api/*/endpoints/detections.py
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/detections.py
+    - src/app/crud/detections.py
 
 'endpoint: login':
 - changed-files:
@@ -58,7 +62,15 @@
 
 'endpoint: users':
 - changed-files:
-  - any-glob-to-any-file: src/app/api/*/endpoints/users.py
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/users.py
+    - src/app/crud/users.py
+
+'endpoint: organizations':
+- changed-files:
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/organizations.py
+    - src/app/crud/organizations.py
 
 
 'topic: build':
