@@ -7,6 +7,7 @@ from app.services.storage import S3Bucket, s3_bucket
 from app.services.utils import cfg, send_telegram_msg
 from httpx import AsyncClient
 
+
 def test_resolve_bucket_key(monkeypatch):
     file_name = "myfile.jpg"
     bucket_subfolder = "my/bucket/subfolder"
@@ -57,6 +58,7 @@ def test_send_telegram_msg(chat_id, msg, expected_status_code):
         assert response is None
     else:
         assert response.status_code == expected_status_code, response.text
+
 
 @pytest.mark.asyncio
 async def test_s3_bucket(async_client: AsyncClient, mock_img: bytes):

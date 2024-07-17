@@ -86,10 +86,10 @@ DEVICE_TABLE = [
 ]
 
 MEDIA_TABLE = [
-    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773", "bucket_key": "my_file"},
+    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
+    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
 ]
 
 ALERT_TABLE = [

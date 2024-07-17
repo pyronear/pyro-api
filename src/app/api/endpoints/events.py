@@ -15,7 +15,7 @@ from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_db
 from app.db import alerts, events
 from app.models import Access, AccessType, Alert, Device, Event, Media
-from app.schemas import AccessRead, Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate, MediaUrl
+from app.schemas import AccessRead, Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
 from app.services.telemetry import telemetry_client
 
 router = APIRouter(redirect_slashes=True)
@@ -140,40 +140,29 @@ async def fetch_unacknowledged_events(
     """
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
     if await is_admin_access(requester.id):
-                retrieved_events = (
-            session.query(
-                Event,
-                Media.bucket_key
-            )
+        retrieved_events = (
+            session.query(Event, Media.bucket_key)
             .select_from(Event)
             .join(Alert, Event.id == Alert.event_id)
             .join(Media, Alert.media_id == Media.id)
-            .filter(and_(
-                Event.is_acknowledged.is_(False)
-            ))
+            .filter(and_(Event.is_acknowledged.is_(False)))
         )
     else:
         retrieved_events = (
-            session.query(
-                Event,
-                Media.bucket_key
-            )
+            session.query(Event, Media.bucket_key)
             .select_from(Event)
             .join(Alert, Event.id == Alert.event_id)
             .join(Media, Alert.media_id == Media.id)
             .join(Device, Alert.device_id == Device.id)
             .join(Access, Device.access_id == Access.id)
-            .filter(and_(
-                Access.group_id == requester.group_id,
-                Event.is_acknowledged.is_(False)
-            ))
+            .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
         )
     results = []
     for event, bucket_key in retrieved_events.all():
         event_dict = event.__dict__.copy()
-        event_dict['bucket_key'] = bucket_key
+        event_dict["bucket_key"] = await s3_bucket.get_public_url(bucket_key)
         results.append(event_dict)
-    
+
     return results
 
 

@@ -111,7 +111,7 @@ make run-dev
 
 To enable a smoother development experience, we are using [localstack](https://docs.localstack.cloud/overview/) to create a local S3 bucket.
 
-We automatically create a s3 bucket called `sample-bucket`, which you can check by running:
+We automatically create a s3 bucket called `bucket`, which you can check by running:
 ```shell
 docker-compose exec localstack awslocal s3 ls
 ```
