@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Annotated, List, cast, Tuple
+from typing import Annotated, List, cast, Tuple, Dict
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
@@ -130,7 +130,7 @@ async def delete_event(
 
 
 @router.get(
-    "/unacknowledged", response_model=Tuple[List[EventOut], List[str]], summary="Get the list of events that haven't been acknowledged"
+    "/unacknowledged", response_model=Tuple[List[EventOut], Dict[int,str]], summary="Get the list of events that haven't been acknowledged"
 )
 async def fetch_unacknowledged_events(
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
@@ -141,7 +141,7 @@ async def fetch_unacknowledged_events(
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
     if await is_admin_access(requester.id):
         retrieved_events = (
-            session.query(Event, Media.bucket_key)
+            session.query(Event, Media.bucket_key, Media.id)
             .select_from(Event)
             .join(Alert, Event.id == Alert.event_id)
             .join(Media, Alert.media_id == Media.id)
@@ -149,7 +149,7 @@ async def fetch_unacknowledged_events(
         )
     else:
         retrieved_events = (
-            session.query(Event, Media.bucket_key)
+            session.query(Event, Media.bucket_key, Media.id)
             .select_from(Event)
             .join(Alert, Event.id == Alert.event_id)
             .join(Media, Alert.media_id == Media.id)
@@ -157,14 +157,14 @@ async def fetch_unacknowledged_events(
             .join(Access, Device.access_id == Access.id)
             .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
         )
-    list_url = []
+    dict_url = {}
     list_event = []
-    for event, bucket_key in retrieved_events.all():
+    for event, bucket_key, media_id in retrieved_events.all():
         event_dict = event.__dict__.copy()
         url = await s3_bucket.get_public_url(bucket_key)
-        list_url.append(url)
+        dict_url[media_id] = url
         list_event.append(event_dict)
-    return (list_event, list_url)
+    return (list_event, dict_url)
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")

@@ -42,8 +42,8 @@ stop-dev:
 test:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
 	docker compose -f docker-compose.test.yml up -d --build --wait
-	sleep 20
-	docker compose exec -T backend pytest -s tests/routes/test_events.py::test_fetch_unacknowledged_events
+	docker compose exec -T backend pytest --cov=app
+	docker compose -f docker-compose.test.yml down
 
 # Run tests for the Python client
 test-client:
