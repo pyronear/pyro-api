@@ -160,7 +160,7 @@ async def fetch_unacknowledged_events(
     results = []
     for event, bucket_key in retrieved_events.all():
         event_dict = event.__dict__.copy()
-        event_dict["bucket_key"] = await s3_bucket.get_public_url(bucket_key)
+        event_dict["url"] = await s3_bucket.get_public_url(bucket_key)
         results.append(event_dict)
 
     return results
