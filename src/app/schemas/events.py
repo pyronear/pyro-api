@@ -33,7 +33,6 @@ class EventIn(_FlatLocation):
     _validate_start_ts = field_validator("start_ts")(validate_datetime_none)
     _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
 
-
 class EventOut(EventIn, _CreatedAt, _Id):
     pass
 

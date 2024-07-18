@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Annotated, List, cast
+from typing import Annotated, List, cast, Tuple
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
@@ -130,7 +130,7 @@ async def delete_event(
 
 
 @router.get(
-    "/unacknowledged", response_model=List[EventOut], summary="Get the list of events that haven't been acknowledged"
+    "/unacknowledged", response_model=Tuple[List[EventOut], List[str]], summary="Get the list of events that haven't been acknowledged"
 )
 async def fetch_unacknowledged_events(
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
@@ -157,13 +157,14 @@ async def fetch_unacknowledged_events(
             .join(Access, Device.access_id == Access.id)
             .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
         )
-    results = []
+    list_url = []
+    list_event = []
     for event, bucket_key in retrieved_events.all():
         event_dict = event.__dict__.copy()
-        event_dict["url"] = await s3_bucket.get_public_url(bucket_key)
-        results.append(event_dict)
-
-    return results
+        url = await s3_bucket.get_public_url(bucket_key)
+        list_url.append(url)
+        list_event.append(event_dict)
+    return (list_event, list_url)
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")
