@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-
 from typing import Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
@@ -27,7 +26,7 @@ ROUTES: Dict[str, str] = {
     #################
     # DETECTIONS
     #################
-    "detections-create": "/detections",
+    "detections-create": "/detections/",
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
     "detections-fetch-unl": "/detections/unlabeled/fromdate",

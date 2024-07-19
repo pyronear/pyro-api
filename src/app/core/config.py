@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
 
     # Storage
-    S3_BUCKET_NAME: str = os.environ["S3_BUCKET_NAME"]
     S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]
     S3_SECRET_KEY: str = os.environ["S3_SECRET_KEY"]
     S3_REGION: str = os.environ["S3_REGION"]
