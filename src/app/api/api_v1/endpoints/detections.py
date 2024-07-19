@@ -117,9 +117,7 @@ async def get_detection_url(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     return DetectionUrl(
-        url=await s3_bucket.get_public_url(
-            detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
-        )
+        url=await s3_bucket.get_public_url(detection.bucket_key, s3_bucket.get_bucket_name(camera.organization_id))
     )
 
 
