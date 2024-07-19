@@ -6,7 +6,7 @@
 
 from typing import List, cast
 
-from fastapi import APIRouter, Depends, Path, Security, status, HTTPException
+from fastapi import APIRouter, Depends, Path, Security, status
 
 from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
@@ -14,8 +14,7 @@ from app.models import Organization, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.organizations import OrganizationCreate
 from app.services.telemetry import telemetry_client
-from app.services.storage import s3_bucket
-import logging
+
 router = APIRouter()
 
 
@@ -28,12 +27,11 @@ async def register_organization(
     telemetry_client.capture(
         token_payload.sub, event="organization-create", properties={"organization_name": payload.name}
     )
-    organization = await organizations.create(payload)
-    bucket_name = s3_bucket.get_bucket_name(organization.id)
-    if not (await s3_bucket.create_bucket(bucket_name)):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
-    logging.info(f"Bucket {bucket_name} created successfully.")
-    return organization
+    # bucket_name = s3_bucket.get_bucket_name(organization.id)
+    # if not (await s3_bucket.create_bucket(bucket_name)):
+    #    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
+    # logging.info(f"Bucket {bucket_name} created successfully.")
+    return await organizations.create(payload)
 
 
 @router.get(
