@@ -149,11 +149,7 @@ async def fetch_unlabeled_detections(
             detection for detection in all_unck_detections_admin if detection.created_at >= from_date
         ]
         url_list = [
-            DetectionUrl(
-                url=await s3_bucket.get_public_url(
-                    detection.bucket_key
-                )  # s3_bucket.get_bucket_name(dict_camera_orgid[detection.camera_id])
-            )
+            DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
             for detection in all_unck_detections_admin
         ]
         return (all_unck_detections_admin, url_list)
@@ -165,10 +161,7 @@ async def fetch_unlabeled_detections(
     )
     all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
     url_list = [
-        DetectionUrl(
-            url=await s3_bucket.get_public_url(detection.bucket_key)
-        )  # , s3_bucket.get_bucket_name(token_payload.organization_id)
-        for detection in all_unck_detections
+        DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key)) for detection in all_unck_detections
     ]
     return (all_unck_detections, url_list)
 
@@ -197,12 +190,9 @@ async def label_detection(
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
     detections: DetectionCRUD = Depends(get_detection_crud),
-    # cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    # camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key)  # s3_bucket.get_bucket_name(camera.organization_id)
-    # TODO : what if the delete fails ?
+    await s3_bucket.delete_file(detection.bucket_key)
     await detections.delete(detection_id)
