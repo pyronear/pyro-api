@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import Any, Generic, List, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
@@ -59,13 +59,31 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return entry
 
     async def fetch_all(
-        self, filter_pair: Union[Tuple[str, Any], None] = None, in_pair: Union[Tuple[str, List], None] = None
+        self,
+        filter_pair: Union[Tuple[str, Any], None] = None,
+        in_pair: Union[Tuple[str, List], None] = None,
+        inequality_pair: Optional[Tuple[str, str, Any]] = None,
     ) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
         if isinstance(filter_pair, tuple):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
+
         if isinstance(in_pair, tuple):
             statement = statement.where(getattr(self.model, in_pair[0]).in_(in_pair[1]))
+
+        if isinstance(inequality_pair, tuple):
+            field, op, value = inequality_pair
+            if op == ">=":
+                statement = statement.where(getattr(self.model, field) >= value)
+            elif op == ">":
+                statement = statement.where(getattr(self.model, field) > value)
+            elif op == "<=":
+                statement = statement.where(getattr(self.model, field) <= value)
+            elif op == "<":
+                statement = statement.where(getattr(self.model, field) < value)
+            else:
+                raise ValueError(f"Unsupported inequality operator: {op}")
+
         result = await self.session.exec(statement=statement)
         return [r for r in result]
 

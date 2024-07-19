@@ -149,14 +149,13 @@ async def fetch_unlabeled_detections(
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
     if UserRole.ADMIN in token_payload.scopes:
-        all_unck_detections_admin = await detections.fetch_all(filter_pair=("is_wildfire", None))
+        all_unck_detections_admin = await detections.fetch_all(
+            filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
+        )
         cameras_list = await cameras.fetch_all()
         dict_camera_orgid = {}
         for camera in cameras_list:
             dict_camera_orgid[camera.id] = camera.organization_id
-        all_unck_detections_admin = [
-            detection for detection in all_unck_detections_admin if detection.created_at >= from_date
-        ]
         url_list = [
             DetectionUrl(
                 url=await s3_bucket.get_public_url(
@@ -170,9 +169,10 @@ async def fetch_unlabeled_detections(
     cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
     all_unck_detections = await detections.fetch_all(
-        filter_pair=("is_wildfire", None), in_pair=("camera_id", camera_ids)
+        filter_pair=("is_wildfire", None),
+        in_pair=("camera_id", camera_ids),
+        inequality_pair=("created_at", ">=", from_date),
     )
-    all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
     url_list = [
         DetectionUrl(
             url=await s3_bucket.get_public_url(
