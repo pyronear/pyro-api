@@ -9,7 +9,7 @@ from typing import Union
 
 from sqlmodel import Field, SQLModel
 
-__all__ = ["Camera", "Detection", "User"]
+__all__ = ["Camera", "Detection", "Organization", "User"]
 
 
 class UserRole(str, Enum):
