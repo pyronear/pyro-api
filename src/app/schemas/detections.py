@@ -6,7 +6,6 @@
 from typing import Union
 
 from pydantic import BaseModel, Field
-from typing import Union
 
 __all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
 
@@ -29,6 +28,7 @@ class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
     localization: Union[str, None]
+
 
 class DetectionUrl(BaseModel):
     url: str = Field(..., description="temporary URL to access the media content")

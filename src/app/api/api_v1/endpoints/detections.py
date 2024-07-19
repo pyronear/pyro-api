@@ -8,7 +8,7 @@ import logging
 import re
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List,Tuple, Union, cast
+from typing import List, Tuple, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -204,5 +204,5 @@ async def delete_detection(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     # camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     await s3_bucket.delete_file(detection.bucket_key)  # s3_bucket.get_bucket_name(camera.organization_id)
-    #TODO : what if the delete fails ?
+    # TODO : what if the delete fails ?
     await detections.delete(detection_id)
