@@ -8,7 +8,7 @@ import logging
 import re
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, Union, cast
+from typing import List, Tuple, Union, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -33,7 +33,7 @@ async def create_detection(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
-    localization_pattern = re.compile(r"^\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]$")
+    localization_pattern = re.compile(r"^\[\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]\]$")
     if localization and localization != "[]" and not localization_pattern.match(localization):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid localization format: {localization}"
@@ -69,7 +69,6 @@ async def create_detection(
             detail="Data was corrupted during upload",
         )
     logging.info(f"Data integrity check passed for file {bucket_key}.")
-
     # No need to create the Wildfire and Detection in the same commit
     return await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
@@ -146,21 +145,43 @@ async def fetch_unlabeled_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Detection]:
-    telemetry_client.capture(token_payload.sub, event="unlabeled-fetch")
-
-    all_unck_detections = await detections.fetch_all(filter_pair=("is_wildfire", None))
-    all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
+) -> Tuple[List[Detection], List[DetectionUrl]]:
+    telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
     if UserRole.ADMIN in token_payload.scopes:
-        return all_unck_detections
+        all_unck_detections_admin = await detections.fetch_all(filter_pair=("is_wildfire", None))
+        cameras_list = await cameras.fetch_all()
+        dict_camera_orgid = {}
+        for camera in cameras_list:
+            dict_camera_orgid[camera.id] = camera.organization_id
+        all_unck_detections_admin = [
+            detection for detection in all_unck_detections_admin if detection.created_at >= from_date
+        ]
+        url_list = [
+            DetectionUrl(
+                url=await s3_bucket.get_public_url(
+                    detection.bucket_key, s3_bucket.get_bucket_name(dict_camera_orgid[detection.camera_id])
+                )
+            )
+            for detection in all_unck_detections_admin
+        ]
+        return (all_unck_detections_admin, url_list)
 
     cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
     all_unck_detections = await detections.fetch_all(
         filter_pair=("is_wildfire", None), in_pair=("camera_id", camera_ids)
     )
-    return [detection for detection in all_unck_detections if detection.created_at >= from_date]
+    all_unck_detections = [detection for detection in all_unck_detections if detection.created_at >= from_date]
+    url_list = [
+        DetectionUrl(
+            url=await s3_bucket.get_public_url(
+                detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
+            )
+        )
+        for detection in all_unck_detections
+    ]
+    return (all_unck_detections, url_list)
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")

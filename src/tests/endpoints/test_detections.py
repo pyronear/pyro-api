@@ -17,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {}, 422, None),
         (None, 0, {"azimuth": 45.6, "localization": None}, 201, None),
         (None, 1, {"azimuth": 45.6, "localization": "xyxyconf"}, 400, "Invalid localization format: xyxyconf"),
-        (None, 1, {"azimuth": 45.6, "localization": "[0.6,0.6,0.6,0.6,0.6]"}, 201, None),
+        (None, 1, {"azimuth": 45.6, "localization": "[[0.6,0.6,0.6,0.6,0.6]]"}, 201, None),
     ],
 )
 @pytest.mark.asyncio
@@ -139,6 +139,7 @@ async def test_fetch_detections(
         (None, 401, "Not authenticated", None),
         (0, 200, None, [pytest.detection_table[2]]),
         (1, 200, None, []),
+        (2, 200, None, [pytest.detection_table[2]]),
     ],
 )
 @pytest.mark.asyncio
@@ -164,7 +165,7 @@ async def test_fetch_unlabeled_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == expected_result
+        assert response.json()[0] == expected_result
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,7 @@ Enum "userrole" {
 
 Table "User" as U {
   "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
   "role" userrole [not null]
   "organization_id" int [ref: > S.id, not null]
   "login" str [not null]
@@ -18,7 +19,7 @@ Table "User" as U {
 
 Table "Camera" as C {
   "id" int [not null]
-  "organization_id" int [ref: > S.id, not null]
+  "organization_id" int [ref: > O.id, not null]
   "name" str [not null]
   "angle_of_view" float [not null]
   "elevation" float [not null]
@@ -45,7 +46,10 @@ Table "Detection" as D {
   }
 }
 
-Table "Organization" as S {
+Table "Organization" as O {
   "id" int [not null]
   "name" str [not null]
+  Indexes {
+    (id) [pk]
+  }
 }

@@ -66,7 +66,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
         if isinstance(in_pair, tuple):
             statement = statement.where(getattr(self.model, in_pair[0]).in_(in_pair[1]))
-        return await self.session.exec(statement=statement)
+        result = await self.session.exec(statement=statement)
+        return [r for r in result]
 
     async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
         access = cast(ModelType, await self.get(entry_id, strict=True))
@@ -87,3 +88,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
+
+    async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
+        statement = select(self.model).where(getattr(self.model, field_name).in_(list_))  # type: ignore[var-annotated]
+        results = await self.session.exec(statement)
+        return results.all()
