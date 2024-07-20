@@ -17,8 +17,8 @@ services:
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
       - SUPERUSER_LOGIN=dummy_login
       - SUPERUSER_PWD=dummy&P@ssw0rd!
-      - BUCKET_NAME=sample-bucket
-      - S3_ENDPOINT_URL=http://s3.localhost.localstack.cloud:4566
+      - BUCKET_NAME=bucket
+      - S3_ENDPOINT_URL=http://localstack:4566
       - S3_ACCESS_KEY=fake
       - S3_SECRET_KEY=fake
       - S3_REGION=us-east-1
@@ -51,8 +51,10 @@ services:
     environment:
       - EDGE_PORT=4566
       - SERVICES=s3
+    volumes:
+      - ./scripts/localstack:/etc/localstack/init/ready.d
     healthcheck:
-      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://bucket"]
       interval: 10s
       timeout: 5s
       retries: 5

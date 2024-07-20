@@ -86,10 +86,10 @@ DEVICE_TABLE = [
 ]
 
 MEDIA_TABLE = [
-    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773"},
-    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773"},
-    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773"},
+    {"id": 1, "device_id": 1, "type": "image", "created_at": "2020-10-13T08:18:45.447773", "bucket_key": "my_file"},
+    {"id": 2, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
+    {"id": 3, "device_id": 1, "type": "image", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
+    {"id": 4, "device_id": 1, "type": "video", "created_at": "2020-10-13T09:18:45.447773", "bucket_key": "my_file"},
 ]
 
 ALERT_TABLE = [
@@ -522,7 +522,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
             event_ids = [alert["event_id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
             events_group_id = [event["id"] for event in EVENT_TABLE if event["id"] in event_ids]
 
-        assert response.json() == [
+        assert response.json()[0] == [
             x for x in EVENT_TABLE if x["is_acknowledged"] is False and x["id"] in events_group_id
         ]
 

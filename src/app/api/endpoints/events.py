@@ -3,18 +3,18 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Annotated, List, cast
+from typing import Annotated, List, cast, Tuple
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
 from sqlalchemy import and_
-
+from app.services import s3_bucket
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
 from app.api.crud.groups import get_entity_group_id
 from app.api.deps import get_current_access, get_db
 from app.db import alerts, events
-from app.models import Access, AccessType, Alert, Device, Event
+from app.models import Access, AccessType, Alert, Device, Event, Media
 from app.schemas import AccessRead, Acknowledgement, AcknowledgementOut, AlertOut, EventIn, EventOut, EventUpdate
 from app.services.telemetry import telemetry_client
 
@@ -130,7 +130,7 @@ async def delete_event(
 
 
 @router.get(
-    "/unacknowledged", response_model=List[EventOut], summary="Get the list of events that haven't been acknowledged"
+    "/unacknowledged", response_model=Tuple[List[EventOut], List[Tuple[int,str]]], summary="Get the list of events that haven't been acknowledged"
 )
 async def fetch_unacknowledged_events(
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
@@ -140,17 +140,31 @@ async def fetch_unacknowledged_events(
     """
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
     if await is_admin_access(requester.id):
-        return await crud.fetch_all(events, {"is_acknowledged": False})
+        retrieved_events = (
+            session.query(Event, Media.bucket_key, Media.id)
+            .select_from(Event)
+            .join(Alert, Event.id == Alert.event_id)
+            .join(Media, Alert.media_id == Media.id)
+            .filter(and_(Event.is_acknowledged.is_(False)))
+        )
     else:
         retrieved_events = (
-            session.query(Event)
-            .join(Alert)
-            .join(Device)
-            .join(Access)
+            session.query(Event, Media.bucket_key, Media.id)
+            .select_from(Event)
+            .join(Alert, Event.id == Alert.event_id)
+            .join(Media, Alert.media_id == Media.id)
+            .join(Device, Alert.device_id == Device.id)
+            .join(Access, Device.access_id == Access.id)
             .filter(and_(Access.group_id == requester.group_id, Event.is_acknowledged.is_(False)))
         )
-        retrieved_events = [x.__dict__ for x in retrieved_events.all()]
-        return retrieved_events
+    list_url = []
+    list_event = []
+    for event, bucket_key, media_id in retrieved_events.all():
+        event_dict = event.__dict__.copy()
+        url = await s3_bucket.get_public_url(bucket_key)
+        list_url.append((media_id, url))
+        list_event.append(event_dict)
+    return (list_event, list_url)
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")
