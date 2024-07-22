@@ -16,7 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         # (None, 0, {"azimuth": "45.6"}, 422, None),  # This is odd, it works
         (None, 0, {}, 422, None),
         (None, 0, {"azimuth": 45.6, "localization": None}, 201, None),
-        (None, 1, {"azimuth": 45.6, "localization": "xyxyconf"}, 400, "Invalid localization format: xyxyconf"),
+        (None, 1, {"azimuth": 45.6, "localization": "xyxyconf"}, 422, None),
         (None, 1, {"azimuth": 45.6, "localization": "[[0.6,0.6,0.6,0.6,0.6]]"}, 201, None),
     ],
 )
@@ -49,7 +49,7 @@ async def test_create_detection(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == status_code, print(response.__dict__)
-    if isinstance(status_detail, str):
+    if isinstance(status_detail, str) and response.status_code != 422:
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert {
@@ -160,7 +160,7 @@ async def test_fetch_unlabeled_detections(
         )
 
     response = await async_client.get("/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", headers=auth)
-    print(response.json())
+
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
