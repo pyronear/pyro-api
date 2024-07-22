@@ -40,7 +40,7 @@ build-client:
 
 # Run tests for the Python client
 # the "-" are used to launch the next command even if a command fail
-test-client:
+test-client: build-client
 	poetry export -f requirements.txt --without-hashes --output requirements.txt
 	docker compose -f docker-compose.dev.yml up -d --build --wait
 	- cd client && pytest --cov=pyroclient tests/ && cd ..
