@@ -42,7 +42,7 @@ ROUTES: Dict[str, str] = {
 def convert_loc_to_str(
     bboxes: Union[List[Tuple[float, float, float, float, float]], None] = None,
     max_num_boxes: int = 5,
-) -> str:
+) -> Union[str, None]:
     """Performs a custom JSON dump for list of coordinates
 
     Args:
