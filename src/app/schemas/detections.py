@@ -29,7 +29,7 @@ class Azimuth(BaseModel):
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
-    localization: Union[str, None]
+    bboxes: Union[str, None]
 
 
 class DetectionUrl(BaseModel):
@@ -46,7 +46,7 @@ class DetectionWithUrl(Detection):
             camera_id=detection.camera_id,
             azimuth=detection.azimuth,
             bucket_key=detection.bucket_key,
-            localization=detection.localization,
+            bboxes=detection.bboxes,
             is_wildfire=detection.is_wildfire,
             created_at=detection.created_at,
             updated_at=detection.updated_at,

@@ -27,7 +27,7 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    localization: Union[str, None] = Form(None, pattern=r"^\[\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]\]$"),
+    bboxes: Union[str, None] = Form(None, pattern=r"^\[\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]\]$"),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -65,7 +65,7 @@ async def create_detection(
     logging.info(f"Data integrity check passed for file {bucket_key}.")
     # No need to create the Wildfire and Detection in the same commit
     return await detections.create(
-        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, localization=localization)
+        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
 
 

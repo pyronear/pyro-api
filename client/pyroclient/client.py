@@ -40,26 +40,26 @@ ROUTES: Dict[str, str] = {
 
 
 def convert_loc_to_str(
-    localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
+    bboxes: Union[List[Tuple[float, float, float, float, float]], None] = None,
     max_num_boxes: int = 5,
 ) -> str:
     """Performs a custom JSON dump for list of coordinates
 
     Args:
-        localization: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+        bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
         max_num_boxes: maximum allowed number of bounding boxes
     Returns:
         the JSON string dump with 2 decimal precision
     """
-    if isinstance(localization, list) and len(localization) > 0:
-        if any(coord > 1 or coord < 0 for bbox in localization for coord in bbox):
+    if isinstance(bboxes, list) and len(bboxes) > 0:
+        if any(coord > 1 or coord < 0 for bbox in bboxes for coord in bbox):
             raise ValueError("coordinates are expected to be relative")
-        if any(len(bbox) != 5 for bbox in localization):
+        if any(len(bbox) != 5 for bbox in bboxes):
             raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
-        if len(localization) > max_num_boxes:
+        if len(bboxes) > max_num_boxes:
             raise ValueError(f"Please limit the number of boxes to {max_num_boxes}")
         box_list = tuple(
-            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in localization
+            f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in bboxes
         )
         return f"[{','.join(box_list)}]"
     return "[]"
@@ -120,19 +120,19 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
-        localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
+        bboxes: Union[List[Tuple[float, float, float, float, float]], None] = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, localizationn"xyxy")
+        >>> response = api_client.create_detection(data, azimuth=124.2, bboxesn"xyxy")
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
-            localization: bounding box of the detected fire
+            bboxes: bounding box of the detected fire
 
         Returns:
             HTTP response
@@ -140,7 +140,7 @@ class Client:
         return requests.post(
             self.routes["detections-create"],
             headers=self.headers,
-            data={"azimuth": azimuth, "localization": convert_loc_to_str(localization)},
+            data={"azimuth": azimuth, "bboxes": convert_loc_to_str(bboxes)},
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )
