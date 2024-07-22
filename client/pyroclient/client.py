@@ -120,7 +120,7 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
-        localization: Union[List[Tuple[float, float, float, float, float]], None],
+        localization: Union[List[Tuple[float, float, float, float, float]], None] = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 

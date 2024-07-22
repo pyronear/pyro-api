@@ -3,10 +3,12 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 import hashlib
 import logging
 import re
 from datetime import datetime
+from itertools import starmap
 from mimetypes import guess_extension
 from typing import List, Tuple, Union, cast
 
@@ -16,7 +18,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.crud import CameraCRUD, DetectionCRUD
 from app.models import Camera, Detection, Role, UserRole
-from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl
+from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
@@ -136,34 +138,31 @@ async def fetch_unlabeled_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Tuple[List[Detection], List[DetectionUrl]]:
+) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
+    async def get_url(detection: Detection) -> Tuple[Detection, str]:
+        url = await s3_bucket.get_public_url(detection.bucket_key)
+        return detection, url
+
     if UserRole.ADMIN in token_payload.scopes:
-        all_unck_detections_admin = await detections.fetch_all(
+        all_unck_detections = await detections.fetch_all(
             filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
         )
-        cameras_list = await cameras.fetch_all()
-        dict_camera_orgid = {}
-        for camera in cameras_list:
-            dict_camera_orgid[camera.id] = camera.organization_id
-        url_list = [
-            DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
-            for detection in all_unck_detections_admin
-        ]
-        return (all_unck_detections_admin, url_list)
+    else:
+        cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
+        camera_ids = [camera.id for camera in cameras_list]
+        all_unck_detections = await detections.fetch_all(
+            filter_pair=("is_wildfire", None),
+            in_pair=("camera_id", camera_ids),
+            inequality_pair=("created_at", ">=", from_date),
+        )
 
-    cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
-    camera_ids = [camera.id for camera in cameras_list]
-    all_unck_detections = await detections.fetch_all(
-        filter_pair=("is_wildfire", None),
-        in_pair=("camera_id", camera_ids),
-        inequality_pair=("created_at", ">=", from_date),
-    )
-    url_list = [
-        DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key)) for detection in all_unck_detections
-    ]
-    return (all_unck_detections, url_list)
+    # Launch all get_url calls in parallel
+    url_tasks = [get_url(detection) for detection in all_unck_detections]
+    tuple_list = await asyncio.gather(*url_tasks)
+
+    return list(starmap(DetectionWithUrl.from_detection, tuple_list))
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
