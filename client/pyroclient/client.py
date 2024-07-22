@@ -62,7 +62,7 @@ def convert_loc_to_str(
             f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in bboxes
         )
         return f"[{','.join(box_list)}]"
-    return "[]"
+    return None
 
 
 class Client:
