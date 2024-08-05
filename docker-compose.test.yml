@@ -54,7 +54,7 @@ services:
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
     healthcheck:
-      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://bucket"]
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
       interval: 10s
       timeout: 5s
       retries: 5
