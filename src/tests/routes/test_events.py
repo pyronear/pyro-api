@@ -522,7 +522,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
             event_ids = [alert["event_id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
             events_group_id = [event["id"] for event in EVENT_TABLE if event["id"] in event_ids]
 
-        assert {k: v for k, v in response.json().items() if k != "media_url"} == [
+        assert [{k: v for k, v in entry.items() if k != "media_url"} for entry in response.json()] == [
             x for x in EVENT_TABLE if x["is_acknowledged"] is False and x["id"] in events_group_id
         ]
         assert all(entry["media_url"].startswith("http") for entry in response.json())
