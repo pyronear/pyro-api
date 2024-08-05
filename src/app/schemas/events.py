@@ -12,7 +12,7 @@ from app.models import EventType
 
 from .base import _CreatedAt, _FlatLocation, _Id, validate_datetime_none
 
-__all__ = ["EventIn", "EventOut", "EventUpdate", "Acknowledgement", "AcknowledgementOut"]
+__all__ = ["EventIn", "EventOut", "EventUpdate", "EventPayload", "Acknowledgement", "AcknowledgementOut"]
 
 
 # Events
@@ -33,8 +33,13 @@ class EventIn(_FlatLocation):
     _validate_start_ts = field_validator("start_ts")(validate_datetime_none)
     _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
 
+
 class EventOut(EventIn, _CreatedAt, _Id):
     pass
+
+
+class EventPayload(EventOut):
+    media_url: str = Field(..., description="url of the media associated to the event")
 
 
 class Acknowledgement(BaseModel):
