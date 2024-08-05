@@ -97,8 +97,12 @@ def main(args):
     payload = {"lat": 44.1, "lon": 3.9, "azimuth": 0, "event_id": event_id, "media_id": media_id, "localization": None}
     alert_id = api_request("post", f"{api_url}/alerts/from-device", device_auth, payload)["id"]
 
+    # Unacknowledge events
+    response = api_request("get", f"{api_url}/events/unacknowledged", superuser_auth)
+    assert isinstance(response, list) and len(response) == 1
     # Acknowledge it
     api_request("put", f"{api_url}/events/{event_id}/acknowledge", superuser_auth)
+    assert len(api_request("get", f"{api_url}/events/unacknowledged", superuser_auth)) == 0
 
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request("delete", f"{api_url}/alerts/{alert_id}/", superuser_auth)
