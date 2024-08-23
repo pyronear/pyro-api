@@ -29,7 +29,11 @@ class Azimuth(BaseModel):
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
-    bboxes: Union[str, None]
+    bboxes: Union[str, None] = Field(
+        None,
+        description="formatted string representing a list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
+        json_schema_extra={"examples": ["[(0.1,0.1,0.9,0.9,0.5)]"]},
+    )
 
 
 class DetectionUrl(BaseModel):

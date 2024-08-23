@@ -5,7 +5,6 @@
 
 import asyncio
 import hashlib
-import logging
 from datetime import datetime
 from itertools import starmap
 from mimetypes import guess_extension
@@ -62,7 +61,6 @@ async def create_detection(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Data was corrupted during upload",
         )
-    logging.info(f"Data integrity check passed for file {bucket_key}.")
     # No need to create the Wildfire and Detection in the same commit
     return await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
@@ -144,11 +142,10 @@ async def fetch_unlabeled_detections(
             filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
         )
     else:
-        cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
-        camera_ids = [camera.id for camera in cameras_list]
+        org_cams = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
         all_unck_detections = await detections.fetch_all(
             filter_pair=("is_wildfire", None),
-            in_pair=("camera_id", camera_ids),
+            in_pair=("camera_id", [camera.id for camera in org_cams]),
             inequality_pair=("created_at", ">=", from_date),
         )
 

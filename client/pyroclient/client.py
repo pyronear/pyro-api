@@ -42,7 +42,7 @@ ROUTES: Dict[str, str] = {
 def convert_loc_to_str(
     bboxes: Union[List[Tuple[float, float, float, float, float]], None] = None,
     max_num_boxes: int = 5,
-) -> Union[str, None]:
+) -> str:
     """Performs a custom JSON dump for list of coordinates
 
     Args:
@@ -62,7 +62,7 @@ def convert_loc_to_str(
             f"[{xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f}]" for xmin, ymin, xmax, ymax, conf in bboxes
         )
         return f"[{','.join(box_list)}]"
-    return None
+    return "[]"
 
 
 class Client:
@@ -127,12 +127,12 @@ class Client:
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, bboxesn"xyxy")
+        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
-            bboxes: bounding box of the detected fire
+            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
 
         Returns:
             HTTP response

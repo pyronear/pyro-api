@@ -17,6 +17,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {}, 422, None),
         (None, 0, {"azimuth": 45.6, "bboxes": None}, 201, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "xyxyconf"}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[[x,y,x,y,conf]]"}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[[0.6,0.6,0.6,0.6]]"}, 422, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "[[0.6,0.6,0.6,0.6,0.6]]"}, 201, None),
     ],
 )
@@ -49,7 +51,7 @@ async def test_create_detection(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == status_code, print(response.__dict__)
-    if isinstance(status_detail, str) and response.status_code != 422:
+    if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert {
@@ -134,12 +136,16 @@ async def test_fetch_detections(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_result"),
+    ("user_idx", "from_date", "status_code", "status_detail", "expected_result"),
     [
-        (None, 401, "Not authenticated", None),
-        (0, 200, None, pytest.detection_table[2]),
-        (1, 200, None, []),
-        (2, 200, None, pytest.detection_table[2]),
+        (None, "2018-06-06T00:00:00", 401, "Not authenticated", None),
+        (0, "", 422, None, None),
+        (0, "old-date", 422, None, None),
+        (0, "2018-19-20", 422, None, None),
+        (0, "2018-06-06", 200, None, [pytest.detection_table[2]]),
+        (0, "2018-06-06T00:00:00", 200, None, [pytest.detection_table[2]]),
+        (1, "2018-06-06", 200, None, []),
+        (2, "2018-06-06", 200, None, [pytest.detection_table[2]]),
     ],
 )
 @pytest.mark.asyncio
@@ -147,6 +153,7 @@ async def test_fetch_unlabeled_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     user_idx: Union[int, None],
+    from_date: str,
     status_code: int,
     status_detail: Union[str, None],
     expected_result: Union[List[Dict[str, Any]], None],
@@ -159,15 +166,14 @@ async def test_fetch_unlabeled_detections(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", headers=auth)
+    response = await async_client.get(f"/detections/unlabeled/fromdate?from_date={from_date}", headers=auth)
 
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
-    if response.status_code // 100 == 2 and response.json() != []:
-        dict_element = response.json()[0]
-        del dict_element["url"]
-        assert dict_element == expected_result
+    if response.status_code // 100 == 2:
+        assert [{k: v for k, v in det if k != "url"} for det in response.json()] == expected_result
+        assert all(det["url"].startswith("http://") for det in response.json())
 
 
 @pytest.mark.parametrize(

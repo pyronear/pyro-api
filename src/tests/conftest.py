@@ -91,7 +91,7 @@ DET_TABLE = [
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": True,
-        "bboxes": "[[x,y,x,y,confidence]]",
+        "bboxes": "[[.1,.1,.7,.8,.9]]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
