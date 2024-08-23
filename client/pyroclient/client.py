@@ -3,7 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Dict
+
+from typing import Dict, List, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -29,12 +30,39 @@ ROUTES: Dict[str, str] = {
     "detections-create": "/detections",
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
+    "detections-fetch-unl": "/detections/unlabeled/fromdate",
     "detections-url": "/detections/{det_id}/url",
     #################
     # ORGS
     #################
     "organizations-fetch": "/organizations",
 }
+
+
+def _to_str(coord: float) -> str:
+    """Format string conditionally"""
+    return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
+
+
+def _dump_bbox_to_json(
+    bboxes: List[Tuple[float, float, float, float, float]],
+) -> str:
+    """Performs a custom JSON dump for list of coordinates
+
+    Args:
+        bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+    Returns:
+        the JSON string dump with 3 decimal precision
+    """
+    if any(coord > 1 or coord < 0 for bbox in bboxes for coord in bbox):
+        raise ValueError("coordinates are expected to be relative")
+    if any(len(bbox) != 5 for bbox in bboxes):
+        raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
+    box_strs = (
+        f"({_to_str(xmin)},{_to_str(ymin)},{_to_str(xmax)},{_to_str(ymax)},{_to_str(conf)})"
+        for xmin, ymin, xmax, ymax, conf in bboxes
+    )
+    return f"[{','.join(box_strs)}]"
 
 
 class Client:
@@ -92,25 +120,32 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
+        bboxes: List[Tuple[float, float, float, float, float]],
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2)
+        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
+            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
 
         Returns:
             HTTP response
         """
+        if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
+            raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
         return requests.post(
             self.routes["detections-create"],
             headers=self.headers,
-            data={"azimuth": azimuth},
+            data={
+                "azimuth": azimuth,
+                "bboxes": _dump_bbox_to_json(bboxes),
+            },
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )
@@ -184,6 +219,24 @@ class Client:
         return requests.get(
             self.routes["detections-fetch"],
             headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def fetch_unlabeled_detections(self, from_date: str) -> Response:
+        """List the detections accessible to the authenticated user
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_unacknowledged_detections("2023-07-04T00:00:00")
+
+        Returns:
+            HTTP response
+        """
+        params = {"from_date": from_date}
+        return requests.get(
+            self.routes["detections-fetch-unl"],
+            headers=self.headers,
+            params=params,
             timeout=self.timeout,
         )
 

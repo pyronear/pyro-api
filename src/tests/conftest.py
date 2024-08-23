@@ -91,6 +91,7 @@ DET_TABLE = [
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": True,
+        "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
@@ -100,6 +101,7 @@ DET_TABLE = [
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": False,
+        "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
@@ -109,6 +111,7 @@ DET_TABLE = [
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": None,
+        "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
@@ -125,7 +128,7 @@ def event_loop(request) -> Generator:
 @pytest_asyncio.fixture(scope="function")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
-        app=app, base_url=f"http://api.localhost:8050{settings.API_V1_STR}", follow_redirects=True
+        app=app, base_url=f"http://api.localhost:8050{settings.API_V1_STR}", follow_redirects=True, timeout=5
     ) as client:
         yield client
 

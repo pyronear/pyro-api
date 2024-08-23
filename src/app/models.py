@@ -9,7 +9,9 @@ from typing import Union
 
 from sqlmodel import Field, SQLModel
 
-__all__ = ["Camera", "Detection", "User"]
+from app.core.config import settings
+
+__all__ = ["Camera", "Detection", "Organization", "User"]
 
 
 class UserRole(str, Enum):
@@ -53,6 +55,7 @@ class Detection(SQLModel, table=True):
     camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
     azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
+    bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
     is_wildfire: Union[bool, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
