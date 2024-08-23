@@ -26,7 +26,7 @@ from app.schemas.detections import (
     DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
-from app.services.storage import s3_bucket
+from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -68,18 +68,19 @@ async def create_detection(
     bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
-    bucket_name = s3_bucket.get_bucket_name(token_payload.organization_id)
+    bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
+    bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
-    if not (await s3_bucket.upload_file(bucket_key, bucket_name, file.file)):  # type: ignore[arg-type]
+    if not (await bucket.upload_file(bucket_key, file.file)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 
     # Data integrity check
-    file_meta = await s3_bucket.get_file_metadata(bucket_key, bucket_name)
+    file_meta = bucket.get_file_metadata(bucket_key)
     # Corrupted file
     if md5_hash != file_meta["ETag"].replace('"', ""):
         # Delete the corrupted upload
-        await s3_bucket.delete_file(bucket_key, bucket_name)
+        await bucket.delete_file(bucket_key)
         # Raise the exception
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -124,17 +125,15 @@ async def get_detection_url(
 
     if UserRole.ADMIN in token_payload.scopes:
         camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-        return DetectionUrl(
-            url=await s3_bucket.get_public_url(detection.bucket_key, s3_bucket.get_bucket_name(camera.organization_id))
-        )
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+        return DetectionUrl(url=await bucket.get_public_url(detection.bucket_key))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
-    return DetectionUrl(
-        url=await s3_bucket.get_public_url(detection.bucket_key, s3_bucket.get_bucket_name(camera.organization_id))
-    )
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    return DetectionUrl(url=await bucket.get_public_url(detection.bucket_key))
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -162,10 +161,10 @@ async def fetch_unlabeled_detections(
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+
     async def get_url(detection: Detection) -> str:
-        return await s3_bucket.get_public_url(
-            detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
-        )
+        return await bucket.get_public_url(detection.bucket_key)
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
@@ -216,5 +215,6 @@ async def delete_detection(
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key, s3_bucket.get_bucket_name(camera.organization_id))
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    await bucket.delete_file(detection.bucket_key)
     await detections.delete(detection_id)

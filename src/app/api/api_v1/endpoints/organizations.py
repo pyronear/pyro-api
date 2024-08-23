@@ -13,7 +13,7 @@ from app.crud import OrganizationCRUD
 from app.models import Organization, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.organizations import OrganizationCreate
-from app.services.storage import s3_bucket
+from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -29,8 +29,8 @@ async def register_organization(
         token_payload.sub, event="organization-create", properties={"organization_name": payload.name}
     )
     organization = await organizations.create(payload)
-    bucket_name = s3_bucket.get_bucket_name(organization.id)
-    if not (await s3_bucket.create_bucket(bucket_name)):
+    bucket_name = s3_service.resolve_bucket_name(organization.id)
+    if not (await s3_service.create_bucket(bucket_name)):
         # Delete the organization if the bucket creation failed
         await organizations.delete(organization.id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
@@ -69,7 +69,7 @@ async def delete_organization(
     telemetry_client.capture(
         token_payload.sub, event="organizations-deletion", properties={"organization_id": organization_id}
     )
-    bucket_name = s3_bucket.get_bucket_name(organization_id)
-    if not (await s3_bucket.delete_bucket(bucket_name)):
+    bucket_name = s3_service.resolve_bucket_name(organization_id)
+    if not (await s3_service.delete_bucket(bucket_name)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
     await organizations.delete(organization_id)
