@@ -6,17 +6,24 @@
 import asyncio
 import hashlib
 from datetime import datetime
-from itertools import starmap
 from mimetypes import guess_extension
-from typing import List, Tuple, cast
+from typing import List, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
+from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD
 from app.models import Camera, Detection, Role, UserRole
-from app.schemas.detections import DetectionCreate, DetectionLabel, DetectionUrl, DetectionWithUrl
+from app.schemas.detections import (
+    BOXES_PATTERN,
+    COMPILED_BOXES_PATTERN,
+    DetectionCreate,
+    DetectionLabel,
+    DetectionUrl,
+    DetectionWithUrl,
+)
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_bucket
 from app.services.telemetry import telemetry_client
@@ -26,9 +33,12 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    bboxes: List[Tuple[float, float, float, float, float]] = Form(
+    bboxes: str = Form(
         ...,
-        description="formatted string representing a list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
+        description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
+        pattern=BOXES_PATTERN,
+        min_length=2,
+        max_length=2 + 5 * (2 + settings.DECIMALS_PER_COORD) + 4 * 2,
     ),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
@@ -36,6 +46,13 @@ async def create_detection(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
+
+    # Throw an error if the format is invalid and can't be captured by the regex
+    if any(box[0] >= box[2] or box[1] >= box[3] for box in COMPILED_BOXES_PATTERN.findall(bboxes)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
+        )
 
     # Upload media
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
@@ -64,7 +81,7 @@ async def create_detection(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Data was corrupted during upload",
         )
-    # No need to create the Wildfire and Detection in the same commit
+    # Format the string
     return await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
@@ -136,9 +153,8 @@ async def fetch_unlabeled_detections(
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
-    async def get_url(detection: Detection) -> Tuple[Detection, str]:
-        url = await s3_bucket.get_public_url(detection.bucket_key)
-        return detection, url
+    async def get_url(detection: Detection) -> str:
+        return await s3_bucket.get_public_url(detection.bucket_key)
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
@@ -154,9 +170,9 @@ async def fetch_unlabeled_detections(
 
     # Launch all get_url calls in parallel
     url_tasks = [get_url(detection) for detection in all_unck_detections]
-    tuple_list = await asyncio.gather(*url_tasks)
+    urls = await asyncio.gather(*url_tasks)
 
-    return list(starmap(DetectionWithUrl.from_detection, tuple_list))
+    return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
