@@ -39,7 +39,12 @@ ROUTES: Dict[str, str] = {
 }
 
 
-def dump_bbox_to_json(
+def _to_str(coord: float) -> str:
+    """Format string conditionally"""
+    return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
+
+
+def _dump_bbox_to_json(
     bboxes: List[Tuple[float, float, float, float, float]],
 ) -> str:
     """Performs a custom JSON dump for list of coordinates
@@ -53,7 +58,10 @@ def dump_bbox_to_json(
         raise ValueError("coordinates are expected to be relative")
     if any(len(bbox) != 5 for bbox in bboxes):
         raise ValueError("Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf")
-    box_strs = (f"({xmin:.3f},{ymin:.3f},{xmax:.3f},{ymax:.3f},{conf:.3f})" for xmin, ymin, xmax, ymax, conf in bboxes)
+    box_strs = (
+        f"({_to_str(xmin)},{_to_str(ymin)},{_to_str(xmax)},{_to_str(ymax)},{_to_str(conf)})"
+        for xmin, ymin, xmax, ymax, conf in bboxes
+    )
     return f"[{','.join(box_strs)}]"
 
 
@@ -136,7 +144,7 @@ class Client:
             headers=self.headers,
             data={
                 "azimuth": azimuth,
-                "bboxes": dump_bbox_to_json(bboxes),
+                "bboxes": _dump_bbox_to_json(bboxes),
             },
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
