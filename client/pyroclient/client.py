@@ -222,7 +222,7 @@ class Client:
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
-        >>> response = api_client.fetch_unacknowledged_detections("2023-07-04")
+        >>> response = api_client.fetch_unacknowledged_detections("2023-07-04T00:00:00")
 
         Returns:
             HTTP response
