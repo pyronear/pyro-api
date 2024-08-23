@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -29,8 +28,8 @@ class Azimuth(BaseModel):
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
-    bboxes: Union[str, None] = Field(
-        None,
+    bboxes: str = Field(
+        "[]",
         description="formatted string representing a list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
         json_schema_extra={"examples": ["[(0.1,0.1,0.9,0.9,0.5)]"]},
     )

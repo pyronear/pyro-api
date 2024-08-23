@@ -30,8 +30,8 @@ def test_cam_workflow(cam_token, mock_img):
     response = cam_client.create_detection(mock_img, 123.2, None)
     assert response.status_code == 201, print(response.__dict__)
     # Check that adding bboxes works
-    response = cam_client.create_detection(mock_img, 123.2, [])
-    assert response.status_code == 201, print(response.__dict__)
+    with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
+        cam_client.create_detection(mock_img, 123.2, [])
     response = cam_client.create_detection(mock_img, 123.2, [(0, 0, 1.0, 0.9, 0.5)])
     assert response.status_code == 201, print(response.__dict__)
     response = cam_client.create_detection(mock_img, 123.2, [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)])

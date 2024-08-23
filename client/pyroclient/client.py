@@ -120,7 +120,7 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
-        bboxes: Union[List[Tuple[float, float, float, float, float]], None] = None,
+        bboxes: List[Tuple[float, float, float, float, float]],
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -137,6 +137,8 @@ class Client:
         Returns:
             HTTP response
         """
+        if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0:
+            raise ValueError("bboxes must be a non-empty list of tuples")
         return requests.post(
             self.routes["detections-create"],
             headers=self.headers,
