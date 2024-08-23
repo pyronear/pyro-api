@@ -172,7 +172,7 @@ async def test_fetch_unlabeled_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert [{k: v for k, v in det if k != "url"} for det in response.json()] == expected_result
+        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
         assert all(det["url"].startswith("http://") for det in response.json())
 
 
