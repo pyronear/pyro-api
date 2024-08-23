@@ -50,7 +50,6 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("camera_id", sa.Integer(), nullable=False),
         sa.Column("azimuth", sa.Float(), nullable=False),
-        sa.Column("localization", sa.String(200), default=None, nullable=True),
         sa.Column("bucket_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("is_wildfire", sa.Boolean(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
