@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import asyncio
 import hashlib
 import logging
 from datetime import datetime
@@ -163,8 +162,8 @@ async def fetch_unlabeled_detections(
 
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
 
-    async def get_url(detection: Detection) -> str:
-        return await bucket.get_public_url(detection.bucket_key)
+    def get_url(detection: Detection) -> str:
+        return bucket.get_public_url(detection.bucket_key)
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
@@ -178,9 +177,7 @@ async def fetch_unlabeled_detections(
             inequality_pair=("created_at", ">=", from_date),
         )
 
-    # Launch all get_url calls in parallel
-    url_tasks = [get_url(detection) for detection in all_unck_detections]
-    urls = await asyncio.gather(*url_tasks)
+    urls = (get_url(detection) for detection in all_unck_detections)
 
     return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
 
