@@ -16,6 +16,7 @@ from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
 from app.models import Camera, Detection, Organization, User
+from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
 
@@ -174,8 +175,14 @@ async def organization_session(async_session: AsyncSession):
         text(f"ALTER SEQUENCE organization_id_seq RESTART WITH {max(entry['id'] for entry in ORGANIZATION_TABLE) + 1}")
     )
     await async_session.commit()
+    # Create buckets
+    for entry in ORGANIZATION_TABLE:
+        await s3_service.create_bucket(s3_service.resolve_bucket_name(entry["id"]))
     yield async_session
     await async_session.rollback()
+    # Delete buckets
+    for entry in ORGANIZATION_TABLE:
+        await s3_service.delete_bucket(s3_service.resolve_bucket_name(entry["id"]))
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -218,7 +225,14 @@ async def detection_session(
         text(f"ALTER SEQUENCE detection_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}")
     )
     await user_session.commit()
+    # Create bucket files
+    for entry in DET_TABLE:
+        await s3_service.upload_file(s3_service.resolve_bucket_name(entry["camera_id"]), entry["bucket_key"], b"")
     yield user_session
+    await user_session.rollback()
+    # Delete bucket files
+    for entry in DET_TABLE:
+        await s3_service.delete_file(s3_service.resolve_bucket_name(entry["camera_id"]), entry["bucket_key"])
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
