@@ -207,7 +207,8 @@
 <span class="c1"># This program is licensed under the Apache License 2.0.</span>
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 <span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span> <span class="nn">requests</span>
@@ -233,12 +234,39 @@
     <span class="s2">&quot;detections-create&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
     <span class="s2">&quot;detections-label&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/label&quot;</span><span class="p">,</span>
     <span class="s2">&quot;detections-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;detections-fetch-unl&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/unlabeled/fromdate&quot;</span><span class="p">,</span>
     <span class="s2">&quot;detections-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
     <span class="c1"># ORGS</span>
     <span class="c1">#################</span>
     <span class="s2">&quot;organizations-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/organizations&quot;</span><span class="p">,</span>
 <span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_to_str</span><span class="p">(</span><span class="n">coord</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format string conditionally&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_dump_bbox_to_json</span><span class="p">(</span>
+    <span class="n">bboxes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs a custom JSON dump for list of coordinates</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        the JSON string dump with 3 decimal precision</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">coord</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coord</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">bboxes</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">bbox</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coordinates are expected to be relative&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bbox</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">bboxes</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf&quot;</span><span class="p">)</span>
+    <span class="n">box_strs</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">for</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">conf</span> <span class="ow">in</span> <span class="n">bboxes</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">box_strs</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span>
 
 
 <div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">:</span>
@@ -296,25 +324,32 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">bboxes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Notify the detection of a wildfire on the picture taken by a camera.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, azimuth=124.2)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            media: byte data of the picture</span>
 <span class="sd">            azimuth: the azimuth of the camera when the picture was taken</span>
+<span class="sd">            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bboxes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bboxes must be a non-empty list of tuples with a maximum of 5 boxes&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-create&quot;</span><span class="p">],</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">},</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
+                <span class="s2">&quot;bboxes&quot;</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
+            <span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
             <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
         <span class="p">)</span></div>
@@ -388,6 +423,24 @@
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch&quot;</span><span class="p">],</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.fetch_unlabeled_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_unlabeled_detections">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_unlabeled_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections accessible to the authenticated user</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_unacknowledged_detections(&quot;2023-07-04T00:00:00&quot;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;from_date&quot;</span><span class="p">:</span> <span class="n">from_date</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch-unl&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
