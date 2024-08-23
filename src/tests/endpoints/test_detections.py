@@ -18,8 +18,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {"azimuth": 45.6, "bboxes": None}, 201, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "xyxyconf"}, 422, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "[[x,y,x,y,conf]]"}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[[0.6,0.6,0.6,0.6]]"}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[[0.6,0.6,0.6,0.6,0.6]]"}, 201, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": [("x", "y", "x", "y", "conf")]}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": [(0.6, 0.6, 0.6, 0.6)]}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": [(0.6, 0.6, 0.6, 0.6, 0.6)]}, 201, None),
     ],
 )
 @pytest.mark.asyncio
@@ -245,7 +246,10 @@ async def test_get_detection_url(
     if detection_id is None:
         auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
         response = await async_client.post(
-            "/detections", data={"azimuth": 45.6}, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+            "/detections",
+            data={"azimuth": 45.6, "bboxes": [(0.6, 0.6, 0.6, 0.6, 0.6)]},
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
         )
         assert response.status_code == 201, print(response.__dict__)
     det_id = detection_id or response.json()["id"]
