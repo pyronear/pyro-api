@@ -163,7 +163,9 @@ async def fetch_unlabeled_detections(
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
     async def get_url(detection: Detection) -> str:
-        return await s3_bucket.get_public_url(detection.bucket_key)
+        return await s3_bucket.get_public_url(
+            detection.bucket_key, s3_bucket.get_bucket_name(token_payload.organization_id)
+        )
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
