@@ -38,7 +38,7 @@ async def create_detection(
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
         pattern=BOXES_PATTERN,
         min_length=2,
-        max_length=2 + 5 * (2 + settings.DECIMALS_PER_COORD) + 4 * 2,
+        max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
