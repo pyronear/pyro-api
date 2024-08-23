@@ -8,7 +8,6 @@ Table "User" as U {
   "id" int [not null]
   "organization_id" int [ref: > O.id, not null]
   "role" userrole [not null]
-  "organization_id" int [ref: > S.id, not null]
   "login" str [not null]
   "hashed_password" str [not null]
   "created_at" timestamp [not null]

@@ -38,8 +38,8 @@ class S3Bucket:
         except EndpointConnectionError:
             raise ValueError(f"unable to access endpoint {endpoint_url}")
         except ClientError:
-            raise ValueError("unable to access bucket admin")
-        logger.info(f"S3 bucket admin connected on {endpoint_url}")
+            raise ValueError(f"unable to access bucket {settings.SUPERADMIN_ORG}")
+        logger.info(f"S3 bucket {settings.SUPERADMIN_ORG} connected on {endpoint_url}")
         self.proxy_url = proxy_url
 
     async def get_file_metadata(self, bucket_key: str, bucket_name: str) -> Dict[str, Any]:
@@ -108,7 +108,8 @@ class S3Bucket:
             logger.error(e)
             return False
 
-    def get_bucket_name(self, organization_id: int) -> str:
+    @staticmethod
+    def get_bucket_name(organization_id: int) -> str:
         return f"alert-api-{organization_id!s}"
 
 

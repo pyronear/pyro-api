@@ -72,7 +72,7 @@ async def delete_organization(
     telemetry_client.capture(
         token_payload.sub, event="organizations-deletion", properties={"organization_id": organization_id}
     )
-    # bucket_name = s3_bucket.get_bucket_name(organization_id)
-    # if not (await s3_bucket.delete_bucket(bucket_name)):
-    #    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
+    bucket_name = s3_bucket.get_bucket_name(organization_id)
+    if not (await s3_bucket.delete_bucket(bucket_name)):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
     await organizations.delete(organization_id)
