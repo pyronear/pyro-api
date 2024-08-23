@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -25,7 +25,7 @@ class InstallationIn(BaseModel):
     end_ts: Optional[datetime] = Field(
         None,
         description="timestamp of event end",
-        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None) + timedelta(weeks=52)]},
     )
     is_trustworthy: bool = Field(True, description="whether alerts from this installation can be trusted")
 
@@ -41,7 +41,7 @@ class InstallationUpdate(InstallationIn):
     end_ts: Optional[datetime] = Field(
         ...,
         description="timestamp of event end",
-        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None)]},
+        json_schema_extra={"examples": [datetime.utcnow().replace(tzinfo=None) + timedelta(weeks=52)]},
     )
     is_trustworthy: bool = Field(..., description="whether alerts from this installation can be trusted")
     _validate_end_ts = field_validator("end_ts")(validate_datetime_none)
