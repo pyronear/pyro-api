@@ -141,11 +141,11 @@ async def test_fetch_detections(
         (None, "2018-06-06T00:00:00", 401, "Not authenticated", None),
         (0, "", 422, None, None),
         (0, "old-date", 422, None, None),
-        (0, "2018-19-20", 422, None, None),
-        (0, "2018-06-06", 200, None, [pytest.detection_table[2]]),
+        (0, "2018-19-20T00:00:00", 422, None, None),  # impossible date
+        (0, "2018-06-06", 422, None, None),  # datetime != date
         (0, "2018-06-06T00:00:00", 200, None, [pytest.detection_table[2]]),
-        (1, "2018-06-06", 200, None, []),
-        (2, "2018-06-06", 200, None, [pytest.detection_table[2]]),
+        (1, "2018-06-06T00:00:00", 200, None, []),
+        (2, "2018-06-06T00:00:00", 200, None, [pytest.detection_table[2]]),
     ],
 )
 @pytest.mark.asyncio
