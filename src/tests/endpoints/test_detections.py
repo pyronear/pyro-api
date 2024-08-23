@@ -8,16 +8,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.mark.parametrize(
     ("user_idx", "cam_idx", "payload", "status_code", "status_detail"),
     [
-        (None, None, {"azimuth": 45.6}, 401, "Not authenticated"),
-        (0, None, {"azimuth": 45.6}, 403, "Incompatible token scope."),
-        (1, None, {"azimuth": 45.6}, 403, "Incompatible token scope."),
-        (2, None, {"azimuth": 45.6}, 403, "Incompatible token scope."),
+        (None, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated"),
+        (0, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
+        (1, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
+        (2, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
         (None, 0, {"azimuth": "hello"}, 422, None),
-        # (None, 0, {"azimuth": "45.6"}, 422, None),  # This is odd, it works
         (None, 0, {}, 422, None),
-        (None, 0, {"azimuth": 45.6, "localization": None}, 201, None),
-        (None, 1, {"azimuth": 45.6, "localization": "xyxyconf"}, 400, "Invalid localization format: xyxyconf"),
-        (None, 1, {"azimuth": 45.6, "localization": "[[0.6,0.6,0.6,0.6,0.6]]"}, 201, None),
+        (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 201, None),
     ],
 )
 @pytest.mark.asyncio
@@ -134,12 +134,16 @@ async def test_fetch_detections(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_result"),
+    ("user_idx", "from_date", "status_code", "status_detail", "expected_result"),
     [
-        (None, 401, "Not authenticated", None),
-        (0, 200, None, [pytest.detection_table[2]]),
-        (1, 200, None, []),
-        (2, 200, None, [pytest.detection_table[2]]),
+        (None, "2018-06-06T00:00:00", 401, "Not authenticated", None),
+        (0, "", 422, None, None),
+        (0, "old-date", 422, None, None),
+        (0, "2018-19-20T00:00:00", 422, None, None),  # impossible date
+        (0, "2018-06-06", 422, None, None),  # datetime != date
+        (0, "2018-06-06T00:00:00", 200, None, [pytest.detection_table[2]]),
+        (1, "2018-06-06T00:00:00", 200, None, []),
+        (2, "2018-06-06T00:00:00", 200, None, [pytest.detection_table[2]]),
     ],
 )
 @pytest.mark.asyncio
@@ -147,6 +151,7 @@ async def test_fetch_unlabeled_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     user_idx: Union[int, None],
+    from_date: str,
     status_code: int,
     status_detail: Union[str, None],
     expected_result: Union[List[Dict[str, Any]], None],
@@ -159,13 +164,14 @@ async def test_fetch_unlabeled_detections(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", headers=auth)
+    response = await async_client.get(f"/detections/unlabeled/fromdate?from_date={from_date}", headers=auth)
 
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json()[0] == expected_result
+        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
+        assert all(det["url"].startswith("http://") for det in response.json())
 
 
 @pytest.mark.parametrize(
@@ -218,9 +224,9 @@ async def test_label_detection(
     [
         (None, 1, 401, "Not authenticated"),
         (0, 100, 404, "Table Detection has no corresponding entry."),
-        (0, None, 200, None),
-        (1, None, 200, None),
-        (2, None, 403, "Access forbidden."),
+        (0, 1, 200, None),
+        (1, 1, 200, None),
+        (2, 1, 403, "Access forbidden."),
     ],
 )
 @pytest.mark.asyncio
@@ -233,14 +239,6 @@ async def test_get_detection_url(
     status_code: int,
     status_detail: Union[str, None],
 ):
-    # We aren't actually putting files in the bucket during conftest. So we create some here to retrieve the URL
-    if detection_id is None:
-        auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
-        response = await async_client.post(
-            "/detections", data={"azimuth": 45.6}, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
-        )
-        assert response.status_code == 201, print(response.__dict__)
-    det_id = detection_id or response.json()["id"]
     auth = None
     if isinstance(user_idx, int):
         auth = pytest.get_token(
@@ -249,7 +247,7 @@ async def test_get_detection_url(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get(f"/detections/{det_id}/url", headers=auth)
+    response = await async_client.get(f"/detections/{detection_id}/url", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail

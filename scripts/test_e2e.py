@@ -87,13 +87,18 @@ def main(args):
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
-    detection_id = requests.post(
+    response = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6, "localization": None},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
-    ).json()["id"]
+    )
+    assert response.status_code == 201, response.text
+    detection_id = response.json()["id"]
+
+    # Fetch unlabeled detections
+    api_request("get", f"{args.endpoint}/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", agent_auth)
 
     # Acknowledge it
     api_request("patch", f"{args.endpoint}/detections/{detection_id}/label", agent_auth, {"is_wildfire": True})

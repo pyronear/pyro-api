@@ -43,6 +43,13 @@ class Settings(BaseSettings):
     JWT_UNLIMITED: int = 60 * 24 * 365
     JWT_ALGORITHM: str = "HS256"
 
+    # DB conversion
+    MAX_BOXES_PER_DETECTION: int = 5
+    DECIMALS_PER_COORD: int = 3
+    MAX_BBOX_STR_LENGTH: int = (
+        2 + MAX_BOXES_PER_DETECTION * (2 + 5 * (2 + DECIMALS_PER_COORD) + 4 * 2) + (MAX_BOXES_PER_DETECTION - 1) * 2
+    )
+
     # Storage
     S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]
     S3_SECRET_KEY: str = os.environ["S3_SECRET_KEY"]
