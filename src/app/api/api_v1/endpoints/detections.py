@@ -8,7 +8,7 @@ import hashlib
 from datetime import datetime
 from itertools import starmap
 from mimetypes import guess_extension
-from typing import List, Tuple, Union, cast
+from typing import List, Tuple, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -26,7 +26,10 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    bboxes: Union[str, None] = Form(None, pattern=r"^\[\[\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+,\d+\.\d+\]\]$"),
+    bboxes: List[Tuple[float, float, float, float, float]] = Form(
+        ...,
+        description="formatted string representing a list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
+    ),
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
