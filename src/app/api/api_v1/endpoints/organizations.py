@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-import logging
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
@@ -19,9 +18,6 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
-logging.basicConfig(level=logging.WARNING)
-logging.getLogger("uvicorn.warning")
-
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new organization")
 async def register_organization(
@@ -35,8 +31,9 @@ async def register_organization(
     organization = await organizations.create(payload)
     bucket_name = s3_bucket.get_bucket_name(organization.id)
     if not (await s3_bucket.create_bucket(bucket_name)):
+        # Delete the organization if the bucket creation failed
+        await organizations.delete(organization.id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
-    logging.info(f"Bucket {bucket_name} created successfully.")
     return organization
 
 
