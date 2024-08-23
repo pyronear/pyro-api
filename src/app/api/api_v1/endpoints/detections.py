@@ -70,7 +70,7 @@ async def create_detection(
     bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
     bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
-    if not (await bucket.upload_file(bucket_key, file.file)):
+    if not (await bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 
@@ -125,14 +125,14 @@ async def get_detection_url(
     if UserRole.ADMIN in token_payload.scopes:
         camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-        return DetectionUrl(url=await bucket.get_public_url(detection.bucket_key))
+        return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    return DetectionUrl(url=await bucket.get_public_url(detection.bucket_key))
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
