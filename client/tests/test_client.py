@@ -1,5 +1,6 @@
 import pytest
-from requests.exceptions import ConnectionError, ReadTimeout
+from requests.exceptions import ConnectionError as ConnError
+from requests.exceptions import ReadTimeout
 
 from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestError
@@ -9,7 +10,7 @@ from pyroclient.exceptions import HTTPRequestError
     ("token", "host", "timeout", "expected_error"),
     [
         ("invalid_token", "http://localhost:5050", 10, HTTPRequestError),
-        (pytest.admin_token, "http://localhost:8003", 10, ConnectionError),
+        (pytest.admin_token, "http://localhost:8003", 10, ConnError),
         (pytest.admin_token, "http://localhost:5050", 0.00001, ReadTimeout),
         (pytest.admin_token, "http://localhost:5050", 10, None),
     ],
