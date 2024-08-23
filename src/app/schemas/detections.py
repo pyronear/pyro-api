@@ -4,6 +4,8 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
+from typing import List, Tuple
+
 from pydantic import BaseModel, Field
 
 from app.models import Detection
@@ -28,10 +30,10 @@ class Azimuth(BaseModel):
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
     bucket_key: str
-    bboxes: str = Field(
-        "[]",
-        description="formatted string representing a list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
-        json_schema_extra={"examples": ["[(0.1,0.1,0.9,0.9,0.5)]"]},
+    bboxes: List[Tuple[float, float, float, float, float]] = Field(
+        ...,
+        description="list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
+        json_schema_extra={"examples": [[(0.1, 0.1, 0.9, 0.9, 0.5)]]},
     )
 
 
