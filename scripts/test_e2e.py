@@ -90,7 +90,7 @@ def main(args):
     response = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6, "bboxes": "[(.1,.1,.8,.8,.5)]"},
+        data={"azimuth": 45.6, "bboxes": [(0.1, 0.1, 0.8, 0.8, 0.5)]},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     )
