@@ -70,7 +70,7 @@ async def create_detection(
     bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
     bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
-    if not (await bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
+    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 
@@ -213,5 +213,5 @@ async def delete_detection(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    await bucket.delete_file(detection.bucket_key)
+    bucket.delete_file(detection.bucket_key)
     await detections.delete(detection_id)

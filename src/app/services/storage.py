@@ -52,16 +52,16 @@ class S3Bucket:
             logger.warning(e)
             return False
 
-    async def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
+    def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        await self._s3.upload_fileobj(file_binary, self.name, bucket_key)
+        self._s3.upload_fileobj(file_binary, self.name, bucket_key)
         return True
 
-    async def delete_file(self, bucket_key: str) -> None:
+    def delete_file(self, bucket_key: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
-        await self._s3.delete_object(Bucket=self.name, Key=bucket_key)
+        self._s3.delete_object(Bucket=self.name, Key=bucket_key)
 
     def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
         """Generate a temporary public URL for a bucket file"""
@@ -115,10 +115,10 @@ class S3Service:
         logger.info(f"S3 connected on {endpoint_url}")
         self.proxy_url = proxy_url
 
-    async def create_bucket(self, bucket_name: str) -> bool:
+    def create_bucket(self, bucket_name: str) -> bool:
         """Create a new bucket in S3 storage"""
         try:
-            await self._s3.create_bucket(
+            self._s3.create_bucket(
                 Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": self._s3.meta.region_name}
             )
             return True
@@ -135,7 +135,7 @@ class S3Service:
         bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
         try:
             await bucket.delete_items()
-            await self._s3.delete_bucket(Bucket=bucket_name)
+            self._s3.delete_bucket(Bucket=bucket_name)
             return True
         except ClientError as e:
             logger.warning(e)

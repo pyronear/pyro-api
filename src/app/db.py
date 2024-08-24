@@ -48,7 +48,7 @@ async def init_db() -> None:
         else:
             organization_id = organization.id
         # Create the bucket
-        await s3_service.create_bucket(s3_service.resolve_bucket_name(organization_id))
+        s3_service.create_bucket(s3_service.resolve_bucket_name(organization_id))
 
         # Check if admin exists
         statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)
