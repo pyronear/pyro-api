@@ -1,4 +1,3 @@
-
 Enum "userrole" {
   "admin"
   "agent"

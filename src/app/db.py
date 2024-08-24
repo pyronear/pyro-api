@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.core.security import hash_password
 from app.models import Organization, User, UserRole
+from app.services.storage import s3_service
 
 __all__ = ["get_session", "init_db"]
 
@@ -34,6 +35,7 @@ async def init_db() -> None:
     async with AsyncSession(engine) as session:
         logger.info("Initializing PostgreSQL database...")
 
+        # Create the superadmin organization
         statement = select(Organization).where(Organization.name == settings.SUPERADMIN_ORG)  # type: ignore[var-annotated]
         results = await session.execute(statement=statement)
         organization = results.scalar_one_or_none()
@@ -45,6 +47,8 @@ async def init_db() -> None:
             organization_id = new_orga.id
         else:
             organization_id = organization.id
+        # Create the bucket
+        s3_service.create_bucket(s3_service.resolve_bucket_name(organization_id))
 
         # Check if admin exists
         statement = select(User).where(User.login == settings.SUPERADMIN_LOGIN)

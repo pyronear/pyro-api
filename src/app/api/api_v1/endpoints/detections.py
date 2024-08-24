@@ -3,8 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import asyncio
 import hashlib
+import logging
 from datetime import datetime
 from mimetypes import guess_extension
 from typing import List, cast
@@ -25,7 +25,7 @@ from app.schemas.detections import (
     DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
-from app.services.storage import s3_bucket
+from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -67,15 +67,19 @@ async def create_detection(
     bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
-    # Failed upload
-    if not (await s3_bucket.upload_file(bucket_key, file.file)):  # type: ignore[arg-type]
+    bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
+    bucket = s3_service.get_bucket(bucket_name)
+    # Upload the file
+    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
+    logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
+
     # Data integrity check
-    file_meta = await s3_bucket.get_file_metadata(bucket_key)
+    file_meta = bucket.get_file_metadata(bucket_key)
     # Corrupted file
     if md5_hash != file_meta["ETag"].replace('"', ""):
         # Delete the corrupted upload
-        await s3_bucket.delete_file(bucket_key)
+        bucket.delete_file(bucket_key)
         # Raise the exception
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -119,13 +123,16 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     if UserRole.ADMIN in token_payload.scopes:
-        return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
+        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+        return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
-    return DetectionUrl(url=await s3_bucket.get_public_url(detection.bucket_key))
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -153,8 +160,10 @@ async def fetch_unlabeled_detections(
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
 
-    async def get_url(detection: Detection) -> str:
-        return await s3_bucket.get_public_url(detection.bucket_key)
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+
+    def get_url(detection: Detection) -> str:
+        return bucket.get_public_url(detection.bucket_key)
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
@@ -168,9 +177,7 @@ async def fetch_unlabeled_detections(
             inequality_pair=("created_at", ">=", from_date),
         )
 
-    # Launch all get_url calls in parallel
-    url_tasks = [get_url(detection) for detection in all_unck_detections]
-    urls = await asyncio.gather(*url_tasks)
+    urls = (get_url(detection) for detection in all_unck_detections)
 
     return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
 
@@ -199,9 +206,12 @@ async def label_detection(
 async def delete_detection(
     detection_id: int = Path(..., gt=0),
     detections: DetectionCRUD = Depends(get_detection_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
-    await s3_bucket.delete_file(detection.bucket_key)
+    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    bucket.delete_file(detection.bucket_key)
     await detections.delete(detection_id)

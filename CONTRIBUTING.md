@@ -140,7 +140,6 @@ None :)
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
-- `S3_BUCKET_NAME`: the name of the storage bucket
 
 #### Production-only values
 - `ACME_EMAIL`: the email linked to your certificate for HTTPS

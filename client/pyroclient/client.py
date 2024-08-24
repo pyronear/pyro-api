@@ -27,7 +27,7 @@ ROUTES: Dict[str, str] = {
     #################
     # DETECTIONS
     #################
-    "detections-create": "/detections",
+    "detections-create": "/detections/",
     "detections-label": "/detections/{det_id}/label",
     "detections-fetch": "/detections",
     "detections-fetch-unl": "/detections/unlabeled/fromdate",
