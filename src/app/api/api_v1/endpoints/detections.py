@@ -79,7 +79,7 @@ async def create_detection(
     # Corrupted file
     if md5_hash != file_meta["ETag"].replace('"', ""):
         # Delete the corrupted upload
-        await bucket.delete_file(bucket_key)
+        bucket.delete_file(bucket_key)
         # Raise the exception
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
