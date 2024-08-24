@@ -6,6 +6,7 @@ from typing import AsyncGenerator, Dict, Generator
 import pytest
 import pytest_asyncio
 import requests
+from botocore.exceptions import ClientError
 from httpx import AsyncClient
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, text
@@ -182,8 +183,11 @@ async def organization_session(async_session: AsyncSession):
     yield async_session
     await async_session.rollback()
     # Delete buckets
-    for entry in ORGANIZATION_TABLE:
-        await s3_service.delete_bucket(s3_service.resolve_bucket_name(entry["id"]))
+    try:
+        for entry in ORGANIZATION_TABLE:
+            await s3_service.delete_bucket(s3_service.resolve_bucket_name(entry["id"]))
+    except ClientError:
+        pass
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -233,9 +237,12 @@ async def detection_session(
     yield user_session
     await user_session.rollback()
     # Delete bucket files
-    for entry in DET_TABLE:
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
-        bucket.delete_file(entry["bucket_key"])
+    try:
+        for entry in DET_TABLE:
+            bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
+            bucket.delete_file(entry["bucket_key"])
+    except ClientError:
+        pass
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
