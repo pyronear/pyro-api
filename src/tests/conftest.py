@@ -186,7 +186,7 @@ async def organization_session(async_session: AsyncSession):
     try:
         for entry in ORGANIZATION_TABLE:
             await s3_service.delete_bucket(s3_service.resolve_bucket_name(entry["id"]))
-    except ClientError:
+    except ValueError:
         pass
 
 
