@@ -30,7 +30,7 @@ async def register_organization(
     )
     organization = await organizations.create(payload)
     bucket_name = s3_service.resolve_bucket_name(organization.id)
-    if not (await s3_service.create_bucket(bucket_name)):
+    if not s3_service.create_bucket(bucket_name):
         # Delete the organization if the bucket creation failed
         await organizations.delete(organization.id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")

@@ -1,4 +1,5 @@
 import asyncio
+import io
 from datetime import datetime
 from typing import AsyncGenerator, Dict, Generator
 
@@ -177,7 +178,7 @@ async def organization_session(async_session: AsyncSession):
     await async_session.commit()
     # Create buckets
     for entry in ORGANIZATION_TABLE:
-        await s3_service.create_bucket(s3_service.resolve_bucket_name(entry["id"]))
+        s3_service.create_bucket(s3_service.resolve_bucket_name(entry["id"]))
     yield async_session
     await async_session.rollback()
     # Delete buckets
@@ -227,12 +228,14 @@ async def detection_session(
     await user_session.commit()
     # Create bucket files
     for entry in DET_TABLE:
-        await s3_service.upload_file(s3_service.resolve_bucket_name(entry["camera_id"]), entry["bucket_key"], b"")
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
+        bucket.upload_file(entry["bucket_key"], io.BytesIO(b""))
     yield user_session
     await user_session.rollback()
     # Delete bucket files
     for entry in DET_TABLE:
-        await s3_service.delete_file(s3_service.resolve_bucket_name(entry["camera_id"]), entry["bucket_key"])
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
+        bucket.delete_file(entry["bucket_key"])
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
