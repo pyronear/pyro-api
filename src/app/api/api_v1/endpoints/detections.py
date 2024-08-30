@@ -10,11 +10,23 @@ from mimetypes import guess_extension
 from typing import List, cast
 
 import magic
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path,
+    Query,
+    Security,
+    UploadFile,
+    status,
+)
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
+from app.api.dependencies import dispatch_webhook, get_camera_crud, get_detection_crud, get_jwt, get_webhook_crud
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD
+from app.crud import CameraCRUD, DetectionCRUD, WebhookCRUD
 from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -33,6 +45,7 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
+    background_tasks: BackgroundTasks,
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
@@ -43,6 +56,7 @@ async def create_detection(
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
+    webhooks: WebhookCRUD = Depends(get_webhook_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -86,9 +100,15 @@ async def create_detection(
             detail="Data was corrupted during upload",
         )
     # Format the string
-    return await detections.create(
+    det = await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
+    # Webhooks
+    whs = await webhooks.fetch_all()
+    if any(whs):
+        for webhook in await webhooks.fetch_all():
+            background_tasks.add_task(dispatch_webhook, webhook.url, det)
+    return det
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")

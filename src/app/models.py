@@ -64,3 +64,8 @@ class Detection(SQLModel, table=True):
 class Organization(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
+
+
+class Webhook(SQLModel, table=True):
+    id: int = Field(None, primary_key=True)
+    url: str = Field(..., nullable=False, unique=True)
