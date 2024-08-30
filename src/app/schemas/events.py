@@ -40,6 +40,13 @@ class EventOut(EventIn, _CreatedAt, _Id):
 
 class EventPayload(EventOut):
     media_url: str = Field(..., description="url of the media associated to the event")
+    localization: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="list of bounding boxes",
+        json_schema_extra={"strip_whitespace": True},
+    )
+    device_id: int = Field(..., gt=0, description="device ID")
 
 
 class Acknowledgement(BaseModel):

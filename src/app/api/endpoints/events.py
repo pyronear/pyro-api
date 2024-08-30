@@ -153,7 +153,7 @@ async def fetch_unacknowledged_events(
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
     if await is_admin_access(requester.id):
         retrieved_events = (
-            session.query(Event, Media.bucket_key)
+            session.query(Event, Media.bucket_key, Alert.localization, Alert.device_id)
             .select_from(Event)
             .filter(Event.is_acknowledged.is_(False))
             .join(Alert, Event.id == Alert.event_id)
@@ -161,7 +161,7 @@ async def fetch_unacknowledged_events(
         )
     else:
         retrieved_events = (
-            session.query(Event, Media.bucket_key)
+            session.query(Event, Media.bucket_key, Alert.localization, Alert.device_id)
             .select_from(Event)
             .filter(Event.is_acknowledged.is_(False))
             .join(Alert, Event.id == Alert.event_id)
@@ -171,8 +171,13 @@ async def fetch_unacknowledged_events(
             .filter(Access.group_id == requester.group_id)
         )
     return [
-        EventPayload(**event.__dict__, media_url=await s3_bucket.get_public_url(bucket_key))
-        for event, bucket_key in retrieved_events.all()
+        EventPayload(
+            **event.__dict__,
+            media_url=await s3_bucket.get_public_url(bucket_key),
+            localization=loc,
+            device_id=device_id,
+        )
+        for event, bucket_key, loc, device_id in retrieved_events.all()
     ]
 
 
