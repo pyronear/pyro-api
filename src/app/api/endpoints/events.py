@@ -7,7 +7,7 @@ from typing import Annotated, List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
-from sqlalchemy import and_
+from sqlalchemy import and_, func, select
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
@@ -148,28 +148,79 @@ async def fetch_unacknowledged_events(
     requester=Security(get_current_access, scopes=[AccessType.admin, AccessType.user]), session=Depends(get_db)
 ):
     """
-    Retrieves the list of non confirmed alerts and their information
+    Retrieves the last 10 un-acknowledged events and their 10 first alerts
     """
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
+    # Last 10 unacknowledged events
+    subquery_events = (
+        session
+        .query(Event.id)
+        .filter(Event.is_acknowledged.is_(False))
+        .order_by(Event.id.desc())
+        .limit(10)
+        .subquery()
+    )
     if await is_admin_access(requester.id):
-        retrieved_events = (
-            session.query(Event, Media.bucket_key, Alert.localization, Alert.device_id)
-            .select_from(Event)
-            .filter(Event.is_acknowledged.is_(False))
-            .join(Alert, Event.id == Alert.event_id)
-            .join(Media, Alert.media_id == Media.id)
+        # Alerts associated to the last 10 unacknowledged events
+        subquery_alerts = (
+            session
+            .query(
+                Alert.id.label('alert_id'),  # Alias the columns to avoid ambiguity
+                Alert.event_id,
+                Alert.localization,
+                Alert.device_id,
+                Alert.media_id,
+                func.dense_rank().over(
+                    partition_by=Alert.event_id,
+                    order_by=Alert.id.asc()
+                ).label('rank')
+            )
+            .filter(Alert.event_id.in_(select([subquery_events.c.id])))
+            .subquery()
         )
     else:
-        retrieved_events = (
-            session.query(Event, Media.bucket_key, Alert.localization, Alert.device_id)
-            .select_from(Event)
-            .filter(Event.is_acknowledged.is_(False))
-            .join(Alert, Event.id == Alert.event_id)
-            .join(Media, Alert.media_id == Media.id)
-            .join(Device, Alert.device_id == Device.id)
-            .join(Access, Device.access_id == Access.id)
+        # Limit to devices in the same group
+        subquery_access = (
+            session
+            .query(Access.id)
             .filter(Access.group_id == requester.group_id)
+            .subquery()
         )
+        subquery_devices = (
+            session.query(Device.id)
+            .filter(Device.access_id.in_(select(subquery_access.c.id)))
+            .subquery()
+        )
+        subquery_alerts = (
+            session
+            .query(
+                Alert.id.label('alert_id'),  # Alias the columns to avoid ambiguity
+                Alert.event_id,
+                Alert.localization,
+                Alert.device_id,
+                Alert.media_id,
+                func.dense_rank().over(
+                    partition_by=Alert.event_id,
+                    order_by=Alert.id.asc()
+                ).label('rank')
+            )
+            .filter(Alert.event_id.in_(select([subquery_events.c.id])))
+            .filter(Alert.device_id.in_(select([subquery_devices.c.id])))  # filter by devices
+            .subquery()
+        )
+    filtered_alerts = (
+            session.query(subquery_alerts)
+            .filter(subquery_alerts.c.rank <= 10)
+            .subquery()
+        )
+    # Final query
+    retrieved_events = (
+        session
+        .query(Event, Media.bucket_key, subquery_alerts.c.localization, subquery_alerts.c.device_id)
+        .join(filtered_alerts, Event.id == filtered_alerts.c.event_id)
+        .join(Media, Media.id == filtered_alerts.c.media_id)
+        .yield_per(100)  # Fetch 100 rows at a time to reduce memory usage
+    )
     return [
         EventPayload(
             **event.__dict__,
