@@ -31,7 +31,7 @@ stop:
 
 run-dev:
 	poetry export -f requirements.txt --without-hashes --with dev --output src/app/requirements.txt
-	docker compose -f docker-compose.test.yml up -d --build
+	docker compose -f docker-compose.test.yml up -d --build --wait
 	docker compose exec localstack awslocal s3 mb s3://bucket
 	docker compose exec localstack awslocal s3api put-object --bucket bucket --key media-folder
 
