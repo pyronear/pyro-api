@@ -158,7 +158,7 @@ async def fetch_unacknowledged_events(
         .query(Event.id)
         .filter(and_(
             Event.is_acknowledged.is_(False),
-            Event.created_at < datetime.utcnow() - timedelta(hours=24)
+            Event.created_at > datetime.utcnow() - timedelta(hours=24)
         ))
         .order_by(Event.id.desc())
         .limit(10)
