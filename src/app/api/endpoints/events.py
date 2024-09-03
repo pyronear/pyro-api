@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+import asyncio
 from datetime import datetime, timedelta
 from typing import Annotated, List, cast
 
@@ -227,15 +228,21 @@ async def fetch_unacknowledged_events(
         .join(Media, Media.id == filtered_alerts.c.media_id)
         .yield_per(100)  # Fetch 100 rows at a time to reduce memory usage
     )
-    return [
-        EventPayload(
+
+    async def get_event_payload(event, bucket_key, loc, device_id):
+        # Fetch the public URL asynchronously
+        return EventPayload(
             **event.__dict__,
             media_url=await s3_bucket.get_public_url(bucket_key),
             localization=loc,
             device_id=device_id,
         )
+
+    tasks = [
+        get_event_payload(event, bucket_key, loc, device_id)
         for event, bucket_key, loc, device_id in retrieved_events.all()
     ]
+    return await asyncio.gather(*tasks)
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")
