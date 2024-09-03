@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -34,7 +34,7 @@ EVENT_TABLE = [
         "start_ts": "2020-09-13T08:18:45.447773",
         "end_ts": None,
         "is_acknowledged": True,
-        "created_at": "2020-09-13T08:18:45.447773",
+        "created_at": ts_to_string(datetime.utcnow().replace(tzinfo=None) - timedelta(hours=10)),
     },
     {
         "id": 3,
@@ -44,7 +44,7 @@ EVENT_TABLE = [
         "start_ts": "2021-03-13T08:18:45.447773",
         "end_ts": "2021-03-13T10:18:45.447773",
         "is_acknowledged": False,
-        "created_at": "2020-09-13T08:18:45.447773",
+        "created_at": ts_to_string(datetime.utcnow().replace(tzinfo=None) - timedelta(hours=8)),
     },
 ]
 
@@ -523,7 +523,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
             events_group_id = [event["id"] for event in EVENT_TABLE if event["id"] in event_ids]
 
         assert [{k: v for k, v in entry.items() if k not in {"media_url", "localization", "device_id"}} for entry in response.json()] == [
-            x for x in EVENT_TABLE if x["is_acknowledged"] is False and x["id"] in events_group_id
+            x for x in EVENT_TABLE if x["is_acknowledged"] is False and x["id"] in events_group_id and x["created_at"] > ts_to_string(datetime.utcnow().replace(tzinfo=None) - timedelta(hours=24))
         ]
         assert all(entry["media_url"].startswith("http") for entry in response.json())
         # Localization are set to None in this test
