@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from datetime import datetime, timedelta
 from typing import Annotated, List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
@@ -155,7 +156,10 @@ async def fetch_unacknowledged_events(
     subquery_events = (
         session
         .query(Event.id)
-        .filter(Event.is_acknowledged.is_(False))
+        .filter(and_(
+            Event.is_acknowledged.is_(False),
+            Event.created_at < datetime.utcnow() - timedelta(hours=24)
+        ))
         .order_by(Event.id.desc())
         .limit(10)
         .subquery()
@@ -204,15 +208,17 @@ async def fetch_unacknowledged_events(
                     order_by=Alert.id.asc()
                 ).label('rank')
             )
-            .filter(Alert.event_id.in_(select([subquery_events.c.id])))
-            .filter(Alert.device_id.in_(select([subquery_devices.c.id])))  # filter by devices
+            .filter(and_(
+                Alert.event_id.in_(select([subquery_events.c.id])),
+                Alert.device_id.in_(select([subquery_devices.c.id]))
+            ))
             .subquery()
         )
     filtered_alerts = (
-            session.query(subquery_alerts)
-            .filter(subquery_alerts.c.rank <= 10)
-            .subquery()
-        )
+        session.query(subquery_alerts)
+        .filter(subquery_alerts.c.rank <= 10)
+        .subquery()
+    )
     # Final query
     retrieved_events = (
         session
