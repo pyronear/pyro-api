@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime, timedelta
-import logging
 from typing import Annotated, List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
