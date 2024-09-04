@@ -3,13 +3,14 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-import asyncio
 from datetime import datetime, timedelta
+import logging
 from typing import Annotated, List, cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 from pydantic import PositiveInt
 from sqlalchemy import and_, func, select
+from sqlalchemy.orm import aliased
 
 from app.api import crud
 from app.api.crud.authorizations import check_group_read, check_group_update, is_admin_access
@@ -167,7 +168,7 @@ async def fetch_unacknowledged_events(
     )
     if await is_admin_access(requester.id):
         # Alerts associated to the last 10 unacknowledged events
-        subquery_alerts = (
+        ranked_alerts = (
             session
             .query(
                 Alert.id.label('alert_id'),  # Alias the columns to avoid ambiguity
@@ -185,18 +186,13 @@ async def fetch_unacknowledged_events(
         )
     else:
         # Limit to devices in the same group
-        subquery_access = (
-            session
-            .query(Access.id)
+        subquery_devices = (
+            session.query(Device.id)
+            .join(Access, Device.access_id == Access.id)
             .filter(Access.group_id == requester.group_id)
             .subquery()
         )
-        subquery_devices = (
-            session.query(Device.id)
-            .filter(Device.access_id.in_(select(subquery_access.c.id)))
-            .subquery()
-        )
-        subquery_alerts = (
+        ranked_alerts = (
             session
             .query(
                 Alert.id.label('alert_id'),  # Alias the columns to avoid ambiguity
@@ -216,33 +212,39 @@ async def fetch_unacknowledged_events(
             .subquery()
         )
     filtered_alerts = (
-        session.query(subquery_alerts)
-        .filter(subquery_alerts.c.rank <= 10)
+        session.query(
+            ranked_alerts.c.alert_id,
+            ranked_alerts.c.event_id,
+            ranked_alerts.c.localization,
+            ranked_alerts.c.device_id,
+            ranked_alerts.c.media_id
+        )
+        .filter(ranked_alerts.c.rank <= 10)
         .subquery()
     )
+    # Aliased table to allow correct joining without conflicts
+    alert_alias = aliased(filtered_alerts)
     # Final query
-    retrieved_events = (
+    retrieved_alerts = (
         session
-        .query(Event, Media.bucket_key, subquery_alerts.c.localization, subquery_alerts.c.device_id)
-        .join(filtered_alerts, Event.id == filtered_alerts.c.event_id)
-        .join(Media, Media.id == filtered_alerts.c.media_id)
+        .query(Event, alert_alias.c.alert_id, Media.bucket_key, alert_alias.c.localization, alert_alias.c.device_id)
+        .join(Event, Event.id == alert_alias.c.event_id)
+        .join(Media, Media.id == alert_alias.c.media_id)
+        .distinct()
         .yield_per(100)  # Fetch 100 rows at a time to reduce memory usage
+        .all()
     )
 
-    async def get_event_payload(event, bucket_key, loc, device_id):
-        # Fetch the public URL asynchronously
-        return EventPayload(
+    return [
+        EventPayload(
             **event.__dict__,
             media_url=await s3_bucket.get_public_url(bucket_key),
             localization=loc,
             device_id=device_id,
+            alert_id=alert_id,
         )
-
-    tasks = [
-        get_event_payload(event, bucket_key, loc, device_id)
-        for event, bucket_key, loc, device_id in retrieved_events.all()
+        for event, alert_id, bucket_key, loc, device_id in retrieved_alerts
     ]
-    return await asyncio.gather(*tasks)
 
 
 @router.get("/{event_id}/alerts", response_model=List[AlertOut], summary="Get the list of alerts for event")

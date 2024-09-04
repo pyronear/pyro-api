@@ -47,6 +47,7 @@ class EventPayload(EventOut):
         json_schema_extra={"strip_whitespace": True},
     )
     device_id: int = Field(..., gt=0, description="device ID")
+    alert_id: int = Field(..., gt=0, description="alert ID")
 
 
 class Acknowledgement(BaseModel):
