@@ -522,7 +522,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
             event_ids = [alert["event_id"] for alert in ALERT_TABLE if alert["device_id"] in devices_group_id]
             events_group_id = [event["id"] for event in EVENT_TABLE if event["id"] in event_ids]
 
-        assert [{k: v for k, v in entry.items() if k not in {"media_url", "localization", "device_id"}} for entry in response.json()] == [
+        assert [{k: v for k, v in entry.items() if k not in {"media_url", "localization", "device_id", "alert_id"}} for entry in response.json()] == [
             x for x in EVENT_TABLE if x["is_acknowledged"] is False and x["id"] in events_group_id and x["created_at"] > ts_to_string(datetime.utcnow().replace(tzinfo=None) - timedelta(hours=24))
         ]
         assert all(entry["media_url"].startswith("http") for entry in response.json())
@@ -530,6 +530,7 @@ async def test_fetch_unacknowledged_events(test_app_asyncio, init_test_db, acces
         assert all(entry["localization"] is None for entry in response.json())
         # Ensure the device_id are valid
         assert all(entry["device_id"] in {device["id"] for device in DEVICE_TABLE} for entry in response.json())
+        assert all(entry["alert_id"] in {alert["id"] for alert in ALERT_TABLE} for entry in response.json())
 
 
 @pytest.mark.parametrize(
