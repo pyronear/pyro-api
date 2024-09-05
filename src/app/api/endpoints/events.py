@@ -226,9 +226,18 @@ async def fetch_unacknowledged_events(
     # Final query
     retrieved_alerts = (
         session
-        .query(Event, alert_alias.c.alert_id, Media.bucket_key, alert_alias.c.localization, alert_alias.c.device_id)
+        .query(
+            Event,
+            alert_alias.c.alert_id,
+            Media.bucket_key,
+            alert_alias.c.localization,
+            alert_alias.c.device_id,
+            Device.login,
+            Device.azimuth,
+        )
         .join(Event, Event.id == alert_alias.c.event_id)
         .join(Media, Media.id == alert_alias.c.media_id)
+        .join(Device, Device.id == alert_alias.c.device_id)
         .distinct()
         .yield_per(100)  # Fetch 100 rows at a time to reduce memory usage
         .all()
@@ -241,8 +250,10 @@ async def fetch_unacknowledged_events(
             localization=loc,
             device_id=device_id,
             alert_id=alert_id,
+            device_login=login,
+            device_azimuth=azimuth,
         )
-        for event, alert_id, bucket_key, loc, device_id in retrieved_alerts
+        for event, alert_id, bucket_key, loc, device_id, login, azimuth in retrieved_alerts
     ]
 
 

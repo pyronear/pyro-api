@@ -48,6 +48,8 @@ class EventPayload(EventOut):
     )
     device_id: int = Field(..., gt=0, description="device ID")
     alert_id: int = Field(..., gt=0, description="alert ID")
+    device_login: str = Field(..., description="device name")
+    device_azimuth: Optional[float] = Field(None, ge=0, le=360, description="angle between north and direction in degrees")
 
 
 class Acknowledgement(BaseModel):
