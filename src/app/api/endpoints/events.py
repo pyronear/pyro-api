@@ -153,7 +153,7 @@ async def fetch_unacknowledged_events(
     Retrieves the last 10 un-acknowledged events and their 10 first alerts
     """
     telemetry_client.capture(requester.id, event="events-fetch-unacnkowledged")
-    # Last 10 unacknowledged events
+    # Last 15 unacknowledged events
     subquery_events = (
         session
         .query(Event.id)
@@ -162,7 +162,7 @@ async def fetch_unacknowledged_events(
             Event.created_at > datetime.utcnow() - timedelta(hours=24)
         ))
         .order_by(Event.id.desc())
-        .limit(10)
+        .limit(15)
         .subquery()
     )
     if await is_admin_access(requester.id):
