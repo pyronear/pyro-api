@@ -64,7 +64,7 @@ async def create_detection(
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash
-    bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    bucket_key = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
@@ -165,10 +165,16 @@ async def fetch_unlabeled_detections(
     def get_url(detection: Detection) -> str:
         return bucket.get_public_url(detection.bucket_key)
 
+    async def get_url_with_bucket(detection: Detection) -> str:
+        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+        bucket_ = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+        return bucket_.get_public_url(detection.bucket_key)
+
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
             filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
         )
+        urls = [await get_url_with_bucket(detection) for detection in all_unck_detections]
     else:
         org_cams = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
         all_unck_detections = await detections.fetch_all(
@@ -176,8 +182,7 @@ async def fetch_unlabeled_detections(
             in_pair=("camera_id", [camera.id for camera in org_cams]),
             inequality_pair=("created_at", ">=", from_date),
         )
-
-    urls = (get_url(detection) for detection in all_unck_detections)
+        urls = [get_url(detection) for detection in all_unck_detections]
 
     return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
 
