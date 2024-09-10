@@ -37,6 +37,7 @@ Table "Detection" as D {
   "camera_id" int [ref: > C.id, not null]
   "azimuth" float [not null]
   "bucket_key" str [not null]
+  "bboxes" str [not null]
   "is_wildfire" bool
   "created_at" timestamp [not null]
   "updated_at" timestamp [not null]
@@ -48,6 +49,15 @@ Table "Detection" as D {
 Table "Organization" as O {
   "id" int [not null]
   "name" str [not null]
+  Indexes {
+    (id) [pk]
+  }
+}
+
+
+Table "Webhook" as W {
+  "id" int [not null]
+  "url" str [not null]
   Indexes {
     (id) [pk]
   }
