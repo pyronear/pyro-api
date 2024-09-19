@@ -7,7 +7,7 @@ import hashlib
 import logging
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import List, cast
+from typing import List, Optional, cast
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
@@ -64,8 +64,7 @@ async def create_detection(
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash
-    bucket_key = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
-    # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
+    bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"  # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
     bucket = s3_service.get_bucket(bucket_name)
@@ -154,6 +153,8 @@ async def fetch_detections(
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(
     from_date: datetime = Query(),
+    limit: Optional[int] = Query(None, description="Maximum number of detections to fetch"),
+    offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -172,7 +173,10 @@ async def fetch_unlabeled_detections(
 
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
-            filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
+            filter_pair=("is_wildfire", None),
+            inequality_pair=("created_at", ">=", from_date),
+            limit=limit,
+            offset=offset,
         )
         urls = [await get_url_with_bucket(detection) for detection in all_unck_detections]
     else:
@@ -181,6 +185,8 @@ async def fetch_unlabeled_detections(
             filter_pair=("is_wildfire", None),
             in_pair=("camera_id", [camera.id for camera in org_cams]),
             inequality_pair=("created_at", ">=", from_date),
+            limit=limit,
+            offset=offset,
         )
         urls = [get_url(detection) for detection in all_unck_detections]
 
