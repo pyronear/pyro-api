@@ -43,6 +43,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.mark.asyncio
 async def test_create_webhook(
     async_client: AsyncClient,
+    webhook_session: AsyncSession,
     user_idx: Union[int, None],
     payload: Dict[str, Any],
     status_code: int,
