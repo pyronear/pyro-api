@@ -91,7 +91,9 @@ async def test_create_camera(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert {
-            k: v for k, v in response.json().items() if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image"}
+            k: v
+            for k, v in response.json().items()
+            if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image"}
         } == payload
 
 
