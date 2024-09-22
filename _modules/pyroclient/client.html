@@ -227,6 +227,7 @@
     <span class="c1"># CAMERAS</span>
     <span class="c1">#################</span>
     <span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/heartbeat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cameras-image&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/image&quot;</span><span class="p">,</span>
     <span class="s2">&quot;cameras-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras&quot;</span><span class="p">,</span>
     <span class="c1">#################</span>
     <span class="c1"># DETECTIONS</span>
@@ -307,6 +308,22 @@
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
 
     <span class="c1"># CAMERAS</span>
+<div class="viewcode-block" id="Client.fetch_cameras"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_cameras">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_cameras</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_cameras()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-fetch&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
 <div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span> <span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last ping of the camera</span>
 
@@ -318,6 +335,24 @@
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.update_last_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_last_image">[docs]</a>    <span class="k">def</span> <span class="nf">update_last_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last image of the camera</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.update_last_image(data)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the update device info</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-image&quot;</span><span class="p">],</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
     <span class="c1"># DETECTIONS</span>
 <div class="viewcode-block" id="Client.create_detection"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_detection">[docs]</a>    <span class="k">def</span> <span class="nf">create_detection</span><span class="p">(</span>
@@ -372,22 +407,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-label&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_wildfire&quot;</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
-            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.fetch_cameras"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_cameras">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_cameras</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_cameras()</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-fetch&quot;</span><span class="p">],</span>
-            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 

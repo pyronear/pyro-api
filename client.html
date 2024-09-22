@@ -375,6 +375,23 @@
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.update_last_image">
+<span class="sig-name descname"><span class="pre">update_last_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_last_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_last_image" title="Permalink to this definition">#</a></dt>
+<dd><p>Update the last image of the camera</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pyroclient</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_CAM_TOKEN&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;path/to/my/file.ext&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">update_last_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>HTTP response containing the update device info</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -453,6 +470,7 @@
 <li><a class="reference internal" href="#pyroclient.client.Client.get_detection_url"><code class="docutils literal notranslate"><span class="pre">Client.get_detection_url()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.heartbeat"><code class="docutils literal notranslate"><span class="pre">Client.heartbeat()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.label_detection"><code class="docutils literal notranslate"><span class="pre">Client.label_detection()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.update_last_image"><code class="docutils literal notranslate"><span class="pre">Client.update_last_image()</span></code></a></li>
 </ul>
 </li>
 </ul>
