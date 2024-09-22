@@ -121,6 +121,4 @@ async def dispatch_webhook(url: str, payload: BaseModel) -> None:
             response.raise_for_status()
             logger.info(f"Successfully dispatched to {url}")
         except HTTPStatusError as e:
-            logger.error(f"Error sending notification to {url}: {e.response.status_code} - {e.response.text}")
-        except Exception as e:
-            logger.error(f"Failed to dispatch webhook to {url}: {e!s}")
+            logger.error(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
