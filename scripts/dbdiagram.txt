@@ -27,6 +27,7 @@ Table "Camera" as C {
   "is_trustable" bool [not null]
   "created_at" timestamp [not null]
   "last_active_at" timestamp
+  "last_image" str
   Indexes {
     (id) [pk]
   }
