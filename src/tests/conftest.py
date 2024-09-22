@@ -71,6 +71,7 @@ CAM_TABLE = [
         "lon": -45.2,
         "is_trustable": True,
         "last_active_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
+        "last_image": None,
         "created_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
     },
     {
@@ -83,6 +84,7 @@ CAM_TABLE = [
         "lon": -45.2,
         "is_trustable": False,
         "last_active_at": None,
+        "last_image": None,
         "created_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
     },
 ]
