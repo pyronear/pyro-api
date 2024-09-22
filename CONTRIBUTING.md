@@ -18,7 +18,7 @@ The back-end core feature is to interact with the metadata tables. For the servi
 
 - Detection: association of a picture and a camera.
 
-![UML diagram](https://github.com/user-attachments/assets/04016451-6a67-4496-adf7-ad790722d74b)
+![UML diagram](https://github.com/user-attachments/assets/d0160a58-b494-4b81-bef0-b1a9f483be3e)
 
 ### What is the full detection workflow through the API
 

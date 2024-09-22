@@ -72,6 +72,12 @@
     - src/app/api/*/endpoints/organizations.py
     - src/app/crud/organizations.py
 
+'endpoint: webhooks':
+- changed-files:
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/webhooks.py
+    - src/app/crud/webhooks.py
+
 
 'topic: build':
 - changed-files:

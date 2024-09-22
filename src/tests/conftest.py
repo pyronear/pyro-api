@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, User
+from app.models import Camera, Detection, Organization, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -120,6 +120,17 @@ DET_TABLE = [
     },
 ]
 
+WEBHOOK_TABLE = [
+    {
+        "id": 1,
+        "url": f"http://localhost:8050{settings.API_V1_STR}",
+    },
+    {
+        "id": 2,
+        "url": "http://localhost:9999",
+    },
+]
+
 
 @pytest.fixture(scope="session")
 def event_loop(request) -> Generator:
@@ -188,6 +199,19 @@ async def organization_session(async_session: AsyncSession):
             await s3_service.delete_bucket(s3_service.resolve_bucket_name(entry["id"]))
     except ValueError:
         pass
+
+
+@pytest_asyncio.fixture(scope="function")
+async def webhook_session(async_session: AsyncSession):
+    for entry in WEBHOOK_TABLE:
+        async_session.add(Webhook(**entry))
+    await async_session.commit()
+    await async_session.exec(
+        text(f"ALTER SEQUENCE webhook_id_seq RESTART WITH {max(entry['id'] for entry in WEBHOOK_TABLE) + 1}")
+    )
+    await async_session.commit()
+    yield async_session
+    await async_session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -270,4 +294,8 @@ def pytest_configure():
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in DET_TABLE
+    ]
+    pytest.webhook_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in WEBHOOK_TABLE
     ]

@@ -53,3 +53,12 @@ Table "Organization" as O {
     (id) [pk]
   }
 }
+
+
+Table "Webhook" as W {
+  "id" int [not null]
+  "url" str [not null]
+  Indexes {
+    (id) [pk]
+  }
+}
