@@ -13,12 +13,18 @@ The back-end core feature is to interact with the metadata tables. For the servi
 
 - Users: stores the hashed credentials and access level for users.
 - Cameras: stores the camera metadata.
+- Organizations: scope the access to the API.
 
 #### Core worklow tables
 
 - Detection: association of a picture and a camera.
 
-![UML diagram](https://github.com/user-attachments/assets/d0160a58-b494-4b81-bef0-b1a9f483be3e)
+#### Client-related tables
+
+- Webhook: stores the webhook URLs.
+
+<iframe width="560" height="315" src='https://dbdiagram.io/e/665a15d0b65d933879357b58/66f014c3a0828f8aa6a5d9ab'> </iframe>
+_The UML is versioned at [`scripts/dbdiagram.txt`](https://github.com/pyronear/pyro-api/blob/main/scripts/dbdiagram.txt) and the UML diagram is available on [DBDiagram](https://dbdiagram.io/d/Pyronear-UML-665a15d0b65d933879357b58)._
 
 ### What is the full detection workflow through the API
 
