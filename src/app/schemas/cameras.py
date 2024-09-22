@@ -17,6 +17,10 @@ class LastActive(BaseModel):
     last_active_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class LastImage(LastActive):
+    last_image: str
+
+
 class CameraCreate(BaseModel):
     organization_id: int = Field(..., gt=0)
     name: str = Field(

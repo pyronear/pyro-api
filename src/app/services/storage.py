@@ -3,16 +3,20 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+import hashlib
 import logging
+from datetime import datetime
+from mimetypes import guess_extension
 from typing import Any, Dict, Union
 
 import boto3
+import magic
 from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError, PartialCredentialsError
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import settings
 
-__all__ = ["s3_service"]
+__all__ = ["s3_service", "upload_file"]
 
 
 logger = logging.getLogger("uvicorn.warning")
@@ -144,6 +148,41 @@ class S3Service:
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
         return f"alert-api-{organization_id!s}"
+
+
+async def upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
+    """Upload a file to S3 storage and return the public URL"""
+    # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
+    sha_hash = hashlib.sha256(file.file.read()).hexdigest()
+    await file.seek(0)
+    # Use MD5 to verify upload
+    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+    await file.seek(0)
+    # guess_extension will return none if this fails
+    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
+    # Concatenate timestamp & hash
+    bucket_key = f"{camera_id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
+    await file.seek(0)
+    bucket_name = s3_service.resolve_bucket_name(organization_id)
+    bucket = s3_service.get_bucket(bucket_name)
+    # Upload the file
+    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
+    logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
+
+    # Data integrity check
+    file_meta = bucket.get_file_metadata(bucket_key)
+    # Corrupted file
+    if md5_hash != file_meta["ETag"].replace('"', ""):
+        # Delete the corrupted upload
+        bucket.delete_file(bucket_key)
+        # Raise the exception
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Data was corrupted during upload",
+        )
+    return bucket_key
 
 
 s3_service = S3Service(
