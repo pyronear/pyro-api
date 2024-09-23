@@ -63,6 +63,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filter_pair: Union[Tuple[str, Any], None] = None,
         in_pair: Union[Tuple[str, List], None] = None,
         inequality_pair: Optional[Tuple[str, str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
         if isinstance(filter_pair, tuple):
@@ -83,6 +85,12 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 statement = statement.where(getattr(self.model, field) < value)
             else:
                 raise ValueError(f"Unsupported inequality operator: {op}")
+
+        if offset is not None:
+            statement = statement.offset(offset)
+
+        if limit is not None:
+            statement = statement.limit(limit)
 
         result = await self.session.exec(statement=statement)
         return [r for r in result]

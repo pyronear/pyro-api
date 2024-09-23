@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime
-from typing import List, cast
+from typing import List, Optional, cast
 
 from fastapi import (
     APIRouter,
@@ -140,6 +140,8 @@ async def fetch_detections(
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(
     from_date: datetime = Query(),
+    limit: Optional[int] = Query(15, description="Maximum number of detections to fetch"),
+    offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -151,19 +153,29 @@ async def fetch_unlabeled_detections(
     def get_url(detection: Detection) -> str:
         return bucket.get_public_url(detection.bucket_key)
 
+    async def get_url_with_bucket(detection: Detection) -> str:
+        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+        bucket_ = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+        return bucket_.get_public_url(detection.bucket_key)
+
     if UserRole.ADMIN in token_payload.scopes:
         all_unck_detections = await detections.fetch_all(
-            filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
+            filter_pair=("is_wildfire", None),
+            inequality_pair=("created_at", ">=", from_date),
+            limit=limit,
+            offset=offset,
         )
+        urls = [await get_url_with_bucket(detection) for detection in all_unck_detections]
     else:
         org_cams = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
         all_unck_detections = await detections.fetch_all(
             filter_pair=("is_wildfire", None),
             in_pair=("camera_id", [camera.id for camera in org_cams]),
             inequality_pair=("created_at", ">=", from_date),
+            limit=limit,
+            offset=offset,
         )
-
-    urls = (get_url(detection) for detection in all_unck_detections)
+        urls = [get_url(detection) for detection in all_unck_detections]
 
     return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
 
