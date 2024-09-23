@@ -23,6 +23,7 @@ ROUTES: Dict[str, str] = {
     # CAMERAS
     #################
     "cameras-heartbeat": "/cameras/heartbeat",
+    "cameras-image": "/cameras/image",
     "cameras-fetch": "/cameras",
     #################
     # DETECTIONS
@@ -103,6 +104,22 @@ class Client:
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
+    def fetch_cameras(self) -> Response:
+        """List the cameras accessible to the authenticated user
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_cameras()
+
+        Returns:
+            HTTP response
+        """
+        return requests.get(
+            self.routes["cameras-fetch"],
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
     def heartbeat(self) -> Response:
         """Update the last ping of the camera
 
@@ -114,6 +131,24 @@ class Client:
             HTTP response containing the update device info
         """
         return requests.patch(self.routes["cameras-heartbeat"], headers=self.headers, timeout=self.timeout)
+
+    def update_last_image(self, media: bytes) -> Response:
+        """Update the last image of the camera
+
+        >>> from pyroclient import Client
+        >>> api_client = Client("MY_CAM_TOKEN")
+        >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
+        >>> response = api_client.update_last_image(data)
+
+        Returns:
+            HTTP response containing the update device info
+        """
+        return requests.patch(
+            self.routes["cameras-image"],
+            headers=self.headers,
+            files={"file": ("logo.png", media, "image/png")},
+            timeout=self.timeout,
+        )
 
     # DETECTIONS
     def create_detection(
@@ -168,22 +203,6 @@ class Client:
             self.routes["detections-label"].format(det_id=detection_id),
             headers=self.headers,
             json={"is_wildfire": is_wildfire},
-            timeout=self.timeout,
-        )
-
-    def fetch_cameras(self) -> Response:
-        """List the cameras accessible to the authenticated user
-
-        >>> from pyroclient import client
-        >>> api_client = Client("MY_USER_TOKEN")
-        >>> response = api_client.fetch_cameras()
-
-        Returns:
-            HTTP response
-        """
-        return requests.get(
-            self.routes["cameras-fetch"],
-            headers=self.headers,
             timeout=self.timeout,
         )
 

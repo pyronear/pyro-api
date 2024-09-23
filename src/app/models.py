@@ -28,8 +28,9 @@ class Role(str, Enum):
 
 
 class User(SQLModel, table=True):
+    __tablename__ = "users"
     id: int = Field(None, primary_key=True)
-    organization_id: int = Field(..., foreign_key="organization.id", nullable=False)
+    organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
     role: UserRole = Field(UserRole.USER, nullable=False)
     # Allow sign-up/in via login + password
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)
@@ -38,8 +39,9 @@ class User(SQLModel, table=True):
 
 
 class Camera(SQLModel, table=True):
+    __tablename__ = "cameras"
     id: int = Field(None, primary_key=True)
-    organization_id: int = Field(..., foreign_key="organization.id", nullable=False)
+    organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     angle_of_view: float = Field(..., gt=0, le=360, nullable=False)
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
@@ -47,12 +49,14 @@ class Camera(SQLModel, table=True):
     lon: float = Field(..., gt=-180, lt=180)
     is_trustable: bool = True
     last_active_at: Union[datetime, None] = None
+    last_image: Union[str, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
 class Detection(SQLModel, table=True):
+    __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
-    camera_id: int = Field(..., foreign_key="camera.id", nullable=False)
+    camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     azimuth: float = Field(..., gt=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
@@ -62,5 +66,12 @@ class Detection(SQLModel, table=True):
 
 
 class Organization(SQLModel, table=True):
+    __tablename__ = "organizations"
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
+
+
+class Webhook(SQLModel, table=True):
+    __tablename__ = "webhooks"
+    id: int = Field(None, primary_key=True)
+    url: str = Field(..., nullable=False, unique=True)

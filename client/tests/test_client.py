@@ -26,7 +26,13 @@ def test_client_constructor(token, host, timeout, expected_error):
 @pytest.fixture(scope="session")
 def test_cam_workflow(cam_token, mock_img):
     cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
-    assert cam_client.heartbeat().status_code == 200
+    response = cam_client.heartbeat()
+    assert response.status_code == 200
+    # Check that last_image gets changed
+    assert response.json()["last_image"] is None
+    response = cam_client.update_last_image(mock_img)
+    assert response.status_code == 200, response.__dict__
+    assert isinstance(response.json()["last_image"], str)
     # Check that adding bboxes works
     with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
         cam_client.create_detection(mock_img, 123.2, None)

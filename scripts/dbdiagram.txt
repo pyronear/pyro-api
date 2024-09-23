@@ -8,8 +8,8 @@ Table "User" as U {
   "id" int [not null]
   "organization_id" int [ref: > O.id, not null]
   "role" userrole [not null]
-  "login" str [not null]
-  "hashed_password" str [not null]
+  "login" text [not null]
+  "hashed_password" text [not null]
   "created_at" timestamp [not null]
   Indexes {
     (id, login) [pk]
@@ -19,7 +19,7 @@ Table "User" as U {
 Table "Camera" as C {
   "id" int [not null]
   "organization_id" int [ref: > O.id, not null]
-  "name" str [not null]
+  "name" text [not null]
   "angle_of_view" float [not null]
   "elevation" float [not null]
   "lat" float [not null]
@@ -27,6 +27,7 @@ Table "Camera" as C {
   "is_trustable" bool [not null]
   "created_at" timestamp [not null]
   "last_active_at" timestamp
+  "last_image" text
   Indexes {
     (id) [pk]
   }
@@ -36,8 +37,8 @@ Table "Detection" as D {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
   "azimuth" float [not null]
-  "bucket_key" str [not null]
-  "bboxes" str [not null]
+  "bucket_key" text [not null]
+  "bboxes" text [not null]
   "is_wildfire" bool
   "created_at" timestamp [not null]
   "updated_at" timestamp [not null]
@@ -48,7 +49,16 @@ Table "Detection" as D {
 
 Table "Organization" as O {
   "id" int [not null]
-  "name" str [not null]
+  "name" text [not null]
+  Indexes {
+    (id) [pk]
+  }
+}
+
+
+Table "Webhook" as W {
+  "id" int [not null]
+  "url" text [not null]
   Indexes {
     (id) [pk]
   }

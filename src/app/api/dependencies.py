@@ -3,22 +3,25 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import logging
 from typing import Dict, Type, TypeVar, Union, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from httpx import AsyncClient, HTTPStatusError
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, UserCRUD
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, UserCRUD, WebhookCRUD
 from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
 
 JWTTemplate = TypeVar("JWTTemplate")
+logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["get_user_crud"]
 
@@ -47,6 +50,10 @@ def get_detection_crud(session: AsyncSession = Depends(get_session)) -> Detectio
 
 def get_organization_crud(session: AsyncSession = Depends(get_session)) -> OrganizationCRUD:
     return OrganizationCRUD(session=session)
+
+
+def get_webhook_crud(session: AsyncSession = Depends(get_session)) -> WebhookCRUD:
+    return WebhookCRUD(session=session)
 
 
 def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:
@@ -105,3 +112,13 @@ async def get_current_user(
     """Dependency to use as fastapi.security.Security with scopes"""
     token_payload = get_jwt(security_scopes, token)
     return cast(User, await users.get(token_payload.sub, strict=True))
+
+
+async def dispatch_webhook(url: str, payload: BaseModel) -> None:
+    async with AsyncClient(timeout=5) as client:
+        try:
+            response = await client.post(url, json=payload.model_dump_json())
+            response.raise_for_status()
+            logger.info(f"Successfully dispatched to {url}")
+        except HTTPStatusError as e:
+            logger.error(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")

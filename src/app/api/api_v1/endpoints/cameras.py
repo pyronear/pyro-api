@@ -6,15 +6,16 @@
 from datetime import datetime
 from typing import List, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_jwt
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.crud import CameraCRUD
 from app.models import Camera, Role, UserRole
-from app.schemas.cameras import CameraCreate, LastActive
+from app.schemas.cameras import CameraCreate, LastActive, LastImage
 from app.schemas.login import Token, TokenPayload
+from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -62,8 +63,24 @@ async def heartbeat(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Camera:
-    # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat", properties={"camera_id": camera_id})
+    # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
     return await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
+
+
+@router.patch("/image", status_code=status.HTTP_200_OK, summary="Update last image of a camera")
+async def update_image(
+    file: UploadFile = File(..., alias="file"),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
+) -> Camera:
+    # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    # If the upload succeeds, delete the previous image
+    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    if isinstance(cam.last_image, str):
+        s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
+    # Update the DB entry
+    return await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=datetime.utcnow()))
 
 
 @router.post("/{camera_id}/token", status_code=status.HTTP_200_OK, summary="Request an access token for the camera")

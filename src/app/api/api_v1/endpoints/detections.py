@@ -3,18 +3,26 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import hashlib
-import logging
 from datetime import datetime
-from mimetypes import guess_extension
 from typing import List, Optional, cast
 
-import magic
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Security, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path,
+    Query,
+    Security,
+    UploadFile,
+    status,
+)
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
+from app.api.dependencies import dispatch_webhook, get_camera_crud, get_detection_crud, get_jwt, get_webhook_crud
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD
+from app.crud import CameraCRUD, DetectionCRUD, WebhookCRUD
 from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -25,7 +33,7 @@ from app.schemas.detections import (
     DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
-from app.services.storage import s3_service
+from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -33,6 +41,7 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
+    background_tasks: BackgroundTasks,
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
@@ -43,6 +52,7 @@ async def create_detection(
     azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
+    webhooks: WebhookCRUD = Depends(get_webhook_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -55,39 +65,16 @@ async def create_detection(
         )
 
     # Upload media
-    # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    sha_hash = hashlib.sha256(file.file.read()).hexdigest()
-    await file.seek(0)
-    # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
-    await file.seek(0)
-    # guess_extension will return none if this fails
-    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
-    # Concatenate timestamp & hash
-    bucket_key = f"{token_payload.sub}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"  # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
-    await file.seek(0)
-    bucket_name = s3_service.resolve_bucket_name(token_payload.organization_id)
-    bucket = s3_service.get_bucket(bucket_name)
-    # Upload the file
-    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
-    logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
-
-    # Data integrity check
-    file_meta = bucket.get_file_metadata(bucket_key)
-    # Corrupted file
-    if md5_hash != file_meta["ETag"].replace('"', ""):
-        # Delete the corrupted upload
-        bucket.delete_file(bucket_key)
-        # Raise the exception
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Data was corrupted during upload",
-        )
-    # Format the string
-    return await detections.create(
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    det = await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
+    # Webhooks
+    whs = await webhooks.fetch_all()
+    if any(whs):
+        for webhook in await webhooks.fetch_all():
+            background_tasks.add_task(dispatch_webhook, webhook.url, det)
+    return det
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")

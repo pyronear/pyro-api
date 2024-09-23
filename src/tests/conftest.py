@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, User
+from app.models import Camera, Detection, Organization, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -71,6 +71,7 @@ CAM_TABLE = [
         "lon": -45.2,
         "is_trustable": True,
         "last_active_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
+        "last_image": None,
         "created_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
     },
     {
@@ -83,6 +84,7 @@ CAM_TABLE = [
         "lon": -45.2,
         "is_trustable": False,
         "last_active_at": None,
+        "last_image": None,
         "created_at": datetime.strptime("2023-11-07T15:07:19.226673", dt_format),
     },
 ]
@@ -117,6 +119,17 @@ DET_TABLE = [
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+    },
+]
+
+WEBHOOK_TABLE = [
+    {
+        "id": 1,
+        "url": f"http://localhost:8050{settings.API_V1_STR}",
+    },
+    {
+        "id": 2,
+        "url": "http://localhost:9999",
     },
 ]
 
@@ -174,7 +187,9 @@ async def organization_session(async_session: AsyncSession):
         async_session.add(Organization(**entry))
     await async_session.commit()
     await async_session.exec(
-        text(f"ALTER SEQUENCE organization_id_seq RESTART WITH {max(entry['id'] for entry in ORGANIZATION_TABLE) + 1}")
+        text(
+            f"ALTER SEQUENCE {Organization.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in ORGANIZATION_TABLE) + 1}"
+        )
     )
     await async_session.commit()
     # Create buckets
@@ -191,6 +206,21 @@ async def organization_session(async_session: AsyncSession):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def webhook_session(async_session: AsyncSession):
+    for entry in WEBHOOK_TABLE:
+        async_session.add(Webhook(**entry))
+    await async_session.commit()
+    await async_session.exec(
+        text(
+            f"ALTER SEQUENCE {Webhook.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in WEBHOOK_TABLE) + 1}"
+        )
+    )
+    await async_session.commit()
+    yield async_session
+    await async_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
 async def user_session(organization_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(users, "hash_password", mock_hash_password)
     monkeypatch.setattr(login, "verify_password", mock_verify_password)
@@ -198,7 +228,7 @@ async def user_session(organization_session: AsyncSession, monkeypatch):
         organization_session.add(User(**entry))
     await organization_session.commit()
     await organization_session.exec(
-        text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
+        text(f"ALTER SEQUENCE {User.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
     )
     await organization_session.commit()
     yield organization_session
@@ -211,7 +241,7 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
         user_session.add(Camera(**entry))
     await user_session.commit()
     await user_session.exec(
-        text(f"ALTER SEQUENCE camera_id_seq RESTART WITH {max(entry['id'] for entry in CAM_TABLE) + 1}")
+        text(f"ALTER SEQUENCE {Camera.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in CAM_TABLE) + 1}")
     )
     await user_session.commit()
     yield user_session
@@ -227,7 +257,9 @@ async def detection_session(
     await user_session.commit()
     # Update the detection index count
     await user_session.exec(
-        text(f"ALTER SEQUENCE detection_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}")
+        text(
+            f"ALTER SEQUENCE {Detection.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}"
+        )
     )
     await user_session.commit()
     # Create bucket files
@@ -270,4 +302,8 @@ def pytest_configure():
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in DET_TABLE
+    ]
+    pytest.webhook_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in WEBHOOK_TABLE
     ]
