@@ -140,7 +140,7 @@ async def fetch_detections(
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(
     from_date: datetime = Query(),
-    limit: Optional[int] = Query(None, description="Maximum number of detections to fetch"),
+    limit: Optional[int] = Query(15, description="Maximum number of detections to fetch"),
     offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
