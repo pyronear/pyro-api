@@ -17,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None),
         (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 201, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "manual_bboxes": None}, 201, None),
     ],
 )
 @pytest.mark.asyncio
@@ -181,7 +181,6 @@ async def test_fetch_unlabeled_detections(
         (0, 0, {"is_wildfire": True}, 422, None, None),
         (0, 1, {"label": True}, 422, None, None),
         (0, 1, {"is_wildfire": "hello"}, 422, None, None),
-        # (0, 1, {"is_wildfire": "True"}, 422, None, None),  # odd, this works
         (0, 1, {"is_wildfire": True}, 200, None, 0),
         (0, 2, {"is_wildfire": True}, 200, None, 1),
         (1, 1, {"is_wildfire": True}, 200, None, 0),
@@ -215,6 +214,50 @@ async def test_label_detection(
     if response.status_code // 100 == 2:
         assert response.json() == {
             **{k: v for k, v in pytest.detection_table[expected_idx].items() if k != "is_wildfire"},
+            **payload,
+        }
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "detection_id", "payload", "status_code", "status_detail", "expected_idx"),
+    [
+        (None, 1, {"manual_bboxes": True}, 401, "Not authenticated", None),
+        (0, 0, {"manual_bboxes": True}, 422, None, None),
+        (0, 1, {"label": True}, 422, None, None),
+        (0, 1, {"manual_bboxes": "hello"}, 422, None, None),
+        (0, 1, {"manual_bboxes": "[(.1,.1,.7,.8)]"}, 200, None, 0),
+        (0, 2, {"manual_bboxes": "[(.1,.1,.7,.8)]"}, 200, None, 1),
+        (1, 1, {"manual_bboxes": "[(.1,.1,.7,.8)]"}, 200, None, 0),
+        (1, 2, {"manual_bboxes": "[(.1,.1,.7,.8)]"}, 200, None, 1),
+        (2, 1, {"manual_bboxes": "[(.1,.1,.7,.8)]"}, 403, None, 0),
+    ],
+)
+@pytest.mark.asyncio
+async def test_manual_bboxes(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_idx: Union[int, None],
+    detection_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+    expected_idx: Union[int, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/detections/{detection_id}/manualbboxes", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        assert response.json() == {
+            **{k: v for k, v in pytest.detection_table[expected_idx].items()},
             **payload,
         }
 

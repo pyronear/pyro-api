@@ -10,11 +10,21 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import Detection
 
-__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
+__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionManualBboxes", "DetectionUrl"]
 
 
 class DetectionLabel(BaseModel):
     is_wildfire: bool
+
+
+class DetectionManualBboxes(BaseModel):
+    manual_bboxes: str = Field(
+        ...,
+        min_length=2,
+        max_length=settings.MAX_BBOX_STR_LENGTH,
+        description="string representation of list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax",
+        json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9)]"]},
+    )
 
 
 class Azimuth(BaseModel):
@@ -29,7 +39,10 @@ class Azimuth(BaseModel):
 
 # Regex for a float between 0 and 1, with a maximum of 3 decimals
 FLOAT_PATTERN = r"(0?\.[0-9]{1,3}|0|1)"
-BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
+BOX_PATTERN_WITH_CONFIDENCE = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
+BOXES_PATTERN_WITH_CONFIDENCE = rf"^\[{BOX_PATTERN_WITH_CONFIDENCE}(,{BOX_PATTERN_WITH_CONFIDENCE})*\]$"
+COMPILED_BOXES_PATTERN_WITH_CONFIDENCE = re.compile(BOXES_PATTERN_WITH_CONFIDENCE)
+BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
 BOXES_PATTERN = rf"^\[{BOX_PATTERN}(,{BOX_PATTERN})*\]$"
 COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
