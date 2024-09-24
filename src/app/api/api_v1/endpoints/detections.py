@@ -25,10 +25,12 @@ from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, WebhookCRUD
 from app.models import Camera, Detection, Role, UserRole
 from app.schemas.detections import (
-    BOXES_PATTERN,
+    BOXES_PATTERN_WITH_CONFIDENCE,
     COMPILED_BOXES_PATTERN,
+    COMPILED_BOXES_PATTERN_WITH_CONFIDENCE,
     DetectionCreate,
     DetectionLabel,
+    DetectionManualBboxes,
     DetectionUrl,
     DetectionWithUrl,
 )
@@ -45,7 +47,7 @@ async def create_detection(
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
-        pattern=BOXES_PATTERN,
+        pattern=BOXES_PATTERN_WITH_CONFIDENCE,
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
@@ -58,7 +60,7 @@ async def create_detection(
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
 
     # Throw an error if the format is invalid and can't be captured by the regex
-    if any(box[0] >= box[2] or box[1] >= box[3] for box in COMPILED_BOXES_PATTERN.findall(bboxes)):
+    if any(box[0] >= box[2] or box[1] >= box[3] for box in COMPILED_BOXES_PATTERN_WITH_CONFIDENCE.findall(bboxes)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
@@ -178,6 +180,43 @@ async def label_detection(
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-label", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
+
+    if UserRole.ADMIN in token_payload.scopes:
+        return await detections.update(detection_id, payload)
+
+    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    if token_payload.organization_id != camera.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    return await detections.update(detection_id, payload)
+
+
+@router.patch("/{detection_id}/manualbboxes", status_code=status.HTTP_200_OK, summary="Update the manual_bboxes field")
+async def manual_bboxes(
+    payload: DetectionManualBboxes,
+    detection_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+) -> Detection:
+    telemetry_client.capture(
+        token_payload.sub, event="detections-manual-bboxes", properties={"detection_id": detection_id}
+    )
+    detection = cast(Detection, await detections.get(detection_id, strict=True))
+
+    matched_boxes = COMPILED_BOXES_PATTERN.findall(payload.manual_bboxes)
+
+    # Throw an error if no boxes match the expected pattern
+    if not matched_boxes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="No valid bounding boxes found in the input"
+        )
+
+    # Throw an error if the format is invalid and can't be captured by the regex
+    if any(box[0] >= box[2] or box[1] >= box[3] for box in matched_boxes):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
+        )
 
     if UserRole.ADMIN in token_payload.scopes:
         return await detections.update(detection_id, payload)

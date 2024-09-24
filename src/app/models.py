@@ -61,6 +61,7 @@ class Detection(SQLModel, table=True):
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
     is_wildfire: Union[bool, None] = None
+    manual_bboxes: str = Field(None, min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
