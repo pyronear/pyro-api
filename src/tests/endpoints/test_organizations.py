@@ -55,9 +55,7 @@ async def test_create_organization(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert {
-            k: v for k, v in response.json().items() if k not in {"id", "telegram_id"}
-        } == payload
+        assert {k: v for k, v in response.json().items() if k not in {"id", "telegram_id"}} == payload
 
 
 @pytest.mark.parametrize(
