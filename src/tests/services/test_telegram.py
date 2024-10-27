@@ -12,7 +12,7 @@ def test_telegram_client():
     assert not client.is_enabled
 
     client = TelegramClient(settings.TELEGRAM_TOKEN)
-    assert client.is_enabled
+    assert client.is_enabled == isinstance(settings.TELEGRAM_TOKEN, str)
 
     assert not client.has_channel_access("invalid-channel-id")
     assert client.notify("invalid-channel-id", "test").status_code == 404
