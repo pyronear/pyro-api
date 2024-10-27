@@ -32,6 +32,8 @@ class TelegramClient:
             logger.info("Telegram notifications enabled")
 
     def has_channel_access(self, channel_id: str) -> bool:
+        if not self.is_enabled:
+            raise AssertionError("Telegram notifications are not enabled")
         response = requests.get(
             f"{self.BASE_URL.format(token=self.token)}/getChat",
             json={"chat_id": channel_id},
@@ -40,6 +42,8 @@ class TelegramClient:
         return response.status_code == 200
 
     def notify(self, channel_id: str, message: str) -> requests.Response:
+        if not self.is_enabled:
+            raise AssertionError("Telegram notifications are not enabled")
         response = requests.post(
             f"{self.BASE_URL.format(token=self.token)}/sendMessage",
             json={"chat_id": channel_id, "text": message},
