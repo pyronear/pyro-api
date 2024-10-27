@@ -69,7 +69,7 @@ class Organization(SQLModel, table=True):
     __tablename__ = "organizations"
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
-    telegram_id: Union[str, None] = Field(None, pattern=r"^@[a-zA-Z0-9_-]+$", nullable=True)
+    telegram_id: Union[str, None] = Field(None, nullable=True)
 
 
 class Webhook(SQLModel, table=True):
