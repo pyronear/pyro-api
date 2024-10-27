@@ -145,7 +145,7 @@ None :)
 - `S3_REGION`: your S3 bucket is geographically identified by its location's region
 - `S3_ENDPOINT_URL`: the URL providing a S3 endpoint by your cloud provider
 - `S3_PROXY_URL`: the url of the proxy to hide the real s3 url behind, do not use proxy if ""
-
+- `TELEGRAM_TOKEN`: the token of your Telegram bot
 #### Production-only values
 - `ACME_EMAIL`: the email linked to your certificate for HTTPS
 - `BACKEND_HOST`: the subdomain where your users will access your API (e.g "api.mydomain.com")
