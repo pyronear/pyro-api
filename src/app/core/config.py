@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     S3_REGION: str = os.environ["S3_REGION"]
     S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
+    S3_PREFIX: str = os.environ["S3_PREFIX"]
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
 
     # Error monitoring
