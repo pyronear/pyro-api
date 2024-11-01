@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime
-from typing import List, cast
+from typing import List, Optional, cast
 
 from fastapi import (
     APIRouter,
@@ -19,6 +19,8 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
     dispatch_webhook,
@@ -30,6 +32,7 @@ from app.api.dependencies import (
 )
 from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, WebhookCRUD
+from app.db import get_session
 from app.models import Camera, Detection, Organization, Role, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -154,32 +157,45 @@ async def fetch_detections(
 @router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
 async def fetch_unlabeled_detections(
     from_date: datetime = Query(),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
+    limit: Optional[int] = Query(15, description="Maximum number of detections to fetch"),
+    offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionWithUrl]:
-    telemetry_client.capture(token_payload.sub, event="unacknowledged-fetch")
-
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-
-    def get_url(detection: Detection) -> str:
-        return bucket.get_public_url(detection.bucket_key)
+    telemetry_client.capture(token_payload.sub, event="detections-fetch-unlabeled")
 
     if UserRole.ADMIN in token_payload.scopes:
-        all_unck_detections = await detections.fetch_all(
-            filter_pair=("is_wildfire", None), inequality_pair=("created_at", ">=", from_date)
+        # Custom SQL query to fetch detections along with corresponding organization_id
+        query = await session.exec(
+            select(Detection, Camera.organization_id)  # type: ignore[attr-defined]
+            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
+            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
+            .where(Detection.created_at >= from_date)
+            .limit(limit)
+            .offset(offset)
         )
+        results = query.all()
+        unlabeled_detections = [Detection(**detection.__dict__) for detection, _ in results]
+        urls = [
+            s3_service.get_bucket(s3_service.resolve_bucket_name(org_id)).get_public_url(det.bucket_key)
+            for det, org_id in results
+        ]
     else:
-        org_cams = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
-        all_unck_detections = await detections.fetch_all(
-            filter_pair=("is_wildfire", None),
-            in_pair=("camera_id", [camera.id for camera in org_cams]),
-            inequality_pair=("created_at", ">=", from_date),
+        query = await session.exec(
+            select(Detection)  # type: ignore[attr-defined]
+            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
+            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
+            .where(Detection.created_at >= from_date)
+            .where(Camera.organization_id == token_payload.organization_id)
+            .limit(limit)
+            .offset(offset)
         )
+        results = query.all()
+        unlabeled_detections = [Detection(**detection.__dict__) for detection in results]
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+        urls = [bucket.get_public_url(detection.bucket_key) for detection in unlabeled_detections]
 
-    urls = (get_url(detection) for detection in all_unck_detections)
-
-    return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(all_unck_detections, urls)]
+    return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(unlabeled_detections, urls)]
 
 
 @router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
