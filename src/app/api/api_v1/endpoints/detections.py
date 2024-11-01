@@ -177,9 +177,9 @@ async def fetch_unlabeled_detections(
     else:
         # Custom SQL query to fetch detections along with corresponding organization_id
         query = await session.exec(
-            select(Detection, Camera.organization_id)
-            .join(Camera, Detection.camera_id == Camera.id)
-            .where(Detection.is_wildfire.is_(None))
+            select(Detection, Camera.organization_id)  # type: ignore[attr-defined]
+            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
+            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
             .where(Detection.created_at >= from_date)
             .where(Camera.organization_id == token_payload.organization_id)
             .limit(limit)
