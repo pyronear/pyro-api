@@ -22,11 +22,18 @@ from fastapi import (
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import dispatch_webhook, get_camera_crud, get_detection_crud, get_jwt, get_webhook_crud
+from app.api.dependencies import (
+    dispatch_webhook,
+    get_camera_crud,
+    get_detection_crud,
+    get_jwt,
+    get_organization_crud,
+    get_webhook_crud,
+)
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD, WebhookCRUD
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, WebhookCRUD
 from app.db import get_session
-from app.models import Camera, Detection, Role, UserRole
+from app.models import Camera, Detection, Organization, Role, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
@@ -37,6 +44,7 @@ from app.schemas.detections import (
 )
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_service, upload_file
+from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -56,6 +64,7 @@ async def create_detection(
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -77,6 +86,11 @@ async def create_detection(
     if any(whs):
         for webhook in await webhooks.fetch_all():
             background_tasks.add_task(dispatch_webhook, webhook.url, det)
+    # Telegram notifications
+    if telegram_client.is_enabled:
+        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+        if org.telegram_id:
+            background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
     return det
 
 

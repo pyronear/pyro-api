@@ -24,7 +24,7 @@ ROUTES: Dict[str, str] = {
     #################
     "cameras-heartbeat": "/cameras/heartbeat",
     "cameras-image": "/cameras/image",
-    "cameras-fetch": "/cameras",
+    "cameras-fetch": "/cameras/",
     #################
     # DETECTIONS
     #################

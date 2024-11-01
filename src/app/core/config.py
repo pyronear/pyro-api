@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
 
+    # Notifications
+    TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
+
     # Error monitoring
     SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")
     SERVER_NAME: str = os.environ.get("SERVER_NAME", socket.gethostname())
