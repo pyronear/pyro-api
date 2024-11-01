@@ -191,7 +191,7 @@ async def fetch_unlabeled_detections(
             .offset(offset)
         )
         results = query.all()
-        unlabeled_detections = [Detection(**detection.__dict__) for detection, _ in results]
+        unlabeled_detections = [Detection(**detection.__dict__) for detection in results]
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
         urls = [bucket.get_public_url(detection.bucket_key) for detection in unlabeled_detections]
 
