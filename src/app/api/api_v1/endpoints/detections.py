@@ -159,29 +159,18 @@ async def fetch_unlabeled_detections(
     from_date: datetime = Query(),
     limit: Optional[int] = Query(15, description="Maximum number of detections to fetch"),
     offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
-    detections: DetectionCRUD = Depends(get_detection_crud),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch-unlabeled")
 
     if UserRole.ADMIN in token_payload.scopes:
-        unlabeled_detections = await detections.fetch_all(
-            filter_pair=("is_wildfire", None),
-            inequality_pair=("created_at", ">=", from_date),
-            limit=limit,
-            offset=offset,
-        )
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-        urls = [bucket.get_public_url(detection.bucket_key) for detection in unlabeled_detections]
-    else:
         # Custom SQL query to fetch detections along with corresponding organization_id
         query = await session.exec(
             select(Detection, Camera.organization_id)  # type: ignore[attr-defined]
             .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
             .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
             .where(Detection.created_at >= from_date)
-            .where(Camera.organization_id == token_payload.organization_id)
             .limit(limit)
             .offset(offset)
         )
@@ -191,6 +180,20 @@ async def fetch_unlabeled_detections(
             s3_service.get_bucket(s3_service.resolve_bucket_name(org_id)).get_public_url(det.bucket_key)
             for det, org_id in results
         ]
+    else:
+        query = await session.exec(
+            select(Detection)  # type: ignore[attr-defined]
+            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
+            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
+            .where(Detection.created_at >= from_date)
+            .where(Camera.organization_id == token_payload.organization_id)
+            .limit(limit)
+            .offset(offset)
+        )
+        results = query.all()
+        unlabeled_detections = [Detection(**detection.__dict__) for detection, _ in results]
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+        urls = [bucket.get_public_url(detection.bucket_key) for detection in unlabeled_detections]
 
     return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(unlabeled_detections, urls)]
 
