@@ -27,6 +27,7 @@ prometheus-fastapi-instrumentator = "^6.1.0"
 python-multipart = "==0.0.7"
 python-magic = "^0.4.17"
 boto3 = "^1.26.0"
+httpx = "^0.24.0"
 
 [tool.poetry.group.quality]
 optional = true

@@ -115,7 +115,7 @@ async def get_current_user(
 
 
 async def dispatch_webhook(url: str, payload: BaseModel) -> None:
-    async with AsyncClient() as client:
+    async with AsyncClient(timeout=5) as client:
         try:
             response = await client.post(url, json=payload.model_dump_json())
             response.raise_for_status()
