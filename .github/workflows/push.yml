@@ -47,7 +47,7 @@ jobs:
     needs: docker
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1.0.3
+      - uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_DEV_HOST }}
           username: ${{ secrets.SSH_DEV_USERNAME }}
