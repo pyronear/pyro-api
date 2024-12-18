@@ -147,7 +147,7 @@ class S3Service:
 
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
-        return f"alert-api-{organization_id!s}"
+        return f"{settings.SERVER_NAME}-alert-api-{organization_id!s}"
 
 
 async def upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
