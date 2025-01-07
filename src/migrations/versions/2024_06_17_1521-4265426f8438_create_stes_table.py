@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "organization",
+        "organizations",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -29,16 +29,16 @@ def upgrade() -> None:
     )
 
     # Add the 'organization_id' column to the 'camera' and 'user' tables and create  foreign key constraints
-    op.add_column("camera", sa.Column("organization_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_camera_orga", "camera", "organization", ["organization_id"], ["id"])
-    op.add_column("user", sa.Column("organization_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_user_orga", "camera", "organization", ["organization_id"], ["id"])
+    op.add_column("cameras", sa.Column("organization_id", sa.Integer(), nullable=True))
+    op.create_foreign_key("fk_camera_orga", "cameras", "organizations", ["organization_id"], ["id"])
+    op.add_column("users", sa.Column("organization_id", sa.Integer(), nullable=True))
+    op.create_foreign_key("fk_user_orga", "cameras", "organizations", ["organization_id"], ["id"])
 
 
 def downgrade() -> None:
     # Remove the foreign key constraint and the 'organization_id' column from the 'camera' table
-    op.drop_constraint("fk_camera_orga", "camera", type_="foreignkey")
-    op.drop_constraint("fk_user_orga", "user", type_="foreignkey")
-    op.drop_column("camera", "organization_id")
-    op.drop_column("user", "organization_idation_id")
-    op.drop_table("organization")
+    op.drop_constraint("fk_camera_orga", "cameras", type_="foreignkey")
+    op.drop_constraint("fk_user_orga", "users", type_="foreignkey")
+    op.drop_column("cameras", "organization_id")
+    op.drop_column("users", "organization_idation_id")
+    op.drop_table("organizations")
