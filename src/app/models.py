@@ -65,6 +65,14 @@ class Detection(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
+class Stream(SQLModel, table=True):
+    __tablename__ = "streams"
+    id: int = Field(None, primary_key=True)
+    camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    started_at: datetime = Field(..., nullable=False)
+    last_seen_at: datetime = Field(..., nullable=False)
+
+
 class Organization(SQLModel, table=True):
     __tablename__ = "organizations"
     id: int = Field(None, primary_key=True)
