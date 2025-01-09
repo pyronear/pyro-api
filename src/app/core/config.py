@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.2.0.dev0"
     API_V1_STR: str = "/api/v1"
     CORS_ORIGIN: str = "*"
-    SUPPORT_EMAIL: Union[str, None] = os.environ.get("SUPPORT_EMAIL")
+    SUPPORT_EMAIL: str = os.environ.get("SUPPORT_EMAIL", "support@pyronear.org")
     # Authentication
     SUPERADMIN_LOGIN: str = os.environ["SUPERADMIN_LOGIN"]
     SUPERADMIN_PWD: str = os.environ["SUPERADMIN_PWD"]
