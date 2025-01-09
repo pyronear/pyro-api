@@ -6,6 +6,8 @@ on:
 env:
   BACKEND_IMAGE_NAME: alert-api
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_LOGIN }}
+  PYTHON_VERSION: "3.11"
+  POETRY_VERSION: "1.8.3"
 
 jobs:
   docker:
@@ -14,11 +16,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
+          poetry-version: ${{ env.POETRY_VERSION }}
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output requirements.txt
       - name: Build docker

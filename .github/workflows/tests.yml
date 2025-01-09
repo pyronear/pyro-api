@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: main
 
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.5.13"
+  POETRY_VERSION: "1.8.3"
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -13,10 +18,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
+          poetry-version: ${{ env.POETRY_VERSION }}
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
       - name: Run the backend & the test
@@ -39,24 +45,22 @@ jobs:
           fail_ci_if_error: true
 
   pytest-client:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
+          poetry-version: ${{ env.POETRY_VERSION }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
       - name: Resolve dependencies
         run: |
           poetry export -f requirements.txt --without-hashes --output requirements.txt
-          python -m pip install --upgrade uv
           uv pip install --system -e "client/.[test]"
       - name: Run the backend & the test
         env:
