@@ -7,7 +7,7 @@ from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, ca
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import exc
+from sqlalchemy import desc, exc
 from sqlmodel import SQLModel, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -63,6 +63,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filter_pair: Union[Tuple[str, Any], None] = None,
         in_pair: Union[Tuple[str, List], None] = None,
         inequality_pair: Optional[Tuple[str, str, Any]] = None,
+        order_by: Optional[str] = None,
+        order_desc: bool = False,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> List[ModelType]:
@@ -85,6 +87,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 statement = statement.where(getattr(self.model, field) < value)
             else:
                 raise ValueError(f"Unsupported inequality operator: {op}")
+
+        if order_by is not None:
+            statement = statement.order_by(
+                desc(getattr(self.model, order_by)) if order_desc else getattr(self.model, order_by)
+            )
 
         if offset is not None:
             statement = statement.offset(offset)
