@@ -6,53 +6,53 @@ on:
   pull_request:
     branches: main
 
+env:
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.5.13"
+  POETRY_VERSION: "1.8.3"
+
 jobs:
   ruff:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
+          poetry-version: ${{ env.POETRY_VERSION }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
+          poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
           uv pip install --system -r requirements.txt
       - name: Run ruff
         run: |
           ruff --version
+          ruff format --check --diff .
           ruff check --diff .
 
   mypy:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --with quality --output requirements.txt
+          poetry-version: ${{ env.POETRY_VERSION }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
+          poetry export -f requirements.txt --without-hashes --with quality --output requirements.txt
           uv pip install --system -r requirements.txt
       - name: Run mypy
         run: |
@@ -60,79 +60,40 @@ jobs:
           mypy
 
   mypy-client:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - name: Cache python modules
-        uses: actions/cache@v4
+      - uses: astral-sh/setup-uv@v5
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('client/pyproject.toml') }}
+          version: ${{ env.UV_VERSION }}
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e client/. --upgrade
-          pip install "mypy==1.4.1"
+        run: uv pip install --system -e "client/.[quality]"
       - name: Run mypy
         run: |
           mypy --version
           cd client && mypy
 
-  ruff-format:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          architecture: x64
-      - uses: abatilo/actions-poetry@v3
-        with:
-          poetry-version: "1.8.2"
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade uv
-          uv pip install --system -r requirements.txt
-      - name: Run ruff
-        run: |
-          ruff --version
-          ruff format --check --diff .
-
   precommit-hooks:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python: [3.9]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
       - uses: abatilo/actions-poetry@v3
         with:
-          poetry-version: "1.8.2"
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
+          poetry-version: ${{ env.POETRY_VERSION }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade uv
+          poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
           uv pip install --system -r requirements.txt
       - name: Run pre-commit hooks
         run: |
