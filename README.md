@@ -22,8 +22,8 @@
   <a href="https://anaconda.org/pyronear/pyroclient">
     <img alt="Anaconda" src="https://img.shields.io/conda/vn/pyronear/pyroclient?style=flat-square?style=flat-square&logo=Anaconda&logoColor=white&label=conda">
   </a>
-  <a href="https://hub.docker.com/r/pyronear/pyro-api">
-    <img alt="Docker Image Version" src="https://img.shields.io/docker/v/pyronear/pyro-api?style=flat-square&logo=Docker&logoColor=white&label=docker">
+  <a href="https://hub.docker.com/r/pyronear/alert-api">
+    <img alt="Docker Image Version" src="https://img.shields.io/docker/v/pyronear/alert-api?style=flat-square&logo=Docker&logoColor=white&label=docker">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
   <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
