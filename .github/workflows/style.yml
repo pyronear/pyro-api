@@ -71,7 +71,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
       - name: Install dependencies
-        run: uv pip install -e "client/.[quality]" --upgrade
+        run: uv pip install --system -e "client/.[quality]"
       - name: Run mypy
         run: |
           mypy --version
