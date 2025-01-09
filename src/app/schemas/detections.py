@@ -20,7 +20,7 @@ class DetectionLabel(BaseModel):
 class Azimuth(BaseModel):
     azimuth: float = Field(
         ...,
-        gt=-1,
+        ge=0,
         lt=360,
         description="angle between north and direction in degrees",
         json_schema_extra={"examples": [110]},

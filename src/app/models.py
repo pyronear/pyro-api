@@ -57,7 +57,7 @@ class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    azimuth: float = Field(..., gt=-1, lt=360)
+    azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
     is_wildfire: Union[bool, None] = None
