@@ -23,6 +23,8 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -77,6 +79,7 @@ zip-safe = true
 exclude = ["docs*", "tests*"]
 
 [tool.mypy]
+python_version = "3.8"
 files = "pyroclient/"
 show_error_codes = true
 pretty = true

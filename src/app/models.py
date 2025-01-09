@@ -15,16 +15,16 @@ __all__ = ["Camera", "Detection", "Organization", "User"]
 
 
 class UserRole(str, Enum):
-    ADMIN: str = "admin"
-    AGENT: str = "agent"
-    USER: str = "user"
+    ADMIN = "admin"
+    AGENT = "agent"
+    USER = "user"
 
 
 class Role(str, Enum):
-    ADMIN: str = "admin"
-    AGENT: str = "agent"
-    CAMERA: str = "camera"
-    USER: str = "user"
+    ADMIN = "admin"
+    AGENT = "agent"
+    CAMERA = "camera"
+    USER = "user"
 
 
 class User(SQLModel, table=True):

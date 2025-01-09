@@ -137,7 +137,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 mypy_path = "src/"
 files = "src/app"
 show_error_codes = true
