@@ -10,7 +10,7 @@ authors = ["Pyronear <contact@pyronear.org>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 fastapi = ">=0.109.1,<1.0.0"
 sqlmodel = "^0.0.16"
 pydantic = ">=2.0.0,<3.0.0"
