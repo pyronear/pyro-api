@@ -33,7 +33,7 @@ httpx = "^0.24.0"
 optional = true
 
 [tool.poetry.group.quality.dependencies]
-ruff = "==0.7.1"
+ruff = "==0.8.6"
 mypy = "==1.10.0"
 types-requests = ">=2.0.0"
 types-python-dateutil = "^2.8.0"
@@ -104,8 +104,6 @@ ignore = [
     "F403",  # star imports
     "E731",  # lambda assignment
     "C416",  # list comprehension to list()
-    "ANN101",  # missing type annotations on self
-    "ANN102",  # missing type annotations on cls
     "ANN002",  # missing type annotations on *args
     "ANN003",  # missing type annotations on **kwargs
     "COM812",  # trailing comma missing
@@ -139,7 +137,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 mypy_path = "src/"
 files = "src/app"
 show_error_codes = true

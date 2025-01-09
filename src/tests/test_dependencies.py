@@ -46,11 +46,11 @@ from app.core.security import create_access_token
     ],
 )
 def test_get_jwt(scopes, token, expires_minutes, error_code, expected_payload):
-    _token = create_access_token(token, expires_minutes) if isinstance(token, dict) else token
+    token_ = create_access_token(token, expires_minutes) if isinstance(token, dict) else token
     if isinstance(error_code, int):
         with pytest.raises(HTTPException):
-            get_jwt(SecurityScopes(scopes), _token)
+            get_jwt(SecurityScopes(scopes), token_)
     else:
-        payload = get_jwt(SecurityScopes(scopes), _token)
+        payload = get_jwt(SecurityScopes(scopes), token_)
         if expected_payload is not None:
             assert payload.model_dump() == expected_payload

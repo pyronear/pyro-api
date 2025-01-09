@@ -105,8 +105,8 @@ class S3Service:
     def __init__(
         self, region: str, endpoint_url: str, access_key: str, secret_key: str, proxy_url: Union[str, None] = None
     ) -> None:
-        _session = boto3.Session(access_key, secret_key, region_name=region)
-        self._s3 = _session.client("s3", endpoint_url=endpoint_url)
+        session_ = boto3.Session(access_key, secret_key, region_name=region)
+        self._s3 = session_.client("s3", endpoint_url=endpoint_url)
         # Ensure S3 is connected
         try:
             self._s3.list_buckets()
@@ -169,7 +169,7 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int) ->
     # Upload the file
     if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
-    logging.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
+    logger.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 
     # Data integrity check
     file_meta = bucket.get_file_metadata(bucket_key)
