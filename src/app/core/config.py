@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
 
+    # Stream handling
+    STREAM_RELAXATION_SECONDS: int = int(os.environ.get("STREAM_RELAXATION_SECONDS") or 30 * 60)
+    STREAM_MIN_INTERVAL_DETS: int = int(os.environ.get("STREAM_MIN_INTERVAL_DETS") or 3)
+    STREAM_MIN_INTERVAL_SECONDS: int = int(os.environ.get("STREAM_MIN_INTERVAL_SECONDS") or 5 * 60)
+
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
 
