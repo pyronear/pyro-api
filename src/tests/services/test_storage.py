@@ -69,11 +69,11 @@ async def test_s3_service(region, endpoint_url, access_key, secret_key, proxy_ur
 )
 @pytest.mark.asyncio
 async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
-    _session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
-    _s3 = _session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
+    session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
+    s3 = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
     if expected_error is None:
-        _s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": settings.S3_REGION})
-        bucket = S3Bucket(_s3, bucket_name, proxy_url)
+        s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": settings.S3_REGION})
+        bucket = S3Bucket(s3, bucket_name, proxy_url)
         bucket_key = "logo.png"
         # Create file
         assert not bucket.check_file_existence(bucket_key)
@@ -90,7 +90,7 @@ async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
         await bucket.delete_items()
         assert not bucket.check_file_existence(bucket_key)
         # Delete the bucket
-        _s3.delete_bucket(Bucket=bucket_name)
+        s3.delete_bucket(Bucket=bucket_name)
     else:
         with pytest.raises(expected_error):
-            S3Bucket(_s3, bucket_name, proxy_url)
+            S3Bucket(s3, bucket_name, proxy_url)

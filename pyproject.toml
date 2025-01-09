@@ -104,8 +104,6 @@ ignore = [
     "F403",  # star imports
     "E731",  # lambda assignment
     "C416",  # list comprehension to list()
-    "ANN101",  # missing type annotations on self
-    "ANN102",  # missing type annotations on cls
     "ANN002",  # missing type annotations on *args
     "ANN003",  # missing type annotations on **kwargs
     "COM812",  # trailing comma missing
