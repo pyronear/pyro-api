@@ -31,9 +31,9 @@ stop:
 # the "-" are used to launch the next command even if a command fail
 test:
 	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	- docker compose -f docker-compose.dev.yml exec -T backend pytest --cov=app
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.yml up -d --build --wait
+	- docker compose -f docker-compose.yml exec -T backend pytest --cov=app
+	docker compose -f docker-compose.yml down
 
 build-client:
 	pip install -e client/.
@@ -42,9 +42,9 @@ build-client:
 # the "-" are used to launch the next command even if a command fail
 test-client: build-client
 	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
+	docker compose -f docker-compose.yml up -d --build --wait
 	- cd client && pytest --cov=pyroclient tests/ && cd ..
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.yml down
 
 # Check that docs can build for client
 docs-client:
@@ -53,6 +53,6 @@ docs-client:
 
 e2e:
 	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
+	docker compose -f docker-compose.yml up -d --build --wait
 	- python scripts/test_e2e.py
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.yml down

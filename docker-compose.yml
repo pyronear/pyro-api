@@ -5,13 +5,11 @@ services:
     expose:
       - 5432
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - POSTGRES_USER=dummy_pg_user
+      - POSTGRES_PASSWORD=dummy_pg_pwd
+      - POSTGRES_DB=dummy_pg_db
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U dummy_pg_user -d dummy_pg_db'"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -25,11 +23,8 @@ services:
     environment:
       - EDGE_PORT=4566
       - SERVICES=s3
-      - DATA_DIR=/tmp/localstack/data
-      - AWS_DEFAULT_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
-      - localstack_data:/tmp/localstack
     healthcheck:
       test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
       interval: 10s
@@ -37,7 +32,6 @@ services:
       retries: 10
 
   backend:
-    image: pyronear/alert-api:latest
     build:
       context: .
       dockerfile: ./src/Dockerfile
@@ -49,31 +43,24 @@ services:
     ports:
       - "5050:5050"
     environment:
-      - POSTGRES_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
-      - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
-      - SUPERADMIN_PWD=${SUPERADMIN_PWD}
-      - SUPERADMIN_ORG=${SUPERADMIN_ORG}
+      - POSTGRES_URL=postgresql+asyncpg://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
+      - SUPERADMIN_LOGIN=superadmin_login
+      - SUPERADMIN_PWD=superadmin_pwd
+      - SUPERADMIN_ORG=admin
       - JWT_SECRET=${JWT_SECRET}
       - SUPPORT_EMAIL=${SUPPORT_EMAIL}
       - DEBUG=true
-      - PROMETHEUS_ENABLED=true
       - SQLALCHEMY_SILENCE_UBER_WARNING=1
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://localstack:4566}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-na}
-      - S3_SECRET_KEY=${S3_SECRET_KEY:-na}
-      - S3_REGION=${S3_REGION:-us-east-1}
-      - S3_PROXY_URL=${S3_PROXY_URL}
-      - SERVER_NAME=${SERVER_NAME}
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - S3_ACCESS_KEY=fake
+      - S3_SECRET_KEY=fake
+      - S3_REGION=us-east-1
     volumes:
       - ./src/:/app/
-    command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
+    command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "curl http://localhost:5050/status"]
       interval: 10s
       timeout: 3s
-      retries: 10
-
-volumes:
-  postgres_data:
-  localstack_data:
+      retries: 6

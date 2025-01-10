@@ -36,5 +36,5 @@ jobs:
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
         run: |
-          docker compose -f docker-compose.dev.yml up -d --build --wait
+          docker compose -f docker-compose.yml up -d --build --wait
           python scripts/test_e2e.py
