@@ -85,6 +85,7 @@ async def create_detection(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
     # Stream handling
+    # Check if there is a stream that was seen recently
     stream = await streams.fetch_all(
         filter_pair=("camera_id", token_payload.sub),
         inequality_pair=(
@@ -104,11 +105,12 @@ async def create_detection(
         dets_ = await detections.fetch_all(
             filter_pair=("camera_id", token_payload.sub),
             inequality_pair=(
-                "last_seen_at",
+                "created_at",
                 ">",
                 datetime.utcnow() - timedelta(seconds=settings.STREAM_MIN_INTERVAL_SECONDS),
             ),
             order_by="created_at",
+            limit=settings.STREAM_MIN_INTERVAL_DETS,
         )
         if len(dets_) >= settings.STREAM_MIN_INTERVAL_DETS:
             # Create new stream
