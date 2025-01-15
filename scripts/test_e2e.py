@@ -131,7 +131,7 @@ def main(args):
     assert len(sequences) == 1
     assert sequences[0]["camera_id"] == cam_id
     assert sequences[0]["started_at"] == response.json()["created_at"]
-    assert sequences[0]["last_seen_at"] > sequences[0]["started_ts"]
+    assert sequences[0]["last_seen_at"] > sequences[0]["started_at"]
     assert sequences[0]["azimuth"] == response.json()["azimuth"]
 
     # Cleaning (order is important because of foreign key protection in existing tables)
