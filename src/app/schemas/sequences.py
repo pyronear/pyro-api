@@ -7,9 +7,9 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-__all__ = ["StreamUpdate"]
+__all__ = ["SequenceUpdate"]
 
 
 # Accesses
-class StreamUpdate(BaseModel):
+class SequenceUpdate(BaseModel):
     last_seen_at: datetime

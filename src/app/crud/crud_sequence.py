@@ -6,12 +6,12 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
-from app.models import Stream
-from app.schemas.streams import StreamUpdate
+from app.models import Sequence
+from app.schemas.sequences import SequenceUpdate
 
-__all__ = ["StreamCRUD"]
+__all__ = ["SequenceCRUD"]
 
 
-class StreamCRUD(BaseCRUD[Stream, Stream, StreamUpdate]):
+class SequenceCRUD(BaseCRUD[Sequence, Sequence, SequenceUpdate]):
     def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session, Stream)
+        super().__init__(session, Sequence)

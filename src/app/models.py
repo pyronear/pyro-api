@@ -57,7 +57,7 @@ class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    azimuth: float = Field(..., gt=0, lt=360)
+    azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
     is_wildfire: Union[bool, None] = None
@@ -65,10 +65,11 @@ class Detection(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
-class Stream(SQLModel, table=True):
-    __tablename__ = "streams"
+class Sequence(SQLModel, table=True):
+    __tablename__ = "sequences"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    azimuth: float = Field(..., ge=0, lt=360)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 
