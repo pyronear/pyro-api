@@ -113,7 +113,7 @@ async def get_detection(
     return detection
 
 
-@router.get("/{detection_id}/url", response_model=DetectionUrl, status_code=200)
+@router.get("/{detection_id}/url", status_code=200)
 async def get_detection_url(
     detection_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
