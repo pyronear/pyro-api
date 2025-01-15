@@ -16,7 +16,7 @@ services:
 
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
-    image: localstack/localstack:4.0.3
+    image: localstack/localstack:1.4.0
     ports:
       - 4566:4566
     # environment variables details: https://docs.localstack.cloud/references/configuration/

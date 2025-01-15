@@ -18,18 +18,18 @@ services:
 
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
-    image: localstack/localstack:4.0.3
+    image: localstack/localstack:1.4.0
     ports:
       - 4566:4566
     # environment variables details: https://docs.localstack.cloud/references/configuration/
     environment:
       - EDGE_PORT=4566
       - SERVICES=s3
-      - DATA_DIR=/var/lib/localstack/data
+      - DATA_DIR=/tmp/localstack/data
       - AWS_DEFAULT_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
-      - localstack_data:/var/lib/localstack
+      - localstack_data:/tmp/localstack
     healthcheck:
       test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
       interval: 10s
