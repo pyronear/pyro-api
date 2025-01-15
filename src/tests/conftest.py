@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, User, Webhook
+from app.models import Camera, Detection, Organization, Sequence, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -109,18 +109,38 @@ DET_TABLE = [
         "bucket_key": "my_file",
         "is_wildfire": False,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
-        "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
+        "updated_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
         "id": 3,
+        "camera_id": 1,
+        "azimuth": 43.7,
+        "bucket_key": "my_file",
+        "is_wildfire": True,
+        "bboxes": "[(.1,.1,.7,.8,.9)]",
+        "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+        "updated_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+    },
+    {
+        "id": 4,
         "camera_id": 2,
         "azimuth": 43.7,
         "bucket_key": "my_file",
         "is_wildfire": None,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
-        "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "updated_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+    },
+]
+
+SEQ_TABLE = [
+    {
+        "id": 1,
+        "camera_id": 1,
+        "azimuth": 43.7,
+        "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
 ]
 
@@ -279,6 +299,21 @@ async def detection_session(
         pass
 
 
+@pytest_asyncio.fixture(scope="function")
+async def sequence_session(detection_session: AsyncSession):
+    for entry in SEQ_TABLE:
+        detection_session.add(Sequence(**entry))
+    await detection_session.commit()
+    await detection_session.exec(
+        text(
+            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
+        )
+    )
+    await detection_session.commit()
+    yield detection_session
+    await detection_session.rollback()
+
+
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
     token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
     token = create_access_token(token_data)
@@ -304,6 +339,10 @@ def pytest_configure():
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in DET_TABLE
+    ]
+    pytest.sequence_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in SEQ_TABLE
     ]
     pytest.webhook_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}

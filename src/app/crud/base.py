@@ -7,7 +7,7 @@ from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, ca
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import exc
+from sqlalchemy import desc, exc
 from sqlmodel import SQLModel, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -60,15 +60,20 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def fetch_all(
         self,
-        filter_pair: Union[Tuple[str, Any], None] = None,
+        filters: Union[Tuple[str, Any], List[Tuple[str, Any]], None] = None,
         in_pair: Union[Tuple[str, List], None] = None,
         inequality_pair: Optional[Tuple[str, str, Any]] = None,
+        order_by: Optional[str] = None,
+        order_desc: bool = False,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
-        if isinstance(filter_pair, tuple):
-            statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
+        if isinstance(filters, tuple):
+            statement = statement.where(getattr(self.model, filters[0]) == filters[1])
+        elif isinstance(filters, list):
+            for filter_ in filters:
+                statement = statement.where(getattr(self.model, filter_[0]) == filter_[1])
 
         if isinstance(in_pair, tuple):
             statement = statement.where(getattr(self.model, in_pair[0]).in_(in_pair[1]))
@@ -85,6 +90,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 statement = statement.where(getattr(self.model, field) < value)
             else:
                 raise ValueError(f"Unsupported inequality operator: {op}")
+
+        if order_by is not None:
+            statement = statement.order_by(
+                desc(getattr(self.model, order_by)) if order_desc else getattr(self.model, order_by)
+            )
 
         if offset is not None:
             statement = statement.offset(offset)
