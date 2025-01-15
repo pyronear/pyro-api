@@ -56,6 +56,12 @@
     - src/app/api/*/endpoints/detections.py
     - src/app/crud/detections.py
 
+'endpoint: sequences':
+- changed-files:
+  - any-glob-to-any-file:
+    - src/app/api/*/endpoints/sequences.py
+    - src/app/crud/sequences.py
+
 'endpoint: login':
 - changed-files:
   - any-glob-to-any-file: src/app/api/*/endpoints/login.py
