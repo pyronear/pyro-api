@@ -113,7 +113,7 @@ DET_TABLE = [
         "updated_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
-        "id": 2,
+        "id": 3,
         "camera_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
@@ -123,7 +123,7 @@ DET_TABLE = [
         "updated_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
-        "id": 3,
+        "id": 4,
         "camera_id": 2,
         "azimuth": 43.7,
         "bucket_key": "my_file",
