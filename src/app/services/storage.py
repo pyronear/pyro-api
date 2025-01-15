@@ -122,9 +122,14 @@ class S3Service:
     def create_bucket(self, bucket_name: str) -> bool:
         """Create a new bucket in S3 storage"""
         try:
-            self._s3.create_bucket(
-                Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": self._s3.meta.region_name}
+            # https://stackoverflow.com/questions/51912072/invalidlocationconstraint-error-while-creating-s3-bucket-when-the-used-command-i
+            # https://github.com/localstack/localstack/issues/8000
+            config_ = (
+                {}
+                if self._s3.meta.region_name == "us-east-1"
+                else {"CreateBucketConfiguration": {"LocationConstraint": self._s3.meta.region_name}}
             )
+            self._s3.create_bucket(Bucket=bucket_name, **config_)
             return True
         except ClientError as e:
             logger.warning(e)

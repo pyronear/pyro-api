@@ -44,14 +44,18 @@ def main(args):
         "Content-Type": "application/json",
     }
 
-    user_login = "my_user"
-    user_pwd = "my_pwd"  # noqa S105
+    # Create an organization
+    org_name = "my_org"
+    org_id = api_request("post", f"{args.endpoint}/organizations/", superuser_auth, {"name": org_name})["id"]
+
+    agent_login = "my_user"
+    agent_pwd = "my_pwd"  # noqa S105
 
     # create a user
-    payload = {"organization_id": 1, "login": user_login, "password": user_pwd, "role": "agent"}
+    payload = {"organization_id": org_id, "login": agent_login, "password": agent_pwd, "role": "agent"}
     user_id = api_request("post", f"{args.endpoint}/users/", superuser_auth, payload)["id"]
     agent_auth = {
-        "Authorization": f"Bearer {get_token(args.endpoint, user_login, user_pwd)}",
+        "Authorization": f"Bearer {get_token(args.endpoint, agent_login, agent_pwd)}",
         "Content-Type": "application/json",
     }
     # Get & Fetch access
@@ -63,11 +67,11 @@ def main(args):
     new_pwd = "my_new_pwd"  # noqa S105
     api_request("patch", f"{args.endpoint}/users/{user_id}/", superuser_auth, {"password": new_pwd})
 
-    # Create a camera (as admin until #79 is closed)
+    # Create a camera
     camera_name = "my_device"
     payload = {
         "name": camera_name,
-        "organization_id": 1,
+        "organization_id": org_id,
         "angle_of_view": 70.0,
         "elevation": 100,
         "lat": 44.7,
@@ -111,7 +115,7 @@ def main(args):
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
-
+    api_request("delete", f"{args.endpoint}/organizations/{org_id}/", superuser_auth)
     print(f"SUCCESS in {time.time() - start_ts:.3}s")
 
     return
