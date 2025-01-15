@@ -5,7 +5,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Depends, Security, status
+from fastapi import APIRouter, Depends, Path, Security, status
 
 from app.api.dependencies import get_jwt, get_sequence_crud
 from app.crud import SequenceCRUD
@@ -23,3 +23,13 @@ async def fetch_sequences(
 ) -> List[Sequence]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch")
     return [elt for elt in await sequences.fetch_all()]
+
+
+@router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
+async def delete_sequence(
+    sequence_id: int = Path(..., gt=0),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> None:
+    telemetry_client.capture(token_payload.sub, event="sequence-deletion", properties={"sequence_id": sequence_id})
+    await sequences.delete(sequence_id)
