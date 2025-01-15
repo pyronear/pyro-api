@@ -111,6 +111,29 @@ def main(args):
     api_request("get", f"{args.endpoint}/detections", agent_auth)
     api_request("get", f"{args.endpoint}/detections/{detection_id}/url", agent_auth)
 
+    # Create a sequence by adding two additional detections
+    requests.post(
+        f"{args.endpoint}/detections",
+        headers=cam_auth,
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
+        files={"file": ("logo.png", file_bytes, "image/png")},
+        timeout=5,
+    )
+    requests.post(
+        f"{args.endpoint}/detections",
+        headers=cam_auth,
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
+        files={"file": ("logo.png", file_bytes, "image/png")},
+        timeout=5,
+    )
+    # Check that a sequence has been created
+    sequences = api_request("get", f"{args.endpoint}/sequences", superuser_auth)
+    assert len(sequences) == 1
+    assert sequences[0]["camera_id"] == cam_id
+    assert sequences[0]["started_ts"] == response.json()["created_at"]
+    assert sequences[0]["last_seen_at"] > sequences[0]["started_ts"]
+    assert sequences[0]["azimuth"] == response.json()["azimuth"]
+
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
