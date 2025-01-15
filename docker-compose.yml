@@ -25,11 +25,11 @@ services:
     environment:
       - EDGE_PORT=4566
       - SERVICES=s3
-      - DATA_DIR=/tmp/localstack/data
+      - DATA_DIR=/var/lib/localstack/data
       - AWS_DEFAULT_REGION=${S3_REGION:-us-east-1}
     volumes:
       - ./scripts/localstack:/etc/localstack/init/ready.d
-      - localstack_data:/tmp/localstack
+      - localstack_data:/var/lib/localstack
     healthcheck:
       test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
       interval: 10s
