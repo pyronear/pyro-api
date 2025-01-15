@@ -60,7 +60,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def fetch_all(
         self,
-        filter_pair: Union[Tuple[str, Any], None] = None,
+        filters: Union[Tuple[str, Any], List[Tuple[str, Any]], None] = None,
         in_pair: Union[Tuple[str, List], None] = None,
         inequality_pair: Optional[Tuple[str, str, Any]] = None,
         order_by: Optional[str] = None,
@@ -69,8 +69,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         offset: Optional[int] = None,
     ) -> List[ModelType]:
         statement = select(self.model)  # type: ignore[var-annotated]
-        if isinstance(filter_pair, tuple):
-            statement = statement.where(getattr(self.model, filter_pair[0]) == filter_pair[1])
+        if isinstance(filters, tuple):
+            statement = statement.where(getattr(self.model, filters[0]) == filters[1])
+        elif isinstance(filters, list):
+            for filter_ in filters:
+                statement = statement.where(getattr(self.model, filter_[0]) == filter_[1])
 
         if isinstance(in_pair, tuple):
             statement = statement.where(getattr(self.model, in_pair[0]).in_(in_pair[1]))
