@@ -42,7 +42,7 @@ async def test_fetch_sequences(
     [
         (None, 1, 401, "Not authenticated"),
         (0, 1, 200, None),
-        (0, 2, 404, "Table sequences has no corresponding entry."),
+        (0, 2, 404, "Table Sequence has no corresponding entry."),
         (1, 1, 403, "Incompatible token scope."),
     ],
 )
