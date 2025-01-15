@@ -28,13 +28,13 @@ from app.api.dependencies import (
     get_detection_crud,
     get_jwt,
     get_organization_crud,
-    get_stream_crud,
+    get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, StreamCRUD, WebhookCRUD
+from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
 from app.db import get_session
-from app.models import Camera, Detection, Organization, Role, Stream, UserRole
+from app.models import Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
@@ -44,7 +44,7 @@ from app.schemas.detections import (
     DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
-from app.schemas.streams import StreamUpdate
+from app.schemas.sequences import SequenceUpdate
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
@@ -67,7 +67,7 @@ async def create_detection(
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
-    streams: StreamCRUD = Depends(get_stream_crud),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -84,39 +84,41 @@ async def create_detection(
     det = await detections.create(
         DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
     )
-    # Stream handling
-    # Check if there is a stream that was seen recently
-    stream = await streams.fetch_all(
-        filter_pair=("camera_id", token_payload.sub),
+    # Sequence handling
+    # Check if there is a sequence that was seen recently
+    sequence = await sequences.fetch_all(
+        filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
         inequality_pair=(
             "last_seen_at",
             ">",
-            datetime.utcnow() - timedelta(seconds=settings.STREAM_RELAXATION_SECONDS),
+            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
         order_by="last_seen_at",
         order_desc=True,
         limit=1,
     )
-    if len(stream) == 1:
-        # Add detection to existing stream
-        await streams.update(stream[0].id, StreamUpdate(last_seen_at=det.created_at))
+    if len(sequence) == 1:
+        # Add detection to existing sequence
+        await sequences.update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
     else:
         # Check if we've reached the threshold of detections per interval
         dets_ = await detections.fetch_all(
-            filter_pair=("camera_id", token_payload.sub),
+            filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
             inequality_pair=(
                 "created_at",
                 ">",
-                datetime.utcnow() - timedelta(seconds=settings.STREAM_MIN_INTERVAL_SECONDS),
+                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
             ),
             order_by="created_at",
-            limit=settings.STREAM_MIN_INTERVAL_DETS,
+            order_desc=False,
+            limit=settings.SEQUENCE_MIN_INTERVAL_DETS,
         )
-        if len(dets_) >= settings.STREAM_MIN_INTERVAL_DETS:
-            # Create new stream
-            await streams.create(
-                Stream(
+        if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
+            # Create new sequence
+            await sequences.create(
+                Sequence(
                     camera_id=token_payload.sub,
+                    azimuth=det.azimuth,
                     started_at=dets_[0].created_at,
                     last_seen_at=det.created_at,
                 )
@@ -189,7 +191,7 @@ async def fetch_detections(
     if UserRole.ADMIN in token_payload.scopes:
         return [elt for elt in await detections.fetch_all()]
 
-    cameras_list = await cameras.fetch_all(filter_pair=("organization_id", token_payload.organization_id))
+    cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
     return await detections.fetch_all(in_pair=("camera_id", camera_ids))
