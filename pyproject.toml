@@ -111,6 +111,7 @@ ignore = [
     "ANN003",  # missing type annotations on **kwargs
     "COM812",  # trailing comma missing
     "ISC001",  # implicit string concatenation (handled by format)
+    "FAST002",  # fastapi annotated
 ]
 exclude = [".git"]
 
