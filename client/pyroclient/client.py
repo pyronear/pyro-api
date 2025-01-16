@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-
+from enum import Enum
 from typing import Dict, List, Tuple
 from urllib.parse import urljoin
 
@@ -14,30 +14,25 @@ from .exceptions import HTTPRequestError
 
 __all__ = ["Client"]
 
-ROUTES: Dict[str, str] = {
-    #################
+
+class RouteMap(str, Enum):
     # LOGIN
-    #################
-    "login-validate": "/login/validate",
-    #################
+    LOGIN_VALIDATE = "/login/validate"
     # CAMERAS
-    #################
-    "cameras-heartbeat": "/cameras/heartbeat",
-    "cameras-image": "/cameras/image",
-    "cameras-fetch": "/cameras/",
-    #################
+    CAMERAS_HEARTBEAT = "/cameras/heartbeat"
+    CAMERAS_IMAGE = "/cameras/image"
+    CAMERAS_FETCH = "/cameras/"
     # DETECTIONS
-    #################
-    "detections-create": "/detections/",
-    "detections-label": "/detections/{det_id}/label",
-    "detections-fetch": "/detections",
-    "detections-fetch-unl": "/detections/unlabeled/fromdate",
-    "detections-url": "/detections/{det_id}/url",
-    #################
+    DETECTIONS_CREATE = "/detections/"
+    DETECTIONS_FETCH = "/detections"
+    DETECTIONS_URL = "/detections/{det_id}/url"
+    # SEQUENCES
+    SEQUENCES_LABEL = "/sequences/{seq_id}/label"
+    SEQUENCES_FETCH_DETECTIONS = "/sequences/{seq_id}/detections"
+    SEQUENCES_FETCH_LATEST = "/sequences/unlabeled/latest"
+    SEQUENCES_FETCH_FROMDATE = "/sequences/all/fromdate"
     # ORGS
-    #################
-    "organizations-fetch": "/organizations",
-}
+    ORGS_FETCH = "/organizations"
 
 
 def _to_str(coord: float) -> str:
@@ -89,10 +84,11 @@ class Client:
         if requests.get(urljoin(host, "status"), timeout=timeout, **kwargs).status_code != 200:
             raise ValueError(f"unable to reach host {host}")
         # Prepend API url to each route
-        self.routes = {k: urljoin(host, f"api/v1{v}") for k, v in ROUTES.items()}
+        # self.routes = {r.name: urljoin(host, f"api/v1{r.value}") for r in RouteMap}
+        self.routes = Enum("RouteMap", {r.name: urljoin(host, f"api/v1{r.value}") for r in RouteMap})
         # Check token
         response = requests.get(
-            self.routes["login-validate"], headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
+            self.routes.LOGIN_VALIDATE, headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
         )
         if response.status_code != 200:
             raise HTTPRequestError(response.status_code, response.text)
@@ -115,7 +111,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes["cameras-fetch"],
+            self.routes.CAMERAS_FETCH,
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -130,7 +126,7 @@ class Client:
         Returns:
             HTTP response containing the update device info
         """
-        return requests.patch(self.routes["cameras-heartbeat"], headers=self.headers, timeout=self.timeout)
+        return requests.patch(self.routes.CAMERAS_HEARTBEAT, headers=self.headers, timeout=self.timeout)
 
     def update_last_image(self, media: bytes) -> Response:
         """Update the last image of the camera
@@ -144,7 +140,7 @@ class Client:
             HTTP response containing the update device info
         """
         return requests.patch(
-            self.routes["cameras-image"],
+            self.routes.CAMERAS_IMAGE,
             headers=self.headers,
             files={"file": ("logo.png", media, "image/png")},
             timeout=self.timeout,
@@ -175,7 +171,7 @@ class Client:
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
         return requests.post(
-            self.routes["detections-create"],
+            self.routes.DETECTIONS_CREATE,
             headers=self.headers,
             data={
                 "azimuth": azimuth,
@@ -183,27 +179,6 @@ class Client:
             },
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
-        )
-
-    def label_detection(self, detection_id: int, is_wildfire: bool) -> Response:
-        """Update the label of a detection made by a camera
-
-        >>> from pyroclient import client
-        >>> api_client = Client("MY_USER_TOKEN")
-        >>> response = api_client.label_detection(1, is_wildfire=True)
-
-        Args:
-            detection_id: ID of the associated detection entry
-            is_wildfire: whether this detection is confirmed as a wildfire
-
-        Returns:
-            HTTP response
-        """
-        return requests.patch(
-            self.routes["detections-label"].format(det_id=detection_id),
-            headers=self.headers,
-            json={"is_wildfire": is_wildfire},
-            timeout=self.timeout,
         )
 
     def get_detection_url(self, detection_id: int) -> Response:
@@ -220,7 +195,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes["detections-url"].format(det_id=detection_id),
+            self.routes.DETECTIONS_URL.format(det_id=detection_id),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -236,26 +211,82 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes["detections-fetch"],
+            self.routes.DETECTIONS_FETCH,
             headers=self.headers,
             timeout=self.timeout,
         )
 
-    def fetch_unlabeled_detections(self, from_date: str) -> Response:
-        """List the detections accessible to the authenticated user
+    def label_sequence(self, sequence_id: int, is_wildfire: bool) -> Response:
+        """Update the label of a sequence made by a camera
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
-        >>> response = api_client.fetch_unacknowledged_detections("2023-07-04T00:00:00")
+        >>> response = api_client.label_sequence(1, is_wildfire=True)
+
+        Args:
+            sequence_id: ID of the associated sequence entry
+            is_wildfire: whether this sequence is confirmed as a wildfire
+
+        Returns:
+            HTTP response
+        """
+        return requests.patch(
+            self.routes.SEQUENCES_LABEL.format(seq_id=sequence_id),
+            headers=self.headers,
+            json={"is_wildfire": is_wildfire},
+            timeout=self.timeout,
+        )
+
+    def fetch_sequences_from_date(self, from_date: str) -> Response:
+        """List the sequences accessible to the authenticated user for a specific date
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_sequences_from_date("2023-07-04")
+
+        Args:
+            from_date: date of the sequences to fetch
 
         Returns:
             HTTP response
         """
         params = {"from_date": from_date}
         return requests.get(
-            self.routes["detections-fetch-unl"],
+            self.routes.SEQUENCES_FETCH_FROMDATE,
             headers=self.headers,
             params=params,
+            timeout=self.timeout,
+        )
+
+    def fetch_latest_sequences(self) -> Response:
+        """List the latest sequences accessible to the authenticated user
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_latest_sequences()
+
+        Returns:
+            HTTP response
+        """
+        return requests.get(
+            self.routes.SEQUENCES_FETCH_LATEST,
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def fetch_sequences_detections(self, sequence_id: int) -> Response:
+        """List the detections of a sequence
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.fetch_sequences_detections(1)
+
+        Returns:
+            HTTP response
+        """
+        return requests.get(
+            self.routes.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id),
+            headers=self.headers,
             timeout=self.timeout,
         )
 
@@ -272,7 +303,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes["organizations-fetch"],
+            self.routes.ORGS_FETCH,
             headers=self.headers,
             timeout=self.timeout,
         )
