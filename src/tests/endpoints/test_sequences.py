@@ -40,7 +40,8 @@ async def test_fetch_sequence_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2 and expected_result is not None:
-        assert {k: v for k, v in response.json().items() if k != "url"} == expected_result
+        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
+        assert all(det["url"].startswith("http://") for det in response.json())
 
 
 @pytest.mark.parametrize(
@@ -162,8 +163,7 @@ async def test_fetch_sequences_from_date(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
-        assert all(det["url"].startswith("http://") for det in response.json())
+        assert response.json() == expected_result
 
 
 @pytest.mark.parametrize(
@@ -198,5 +198,4 @@ async def test_latest_sequences(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
-        assert all(det["url"].startswith("http://") for det in response.json())
+        assert response.json() == expected_result
