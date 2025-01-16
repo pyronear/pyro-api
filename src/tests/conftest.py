@@ -276,9 +276,22 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(
-    user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
-):
+async def sequence_session(camera_session: AsyncSession):
+    for entry in SEQ_TABLE:
+        camera_session.add(Sequence(**entry))
+    await camera_session.commit()
+    await camera_session.exec(
+        text(
+            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
+        )
+    )
+    await camera_session.commit()
+    yield camera_session
+    await camera_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def detection_session(user_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
         user_session.add(Detection(**entry))
     await user_session.commit()
@@ -302,21 +315,6 @@ async def detection_session(
             bucket.delete_file(entry["bucket_key"])
     except ClientError:
         pass
-
-
-@pytest_asyncio.fixture(scope="function")
-async def sequence_session(detection_session: AsyncSession):
-    for entry in SEQ_TABLE:
-        detection_session.add(Sequence(**entry))
-    await detection_session.commit()
-    await detection_session.exec(
-        text(
-            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
-        )
-    )
-    await detection_session.commit()
-    yield detection_session
-    await detection_session.rollback()
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
