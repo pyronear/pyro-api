@@ -17,22 +17,22 @@ __all__ = ["Client"]
 
 class ClientRoute(str, Enum):
     # LOGIN
-    LOGIN_VALIDATE = "/login/validate"
+    LOGIN_VALIDATE = "login/validate"
     # CAMERAS
-    CAMERAS_HEARTBEAT = "/cameras/heartbeat"
-    CAMERAS_IMAGE = "/cameras/image"
-    CAMERAS_FETCH = "/cameras/"
+    CAMERAS_HEARTBEAT = "cameras/heartbeat"
+    CAMERAS_IMAGE = "cameras/image"
+    CAMERAS_FETCH = "cameras/"
     # DETECTIONS
-    DETECTIONS_CREATE = "/detections/"
-    DETECTIONS_FETCH = "/detections"
-    DETECTIONS_URL = "/detections/{det_id}/url"
+    DETECTIONS_CREATE = "detections/"
+    DETECTIONS_FETCH = "detections"
+    DETECTIONS_URL = "detections/{det_id}/url"
     # SEQUENCES
-    SEQUENCES_LABEL = "/sequences/{seq_id}/label"
-    SEQUENCES_FETCH_DETECTIONS = "/sequences/{seq_id}/detections"
-    SEQUENCES_FETCH_LATEST = "/sequences/unlabeled/latest"
-    SEQUENCES_FETCH_FROMDATE = "/sequences/all/fromdate"
+    SEQUENCES_LABEL = "sequences/{seq_id}/label"
+    SEQUENCES_FETCH_DETECTIONS = "sequences/{seq_id}/detections"
+    SEQUENCES_FETCH_LATEST = "sequences/unlabeled/latest"
+    SEQUENCES_FETCH_FROMDATE = "sequences/all/fromdate"
     # ORGS
-    ORGS_FETCH = "/organizations"
+    ORGS_FETCH = "organizations"
 
 
 def _to_str(coord: float) -> str:
@@ -82,7 +82,7 @@ class Client:
         if requests.get(urljoin(host, "status"), timeout=timeout, **kwargs).status_code != 200:
             raise ValueError(f"unable to reach host {host}")
         # Prepend API url to each route
-        self._route_prefix = urljoin(host, "api/v1")
+        self._route_prefix = urljoin(host, "api/v1/")
         # Check token
         response = requests.get(
             urljoin(self._route_prefix, ClientRoute.LOGIN_VALIDATE),
