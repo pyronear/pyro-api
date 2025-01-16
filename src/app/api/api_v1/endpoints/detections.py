@@ -62,7 +62,7 @@ async def create_detection(
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
-    azimuth: float = Form(..., gt=0, lt=360, description="angle between north and direction in degrees"),
+    azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
