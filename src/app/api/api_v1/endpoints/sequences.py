@@ -13,8 +13,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
-from app.models import Camera, Sequence, UserRole
-from app.schemas.detections import DetectionWithUrl
+from app.models import Camera, Detection, Sequence, UserRole
+from app.schemas.detections import DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
 from app.services.storage import s3_service
@@ -50,7 +50,7 @@ async def get_sequence(
 @router.get(
     "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
 )
-async def get_sequence_detections(
+async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -128,9 +128,16 @@ async def fetch_sequences_from_date(
 async def delete_sequence(
     sequence_id: int = Path(..., gt=0),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="sequence-deletion", properties={"sequence_id": sequence_id})
+    # Unset the sequence_id in the detections
+    fetched_detections = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
+    for detection in fetched_detections.all():
+        await detections.update(detection.id, DetectionSequence(sequence_id=None))
+    # Delete the sequence
     await sequences.delete(sequence_id)
 
 

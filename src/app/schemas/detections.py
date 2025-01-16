@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import re
+from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -55,4 +56,4 @@ class DetectionWithUrl(Detection):
 
 
 class DetectionSequence(BaseModel):
-    sequence_id: int = Field(..., gt=0)
+    sequence_id: Union[int, None] = Field(..., gt=0)
