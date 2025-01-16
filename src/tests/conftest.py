@@ -100,7 +100,6 @@ DET_TABLE = [
         "is_wildfire": True,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
     {
         "id": 2,
@@ -110,7 +109,6 @@ DET_TABLE = [
         "is_wildfire": False,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
         "id": 3,
@@ -120,17 +118,15 @@ DET_TABLE = [
         "is_wildfire": True,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
         "id": 4,
         "camera_id": 2,
-        "azimuth": 43.7,
+        "azimuth": 74.8,
         "bucket_key": "my_file",
         "is_wildfire": None,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 
@@ -139,8 +135,17 @@ SEQ_TABLE = [
         "id": 1,
         "camera_id": 1,
         "azimuth": 43.7,
+        "is_wildfire": True,
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+    },
+    {
+        "id": 2,
+        "camera_id": 2,
+        "azimuth": 74.8,
+        "is_wildfire": None,
+        "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 
