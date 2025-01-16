@@ -7,11 +7,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Detection
-from app.schemas.detections import DetectionCreate, DetectionLabel
+from app.schemas.detections import DetectionCreate, DetectionSequence
 
 __all__ = ["DetectionCRUD"]
 
 
-class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionLabel]):
+class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Detection)

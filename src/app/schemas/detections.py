@@ -52,3 +52,7 @@ class DetectionUrl(BaseModel):
 
 class DetectionWithUrl(Detection):
     url: str = Field(..., description="temporary URL to access the media content")
+
+
+class DetectionSequence(BaseModel):
+    sequence_id: int = Field(..., gt=0)

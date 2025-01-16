@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime, timedelta
-from typing import List, Optional, cast
+from typing import List, cast
 
 from fastapi import (
     APIRouter,
@@ -14,13 +14,10 @@ from fastapi import (
     Form,
     HTTPException,
     Path,
-    Query,
     Security,
     UploadFile,
     status,
 )
-from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
     dispatch_webhook,
@@ -33,15 +30,13 @@ from app.api.dependencies import (
 )
 from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.db import get_session
 from app.models import Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
     DetectionCreate,
-    DetectionLabel,
+    DetectionSequence,
     DetectionUrl,
-    DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
@@ -100,6 +95,7 @@ async def create_detection(
     if len(sequence) == 1:
         # Add detection to existing sequence
         await sequences.update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
+        await detections.update(det.id, DetectionSequence(sequence_id=sequence[0].id))
     else:
         # Check if we've reached the threshold of detections per interval
         dets_ = await detections.fetch_all(
@@ -115,7 +111,7 @@ async def create_detection(
         )
         if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
             # Create new sequence
-            await sequences.create(
+            sequence_ = await sequences.create(
                 Sequence(
                     camera_id=token_payload.sub,
                     azimuth=det.azimuth,
@@ -123,6 +119,10 @@ async def create_detection(
                     last_seen_at=det.created_at,
                 )
             )
+            # Update the detection with the sequence ID
+            await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
+            for det_ in dets_:
+                await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
 
     # Webhooks
     whs = await webhooks.fetch_all()
@@ -195,70 +195,6 @@ async def fetch_detections(
     camera_ids = [camera.id for camera in cameras_list]
 
     return await detections.fetch_all(in_pair=("camera_id", camera_ids))
-
-
-@router.get("/unlabeled/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled detections")
-async def fetch_unlabeled_detections(
-    from_date: datetime = Query(),
-    limit: Optional[int] = Query(15, description="Maximum number of detections to fetch"),
-    offset: Optional[int] = Query(0, description="Number of detections to skip before starting to fetch"),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[DetectionWithUrl]:
-    telemetry_client.capture(token_payload.sub, event="detections-fetch-unlabeled")
-
-    if UserRole.ADMIN in token_payload.scopes:
-        # Custom SQL query to fetch detections along with corresponding organization_id
-        query = await session.exec(
-            select(Detection, Camera.organization_id)  # type: ignore[attr-defined]
-            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
-            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
-            .where(Detection.created_at >= from_date)
-            .limit(limit)
-            .offset(offset)
-        )
-        results = query.all()
-        unlabeled_detections = [Detection(**detection.__dict__) for detection, _ in results]
-        urls = [
-            s3_service.get_bucket(s3_service.resolve_bucket_name(org_id)).get_public_url(det.bucket_key)
-            for det, org_id in results
-        ]
-    else:
-        query = await session.exec(
-            select(Detection)  # type: ignore[attr-defined]
-            .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
-            .where(Detection.is_wildfire.is_(None))  # type: ignore[union-attr]
-            .where(Detection.created_at >= from_date)
-            .where(Camera.organization_id == token_payload.organization_id)
-            .limit(limit)
-            .offset(offset)
-        )
-        results = query.all()
-        unlabeled_detections = [Detection(**detection.__dict__) for detection in results]
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-        urls = [bucket.get_public_url(detection.bucket_key) for detection in unlabeled_detections]
-
-    return [DetectionWithUrl(**detection.model_dump(), url=url) for detection, url in zip(unlabeled_detections, urls)]
-
-
-@router.patch("/{detection_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the detection")
-async def label_detection(
-    payload: DetectionLabel,
-    detection_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
-) -> Detection:
-    telemetry_client.capture(token_payload.sub, event="detections-label", properties={"detection_id": detection_id})
-    detection = cast(Detection, await detections.get(detection_id, strict=True))
-
-    if UserRole.ADMIN in token_payload.scopes:
-        return await detections.update(detection_id, payload)
-
-    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return await detections.update(detection_id, payload)
 
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")

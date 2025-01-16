@@ -13,3 +13,7 @@ __all__ = ["SequenceUpdate"]
 # Accesses
 class SequenceUpdate(BaseModel):
     last_seen_at: datetime
+
+
+class SequenceLabel(BaseModel):
+    is_wildfire: bool
