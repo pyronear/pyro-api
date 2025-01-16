@@ -85,7 +85,10 @@ class Client:
         self._route_prefix = urljoin(host, "api/v1")
         # Check token
         response = requests.get(
-            ClientRoute.LOGIN_VALIDATE, headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
+            urljoin(self._route_prefix, ClientRoute.LOGIN_VALIDATE),
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=timeout,
+            **kwargs,
         )
         if response.status_code != 200:
             raise HTTPRequestError(response.status_code, response.text)
