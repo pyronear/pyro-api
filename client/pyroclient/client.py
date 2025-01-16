@@ -15,7 +15,7 @@ from .exceptions import HTTPRequestError
 __all__ = ["Client"]
 
 
-class RouteMap(str, Enum):
+class ClientRoute(str, Enum):
     # LOGIN
     LOGIN_VALIDATE = "/login/validate"
     # CAMERAS
@@ -71,8 +71,6 @@ class Client:
         kwargs: optional parameters of `requests.post`
     """
 
-    routes: Dict[str, str]
-
     def __init__(
         self,
         token: str,
@@ -84,11 +82,10 @@ class Client:
         if requests.get(urljoin(host, "status"), timeout=timeout, **kwargs).status_code != 200:
             raise ValueError(f"unable to reach host {host}")
         # Prepend API url to each route
-        # self.routes = {r.name: urljoin(host, f"api/v1{r.value}") for r in RouteMap}
-        self.routes = Enum("RouteMap", {r.name: urljoin(host, f"api/v1{r.value}") for r in RouteMap})
+        self._route_prefix = urljoin(host, "api/v1")
         # Check token
         response = requests.get(
-            self.routes.LOGIN_VALIDATE, headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
+            ClientRoute.LOGIN_VALIDATE, headers={"Authorization": f"Bearer {token}"}, timeout=timeout, **kwargs
         )
         if response.status_code != 200:
             raise HTTPRequestError(response.status_code, response.text)
@@ -111,7 +108,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.CAMERAS_FETCH,
+            urljoin(self._route_prefix, ClientRoute.CAMERAS_FETCH),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -126,7 +123,9 @@ class Client:
         Returns:
             HTTP response containing the update device info
         """
-        return requests.patch(self.routes.CAMERAS_HEARTBEAT, headers=self.headers, timeout=self.timeout)
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.CAMERAS_HEARTBEAT), headers=self.headers, timeout=self.timeout
+        )
 
     def update_last_image(self, media: bytes) -> Response:
         """Update the last image of the camera
@@ -140,7 +139,7 @@ class Client:
             HTTP response containing the update device info
         """
         return requests.patch(
-            self.routes.CAMERAS_IMAGE,
+            urljoin(self._route_prefix, ClientRoute.CAMERAS_IMAGE),
             headers=self.headers,
             files={"file": ("logo.png", media, "image/png")},
             timeout=self.timeout,
@@ -171,7 +170,7 @@ class Client:
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
         return requests.post(
-            self.routes.DETECTIONS_CREATE,
+            urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
             data={
                 "azimuth": azimuth,
@@ -195,7 +194,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.DETECTIONS_URL.format(det_id=detection_id),
+            urljoin(self._route_prefix, ClientRoute.DETECTIONS_URL.format(det_id=detection_id)),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -211,7 +210,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.DETECTIONS_FETCH,
+            urljoin(self._route_prefix, ClientRoute.DETECTIONS_FETCH),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -231,7 +230,7 @@ class Client:
             HTTP response
         """
         return requests.patch(
-            self.routes.SEQUENCES_LABEL.format(seq_id=sequence_id),
+            urljoin(self._route_prefix, ClientRoute.SEQUENCES_LABEL.format(seq_id=sequence_id)),
             headers=self.headers,
             json={"is_wildfire": is_wildfire},
             timeout=self.timeout,
@@ -252,7 +251,7 @@ class Client:
         """
         params = {"from_date": from_date}
         return requests.get(
-            self.routes.SEQUENCES_FETCH_FROMDATE,
+            urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,
             params=params,
             timeout=self.timeout,
@@ -269,7 +268,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.SEQUENCES_FETCH_LATEST,
+            urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_LATEST),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -285,7 +284,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id),
+            urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
             timeout=self.timeout,
         )
@@ -303,7 +302,7 @@ class Client:
             HTTP response
         """
         return requests.get(
-            self.routes.ORGS_FETCH,
+            urljoin(self._route_prefix, ClientRoute.ORGS_FETCH),
             headers=self.headers,
             timeout=self.timeout,
         )
