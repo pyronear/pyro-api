@@ -35,12 +35,13 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=5.3.2",
-    "pytest-cov>=3.0.0,<5.0.0",
+    "pytest==8.3.4",
+    "pytest-cov>=4.0.0,<5.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
+    "types-requests>=2.0.0",
 ]
 quality = [
-    "mypy==1.4.1",
+    "mypy==1.10.0",
 ]
 docs = [
     "sphinx>=3.0.0,!=3.5.0",
@@ -48,21 +49,6 @@ docs = [
     "sphinx-copybutton>=0.3.1",
     "docutils<0.18",
     # cf. https://github.com/readthedocs/readthedocs.org/issues/9038
-    "Jinja2<3.1",
-    "furo>=2022.3.4",
-]
-dev = [
-    # test
-    "pytest>=5.3.2",
-    "pytest-cov>=3.0.0,<5.0.0",
-    "pytest-pretty>=1.0.0,<2.0.0",
-    # style
-    "mypy==1.4.1",
-    # docs
-    "sphinx>=3.0.0,!=3.5.0",
-    "sphinxemoji>=0.1.8",
-    "sphinx-copybutton>=0.3.1",
-    "docutils<0.18",
     "Jinja2<3.1",
     "furo>=2022.3.4",
 ]
