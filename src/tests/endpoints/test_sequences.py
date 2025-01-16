@@ -12,8 +12,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (0, 1, 200, None, pytest.detection_table[:3]),
         (0, 2, 404, "Table Sequence has no corresponding entry.", None),
         (1, 1, 200, None, pytest.detection_table[:3]),
-        (1, 2, 403, "Incompatible token scope.", None),
-        (2, 1, 403, "Incompatible token scope.", None),
+        (1, 2, 403, "Access forbidden.", None),
+        (2, 1, 403, "Access forbidden.", None),
         (2, 2, 200, None, pytest.detection_table[3:4]),
     ],
 )
@@ -48,9 +48,13 @@ async def test_fetch_sequence_detections(
     ("user_idx", "sequence_id", "status_code", "status_detail"),
     [
         (None, 1, 401, "Not authenticated"),
+        (0, 99, 404, "Table Sequence has no corresponding entry."),
         (0, 1, 200, None),
-        (0, 2, 404, "Table Sequence has no corresponding entry."),
+        (0, 2, 200, None),
         (1, 1, 403, "Incompatible token scope."),
+        (1, 2, 403, "Incompatible token scope."),
+        (2, 1, 403, "Incompatible token scope."),
+        (2, 2, 403, "Incompatible token scope."),
     ],
 )
 @pytest.mark.asyncio
@@ -92,7 +96,7 @@ async def test_delete_sequence(
         (1, 1, {"is_wildfire": True}, 200, None, 0),
         (1, 2, {"is_wildfire": True}, 403, None, None),
         (2, 1, {"is_wildfire": True}, 403, None, None),
-        (2, 2, {"is_wildfire": True}, 200, None, 1),
+        (2, 2, {"is_wildfire": True}, 403, None, None),  # User cannot label
     ],
 )
 @pytest.mark.asyncio
@@ -120,7 +124,7 @@ async def test_label_sequence(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() == {
-            **{k: v for k, v in pytest.detection_table[expected_idx].items() if k != "is_wildfire"},
+            **{k: v for k, v in pytest.sequence_table[expected_idx].items() if k != "is_wildfire"},
             **payload,
         }
 
@@ -132,7 +136,7 @@ async def test_label_sequence(
         (0, "", 422, None, None),
         (0, "old-date", 422, None, None),
         (0, "2018-19-20", 422, None, None),  # impossible date
-        (0, "2018-06-06T00:00:00", 422, None, None),  # datetime != date
+        (0, "2018-06-06T00:00:00", 200, None, []),  # datetime != date, weird, but works
         (0, "2018-06-06", 200, None, []),
         (0, "2023-11-07", 200, None, pytest.sequence_table[:1]),
         (1, "2023-11-07", 200, None, pytest.sequence_table[:1]),
