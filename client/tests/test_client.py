@@ -67,8 +67,7 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert response.status_code == 200, response.__dict__
     response = user_client.fetch_latest_sequences()
     assert response.status_code == 200, response.__dict__
-    response = user_client.fetch_latest_sequences().json()
-    assert len(response) == 1
-    response = user_client.fetch_sequences_detections(response[0]["id"])
+    assert len(response.json()) == 1
+    response = user_client.fetch_sequences_detections(response.json()[0]["id"])
     assert response.status_code == 200, response.__dict__
     assert len(response.json()) == 3
