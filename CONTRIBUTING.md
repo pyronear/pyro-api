@@ -18,6 +18,7 @@ The back-end core feature is to interact with the metadata tables. For the servi
 #### Core worklow tables
 
 - Detection: association of a picture and a camera.
+- Sequence: collection of detections in a dense time period.
 
 #### Client-related tables
 
