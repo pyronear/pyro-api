@@ -6,20 +6,22 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "cam_idx", "payload", "status_code", "status_detail"),
+    ("user_idx", "cam_idx", "payload", "status_code", "status_detail", "repeat"),
     [
-        (None, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated"),
-        (0, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
-        (1, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
-        (2, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope."),
-        (None, 0, {"azimuth": "hello"}, 422, None),
-        (None, 0, {}, 422, None),
-        (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None),
-        (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None),
-        (None, 1, {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None),
+        (None, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated", None),
+        (0, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (1, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (2, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (None, 0, {"azimuth": "hello"}, 422, None, None),
+        (None, 0, {}, 422, None, None),
+        (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
+        (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 0),
+        (None, 1, {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 0),
+        # sequence creation
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 2),
     ],
 )
 @pytest.mark.asyncio
@@ -32,6 +34,7 @@ async def test_create_detection(
     payload: Dict[str, Any],
     status_code: int,
     status_detail: Union[str, None],
+    repeat: Union[int, None],
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -61,6 +64,22 @@ async def test_create_detection(
         } == payload
         assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
+    if repeat is not None:
+        det_ids = [response.json()["id"]]
+        for _ in range(repeat):
+            response = await async_client.post(
+                "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+            )
+            assert response.status_code == status_code, print(response.__dict__)
+            det_ids.append(response.json()["id"])
+        # Final response will have a sequence_id
+        assert isinstance(response.json()["sequence_id"], int)
+        sequence_id = response.json()["sequence_id"]
+        # Check that the other detections have the same sequence_id
+        for det_id in det_ids[:-1]:
+            response = await async_client.get(f"/detections/{det_id}", headers=auth)
+            assert response.status_code == 200
+            assert response.json()["sequence_id"] == sequence_id
 
 
 @pytest.mark.parametrize(
