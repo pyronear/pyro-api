@@ -9,10 +9,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     ("user_idx", "sequence_id", "status_code", "status_detail", "expected_result"),
     [
         (None, 1, 401, "Not authenticated", None),
-        (0, 1, 200, None, pytest.detection_table[:3]),
+        (0, 1, 200, None, pytest.detection_table[:3][::-1]),
         (0, 2, 200, None, pytest.detection_table[3:4]),
         (0, 99, 404, "Table Sequence has no corresponding entry.", None),
-        (1, 1, 200, None, pytest.detection_table[:3]),
+        (1, 1, 200, None, pytest.detection_table[:3][::-1]),
         (1, 2, 403, "Access forbidden.", None),
         (2, 1, 403, "Access forbidden.", None),
         (2, 2, 200, None, pytest.detection_table[3:4]),
