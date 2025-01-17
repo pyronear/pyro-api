@@ -74,6 +74,10 @@ async def test_delete_sequence(
             pytest.user_table[user_idx]["role"].split(),
             pytest.user_table[user_idx]["organization_id"],
         )
+    if status_code // 100 == 2:
+        # Fetch the detection IDs to check that they are unset
+        response = await async_client.get(f"/sequences/{sequence_id}/detections", headers=auth)
+        det_ids = [det["id"] for det in response.json()]
 
     response = await async_client.delete(f"/sequences/{sequence_id}", headers=auth)
     assert response.status_code == status_code, print(response.__dict__)
@@ -81,6 +85,10 @@ async def test_delete_sequence(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+        # Check that the detections are unset
+        for det_id in det_ids:
+            response = await async_client.get(f"/detections/{det_id}", headers=auth)
+            assert response.json()["sequence_id"] is None
 
 
 @pytest.mark.parametrize(
