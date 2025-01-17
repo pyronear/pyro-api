@@ -57,11 +57,10 @@ async def test_create_detection(
         assert {
             k: v
             for k, v in response.json().items()
-            if k not in {"created_at", "updated_at", "id", "is_wildfire", "bucket_key", "camera_id"}
+            if k not in {"created_at", "updated_at", "id", "bucket_key", "camera_id"}
         } == payload
         assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
-        assert response.json()["is_wildfire"] is None
 
 
 @pytest.mark.parametrize(
