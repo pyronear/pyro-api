@@ -134,9 +134,9 @@ async def delete_sequence(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="sequence-deletion", properties={"sequence_id": sequence_id})
     # Unset the sequence_id in the detections
-    fetched_detections = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
-    for detection in fetched_detections.all():
-        await detections.update(detection.id, DetectionSequence(sequence_id=None))
+    det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
+    for det_id in det_ids.all():
+        await detections.update(det_id, DetectionSequence(sequence_id=None))
     # Delete the sequence
     await sequences.delete(sequence_id)
 
