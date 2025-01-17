@@ -64,7 +64,7 @@ async def test_create_detection(
         } == payload
         assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
-    if repeat is not None:
+    if isinstance(repeat, int) and repeat > 0:
         det_ids = [response.json()["id"]]
         for _ in range(repeat):
             response = await async_client.post(
@@ -77,7 +77,14 @@ async def test_create_detection(
         sequence_id = response.json()["sequence_id"]
         # Check that the other detections have the same sequence_id
         for det_id in det_ids[:-1]:
-            response = await async_client.get(f"/detections/{det_id}", headers=auth)
+            response = await async_client.get(
+                f"/detections/{det_id}",
+                headers=pytest.get_token(
+                    pytest.user_table[0]["id"],
+                    pytest.user_table[0]["role"].split(),
+                    pytest.user_table[0]["organization_id"],
+                ),
+            )
             assert response.status_code == 200
             assert response.json()["sequence_id"] == sequence_id
 
