@@ -120,20 +120,20 @@ async def create_detection(
                 )
             )
             # Update the detection with the sequence ID
-            await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
+            det = await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
             for det_ in dets_:
                 await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
 
-    # Webhooks
-    whs = await webhooks.fetch_all()
-    if any(whs):
-        for webhook in await webhooks.fetch_all():
-            background_tasks.add_task(dispatch_webhook, webhook.url, det)
-    # Telegram notifications
-    if telegram_client.is_enabled:
-        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-        if org.telegram_id:
-            background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
+            # Webhooks
+            whs = await webhooks.fetch_all()
+            if any(whs):
+                for webhook in await webhooks.fetch_all():
+                    background_tasks.add_task(dispatch_webhook, webhook.url, det)
+            # Telegram notifications
+            if telegram_client.is_enabled:
+                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                if org.telegram_id:
+                    background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
     return det
 
 
