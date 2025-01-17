@@ -64,7 +64,7 @@ async def fetch_sequence_detections(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     # Get the bucket of the camera's organization
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     return [
         DetectionWithUrl(
             **elt.__dict__,
