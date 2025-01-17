@@ -207,7 +207,7 @@
 <span class="c1"># This program is licensed under the Apache License 2.0.</span>
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
-
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urljoin</span>
 
@@ -218,30 +218,25 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Client&quot;</span><span class="p">]</span>
 
-<span class="n">ROUTES</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="c1">#################</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ClientRoute</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
     <span class="c1"># LOGIN</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;login-validate&quot;</span><span class="p">:</span> <span class="s2">&quot;/login/validate&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
+    <span class="n">LOGIN_VALIDATE</span> <span class="o">=</span> <span class="s2">&quot;login/validate&quot;</span>
     <span class="c1"># CAMERAS</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/heartbeat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;cameras-image&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/image&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;cameras-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/cameras/&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
+    <span class="n">CAMERAS_HEARTBEAT</span> <span class="o">=</span> <span class="s2">&quot;cameras/heartbeat&quot;</span>
+    <span class="n">CAMERAS_IMAGE</span> <span class="o">=</span> <span class="s2">&quot;cameras/image&quot;</span>
+    <span class="n">CAMERAS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;cameras/&quot;</span>
     <span class="c1"># DETECTIONS</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;detections-create&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;detections-label&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/label&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;detections-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;detections-fetch-unl&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/unlabeled/fromdate&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;detections-url&quot;</span><span class="p">:</span> <span class="s2">&quot;/detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span><span class="p">,</span>
-    <span class="c1">#################</span>
+    <span class="n">DETECTIONS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;detections/&quot;</span>
+    <span class="n">DETECTIONS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;detections&quot;</span>
+    <span class="n">DETECTIONS_URL</span> <span class="o">=</span> <span class="s2">&quot;detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span>
+    <span class="c1"># SEQUENCES</span>
+    <span class="n">SEQUENCES_LABEL</span> <span class="o">=</span> <span class="s2">&quot;sequences/</span><span class="si">{seq_id}</span><span class="s2">/label&quot;</span>
+    <span class="n">SEQUENCES_FETCH_DETECTIONS</span> <span class="o">=</span> <span class="s2">&quot;sequences/</span><span class="si">{seq_id}</span><span class="s2">/detections&quot;</span>
+    <span class="n">SEQUENCES_FETCH_LATEST</span> <span class="o">=</span> <span class="s2">&quot;sequences/unlabeled/latest&quot;</span>
+    <span class="n">SEQUENCES_FETCH_FROMDATE</span> <span class="o">=</span> <span class="s2">&quot;sequences/all/fromdate&quot;</span>
     <span class="c1"># ORGS</span>
-    <span class="c1">#################</span>
-    <span class="s2">&quot;organizations-fetch&quot;</span><span class="p">:</span> <span class="s2">&quot;/organizations&quot;</span><span class="p">,</span>
-<span class="p">}</span>
+    <span class="n">ORGS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;organizations&quot;</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_to_str</span><span class="p">(</span><span class="n">coord</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -280,8 +275,6 @@
 <span class="sd">        kwargs: optional parameters of `requests.post`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">routes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
-
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -293,10 +286,13 @@
         <span class="k">if</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unable to reach host </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="c1"># Prepend API url to each route</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">routes</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;api/v1</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ROUTES</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;api/v1/&quot;</span><span class="p">)</span>
         <span class="c1"># Check token</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;login-validate&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">LOGIN_VALIDATE</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">HTTPRequestError</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
@@ -319,7 +315,7 @@
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-fetch&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
@@ -334,7 +330,9 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-heartbeat&quot;</span><span class="p">],</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_HEARTBEAT</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.update_last_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_last_image">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_last_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last image of the camera</span>
@@ -348,7 +346,7 @@
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;cameras-image&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_IMAGE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
@@ -379,7 +377,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bboxes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bboxes must be a non-empty list of tuples with a maximum of 5 boxes&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-create&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_CREATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">data</span><span class="o">=</span><span class="p">{</span>
                 <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
@@ -387,27 +385,6 @@
             <span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
             <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
-        <span class="p">)</span></div>
-
-<div class="viewcode-block" id="Client.label_detection"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_detection">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_detection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detection_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the label of a detection made by a camera</span>
-
-<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.label_detection(1, is_wildfire=True)</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            detection_id: ID of the associated detection entry</span>
-<span class="sd">            is_wildfire: whether this detection is confirmed as a wildfire</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-label&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">),</span>
-            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_wildfire&quot;</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
-            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.get_detection_url"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_detection_url">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_detection_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detection_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
@@ -424,7 +401,7 @@
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">),</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_URL</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
@@ -440,26 +417,82 @@
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.fetch_unlabeled_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_unlabeled_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_unlabeled_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections accessible to the authenticated user</span>
+<div class="viewcode-block" id="Client.label_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the label of a sequence made by a camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_unacknowledged_detections(&quot;2023-07-04T00:00:00&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.label_sequence(1, is_wildfire=True)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sequence_id: ID of the associated sequence entry</span>
+<span class="sd">            is_wildfire: whether this sequence is confirmed as a wildfire</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_LABEL</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_wildfire&quot;</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.fetch_sequences_from_date"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_from_date">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_from_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the sequences accessible to the authenticated user for a specific date</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_from_date(&quot;2023-07-04&quot;)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            from_date: date of the sequences to fetch</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;from_date&quot;</span><span class="p">:</span> <span class="n">from_date</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;detections-fetch-unl&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_FROMDATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.fetch_latest_sequences"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_latest_sequences">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_latest_sequences</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the latest sequences accessible to the authenticated user</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_latest_sequences()</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_LATEST</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.fetch_sequences_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections of a sequence</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_detections(1)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_DETECTIONS</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
@@ -476,7 +509,7 @@
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">routes</span><span class="p">[</span><span class="s2">&quot;organizations-fetch&quot;</span><span class="p">],</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">ORGS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div></div>

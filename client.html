@@ -287,6 +287,22 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.fetch_latest_sequences">
+<span class="sig-name descname"><span class="pre">fetch_latest_sequences</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_latest_sequences"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_latest_sequences" title="Permalink to this definition">#</a></dt>
+<dd><p>List the latest sequences accessible to the authenticated user</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">fetch_latest_sequences</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>HTTP response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.fetch_organizations">
 <span class="sig-name descname"><span class="pre">fetch_organizations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_organizations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_organizations" title="Permalink to this definition">#</a></dt>
 <dd><p>List the organizations accessible to the authenticated user</p>
@@ -303,17 +319,36 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="pyroclient.client.Client.fetch_unlabeled_detections">
-<span class="sig-name descname"><span class="pre">fetch_unlabeled_detections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_unlabeled_detections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_unlabeled_detections" title="Permalink to this definition">#</a></dt>
-<dd><p>List the detections accessible to the authenticated user</p>
+<dt class="sig sig-object py" id="pyroclient.client.Client.fetch_sequences_detections">
+<span class="sig-name descname"><span class="pre">fetch_sequences_detections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_sequences_detections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_sequences_detections" title="Permalink to this definition">#</a></dt>
+<dd><p>List the detections of a sequence</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">fetch_unacknowledged_detections</span><span class="p">(</span><span class="s2">&quot;2023-07-04T00:00:00&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">fetch_sequences_detections</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>HTTP response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.fetch_sequences_from_date">
+<span class="sig-name descname"><span class="pre">fetch_sequences_from_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_sequences_from_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_sequences_from_date" title="Permalink to this definition">#</a></dt>
+<dd><p>List the sequences accessible to the authenticated user for a specific date</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">fetch_sequences_from_date</span><span class="p">(</span><span class="s2">&quot;2023-07-04&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>from_date</strong> – date of the sequences to fetch</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>HTTP response</p>
 </dd>
 </dl>
 </dd></dl>
@@ -354,19 +389,19 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="pyroclient.client.Client.label_detection">
-<span class="sig-name descname"><span class="pre">label_detection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">detection_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_wildfire</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.label_detection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.label_detection" title="Permalink to this definition">#</a></dt>
-<dd><p>Update the label of a detection made by a camera</p>
+<dt class="sig sig-object py" id="pyroclient.client.Client.label_sequence">
+<span class="sig-name descname"><span class="pre">label_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_wildfire</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.label_sequence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.label_sequence" title="Permalink to this definition">#</a></dt>
+<dd><p>Update the label of a sequence made by a camera</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">label_detection</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">label_sequence</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>detection_id</strong> – ID of the associated detection entry</p></li>
-<li><p><strong>is_wildfire</strong> – whether this detection is confirmed as a wildfire</p></li>
+<li><p><strong>sequence_id</strong> – ID of the associated sequence entry</p></li>
+<li><p><strong>is_wildfire</strong> – whether this sequence is confirmed as a wildfire</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -465,11 +500,13 @@
 <li><a class="reference internal" href="#pyroclient.client.Client.create_detection"><code class="docutils literal notranslate"><span class="pre">Client.create_detection()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_cameras"><code class="docutils literal notranslate"><span class="pre">Client.fetch_cameras()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_detections"><code class="docutils literal notranslate"><span class="pre">Client.fetch_detections()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.fetch_latest_sequences"><code class="docutils literal notranslate"><span class="pre">Client.fetch_latest_sequences()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_organizations"><code class="docutils literal notranslate"><span class="pre">Client.fetch_organizations()</span></code></a></li>
-<li><a class="reference internal" href="#pyroclient.client.Client.fetch_unlabeled_detections"><code class="docutils literal notranslate"><span class="pre">Client.fetch_unlabeled_detections()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.fetch_sequences_detections"><code class="docutils literal notranslate"><span class="pre">Client.fetch_sequences_detections()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.fetch_sequences_from_date"><code class="docutils literal notranslate"><span class="pre">Client.fetch_sequences_from_date()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.get_detection_url"><code class="docutils literal notranslate"><span class="pre">Client.get_detection_url()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.heartbeat"><code class="docutils literal notranslate"><span class="pre">Client.heartbeat()</span></code></a></li>
-<li><a class="reference internal" href="#pyroclient.client.Client.label_detection"><code class="docutils literal notranslate"><span class="pre">Client.label_detection()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.label_sequence"><code class="docutils literal notranslate"><span class="pre">Client.label_sequence()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.update_last_image"><code class="docutils literal notranslate"><span class="pre">Client.update_last_image()</span></code></a></li>
 </ul>
 </li>
