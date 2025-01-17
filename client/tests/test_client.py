@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from requests.exceptions import ConnectionError as ConnError
 from requests.exceptions import ReadTimeout
@@ -64,9 +66,12 @@ def test_user_workflow(test_cam_workflow, user_token):
     response = user_client.fetch_detections()
     assert response.status_code == 200, response.__dict__
     response = user_client.fetch_sequences_from_date("2018-06-06")
+    assert len(response.json()) == 0
     assert response.status_code == 200, response.__dict__
     response = user_client.fetch_latest_sequences()
     assert response.status_code == 200, response.__dict__
+    assert len(response.json()) == 0  # Sequence was labeled by agent
+    response = user_client.fetch_sequences_from_date(datetime.utcnow().date().isoformat())
     assert len(response.json()) == 1
     response = user_client.fetch_sequences_detections(response.json()[0]["id"])
     assert response.status_code == 200, response.__dict__
