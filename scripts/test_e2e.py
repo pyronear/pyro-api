@@ -5,6 +5,7 @@
 
 import argparse
 import time
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import requests
@@ -100,12 +101,7 @@ def main(args):
     )
     assert response.status_code == 201, response.text
     detection_id = response.json()["id"]
-
-    # Fetch unlabeled detections
-    api_request("get", f"{args.endpoint}/detections/unlabeled/fromdate?from_date=2018-06-06T00:00:00", agent_auth)
-
-    # Acknowledge it
-    api_request("patch", f"{args.endpoint}/detections/{detection_id}/label", agent_auth, {"is_wildfire": True})
+    today = datetime.fromisoformat(response.json()["created_at"]).date()
 
     # Fetch detections & their URLs
     api_request("get", f"{args.endpoint}/detections", agent_auth)
@@ -127,18 +123,33 @@ def main(args):
         timeout=5,
     ).json()["id"]
     # Check that a sequence has been created
-    sequences = api_request("get", f"{args.endpoint}/sequences", superuser_auth)
-    assert len(sequences) == 1
-    assert sequences[0]["camera_id"] == cam_id
-    assert sequences[0]["started_at"] == response.json()["created_at"]
-    assert sequences[0]["last_seen_at"] > sequences[0]["started_at"]
-    assert sequences[0]["azimuth"] == response.json()["azimuth"]
+    sequence = api_request("get", f"{args.endpoint}/sequences/1", agent_auth)
+    assert sequence["camera_id"] == cam_id
+    assert sequence["started_at"] == response.json()["created_at"]
+    assert sequence["last_seen_at"] > sequence["started_at"]
+    assert sequence["azimuth"] == response.json()["azimuth"]
+    # Fetch the latest sequence
+    assert len(api_request("get", f"{args.endpoint}/sequences/unlabeled/latest", agent_auth)) == 1
+    # Fetch from date
+    assert len(api_request("get", f"{args.endpoint}/sequences/all/fromdate?from_date=2019-09-10", agent_auth)) == 0
+    assert (
+        len(api_request("get", f"{args.endpoint}/sequences/all/fromdate?from_date={today.isoformat()}", agent_auth))
+        == 1
+    )
+    # Label the sequence
+    api_request("patch", f"{args.endpoint}/sequences/{sequence['id']}/label", agent_auth, {"is_wildfire": True})
+    # Check the sequence's detections
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections", agent_auth)
+    assert len(dets) == 3
+    assert dets[0]["id"] == det_id_3
+    assert dets[1]["id"] == det_id_2
+    assert dets[2]["id"] == detection_id
 
     # Cleaning (order is important because of foreign key protection in existing tables)
-    api_request("delete", f"{args.endpoint}/sequences/{sequences[0]['id']}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/detections/{det_id_2}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/detections/{det_id_3}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/sequences/{sequence['id']}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/organizations/{org_id}/", superuser_auth)

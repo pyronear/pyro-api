@@ -57,12 +57,11 @@ class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
     azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
-    is_wildfire: Union[bool, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
 class Sequence(SQLModel, table=True):
@@ -70,6 +69,7 @@ class Sequence(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     azimuth: float = Field(..., ge=0, lt=360)
+    is_wildfire: Union[bool, None] = None
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 

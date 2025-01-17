@@ -95,42 +95,38 @@ DET_TABLE = [
     {
         "id": 1,
         "camera_id": 1,
+        "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
-        "is_wildfire": True,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
     {
         "id": 2,
         "camera_id": 1,
+        "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
-        "is_wildfire": False,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
         "id": 3,
         "camera_id": 1,
+        "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
-        "is_wildfire": True,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
         "id": 4,
         "camera_id": 2,
-        "azimuth": 43.7,
+        "sequence_id": 2,
+        "azimuth": 74.8,
         "bucket_key": "my_file",
-        "is_wildfire": None,
         "bboxes": "[(.1,.1,.7,.8,.9)]",
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
-        "updated_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 
@@ -139,8 +135,17 @@ SEQ_TABLE = [
         "id": 1,
         "camera_id": 1,
         "azimuth": 43.7,
+        "is_wildfire": True,
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+    },
+    {
+        "id": 2,
+        "camera_id": 2,
+        "azimuth": 74.8,
+        "is_wildfire": None,
+        "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 
@@ -271,9 +276,22 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(
-    user_session: AsyncSession, camera_session: AsyncSession, organization_session: AsyncSession
-):
+async def sequence_session(camera_session: AsyncSession):
+    for entry in SEQ_TABLE:
+        camera_session.add(Sequence(**entry))
+    await camera_session.commit()
+    await camera_session.exec(
+        text(
+            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
+        )
+    )
+    await camera_session.commit()
+    yield camera_session
+    await camera_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def detection_session(user_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
         user_session.add(Detection(**entry))
     await user_session.commit()
@@ -297,21 +315,6 @@ async def detection_session(
             bucket.delete_file(entry["bucket_key"])
     except ClientError:
         pass
-
-
-@pytest_asyncio.fixture(scope="function")
-async def sequence_session(detection_session: AsyncSession):
-    for entry in SEQ_TABLE:
-        detection_session.add(Sequence(**entry))
-    await detection_session.commit()
-    await detection_session.exec(
-        text(
-            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
-        )
-    )
-    await detection_session.commit()
-    yield detection_session
-    await detection_session.rollback()
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
