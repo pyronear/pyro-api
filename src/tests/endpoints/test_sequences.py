@@ -21,7 +21,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.mark.asyncio
 async def test_fetch_sequence_detections(
     async_client: AsyncClient,
-    sequence_session: AsyncSession,
+    detection_session: AsyncSession,
     user_idx: Union[int, None],
     sequence_id: int,
     status_code: int,
@@ -61,7 +61,7 @@ async def test_fetch_sequence_detections(
 @pytest.mark.asyncio
 async def test_delete_sequence(
     async_client: AsyncClient,
-    sequence_session: AsyncSession,
+    detection_session: AsyncSession,
     user_idx: Union[int, None],
     sequence_id: int,
     status_code: int,
