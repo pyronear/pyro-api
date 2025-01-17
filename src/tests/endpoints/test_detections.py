@@ -18,8 +18,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None),
         (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 201, None),
-        (None, 1, {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 201, None),
+        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None),
+        (None, 1, {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None),
     ],
 )
 @pytest.mark.asyncio
