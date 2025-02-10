@@ -52,7 +52,7 @@ async def fetch_cameras(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Camera]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
-    all_cameras = [elt for elt in await cameras.fetch_all()]
+    all_cameras = [elt for elt in await cameras.fetch_all(order_by="id")]
     if UserRole.ADMIN in token_payload.scopes:
         return all_cameras
     return [camera for camera in all_cameras if camera.organization_id == token_payload.organization_id]
