@@ -194,7 +194,7 @@ async def fetch_detections(
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
-    return await detections.fetch_all(in_pair=("camera_id", camera_ids))
+    return await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
 
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
