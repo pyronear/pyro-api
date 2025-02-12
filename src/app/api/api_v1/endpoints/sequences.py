@@ -79,7 +79,7 @@ async def fetch_sequence_detections(
     ]
 
 
-@router.get("/unlabeled/latest", status_code=status.HTTP_200_OK, summary="Fetch all the latest sequences")
+@router.get("/unlabeled/latest", status_code=status.HTTP_200_OK, summary="Fetch all the unlabeled sequences from the last 24 hours")
 async def fetch_latest_unlabeled_sequences(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
