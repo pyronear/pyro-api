@@ -105,7 +105,7 @@ async def fetch_latest_unlabeled_sequences(
     return [Sequence(**elt.__dict__) for elt in fetched_sequences.all()]
 
 
-@router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences from a specific date")
+@router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
 async def fetch_sequences_from_date(
     from_date: date = Query(),
     limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
