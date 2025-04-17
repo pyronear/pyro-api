@@ -43,12 +43,21 @@ async def resolve_detection_cone(
     seq_ids: List[int], session: AsyncSession = Depends(get_session)
 ) -> Dict[int, Tuple[float, float]]:
     # Select the detections relevant to resolve the cone for each sequence
+    # First get the minimum detection ID for each sequence
+    min_det_ids = await session.exec(
+        select(func.min(Detection.id).label("min_id"))
+        .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
+        .group_by(Detection.sequence_id)
+    )
+
+    # Convert to a dictionary for lookup
+    min_ids_dict = {seq_id: min_id for seq_id, min_id in min_det_ids.all()}
+
+    # Now fetch the actual detection data with camera info
     det_infos = await session.exec(
         select(Detection.sequence_id, Detection.azimuth, Detection.bboxes, Camera.angle_of_view)
-        .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
+        .where(Detection.id.in_(min_ids_dict.values()))  # type: ignore[union-attr]
         .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
-        .group_by(Detection.sequence_id, Detection.azimuth, Detection.bboxes, Camera.angle_of_view)  # type: ignore[attr-defined]
-        .having(Detection.id == func.min(Detection.id))
     )
     # For each sequence, resolve the azimuth + opening angle
     return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in det_infos.all()}
