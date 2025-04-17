@@ -31,7 +31,7 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, s3_client: boto3.client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:
+    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # noqa: ANN001
         self._s3 = s3_client
         try:
             self._s3.head_bucket(Bucket=bucket_name)

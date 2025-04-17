@@ -176,7 +176,12 @@ async def test_fetch_sequences_from_date(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == expected_result
+        # Compare without cone_azimuth and cone_angle
+        assert [
+            {k: v for k, v in item.items() if k not in {"cone_azimuth", "cone_angle"}} for item in response.json()
+        ] == expected_result
+        assert all(isinstance(elt["cone_azimuth"], float) for elt in response.json())
+        assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
 
 
 @pytest.mark.parametrize(
@@ -211,4 +216,9 @@ async def test_latest_sequences(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == expected_result
+        # Compare without cone_azimuth and cone_angle
+        assert [
+            {k: v for k, v in item.items() if k not in {"cone_azimuth", "cone_angle"}} for item in response.json()
+        ] == expected_result
+        assert all(isinstance(elt["cone_azimuth"], float) for elt in response.json())
+        assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
