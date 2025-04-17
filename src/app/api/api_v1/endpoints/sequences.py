@@ -47,7 +47,7 @@ async def resolve_detection_cone(
         select(Detection.sequence_id, Detection.azimuth, Detection.bboxes, Camera.angle_of_view)
         .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
         .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
-        .group_by(Detection.sequence_id)  # type: ignore[attr-defined]
+        .group_by(Detection.sequence_id, Detection.azimuth, Detection.bboxes, Camera.angle_of_view)  # type: ignore[attr-defined]
         .having(Detection.id == func.min(Detection.id))
     )
     # For each sequence, resolve the azimuth + opening angle
