@@ -50,8 +50,8 @@ async def resolve_detection_cones(
     # Define a Common Table Expression (CTE) using a window function
     # Partition by sequence_id, order by id ascending, assign row number
     row_number_cte = (
-        select(
-            Detection.id.label("detection_id"),
+        select(  # type: ignore[call-overload]
+            Detection.id.label("detection_id"),  # type: ignore[attr-defined]
             Detection.sequence_id,
             Detection.azimuth,
             Detection.bboxes,
@@ -59,17 +59,17 @@ async def resolve_detection_cones(
             func.row_number()
             .over(
                 partition_by=Detection.sequence_id,
-                order_by=Detection.id.asc(),  # Explicitly order by ID ascending
+                order_by=Detection.id.asc(),  # type: ignore[attr-defined]
             )
             .label("rn"),  # Assign row number within each sequence_id group
         )
-        .where(Detection.sequence_id.in_(seq_ids))
+        .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
         .cte("ranked_detections")  # Create a Common Table Expression
     )
 
     # Main query: Select from the CTE, join with Camera, filter for row_number = 1
     query = (
-        select(row_number_cte.c.sequence_id, row_number_cte.c.azimuth, row_number_cte.c.bboxes, Camera.angle_of_view)
+        select(row_number_cte.c.sequence_id, row_number_cte.c.azimuth, row_number_cte.c.bboxes, Camera.angle_of_view)  # type: ignore[attr-defined]
         # Join the CTE results with the Camera table
         .join(Camera, row_number_cte.c.camera_id == Camera.id)
         # Filter the CTE results to get only the row with rn = 1 (minimum id) for each sequence
