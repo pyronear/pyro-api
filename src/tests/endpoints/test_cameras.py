@@ -327,10 +327,11 @@ async def test_update_image(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "payload", "status_code", "status_detail"),
+    ("user_idx", "cam_id", "payload", "status_code", "status_detail"),
     [
         (
             None,
+            1,
             {
                 "elevation": 30.0,
                 "lat": 3.5,
@@ -341,12 +342,36 @@ async def test_update_image(
         ),
         (
             0,
+            1,
             {"elevation": 30.0, "lat": 3.5},
             422,
             None,
         ),
         (
             0,
+            999,
+            {
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
+            404,
+            "Table Camera has no corresponding entry.",
+        ),
+        (
+            0,
+            1,
+            {
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
+            200,
+            None,
+        ),
+        (
+            0,
+            2,
             {
                 "elevation": 30.0,
                 "lat": 3.5,
@@ -357,6 +382,7 @@ async def test_update_image(
         ),
         (
             1,
+            1,
             {
                 "elevation": 30.0,
                 "lat": 3.5,
@@ -366,6 +392,29 @@ async def test_update_image(
             "Incompatible token scope.",
         ),
         (
+            1,
+            2,
+            {
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            2,
+            1,
+            {
+                "elevation": 30.0,
+                "lat": 3.5,
+                "lon": 7.8,
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            2,
             2,
             {
                 "elevation": 30.0,
