@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import re
 from datetime import date, datetime, timedelta
 from operator import itemgetter
 from typing import Dict, List, Tuple, Union, cast
@@ -33,34 +34,53 @@ async def verify_org_rights(
 
 
 def _resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, float]:
-    bboxes = ((xmin, xmax, conf) for xmin, _, xmax, _, conf in bboxes_str.strip("[]").split(","))  # type: ignore[misc,has-type]
+    pattern = r"\((\d*\.\d+),\d*\.\d+,(\d*\.\d+),\d*\.\d+,(\d*\.\d+)\)"
+    bboxes = ((float(xmin), float(xmax), float(conf)) for xmin, xmax, conf in re.findall(pattern, bboxes_str))
     # Take the bbox with the highest confidence
     xmin, xmax, _ = max(bboxes, key=itemgetter(2))
-    return azimuth + aov * ((xmin + xmax) / 2 - 0.5), aov * (xmax - xmin)
+    return azimuth + aov * ((float(xmin) + float(xmax)) / 2 - 0.5), aov * (float(xmax) - float(xmin))
 
 
-async def resolve_detection_cone(
+async def resolve_detection_cones(
     seq_ids: List[int], session: AsyncSession = Depends(get_session)
 ) -> Dict[int, Tuple[float, float]]:
-    # Select the detections relevant to resolve the cone for each sequence
-    # First get the minimum detection ID for each sequence
-    min_det_ids = await session.exec(
-        select(func.min(Detection.id).label("min_id"))
-        .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
-        .group_by(Detection.sequence_id)
+    if not seq_ids:
+        return {}
+
+    # Define a Common Table Expression (CTE) using a window function
+    # Partition by sequence_id, order by id ascending, assign row number
+    row_number_cte = (
+        select(
+            Detection.id.label("detection_id"),
+            Detection.sequence_id,
+            Detection.azimuth,
+            Detection.bboxes,
+            Detection.camera_id,
+            func.row_number()
+            .over(
+                partition_by=Detection.sequence_id,
+                order_by=Detection.id.asc(),  # Explicitly order by ID ascending
+            )
+            .label("rn"),  # Assign row number within each sequence_id group
+        )
+        .where(Detection.sequence_id.in_(seq_ids))
+        .cte("ranked_detections")  # Create a Common Table Expression
     )
 
-    # Convert to a dictionary for lookup
-    min_ids_dict = {seq_id: min_id for seq_id, min_id in min_det_ids.all()}
-
-    # Now fetch the actual detection data with camera info
-    det_infos = await session.exec(
-        select(Detection.sequence_id, Detection.azimuth, Detection.bboxes, Camera.angle_of_view)
-        .where(Detection.id.in_(min_ids_dict.values()))  # type: ignore[union-attr]
-        .join(Camera, Detection.camera_id == Camera.id)  # type: ignore[arg-type]
+    # Main query: Select from the CTE, join with Camera, filter for row_number = 1
+    query = (
+        select(row_number_cte.c.sequence_id, row_number_cte.c.azimuth, row_number_cte.c.bboxes, Camera.angle_of_view)
+        # Join the CTE results with the Camera table
+        .join(Camera, row_number_cte.c.camera_id == Camera.id)
+        # Filter the CTE results to get only the row with rn = 1 (minimum id) for each sequence
+        .where(row_number_cte.c.rn == 1)
     )
+
+    det_infos = await session.exec(query)
+    results = det_infos.all()
+
     # For each sequence, resolve the azimuth + opening angle
-    return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in det_infos.all()}
+    return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in results}
 
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
@@ -136,7 +156,9 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    det_cones = await resolve_detection_cone([elt.__dict__["id"] for elt in fetched_sequences], session)
+    if len(fetched_sequences) == 0:
+        return []
+    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
     return [
         SequenceWithCone(
             **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
@@ -167,7 +189,9 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    det_cones = await resolve_detection_cone([elt.__dict__["id"] for elt in fetched_sequences], session)
+    if len(fetched_sequences) == 0:
+        return []
+    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
     return [
         SequenceWithCone(
             **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
