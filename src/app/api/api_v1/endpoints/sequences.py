@@ -34,11 +34,11 @@ async def verify_org_rights(
 
 
 def _resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, float]:
-    pattern = r"\((\d*\.\d+),\d*\.\d+,(\d*\.\d+),\d*\.\d+,(\d*\.\d+)\)"
-    bboxes = ((float(xmin), float(xmax), float(conf)) for xmin, xmax, conf in re.findall(pattern, bboxes_str))
+    pattern = r"\((\d+\.?\d*),\d+\.?\d*,(\d+\.?\d*),\d+\.?\d*,(\d+\.?\d*)\)"
+    bboxes = tuple((float(xmin), float(xmax), float(conf)) for xmin, xmax, conf in re.findall(pattern, bboxes_str))
     # Take the bbox with the highest confidence
     xmin, xmax, _ = max(bboxes, key=itemgetter(2))
-    return azimuth + aov * ((float(xmin) + float(xmax)) / 2 - 0.5), aov * (float(xmax) - float(xmin))
+    return azimuth + aov * ((xmin + xmax) / 2 - 0.5), aov * (xmax - xmin)
 
 
 async def resolve_detection_cones(
