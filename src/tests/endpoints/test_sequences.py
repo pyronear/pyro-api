@@ -155,7 +155,7 @@ async def test_label_sequence(
 @pytest.mark.asyncio
 async def test_fetch_sequences_from_date(
     async_client: AsyncClient,
-    sequence_session: AsyncSession,
+    detection_session: AsyncSession,
     user_idx: Union[int, None],
     from_date: str,
     status_code: int,
