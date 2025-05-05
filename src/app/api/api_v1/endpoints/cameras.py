@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.crud import CameraCRUD
 from app.models import Camera, Role, UserRole
-from app.schemas.cameras import CameraCreate, LastActive, LastImage
+from app.schemas.cameras import CameraCreate, CameraEdit, LastActive, LastImage
 from app.schemas.login import Token, TokenPayload
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -95,6 +95,17 @@ async def create_camera_token(
     token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": camera.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
     return Token(access_token=token, token_type="bearer")  # noqa S106
+
+
+@router.patch("/{camera_id}/location", status_code=status.HTTP_200_OK, summary="Update the location of a camera")
+async def update_camera_location(
+    payload: CameraEdit,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> Camera:
+    telemetry_client.capture(token_payload.sub, event="cameras-update-location", properties={"camera_id": camera_id})
+    return await cameras.update(camera_id, payload)
 
 
 @router.delete("/{camera_id}", status_code=status.HTTP_200_OK, summary="Delete a camera")
