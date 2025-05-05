@@ -36,7 +36,7 @@ async def verify_org_rights(
 def _resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, float]:
     bboxes = literal_eval(bboxes_str)
     # Take the bbox with the highest confidence
-    xmin, xmax, _ = max(bboxes, key=itemgetter(2))
+    xmin, _, xmax, _, _ = max(bboxes, key=itemgetter(2))
     return azimuth + aov * ((xmin + xmax) / 2 - 0.5), aov * (xmax - xmin)
 
 
