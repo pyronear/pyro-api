@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import re
+from ast import literal_eval
 from datetime import date, datetime, timedelta
 from operator import itemgetter
 from typing import Dict, List, Tuple, Union, cast
@@ -34,8 +34,7 @@ async def verify_org_rights(
 
 
 def _resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, float]:
-    pattern = r"\((\d+\.?\d*),\d+\.?\d*,(\d+\.?\d*),\d+\.?\d*,(\d+\.?\d*)\)"
-    bboxes = tuple((float(xmin), float(xmax), float(conf)) for xmin, xmax, conf in re.findall(pattern, bboxes_str))
+    bboxes = literal_eval(bboxes_str)
     # Take the bbox with the highest confidence
     xmin, xmax, _ = max(bboxes, key=itemgetter(2))
     return azimuth + aov * ((xmin + xmax) / 2 - 0.5), aov * (xmax - xmin)
