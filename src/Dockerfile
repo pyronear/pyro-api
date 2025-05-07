@@ -15,7 +15,7 @@ RUN apt-get -y update \
 
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
-COPY --from=ghcr.io/astral-sh/uv:0.5.13 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.7.2 /uv /bin/uv
 
 # copy requirements file
 COPY requirements.txt /tmp/requirements.txt
