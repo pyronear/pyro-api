@@ -42,6 +42,7 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
+from app.services.slack import slack_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -134,6 +135,12 @@ async def create_detection(
                 org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                 if org.telegram_id:
                     background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
+
+            if slack_client.is_enabled:
+                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                if org.slack_hook:
+                    background_tasks.add_task(slack_client.notify, org.slack_hook, det.model_dump_json())
+
     return det
 
 

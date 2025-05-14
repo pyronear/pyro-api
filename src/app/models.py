@@ -26,6 +26,9 @@ class Role(str, Enum):
     CAMERA = "camera"
     USER = "user"
 
+class Notifier(str Enum):
+    None = "None"
+    SLACK = "Slack"
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -36,6 +39,7 @@ class User(SQLModel, table=True):
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)
     hashed_password: str = Field(..., min_length=5, max_length=70, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    notification: Notifier = Field()
 
 
 class Camera(SQLModel, table=True):
@@ -79,6 +83,7 @@ class Organization(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     telegram_id: Union[str, None] = Field(None, nullable=True)
+    slack_hook: Union[str, None] = Field(None, nullable=True)
 
 
 class Webhook(SQLModel, table=True):
