@@ -559,4 +559,4 @@ async def test_update_camera_name(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json()["name"] == payload
+        assert all(response.json()[k] == v for k, v in payload.items())
