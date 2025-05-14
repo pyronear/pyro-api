@@ -40,9 +40,9 @@ from app.schemas.detections import (
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
+from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
-from app.services.slack import slack_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()

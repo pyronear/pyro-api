@@ -12,10 +12,10 @@ from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
 from app.models import Organization, UserRole
 from app.schemas.login import TokenPayload
-from app.schemas.organizations import OrganizationCreate, TelegramChannelId, SlackHook
+from app.schemas.organizations import OrganizationCreate, SlackHook, TelegramChannelId
+from app.services.slack import slack_client
 from app.services.storage import s3_service
 from app.services.telegram import telegram_client
-from app.services.slack import slack_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -95,9 +95,7 @@ async def update_telegram_id(
     return await organizations.update(organization_id, payload)
 
 
-@router.patch(
-    "/{organization_id}", status_code=status.HTTP_200_OK, summary="Update slack token of an organization"
-)
+@router.patch("/{organization_id}", status_code=status.HTTP_200_OK, summary="Update slack token of an organization")
 async def update_slack_hook(
     payload: SlackHook,
     organization_id: int = Path(..., gt=0),

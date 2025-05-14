@@ -5,7 +5,6 @@ from app.services.slack import SlackClient
 
 
 def test_slack_client():
-
     client = SlackClient(settings.TELEGRAM_TOKEN)
 
     with pytest.raises(AssertionError, match="Telegram notifications are not enabled"):

@@ -4,15 +4,13 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Union
 
 import requests
-
-from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["slack_client"]
+
 
 class SlackClient:
     def __init__(self) -> None:
@@ -22,25 +20,27 @@ class SlackClient:
     def has_channel_access(self, slack_hook: str) -> bool:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
-        
+
         """Envoie un message à Slack via un webhook."""
         response = requests.post(
             slack_hook,
             json={"text": "Initialisation du Slack Hook in the Pyronear API"},
             headers={"Content-Type": "application/json"},
+            timeout=3,
         )
 
         return response.status_code == 200
 
-    def notify(self, slack_hook: str, message: str)-> requests.Response:
+    def notify(self, slack_hook: str, message: str) -> requests.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
 
         """Envoie un message à Slack via un webhook."""
         response = requests.post(
             slack_hook,
-            json=message,#{"text": message},
+            json=message,  # {"text": message},
             headers={"Content-Type": "application/json"},
+            timeout=3,
         )
 
         if response.status_code != 200:
