@@ -450,3 +450,113 @@ async def test_update_camera_location(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert {k: v for k, v in response.json().items() if k in {"lat", "lon", "elevation"}} == payload
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "cam_id", "payload", "status_code", "status_detail"),
+    [
+        (
+            None,
+            1,
+            {
+                "name": "pyro-cam",
+            },
+            401,
+            "Not authenticated",
+        ),
+        (
+            0,
+            1,
+            {"name": "cam"},  # name too short
+            422,
+            None,
+        ),
+        (
+            0,
+            999,
+            {
+                "name": "pyro-cam",
+            },
+            404,
+            "Table Camera has no corresponding entry.",
+        ),
+        (
+            0,
+            1,
+            {
+                "name": "pyro-cam",
+            },
+            200,
+            None,
+        ),
+        (
+            0,
+            2,
+            {
+                "name": "pyro-cam",
+            },
+            200,
+            None,
+        ),
+        (
+            1,
+            1,
+            {
+                "name": "pyro-cam",
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            1,
+            2,
+            {
+                "name": "pyro-cam",
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            2,
+            1,
+            {
+                "name": "pyro-cam",
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            2,
+            2,
+            {
+                "name": "pyro-cam",
+            },
+            403,
+            "Incompatible token scope.",
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_camera_name(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    user_idx: Union[int, None],
+    cam_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/cameras/{cam_id}/name", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        assert all(response.json()[k] == v for k, v in payload.items())

@@ -50,3 +50,7 @@ class CameraCreate(CameraEdit):
         json_schema_extra={"examples": [120.0]},
     )
     is_trustable: bool = Field(True, description="whether the detection from this camera can be trusted")
+
+
+class CameraName(BaseModel):
+    name: str = Field(..., min_length=5, max_length=100, description="name of the camera")

@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.crud import CameraCRUD
 from app.models import Camera, Role, UserRole
-from app.schemas.cameras import CameraCreate, CameraEdit, LastActive, LastImage
+from app.schemas.cameras import CameraCreate, CameraEdit, CameraName, LastActive, LastImage
 from app.schemas.login import Token, TokenPayload
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -105,6 +105,17 @@ async def update_camera_location(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-update-location", properties={"camera_id": camera_id})
+    return await cameras.update(camera_id, payload)
+
+
+@router.patch("/{camera_id}/name", status_code=status.HTTP_200_OK, summary="Update the name of a camera")
+async def update_camera_name(
+    payload: CameraName,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> Camera:
+    telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
     return await cameras.update(camera_id, payload)
 
 
