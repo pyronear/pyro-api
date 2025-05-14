@@ -54,11 +54,13 @@ ORGANIZATION_TABLE = [
         "id": 1,
         "name": "organization-1",
         "telegram_id": None,
+        'slack_hook': None,
     },
     {
         "id": 2,
         "name": "organization-2",
         "telegram_id": None,
+        'slack_hook': None,
     },
 ]
 
