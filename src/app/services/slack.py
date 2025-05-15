@@ -28,7 +28,7 @@ class SlackClient:
             headers={"Content-Type": "application/json"},
             timeout=3,
         )
-
+        
         return response.status_code == 200
 
     def notify(self, slack_hook: str, message: str) -> requests.Response:

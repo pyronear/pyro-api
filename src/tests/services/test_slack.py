@@ -3,6 +3,7 @@ import pytest
 from app.core.config import settings
 from app.services.slack import SlackClient
 import requests
+import os
 
 def test_failure_slack_client():
     client = SlackClient()
@@ -15,11 +16,9 @@ def test_failure_slack_client():
         client.notify("invalid-hook-url", "test")
 
 def test_slack_client():
-    hook="https://hooks.slack.com/services/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"
+    hook: str = os.environ["SLACK_HOOK"]
     client = SlackClient()
-
-    client.has_channel_access(hook)
-
+    print(hook)
     response =  client.notify(hook, "test")
     assert response.status_code == 400
 

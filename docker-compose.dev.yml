@@ -55,6 +55,7 @@ services:
       - S3_ACCESS_KEY=fake
       - S3_SECRET_KEY=fake
       - S3_REGION=us-east-1
+      - SLACK_HOOK=${SLACK_HOOK}
     volumes:
       - ./src/:/app/
     command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"

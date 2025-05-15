@@ -95,7 +95,7 @@ async def update_telegram_id(
     return await organizations.update(organization_id, payload)
 
 
-@router.patch("/{organization_id}", status_code=status.HTTP_200_OK, summary="Update slack token of an organization")
+@router.patch("/slack-hook/{organization_id}", status_code=status.HTTP_200_OK, summary="Update slack token of an organization")
 async def update_slack_hook(
     payload: SlackHook,
     organization_id: int = Path(..., gt=0),
@@ -106,6 +106,8 @@ async def update_slack_hook(
         token_payload.sub, event="organizations-update-slack-hook", properties={"organization_id": organization_id}
     )
     # Check if the Slack hook is valid
-    if payload.slack_hook and not slack_client.has_channel_access(payload.slack_hook):
+    check = slack_client.has_channel_access(payload.slack_hook)
+    
+    if payload.slack_hook and not check:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Slack channel")
     return await organizations.update(organization_id, payload)

@@ -60,7 +60,7 @@ ORGANIZATION_TABLE = [
         "id": 2,
         "name": "organization-2",
         "telegram_id": None,
-        'slack_hook': None,
+        'slack_hook': "https://hooks.slack.com/services/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",
     },
 ]
 
