@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+import json
 import logging
 
 import requests
@@ -28,17 +29,19 @@ class SlackClient:
             headers={"Content-Type": "application/json"},
             timeout=3,
         )
-        
+
         return response.status_code == 200
 
     def notify(self, slack_hook: str, message: str) -> requests.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
 
+        message = {"text": f"Nouvel détection reçue :\n```{json.dumps(message, indent=2)}```"}
+
         """Envoie un message à Slack via un webhook."""
         response = requests.post(
             slack_hook,
-            json=message,  # {"text": message},
+            json=message,
             headers={"Content-Type": "application/json"},
             timeout=3,
         )

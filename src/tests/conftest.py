@@ -1,5 +1,6 @@
 import asyncio
 import io
+import os
 from datetime import datetime
 from typing import AsyncGenerator, Dict, Generator
 
@@ -54,13 +55,13 @@ ORGANIZATION_TABLE = [
         "id": 1,
         "name": "organization-1",
         "telegram_id": None,
-        'slack_hook': None,
+        "slack_hook": None,
     },
     {
         "id": 2,
         "name": "organization-2",
         "telegram_id": None,
-        'slack_hook': "https://hooks.slack.com/services/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",
+        "slack_hook": os.environ["SLACK_HOOK"],
     },
 ]
 
