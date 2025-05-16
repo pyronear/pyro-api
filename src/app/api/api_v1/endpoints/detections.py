@@ -40,6 +40,7 @@ from app.schemas.detections import (
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
+from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
@@ -63,6 +64,7 @@ async def create_detection(
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -134,6 +136,18 @@ async def create_detection(
                 org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                 if org.telegram_id:
                     background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
+
+            if slack_client.is_enabled:
+                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                if org.slack_hook:
+                    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+                    url = bucket.get_public_url(det.bucket_key)
+                    camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
+
+                    background_tasks.add_task(
+                        slack_client.notify, org.slack_hook, det.model_dump_json(), url, camera.name
+                    )
+
     return det
 
 
