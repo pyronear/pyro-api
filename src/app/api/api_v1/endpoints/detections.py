@@ -64,6 +64,7 @@ async def create_detection(
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -139,7 +140,13 @@ async def create_detection(
             if slack_client.is_enabled:
                 org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                 if org.slack_hook:
-                    background_tasks.add_task(slack_client.notify, org.slack_hook, det.model_dump_json())
+                    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+                    url = bucket.get_public_url(det.bucket_key)
+                    camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
+
+                    background_tasks.add_task(
+                        slack_client.notify, org.slack_hook, det.model_dump_json(), url, camera.name
+                    )
 
     return det
 
