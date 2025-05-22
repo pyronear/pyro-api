@@ -300,4 +300,4 @@ def create_and_upload_gif(
     gif_binary.seek(0)
 
     # 3. Uploader le GIF sur le bucket S3
-    return bucket.upload_file(bucket_key=output_key, file_binary=gif_binary.getvalue())
+    return bucket.upload_file(bucket_key=output_key, file_binary=gif_binary)  # type: ignore[arg-type]
