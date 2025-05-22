@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, List, Union
 
 import pytest
@@ -168,11 +167,29 @@ async def test_delete_organization(
 @pytest.mark.parametrize(
     ("user_idx", "organization_id", "payload", "status_code", "status_detail"),
     [
-        (None, 1, {"slack_hook":  "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 401, "Not authenticated"),
+        (
+            None,
+            1,
+            {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"},
+            401,
+            "Not authenticated",
+        ),
         (0, 1, {"slack_hook": "test"}, 422, None),
         (0, 1, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 200, None),
-        (1, 2, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 403, "Incompatible token scope."),
-        (2, 2, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 403, "Incompatible token scope."),
+        (
+            1,
+            2,
+            {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"},
+            403,
+            "Incompatible token scope.",
+        ),
+        (
+            2,
+            2,
+            {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"},
+            403,
+            "Incompatible token scope.",
+        ),
     ],
 )
 @pytest.mark.asyncio
