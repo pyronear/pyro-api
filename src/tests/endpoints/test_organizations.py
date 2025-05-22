@@ -175,7 +175,13 @@ async def test_delete_organization(
             "Not authenticated",
         ),
         (0, 1, {"slack_hook": "test"}, 422, None),
-        (0, 1, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 404, "Unable to access Slack channel"),
+        (
+            0,
+            1,
+            {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"},
+            404,
+            "Unable to access Slack channel",
+        ),
         (
             1,
             2,
