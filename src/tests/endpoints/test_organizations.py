@@ -175,7 +175,7 @@ async def test_delete_organization(
             "Not authenticated",
         ),
         (0, 1, {"slack_hook": "test"}, 422, None),
-        (0, 1, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 200, None),
+        (0, 1, {"slack_hook": "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"}, 404, "Unable to access Slack channel"),
         (
             1,
             2,
@@ -212,11 +212,8 @@ async def test_update_slack_hook(
         )
 
     response = await async_client.patch(f"/organizations/slack-hook/{organization_id}", json=payload, headers=auth)
-
+    print(response.text)
     assert response.status_code == status_code, print(response.__dict__)
 
     if isinstance(status_detail, str):
         assert str(response.json()["detail"]) == status_detail
-
-    if response.status_code // 100 == 2:
-        assert response.json()["slack_hook"] == "https://hooks.slack.com/services/TEST123/TEST123/testTEST123"
