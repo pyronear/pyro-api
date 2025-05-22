@@ -2,7 +2,7 @@ default_language_version:
     python: python3.11
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
         exclude: .conda
@@ -17,8 +17,13 @@ repos:
         args: ['--branch', 'main']
       - id: debug-statements
         language_version: python3
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: 'v4.0.0'
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.9.9'
+    rev: 'v0.11.9'
     hooks:
       - id: ruff
         args:

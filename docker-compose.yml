@@ -37,7 +37,7 @@ services:
       retries: 10
 
   backend:
-    image: pyronear/alert-api:latest
+    image: ghcr.io/pyronear/alert-api:latest
     build:
       context: .
       dockerfile: ./src/Dockerfile
