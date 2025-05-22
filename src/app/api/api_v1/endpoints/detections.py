@@ -163,7 +163,7 @@ async def create_detection(
                             limit=10,
                         )
                     ]
-                    await create_and_upload_gif(list_url, bucket, output_key="output.gif")
+                    create_and_upload_gif(list_url, bucket, output_key="output.gif")
                     url = bucket.get_public_url("output.gif")
                     camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
 
@@ -250,7 +250,7 @@ async def delete_detection(
 
 
 def create_and_upload_gif(
-    list_url: List[Detection], bucket: S3Bucket, output_key: str = "output.gif", duration: int = 500
+    list_url: List[DetectionWithUrl], bucket: S3Bucket, output_key: str = "output.gif", duration: int = 500
 ) -> bool:
     images = []
     # 1. Télécharger les images depuis les URLs
@@ -300,4 +300,4 @@ def create_and_upload_gif(
     gif_binary.seek(0)
 
     # 3. Uploader le GIF sur le bucket S3
-    return bucket.upload_file(bucket_key=output_key, file_binary=gif_binary)
+    return bucket.upload_file(bucket_key=output_key, file_binary=gif_binary.getvalue())

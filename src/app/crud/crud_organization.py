@@ -7,11 +7,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Organization
-from app.schemas.organizations import OrganizationCreate, TelegramChannelId
+from app.schemas.organizations import OrganizationCreate, SlackHook, TelegramChannelId
 
 __all__ = ["OrganizationCRUD"]
 
 
-class OrganizationCRUD(BaseCRUD[Organization, OrganizationCreate, TelegramChannelId]):
+class OrganizationCRUD(BaseCRUD[Organization, OrganizationCreate, TelegramChannelId | SlackHook]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Organization)

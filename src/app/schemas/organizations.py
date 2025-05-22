@@ -35,6 +35,6 @@ class TelegramChannelId(BaseModel):
 
 
 class SlackHook(BaseModel):
-    slack_hook: Union[str, None] = Field(
+    slack_hook: Union[str] = Field(
         ..., pattern=r"^https://hooks\.slack\.com/services/[A-Z0-9]+/[A-Z0-9]+/[a-zA-Z0-9]+$"
     )
