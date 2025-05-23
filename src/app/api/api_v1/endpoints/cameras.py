@@ -8,12 +8,13 @@ from typing import List, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_jwt
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.crud import CameraCRUD
-from app.models import Camera, Role, UserRole
+from app.crud import CameraCRUD, DetectionCRUD
+from app.models import Camera, Detection, Role, UserRole
 from app.schemas.cameras import CameraCreate, CameraEdit, CameraName, LastActive, LastImage
+from app.schemas.detections import DetectionWithUrl
 from app.schemas.login import Token, TokenPayload
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -33,17 +34,34 @@ async def register_camera(
     return await cameras.create(payload)
 
 
+class CameraWithLastDetection(Camera):
+    last_detection: DetectionWithUrl | None = None
+
+
 @router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
 async def get_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Camera:
+) -> CameraWithLastDetection:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return camera
+    det = cast(
+        Detection,
+        await detections.fetch_all(
+            filters=(("camera_id", camera_id),), order_by="created_at", order_desc=True, limit=1
+        ),
+    )
+    if len(det) == 0:
+        return CameraWithLastDetection(**camera.model_dump(), last_detection=None)
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    return CameraWithLastDetection(
+        **camera.model_dump(),
+        last_detection=DetectionWithUrl(**det[0].model_dump(), url=bucket.get_public_url(det[0].bucket_key)),
+    )
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
@@ -52,10 +70,12 @@ async def fetch_cameras(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Camera]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
-    all_cameras = [elt for elt in await cameras.fetch_all(order_by="id")]
     if UserRole.ADMIN in token_payload.scopes:
-        return all_cameras
-    return [camera for camera in all_cameras if camera.organization_id == token_payload.organization_id]
+        return [elt for elt in await cameras.fetch_all(order_by="id")]
+    return [
+        elt
+        for elt in await cameras.fetch_all(order_by="id", filters=(("organization_id", token_payload.organization_id),))
+    ]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
