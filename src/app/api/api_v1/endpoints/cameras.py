@@ -12,7 +12,7 @@ from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.crud import CameraCRUD, DetectionCRUD
-from app.models import Camera, Detection, Role, UserRole
+from app.models import Camera, Role, UserRole
 from app.schemas.cameras import CameraCreate, CameraEdit, CameraName, LastActive, LastImage
 from app.schemas.detections import DetectionWithUrl
 from app.schemas.login import Token, TokenPayload
@@ -49,18 +49,13 @@ async def get_camera(
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    det = cast(
-        Detection,
-        await detections.fetch_all(
-            filters=(("camera_id", camera_id),), order_by="created_at", order_desc=True, limit=1
-        ),
-    )
-    if len(det) == 0:
+    dets = await detections.fetch_all(filters=("camera_id", camera_id), order_by="created_at", order_desc=True, limit=1)
+    if len(dets) == 0:
         return CameraWithLastDetection(**camera.model_dump(), last_detection=None)
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     return CameraWithLastDetection(
         **camera.model_dump(),
-        last_detection=DetectionWithUrl(**det[0].model_dump(), url=bucket.get_public_url(det[0].bucket_key)),
+        last_detection=DetectionWithUrl(**dets[0].model_dump(), url=bucket.get_public_url(dets[0].bucket_key)),
     )
 
 
@@ -74,7 +69,7 @@ async def fetch_cameras(
         return [elt for elt in await cameras.fetch_all(order_by="id")]
     return [
         elt
-        for elt in await cameras.fetch_all(order_by="id", filters=(("organization_id", token_payload.organization_id),))
+        for elt in await cameras.fetch_all(order_by="id", filters=("organization_id", token_payload.organization_id))
     ]
 
 
