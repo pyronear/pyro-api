@@ -80,7 +80,7 @@ app.add_middleware(
 )
 
 if isinstance(settings.SENTRY_DSN, str):
-    app.add_middleware(SentryAsgiMiddleware)
+    app.add_middleware(SentryAsgiMiddleware)  # type: ignore[arg-type]
 
 
 # Overrides swagger to include favicon
