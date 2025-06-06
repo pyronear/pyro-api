@@ -258,7 +258,7 @@ class Client:
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,
-            params=params,  # type: ignore[arg-type]
+            params=params,
             timeout=self.timeout,
         )
 
