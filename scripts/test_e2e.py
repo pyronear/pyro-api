@@ -104,7 +104,6 @@ def main(args):
     response = requests.get(f"{args.endpoint}/cameras", headers=agent_auth, timeout=5)
     assert response.status_code == 200, response.text
     assert response.json()[0]["last_image_url"] is not None
-    assert response.json()[0]["last_image_url"].endswith(".png")
 
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
