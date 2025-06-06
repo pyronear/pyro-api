@@ -93,7 +93,7 @@ def main(args):
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Update cam last image
     response = requests.patch(
-        f"{args.endpoint}/cameras/{cam_id}/image",
+        f"{args.endpoint}/cameras/image",
         headers=cam_auth,
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
