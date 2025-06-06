@@ -108,9 +108,9 @@ async def update_image(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
+    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     # If the upload succeeds, delete the previous image
-    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     if isinstance(cam.last_image, str):
         s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
