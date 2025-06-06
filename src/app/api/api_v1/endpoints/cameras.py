@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import datetime
 from typing import List, cast
 
@@ -61,14 +62,34 @@ async def get_camera(
 async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Camera]:
+) -> List[CameraWithLastImgUrl]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
     if UserRole.ADMIN in token_payload.scopes:
-        return [elt for elt in await cameras.fetch_all(order_by="id")]
-    return [
-        elt
-        for elt in await cameras.fetch_all(order_by="id", filters=("organization_id", token_payload.organization_id))
-    ]
+        cams = [elt for elt in await cameras.fetch_all(order_by="id")]
+
+        async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
+            if cam.last_image:
+                bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
+                return bucket.get_public_url(cam.last_image)
+            return None
+
+        urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
+    else:
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+        cams = [
+            elt
+            for elt in await cameras.fetch_all(
+                order_by="id", filters=("organization_id", token_payload.organization_id)
+            )
+        ]
+
+        async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
+            if cam.last_image:
+                return bucket.get_public_url(cam.last_image)
+            return None
+
+        urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
+    return [CameraWithLastImgUrl(**cam.model_dump(), last_image_url=url) for cam, url in zip(cams, urls)]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
