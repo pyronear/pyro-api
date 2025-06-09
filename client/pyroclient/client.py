@@ -239,7 +239,7 @@ class Client:
             timeout=self.timeout,
         )
 
-    def fetch_sequences_from_date(self, from_date: str) -> Response:
+    def fetch_sequences_from_date(self, from_date: str, limit: int = 15, offset: int = 0) -> Response:
         """List the sequences accessible to the authenticated user for a specific date
 
         >>> from pyroclient import client
@@ -248,11 +248,13 @@ class Client:
 
         Args:
             from_date: date of the sequences to fetch
+            limit: maximum number of sequences to fetch
+            offset: number of sequences to skip before starting to fetch
 
         Returns:
             HTTP response
         """
-        params = {"from_date": from_date}
+        params = {"from_date": from_date, "limit": limit, "offset": offset}
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,
