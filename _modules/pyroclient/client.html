@@ -443,7 +443,7 @@
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.fetch_sequences_from_date"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_from_date">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_from_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<div class="viewcode-block" id="Client.fetch_sequences_from_date"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_from_date">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_from_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List the sequences accessible to the authenticated user for a specific date</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
@@ -452,11 +452,13 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            from_date: date of the sequences to fetch</span>
+<span class="sd">            limit: maximum number of sequences to fetch</span>
+<span class="sd">            offset: number of sequences to skip before starting to fetch</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;from_date&quot;</span><span class="p">:</span> <span class="n">from_date</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;from_date&quot;</span><span class="p">:</span> <span class="n">from_date</span><span class="p">,</span> <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">:</span> <span class="n">offset</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_FROMDATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
