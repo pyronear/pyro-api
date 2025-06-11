@@ -3,14 +3,10 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import ast
-import io
+
 from datetime import datetime, timedelta
 from typing import List, cast
 
-import cv2
-import numpy as np
-import requests
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -23,7 +19,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from PIL import Image
 
 from app.api.dependencies import (
     dispatch_webhook,
@@ -43,12 +38,11 @@ from app.schemas.detections import (
     DetectionCreate,
     DetectionSequence,
     DetectionUrl,
-    DetectionWithUrl,
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.slack import slack_client
-from app.services.storage import S3Bucket, s3_service, upload_file
+from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
@@ -150,21 +144,7 @@ async def create_detection(
                 org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                 if org.slack_hook:
                     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-
-                    list_url = [
-                        DetectionWithUrl(
-                            **elt.__dict__,
-                            url=bucket.get_public_url(elt.bucket_key),
-                        )
-                        for elt in await detections.fetch_all(
-                            filters=("sequence_id", sequence_.id),
-                            order_by="created_at",
-                            order_desc=True,
-                            limit=10,
-                        )
-                    ]
-                    create_and_upload_gif(list_url, bucket, output_key="output.gif")
-                    url = bucket.get_public_url("output.gif")
+                    url = bucket.get_public_url(det.bucket_key)
                     camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
 
                     background_tasks.add_task(
@@ -247,57 +227,3 @@ async def delete_detection(
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     bucket.delete_file(detection.bucket_key)
     await detections.delete(detection_id)
-
-
-def create_and_upload_gif(
-    list_url: List[DetectionWithUrl], bucket: S3Bucket, output_key: str = "output.gif", duration: int = 500
-) -> bool:
-    images = []
-    # 1. Télécharger les images depuis les URLs
-    for detection in list_url:
-        response = requests.get(detection.url, timeout=5)
-        if response.status_code == 200:
-            pil_img = Image.open(io.BytesIO(response.content)).convert("RGB")
-
-            # Convertir PIL -> OpenCV (NumPy array)
-            img = np.array(pil_img)
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            height, width = img.shape[:2]
-
-            # Draw all bounding boxes
-            parsed_bboxes = ast.literal_eval(detection.bboxes)
-            if not isinstance(parsed_bboxes, list):
-                raise ValueError("La valeur parsée n'est pas une liste")
-
-            for x0, y0, x1, y1, _ in parsed_bboxes:
-                # Convert normalized coordinates to pixel values
-                x0_pixel = int(x0 * width)
-                y0_pixel = int(y0 * height)
-                x1_pixel = int(x1 * width)
-                y1_pixel = int(y1 * height)
-
-                # Draw the rectangle on the image
-                img = cv2.rectangle(img, (x0_pixel, y0_pixel), (x1_pixel, y1_pixel), (0, 255, 0), 2)
-
-            # Convertir img de BGR (OpenCV) à RGB (PIL)
-            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            pil_img = Image.fromarray(img_rgb)
-            images.append(pil_img)
-
-    if not images:
-        return False
-
-    # 2. Créer un GIF à partir des images
-    gif_binary = io.BytesIO()
-    images[0].save(
-        gif_binary,
-        format="GIF",
-        save_all=True,
-        append_images=images[1:],
-        duration=duration,  # Durée entre les frames en ms
-        loop=0,
-    )
-    gif_binary.seek(0)
-
-    # 3. Uploader le GIF sur le bucket S3
-    return bucket.upload_file(bucket_key=output_key, file_binary=gif_binary)  # type: ignore[arg-type]
