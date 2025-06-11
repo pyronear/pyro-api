@@ -79,6 +79,7 @@ class Organization(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
     telegram_id: Union[str, None] = Field(None, nullable=True)
+    slack_hook: Union[str, None] = Field(None, nullable=True)
 
 
 class Webhook(SQLModel, table=True):
