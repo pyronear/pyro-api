@@ -29,8 +29,6 @@ python-multipart = "==0.0.7"
 python-magic = "^0.4.17"
 boto3 = "==1.28.76"
 httpx = "^0.24.0"
-pillow = "^11.2.1"
-opencv-python = "^4.11.0.86"
 
 [tool.poetry.group.quality]
 optional = true
