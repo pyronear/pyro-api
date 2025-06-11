@@ -9,12 +9,7 @@ ENV PYTHONPATH="/app"
 
 # Install curl
 RUN apt-get -y update \
-    && apt-get -y install -y --no-install-recommends curl libmagic1 \
-    libsm6 \
-    libxext6 \
-    libgl1 \
-    libglib2.0-0 \
-    && apt-get clean \
+    && apt-get -y install curl libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
