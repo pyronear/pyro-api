@@ -91,6 +91,21 @@ def main(args):
 
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
+    # Update cam last image
+    response = requests.patch(
+        f"{args.endpoint}/cameras/image",
+        headers=cam_auth,
+        files={"file": ("logo.png", file_bytes, "image/png")},
+        timeout=5,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["last_image"] is not None
+    # Check that URL is displayed when we fetch all cameras
+    response = requests.get(f"{args.endpoint}/cameras", headers=agent_auth, timeout=5)
+    assert response.status_code == 200, response.text
+    assert response.json()[0]["last_image_url"] is not None
+
+    file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
     response = requests.post(
         f"{args.endpoint}/detections",

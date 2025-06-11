@@ -131,7 +131,9 @@ async def test_get_camera(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == pytest.camera_table[expected_idx]
+        json_response = response.json()
+        assert isinstance(json_response["last_image_url"], str) or json_response["last_image_url"] is None
+        assert {k: v for k, v in json_response.items() if k != "last_image_url"} == pytest.camera_table[expected_idx]
 
 
 @pytest.mark.parametrize(
@@ -165,7 +167,9 @@ async def test_fetch_cameras(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json()[0] == expected_response
+        json_response = response.json()
+        assert {k: v for k, v in json_response[0].items() if k != "last_image_url"} == expected_response
+        assert isinstance(json_response[0]["last_image_url"], str) or json_response[0]["last_image_url"] is None
 
 
 @pytest.mark.parametrize(

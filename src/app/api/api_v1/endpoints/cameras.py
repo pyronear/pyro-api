@@ -3,10 +3,12 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import datetime
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
+from pydantic import Field
 
 from app.api.dependencies import get_camera_crud, get_jwt
 from app.core.config import settings
@@ -33,29 +35,61 @@ async def register_camera(
     return await cameras.create(payload)
 
 
+class CameraWithLastImgUrl(Camera):
+    last_image_url: str | None = Field(None, description="URL of the last image of the camera")
+
+
 @router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
 async def get_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Camera:
+) -> CameraWithLastImgUrl:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return camera
+    if camera.last_image is None:
+        return CameraWithLastImgUrl(**camera.model_dump(), last_image_url=None)
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    return CameraWithLastImgUrl(
+        **camera.model_dump(),
+        last_image_url=bucket.get_public_url(camera.last_image),
+    )
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
 async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Camera]:
+) -> List[CameraWithLastImgUrl]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
-    all_cameras = [elt for elt in await cameras.fetch_all(order_by="id")]
     if UserRole.ADMIN in token_payload.scopes:
-        return all_cameras
-    return [camera for camera in all_cameras if camera.organization_id == token_payload.organization_id]
+        cams = [elt for elt in await cameras.fetch_all(order_by="id")]
+
+        async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
+            if cam.last_image:
+                bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
+                return bucket.get_public_url(cam.last_image)
+            return None
+
+        urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
+    else:
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+        cams = [
+            elt
+            for elt in await cameras.fetch_all(
+                order_by="id", filters=("organization_id", token_payload.organization_id)
+            )
+        ]
+
+        async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
+            if cam.last_image:
+                return bucket.get_public_url(cam.last_image)
+            return None
+
+        urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
+    return [CameraWithLastImgUrl(**cam.model_dump(), last_image_url=url) for cam, url in zip(cams, urls)]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
@@ -74,9 +108,9 @@ async def update_image(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
+    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     # If the upload succeeds, delete the previous image
-    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     if isinstance(cam.last_image, str):
         s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
