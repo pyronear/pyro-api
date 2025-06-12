@@ -10,7 +10,6 @@ ENV PYTHONPATH="/app"
 # Install curl
 RUN apt-get -y update \
     && apt-get -y install curl libmagic1 \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
