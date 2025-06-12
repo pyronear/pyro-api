@@ -51,7 +51,11 @@ class SlackClient:
                         "block_id": "section567",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":fire: \n\n Nom du site concerné : " + camera_name + "\n Azimuth :" + str(azimuth),
+                            "text": ":fire: \n\n Nom du site concerné : "
+                            + camera_name
+                            + "\n Azimuth :"
+                            + str(azimuth)
+                            + "\n https://platform.pyronear.org/",
                         },
                     },
                     {"type": "image", "image_url": url, "alt_text": "Haunted hotel image"},
@@ -66,7 +70,11 @@ class SlackClient:
                         "block_id": "section567",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":fire: \n\n Nom du site concerné : " + camera_name + "\n Azimuth :" + str(azimuth),
+                            "text": ":fire: \n\n Nom du site concerné : "
+                            + camera_name
+                            + "\n Azimuth :"
+                            + str(azimuth)
+                            + "\n https://platform.pyronear.org/",
                         },
                     },
                 ],
