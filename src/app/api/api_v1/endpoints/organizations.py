@@ -12,7 +12,8 @@ from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
 from app.models import Organization, UserRole
 from app.schemas.login import TokenPayload
-from app.schemas.organizations import OrganizationCreate, TelegramChannelId
+from app.schemas.organizations import OrganizationCreate, SlackHook, TelegramChannelId
+from app.services.slack import slack_client
 from app.services.storage import s3_service
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
@@ -91,4 +92,21 @@ async def update_telegram_id(
     # Check if the telegram channel ID is valid
     if payload.telegram_id and not telegram_client.has_channel_access(payload.telegram_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Telegram channel")
+    return await organizations.update(organization_id, payload)
+
+
+@router.patch(
+    "/slack-hook/{organization_id}", status_code=status.HTTP_200_OK, summary="Update slack token of an organization"
+)
+async def update_slack_hook(
+    payload: SlackHook,
+    organization_id: int = Path(..., gt=0),
+    organizations: OrganizationCRUD = Depends(get_organization_crud),
+    _: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> Organization:
+    # Check if the Slack hook is valid
+    check = slack_client.has_channel_access(payload.slack_hook)
+
+    if payload.slack_hook and not check:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Slack channel")
     return await organizations.update(organization_id, payload)
