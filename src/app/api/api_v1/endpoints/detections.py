@@ -134,6 +134,8 @@ async def create_detection(
             if any(whs):
                 for webhook in await webhooks.fetch_all():
                     background_tasks.add_task(dispatch_webhook, webhook.url, det)
+            
+            org = None
             # Telegram notifications
             if telegram_client.is_enabled:
                 org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
@@ -141,7 +143,8 @@ async def create_detection(
                     background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
 
             if slack_client.is_enabled:
-                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                if org is None:
+                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                 if org.slack_hook:
                     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
                     url = bucket.get_public_url(det.bucket_key)

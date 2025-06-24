@@ -104,9 +104,7 @@ async def update_slack_hook(
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Organization:
-    telemetry_client.capture(
-        token_payload.sub, event="organizations-update-slack-hook", properties={"organization_id": organization_id}
-    )
+
     # Check if the Slack hook is valid
     check = slack_client.has_channel_access(payload.slack_hook)
 
