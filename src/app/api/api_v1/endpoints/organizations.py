@@ -102,9 +102,8 @@ async def update_slack_hook(
     payload: SlackHook,
     organization_id: int = Path(..., gt=0),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    _: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> Organization:
-
     # Check if the Slack hook is valid
     check = slack_client.has_channel_access(payload.slack_hook)
 

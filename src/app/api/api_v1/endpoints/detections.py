@@ -134,7 +134,7 @@ async def create_detection(
             if any(whs):
                 for webhook in await webhooks.fetch_all():
                     background_tasks.add_task(dispatch_webhook, webhook.url, det)
-            
+
             org = None
             # Telegram notifications
             if telegram_client.is_enabled:
