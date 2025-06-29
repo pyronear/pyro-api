@@ -482,12 +482,17 @@
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.fetch_sequences_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<div class="viewcode-block" id="Client.fetch_sequences_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">desc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections of a sequence</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_detections(1)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sequence_id: ID of the associated sequence entry</span>
+<span class="sd">            limit: maximum number of detections to fetch</span>
+<span class="sd">            desc: whether to order the detections by created_at in descending order</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
@@ -495,6 +500,7 @@
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_DETECTIONS</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="n">desc</span><span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
