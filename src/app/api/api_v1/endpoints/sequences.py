@@ -103,6 +103,8 @@ async def get_sequence(
 )
 async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),
+    limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
+    desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
@@ -124,8 +126,8 @@ async def fetch_sequence_detections(
         for elt in await detections.fetch_all(
             filters=("sequence_id", sequence_id),
             order_by="created_at",
-            order_desc=True,
-            limit=10,
+            order_desc=desc,
+            limit=limit,
         )
     ]
 
