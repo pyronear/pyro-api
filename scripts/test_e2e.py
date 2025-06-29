@@ -159,6 +159,12 @@ def main(args):
     assert dets[0]["id"] == det_id_3
     assert dets[1]["id"] == det_id_2
     assert dets[2]["id"] == detection_id
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1", agent_auth)
+    assert len(dets) == 1
+    assert dets[0]["id"] == det_id_3
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1&desc=false", agent_auth)
+    assert len(dets) == 1
+    assert dets[0]["id"] == detection_id
 
     # Cleaning (order is important because of foreign key protection in existing tables)
     api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
