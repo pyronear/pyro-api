@@ -278,12 +278,17 @@ class Client:
             timeout=self.timeout,
         )
 
-    def fetch_sequences_detections(self, sequence_id: int) -> Response:
+    def fetch_sequences_detections(self, sequence_id: int, limit: int = 10, desc: bool = True) -> Response:
         """List the detections of a sequence
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
         >>> response = api_client.fetch_sequences_detections(1)
+
+        Args:
+            sequence_id: ID of the associated sequence entry
+            limit: maximum number of detections to fetch
+            desc: whether to order the detections by created_at in descending order
 
         Returns:
             HTTP response
@@ -291,6 +296,7 @@ class Client:
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
+            params={"limit": limit, "desc": desc},
             timeout=self.timeout,
         )
 
