@@ -65,7 +65,9 @@ class SlackClient:
                             + "\n Azimuth de detection : "
                             + str(azimuth)
                             + "°"
-                            + "\n https://platform.pyronear.org/",
+                            + "\n https://platform.pyronear.org/"
+                            + "\n "
+                            + url,
                         },
                     },
                     {"type": "image", "image_url": url, "alt_text": "Haunted hotel image"},
