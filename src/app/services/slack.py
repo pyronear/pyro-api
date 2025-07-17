@@ -5,6 +5,8 @@
 
 import json
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -42,6 +44,11 @@ class SlackClient:
             raise ValueError("Invalid JSON format for message_detection") from e
 
         azimuth = detection_data.get("azimuth", "Inconnu")
+        created_at_str = detection_data.get("created_at", "Inconnu")
+        utc_dt = datetime.fromisoformat(created_at_str)
+        utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))
+        paris_dt = utc_dt.astimezone(ZoneInfo("Europe/Paris"))
+
         if url is not None:
             message = {
                 "text": "Un feu a été detecté !",
@@ -51,11 +58,16 @@ class SlackClient:
                         "block_id": "section567",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":fire: \n\n Nom du site concerné : "
+                            "text": ":date: "
+                            + paris_dt.strftime("%Y-%m-%d %H:%M:%S")
+                            + "\n Nom du site concerné : "
                             + camera_name
-                            + "\n Azimuth :"
+                            + "\n Azimuth de detection : "
                             + str(azimuth)
-                            + "\n https://platform.pyronear.org/",
+                            + "°"
+                            + "\n https://platform.pyronear.org/"
+                            + "\n "
+                            + url,
                         },
                     },
                     {"type": "image", "image_url": url, "alt_text": "Haunted hotel image"},
@@ -70,10 +82,13 @@ class SlackClient:
                         "block_id": "section567",
                         "text": {
                             "type": "mrkdwn",
-                            "text": ":fire: \n\n Nom du site concerné : "
+                            "text": ":date: "
+                            + paris_dt.strftime("%Y-%m-%d %H:%M:%S")
+                            + "\n Nom du site concerné : "
                             + camera_name
-                            + "\n Azimuth :"
+                            + "\n Azimuth de detection : "
                             + str(azimuth)
+                            + "°"
                             + "\n https://platform.pyronear.org/",
                         },
                     },
