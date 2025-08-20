@@ -7,7 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models import Sequence, AnnotationType
+from app.models import AnnotationType, Sequence
 
 __all__ = ["SequenceUpdate", "SequenceWithCone"]
 

@@ -9,7 +9,7 @@ from typing import Union
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.models import Detection, AnnotationType
+from app.models import AnnotationType, Detection
 
 __all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
 

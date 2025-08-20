@@ -1,10 +1,9 @@
-from alembic import op
 import sqlalchemy as sa
-import sqlmodel
+from alembic import op
 
 # Ajoute ton identifiant de révision et dépendance si besoin
-revision = '42dzeg392dhu'
-down_revision = '4265426f8438'
+revision = "42dzeg392dhu"
+down_revision = "4265426f8438"
 branch_labels = None
 depends_on = None
 
