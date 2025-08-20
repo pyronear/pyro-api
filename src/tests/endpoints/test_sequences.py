@@ -94,18 +94,18 @@ async def test_delete_sequence(
 @pytest.mark.parametrize(
     ("user_idx", "sequence_id", "payload", "status_code", "status_detail", "expected_idx"),
     [
-        (None, 1, {"is_wildfire": True}, 401, "Not authenticated", None),
-        (0, 0, {"is_wildfire": True}, 422, None, None),
-        (0, 99, {"is_wildfire": True}, 404, None, None),
-        (0, 1, {"label": True}, 422, None, None),
+        (None, 1, {"is_wildfire": "wildfire_smoke"}, 401, "Not authenticated", None),
+        (0, 0, {"is_wildfire": "wildfire_smoke"}, 422, None, None),
+        (0, 99, {"is_wildfire": "wildfire_smoke"}, 404, None, None),
+        (0, 1, {"label": "wildfire_smoke"}, 422, None, None),
         (0, 1, {"is_wildfire": "hello"}, 422, None, None),
         # (0, 1, {"is_wildfire": "True"}, 422, None, None),  # odd, this works
-        (0, 1, {"is_wildfire": True}, 200, None, 0),
-        (0, 2, {"is_wildfire": True}, 200, None, 1),
-        (1, 1, {"is_wildfire": True}, 200, None, 0),
-        (1, 2, {"is_wildfire": True}, 403, None, None),
-        (2, 1, {"is_wildfire": True}, 403, None, None),
-        (2, 2, {"is_wildfire": True}, 403, None, None),  # User cannot label
+        (0, 1, {"is_wildfire": "wildfire_smoke"}, 200, None, 0),
+        (0, 2, {"is_wildfire": "wildfire_smoke"}, 200, None, 1),
+        (1, 1, {"is_wildfire": "wildfire_smoke"}, 200, None, 0),
+        (1, 2, {"is_wildfire": "wildfire_smoke"}, 403, None, None),
+        (2, 1, {"is_wildfire": "wildfire_smoke"}, 403, None, None),
+        (2, 2, {"is_wildfire": "wildfire_smoke"}, 403, None, None),  # User cannot label
     ],
 )
 @pytest.mark.asyncio
