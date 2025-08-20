@@ -218,12 +218,12 @@ class Client:
             timeout=self.timeout,
         )
 
-    def label_sequence(self, sequence_id: int, is_wildfire: bool) -> Response:
+    def label_sequence(self, sequence_id: int, is_wildfire: str) -> Response:
         """Update the label of a sequence made by a camera
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
-        >>> response = api_client.label_sequence(1, is_wildfire=True)
+        >>> response = api_client.label_sequence(1, is_wildfire="wildfire_smoke")
 
         Args:
             sequence_id: ID of the associated sequence entry

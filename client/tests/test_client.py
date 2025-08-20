@@ -54,7 +54,7 @@ def test_agent_workflow(test_cam_workflow, agent_token):
     agent_client = Client(agent_token, "http://localhost:5050", timeout=10)
     response = agent_client.fetch_latest_sequences().json()
     assert len(response) == 1
-    response = agent_client.label_sequence(response[0]["id"], True)
+    response = agent_client.label_sequence(response[0]["id"], "wildfire_smoke")
     assert response.status_code == 200, response.__dict__
 
 
