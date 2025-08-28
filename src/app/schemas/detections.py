@@ -9,13 +9,13 @@ from typing import Union
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.models import Detection
+from app.models import AnnotationType, Detection
 
 __all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
 
 
 class DetectionLabel(BaseModel):
-    is_wildfire: bool
+    is_wildfire: AnnotationType
 
 
 class Azimuth(BaseModel):

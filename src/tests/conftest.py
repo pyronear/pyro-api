@@ -138,7 +138,7 @@ SEQ_TABLE = [
         "id": 1,
         "camera_id": 1,
         "azimuth": 43.7,
-        "is_wildfire": True,
+        "is_wildfire": "wildfire_smoke",
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
