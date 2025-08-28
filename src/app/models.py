@@ -30,24 +30,8 @@ class Role(str, Enum):
 class AnnotationType(str, Enum):
     WILDFIRE_SMOKE = "wildfire_smoke"
     OTHER_SMOKE = "other_smoke"
-    ANTENNA = "antenna"
-    BUILDING = "building"
-    CLIFF = "cliff"
-    DARK = "dark"
-    DUST = "dust"
-    HIGH_CLOUD = "high_cloud"
-    LOW_CLOUD = "low_cloud"
-    LENS_FLARE = "lens_flare"
-    LENS_DROPLET = "lens_droplet"
-    LIGHT = "light"
-    RAIN = "rain"
-    TRAIL = "trail"
-    ROAD = "road"
-    SKY = "sky"
-    TREE = "tree"
-    WATER_BODY = "water_body"
-    DOUBT = "doubt"
     OTHER = "other"
+
 
 
 class User(SQLModel, table=True):
