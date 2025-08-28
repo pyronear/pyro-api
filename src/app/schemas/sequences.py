@@ -7,7 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models import Sequence
+from app.models import AnnotationType, Sequence
 
 __all__ = ["SequenceUpdate", "SequenceWithCone"]
 
@@ -18,7 +18,7 @@ class SequenceUpdate(BaseModel):
 
 
 class SequenceLabel(BaseModel):
-    is_wildfire: bool
+    is_wildfire: AnnotationType
 
 
 class SequenceWithCone(Sequence):

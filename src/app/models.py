@@ -27,6 +27,29 @@ class Role(str, Enum):
     USER = "user"
 
 
+class AnnotationType(str, Enum):
+    WILDFIRE_SMOKE = "wildfire_smoke"
+    OTHER_SMOKE = "other_smoke"
+    ANTENNA = "antenna"
+    BUILDING = "building"
+    CLIFF = "cliff"
+    DARK = "dark"
+    DUST = "dust"
+    HIGH_CLOUD = "high_cloud"
+    LOW_CLOUD = "low_cloud"
+    LENS_FLARE = "lens_flare"
+    LENS_DROPLET = "lens_droplet"
+    LIGHT = "light"
+    RAIN = "rain"
+    TRAIL = "trail"
+    ROAD = "road"
+    SKY = "sky"
+    TREE = "tree"
+    WATER_BODY = "water_body"
+    DOUBT = "doubt"
+    OTHER = "other"
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: int = Field(None, primary_key=True)
@@ -47,6 +70,8 @@ class Camera(SQLModel, table=True):
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
     lat: float = Field(..., gt=-90, lt=90)
     lon: float = Field(..., gt=-180, lt=180)
+    ip_address: str
+    livestream_activated: bool = False
     is_trustable: bool = True
     last_active_at: Union[datetime, None] = None
     last_image: Union[str, None] = None
@@ -69,7 +94,7 @@ class Sequence(SQLModel, table=True):
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     azimuth: float = Field(..., ge=0, lt=360)
-    is_wildfire: Union[bool, None] = None
+    is_wildfire: Union[AnnotationType, None] = None
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 

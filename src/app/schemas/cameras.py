@@ -49,6 +49,8 @@ class CameraCreate(CameraEdit):
         description="angle between left and right camera view",
         json_schema_extra={"examples": [120.0]},
     )
+    ip_address: str
+    livestream_activated: bool = False
     is_trustable: bool = Field(True, description="whether the detection from this camera can be trusted")
 
 

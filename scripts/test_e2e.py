@@ -78,6 +78,8 @@ def main(args):
         "lat": 44.7,
         "lon": 4.5,
         "azimuth": 110,
+        "ip_address": "165.165.165.165",
+        "livestream_activated": False,
     }
     cam_id = api_request("post", f"{args.endpoint}/cameras/", agent_auth, payload)["id"]
 
@@ -152,7 +154,9 @@ def main(args):
         == 1
     )
     # Label the sequence
-    api_request("patch", f"{args.endpoint}/sequences/{sequence['id']}/label", agent_auth, {"is_wildfire": True})
+    api_request(
+        "patch", f"{args.endpoint}/sequences/{sequence['id']}/label", agent_auth, {"is_wildfire": "wildfire_smoke"}
+    )
     # Check the sequence's detections
     dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections", agent_auth)
     assert len(dets) == 3
