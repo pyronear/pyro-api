@@ -33,7 +33,6 @@ class AnnotationType(str, Enum):
     OTHER = "other"
 
 
-
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: int = Field(None, primary_key=True)
