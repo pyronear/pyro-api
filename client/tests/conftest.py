@@ -35,6 +35,8 @@ def cam_token():
         "elevation": 1582,
         "lat": 44.765181,
         "lon": 4.51488,
+        "ip_address": "165.165.165.165",
+        "livestream_activated": False,
         "is_trustable": True,
     }
     response = requests.post(urljoin(API_URL, "cameras"), json=payload, headers=admin_headers, timeout=5)
