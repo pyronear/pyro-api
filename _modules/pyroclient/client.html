@@ -422,12 +422,12 @@
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.label_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<div class="viewcode-block" id="Client.label_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the label of a sequence made by a camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.label_sequence(1, is_wildfire=True)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.label_sequence(1, is_wildfire=&quot;wildfire_smoke&quot;)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            sequence_id: ID of the associated sequence entry</span>
