@@ -70,7 +70,7 @@ class Camera(SQLModel, table=True):
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
     lat: float = Field(..., gt=-90, lt=90)
     lon: float = Field(..., gt=-180, lt=180)
-    ip_address: str 
+    ip_address: str
     livestream_activated: bool = False
     is_trustable: bool = True
     last_active_at: Union[datetime, None] = None

@@ -32,6 +32,7 @@ class CameraEdit(BaseModel):
     lat: float = Field(..., gt=-90, lt=90, description="latitude", json_schema_extra={"examples": [44.765181]})
     lon: float = Field(..., gt=-180, lt=180, description="longitude", json_schema_extra={"examples": [4.514880]})
 
+
 class CameraCreate(CameraEdit):
     organization_id: int = Field(..., gt=0)
     name: str = Field(
@@ -48,7 +49,7 @@ class CameraCreate(CameraEdit):
         description="angle between left and right camera view",
         json_schema_extra={"examples": [120.0]},
     )
-    ip_address: str 
+    ip_address: str
     livestream_activated: bool = False
     is_trustable: bool = Field(True, description="whether the detection from this camera can be trusted")
 
