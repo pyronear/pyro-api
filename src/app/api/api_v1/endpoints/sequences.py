@@ -213,11 +213,13 @@ async def fetch_latest_unlabeled_sequences(
 
     df_out = compute_overlap(df_input, r_km=35.0, r_min_km=0.5, max_dist_km=2.0)
     groups_by_id = {int(r["id"]): r["event_groups"] for _, r in df_out.iterrows()}
-    smokes_by_id = {int(r["id"]): r["event_smoke_locations"] for _, r in df_out.iterrows()}
+    smokes_by_id = {
+        int(r["id"]): [pt for pt in r["event_smoke_locations"] if pt is not None] for _, r in df_out.iterrows()
+    }
 
     return [
         SequenceWithCone(
-            **s.__dict__,
+            **s.model_dump(),
             cone_azimuth=det_cones[s.id][0],
             cone_angle=det_cones[s.id][1],
             event_groups=groups_by_id.get(int(s.id), [(int(s.id),)]),
@@ -268,11 +270,13 @@ async def fetch_sequences_from_date(
 
     df_out = compute_overlap(df_input, r_km=35.0, r_min_km=0.5, max_dist_km=2.0)
     groups_by_id = {int(r["id"]): r["event_groups"] for _, r in df_out.iterrows()}
-    smokes_by_id = {int(r["id"]): r["event_smoke_locations"] for _, r in df_out.iterrows()}
+    smokes_by_id = {
+        int(r["id"]): [pt for pt in r["event_smoke_locations"] if pt is not None] for _, r in df_out.iterrows()
+    }
 
     return [
         SequenceWithCone(
-            **s.__dict__,
+            **s.model_dump(),
             cone_azimuth=det_cones[s.id][0],
             cone_angle=det_cones[s.id][1],
             event_groups=groups_by_id.get(int(s.id), [(int(s.id),)]),

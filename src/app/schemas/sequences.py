@@ -1,19 +1,13 @@
-# Copyright (C) 2020-2025, Pyronear.
-
-# This program is licensed under the Apache License 2.0.
-# See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
-
 from datetime import datetime
 from typing import List, Tuple
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import AnnotationType, Sequence
+from app.models import AnnotationType  # keep this import if you still use SequenceUpdate and SequenceLabel
 
 __all__ = ["SequenceUpdate", "SequenceWithCone"]
 
 
-# Accesses
 class SequenceUpdate(BaseModel):
     last_seen_at: datetime
 
@@ -22,8 +16,11 @@ class SequenceLabel(BaseModel):
     is_wildfire: AnnotationType
 
 
-class SequenceWithCone(Sequence):
+class SequenceWithCone(BaseModel):
+    # accept all attributes coming from the SQLModel Sequence instance
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
     cone_azimuth: float
     cone_angle: float
-    event_groups: List[Tuple[int, ...]] | None = None
-    event_smoke_locations: List[Tuple[float, float]] | None = None
+    event_groups: List[Tuple[int, ...]] = Field(default_factory=list)
+    event_smoke_locations: List[Tuple[float, float]] = Field(default_factory=list)
