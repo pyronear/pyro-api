@@ -4,9 +4,10 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
+from typing import List, Tuple
 
 from pydantic import BaseModel
-from typing import List, Tuple
+
 from app.models import AnnotationType, Sequence
 
 __all__ = ["SequenceUpdate", "SequenceWithCone"]
@@ -26,4 +27,3 @@ class SequenceWithCone(Sequence):
     cone_angle: float
     event_groups: List[Tuple[int, ...]] | None = None
     event_smoke_locations: List[Tuple[float, float]] | None = None
-

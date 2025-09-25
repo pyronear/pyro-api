@@ -8,12 +8,11 @@ from datetime import date, datetime, timedelta
 from operator import itemgetter
 from typing import Dict, List, Tuple, Union, cast
 
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-import pandas as pd
 
-from app.services.overlap import compute_overlap
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
@@ -21,6 +20,7 @@ from app.models import Camera, Detection, Sequence, UserRole
 from app.schemas.detections import DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceWithCone
+from app.services.overlap import compute_overlap
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
@@ -83,6 +83,7 @@ async def resolve_detection_cones(
     # For each sequence, resolve the azimuth + opening angle
     return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in results}
 
+
 async def _df_from_sequences_with_geo_and_cone(
     sequences: List[Sequence],
     det_cones: Dict[int, Tuple[float, float]],
@@ -105,20 +106,17 @@ async def _df_from_sequences_with_geo_and_cone(
         cone = det_cones.get(s.id)
         if cam is None or cone is None:
             continue
-        rows.append(
-            {
-                "id": int(s.id),
-                "lat": float(cam.lat),
-                "lon": float(cam.lon),
-                "cone_azimuth": float(cone[0]),
-                "cone_angle": float(cone[1]),
-                "is_wildfire": s.is_wildfire,
-                "started_at": s.started_at,
-                "last_seen_at": s.last_seen_at,
-            }
-        )
+        rows.append({
+            "id": int(s.id),
+            "lat": float(cam.lat),
+            "lon": float(cam.lon),
+            "cone_azimuth": float(cone[0]),
+            "cone_angle": float(cone[1]),
+            "is_wildfire": s.is_wildfire,
+            "started_at": s.started_at,
+            "last_seen_at": s.last_seen_at,
+        })
     return pd.DataFrame(rows)
-
 
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
@@ -227,8 +225,6 @@ async def fetch_latest_unlabeled_sequences(
         )
         for s in fetched_sequences
     ]
-
-
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
