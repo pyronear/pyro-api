@@ -28,6 +28,12 @@ python-multipart = "==0.0.7"
 python-magic = "^0.4.17"
 boto3 = "^1.26.0"
 httpx = "^0.24.0"
+pandas = "^2.2.0"
+numpy = "^2.0.0"
+shapely = "^2.0.4"
+pyproj = "^3.6.1"
+geopy = "^2.4.1"
+networkx = "^3.2.1"
 
 [tool.poetry.group.quality]
 optional = true
@@ -120,7 +126,8 @@ docstring-quotes = "double"
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests", "pyroclient"]
-known-third-party = ["fastapi"]
+known-third-party = ["fastapi", "pandas", "numpy", "shapely", "pyproj", "geopy", "networkx"]
+
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["I001", "F401", "CPY001"]
@@ -163,5 +170,9 @@ module = [
     "posthog",
     "prometheus_fastapi_instrumentator",
     "pydantic_settings",
+    "shapely.*",
+    "pyproj",
+    "geopy",
+    "networkx",
 ]
 ignore_missing_imports = true

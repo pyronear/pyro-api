@@ -6,7 +6,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
-
+from typing import List, Tuple
 from app.models import AnnotationType, Sequence
 
 __all__ = ["SequenceUpdate", "SequenceWithCone"]
@@ -24,3 +24,6 @@ class SequenceLabel(BaseModel):
 class SequenceWithCone(Sequence):
     cone_azimuth: float
     cone_angle: float
+    event_groups: List[Tuple[int, ...]] | None = None
+    event_smoke_locations: List[Tuple[float, float]] | None = None
+

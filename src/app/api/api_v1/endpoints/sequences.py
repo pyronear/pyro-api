@@ -11,7 +11,9 @@ from typing import Dict, List, Tuple, Union, cast
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
+import pandas as pd
 
+from app.services.overlap import compute_overlap
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
@@ -80,6 +82,43 @@ async def resolve_detection_cones(
 
     # For each sequence, resolve the azimuth + opening angle
     return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in results}
+
+async def _df_from_sequences_with_geo_and_cone(
+    sequences: List[Sequence],
+    det_cones: Dict[int, Tuple[float, float]],
+    session: AsyncSession,
+) -> pd.DataFrame:
+    """
+    Build a DataFrame with the columns required by compute_overlap:
+    id, lat, lon, cone_azimuth, cone_angle, is_wildfire, started_at, last_seen_at
+    """
+    if not sequences:
+        return pd.DataFrame()
+
+    cam_ids = list({s.camera_id for s in sequences})
+    cams = await session.exec(select(Camera).where(Camera.id.in_(cam_ids)))  # type: ignore[attr-defined]
+    cam_by_id = {c.id: c for c in cams.all()}
+
+    rows = []
+    for s in sequences:
+        cam = cam_by_id.get(s.camera_id)
+        cone = det_cones.get(s.id)
+        if cam is None or cone is None:
+            continue
+        rows.append(
+            {
+                "id": int(s.id),
+                "lat": float(cam.lat),
+                "lon": float(cam.lon),
+                "cone_azimuth": float(cone[0]),
+                "cone_angle": float(cone[1]),
+                "is_wildfire": s.is_wildfire,
+                "started_at": s.started_at,
+                "last_seen_at": s.last_seen_at,
+            }
+        )
+    return pd.DataFrame(rows)
+
 
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
@@ -159,13 +198,37 @@ async def fetch_latest_unlabeled_sequences(
     ).all()
     if len(fetched_sequences) == 0:
         return []
-    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
+    det_cones = await resolve_detection_cones([s.id for s in fetched_sequences], session)
+    df_input = await _df_from_sequences_with_geo_and_cone(fetched_sequences, det_cones, session)
+
+    if df_input.empty:
+        return [
+            SequenceWithCone(
+                **s.__dict__,
+                cone_azimuth=det_cones[s.id][0] if s.id in det_cones else 0.0,
+                cone_angle=det_cones[s.id][1] if s.id in det_cones else 0.0,
+                event_groups=[(int(s.id),)],
+                event_smoke_locations=[],
+            )
+            for s in fetched_sequences
+        ]
+
+    df_out = compute_overlap(df_input, r_km=35.0, r_min_km=0.5, max_dist_km=2.0)
+    groups_by_id = {int(r["id"]): r["event_groups"] for _, r in df_out.iterrows()}
+    smokes_by_id = {int(r["id"]): r["event_smoke_locations"] for _, r in df_out.iterrows()}
+
     return [
         SequenceWithCone(
-            **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
+            **s.__dict__,
+            cone_azimuth=det_cones[s.id][0],
+            cone_angle=det_cones[s.id][1],
+            event_groups=groups_by_id.get(int(s.id), [(int(s.id),)]),
+            event_smoke_locations=smokes_by_id.get(int(s.id), []),
         )
-        for elt in fetched_sequences
+        for s in fetched_sequences
     ]
+
+
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -192,12 +255,34 @@ async def fetch_sequences_from_date(
     ).all()
     if len(fetched_sequences) == 0:
         return []
-    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
+    det_cones = await resolve_detection_cones([s.id for s in fetched_sequences], session)
+    df_input = await _df_from_sequences_with_geo_and_cone(fetched_sequences, det_cones, session)
+
+    if df_input.empty:
+        return [
+            SequenceWithCone(
+                **s.__dict__,
+                cone_azimuth=det_cones[s.id][0] if s.id in det_cones else 0.0,
+                cone_angle=det_cones[s.id][1] if s.id in det_cones else 0.0,
+                event_groups=[(int(s.id),)],
+                event_smoke_locations=[],
+            )
+            for s in fetched_sequences
+        ]
+
+    df_out = compute_overlap(df_input, r_km=35.0, r_min_km=0.5, max_dist_km=2.0)
+    groups_by_id = {int(r["id"]): r["event_groups"] for _, r in df_out.iterrows()}
+    smokes_by_id = {int(r["id"]): r["event_smoke_locations"] for _, r in df_out.iterrows()}
+
     return [
         SequenceWithCone(
-            **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
+            **s.__dict__,
+            cone_azimuth=det_cones[s.id][0],
+            cone_angle=det_cones[s.id][1],
+            event_groups=groups_by_id.get(int(s.id), [(int(s.id),)]),
+            event_smoke_locations=smokes_by_id.get(int(s.id), []),
         )
-        for elt in fetched_sequences
+        for s in fetched_sequences
     ]
 
 
