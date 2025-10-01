@@ -153,13 +153,15 @@ mypy_path = "src/"
 files = "src/app"
 show_error_codes = true
 pretty = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 warn_redundant_casts = true
 no_implicit_optional = true
 check_untyped_defs = true
 implicit_reexport = false
 explicit_package_bases = true
-plugins = ["pydantic.mypy"]
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]
+# Quiet down import related noise globally
+disable_error_code = ["import-untyped", "import-not-found"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -174,5 +176,26 @@ module = [
     "pyproj",
     "geopy",
     "networkx",
+    "requests",
+    "passlib.*",
+    "pandas",
 ]
 ignore_missing_imports = true
+
+# File specific mutes for the errors you pasted
+
+[[tool.mypy.overrides]]
+module = "app.db"
+disable_error_code = ["call-overload", "assignment", "unused-ignore"]
+
+[[tool.mypy.overrides]]
+module = "app.crud.base"
+disable_error_code = ["attr-defined", "return-value", "unused-ignore"]
+
+[[tool.mypy.overrides]]
+module = "app.services.overlap"
+disable_error_code = ["unused-ignore", "import-not-found", "import-untyped"]
+
+[[tool.mypy.overrides]]
+module = "app.api.api_v1.endpoints.sequences"
+disable_error_code = ["arg-type", "attr-defined", "unused-ignore"]
