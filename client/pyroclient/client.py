@@ -22,6 +22,9 @@ class ClientRoute(str, Enum):
     CAMERAS_HEARTBEAT = "cameras/heartbeat"
     CAMERAS_IMAGE = "cameras/image"
     CAMERAS_FETCH = "cameras/"
+    # POSES
+    POSES_CREATE = "poses/"
+    POSES_ID = "poses/{pose_id}"
     # DETECTIONS
     DETECTIONS_CREATE = "detections/"
     DETECTIONS_FETCH = "detections"
@@ -148,11 +151,54 @@ class Client:
             timeout=self.timeout,
         )
 
+    # POSES
+    def create_pose(self, camera_id: int, azimuth: float, patrol_id: str) -> Response:
+        """Create a pose associated with a camera."""
+        return requests.post(
+            urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
+            headers=self.headers,
+            json={
+                "camera_id": camera_id,
+                "azimuth": azimuth,
+                "patrol_id": patrol_id,
+            },
+            timeout=self.timeout,
+        )
+
+    def get_pose(self, pose_id: int) -> Response:
+        """Retrieve a pose by its ID."""
+        return requests.get(
+            urljoin(self._route_prefix, ClientRoute.POSES_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def patch_pose(self, pose_id: int, azimuth: float, patrol_id: str) -> Response:
+        """Update an existing pose."""
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.POSES_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            json={
+                "azimuth": azimuth,
+                "patrol_id": patrol_id,
+            },
+            timeout=self.timeout,
+        )
+
+    def delete_pose(self, pose_id: int) -> Response:
+        """Delete a pose by its ID."""
+        return requests.delete(
+            urljoin(self._route_prefix, ClientRoute.POSES_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
     # DETECTIONS
     def create_detection(
         self,
         media: bytes,
         azimuth: float,
+        pose_id: int,
         bboxes: List[Tuple[float, float, float, float, float]],
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
@@ -160,11 +206,12 @@ class Client:
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])
+        >>> response = api_client.create_detection(data, azimuth=124.2, pose_id=1, bboxes=[(.1,.1,.5,.8,.5)])
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
+            pose_id: the pose_id of the camera when the picture was taken
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
 
         Returns:
@@ -177,6 +224,7 @@ class Client:
             headers=self.headers,
             data={
                 "azimuth": azimuth,
+                "pose_id": pose_id,
                 "bboxes": _dump_bbox_to_json(bboxes),
             },
             timeout=self.timeout,
