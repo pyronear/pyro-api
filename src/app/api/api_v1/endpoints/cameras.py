@@ -8,15 +8,22 @@ from datetime import datetime
 from typing import List, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
-from pydantic import Field
 
-from app.api.dependencies import get_camera_crud, get_jwt
+from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.crud import CameraCRUD
+from app.crud import CameraCRUD, PoseCRUD
 from app.models import Camera, Role, UserRole
-from app.schemas.cameras import CameraCreate, CameraEdit, CameraName, LastActive, LastImage
+from app.schemas.cameras import (
+    CameraCreate,
+    CameraEdit,
+    CameraName,
+    CameraRead,
+    LastActive,
+    LastImage,
+)
 from app.schemas.login import Token, TokenPayload
+from app.schemas.poses import PoseRead
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
@@ -35,34 +42,40 @@ async def register_camera(
     return await cameras.create(payload)
 
 
-class CameraWithLastImgUrl(Camera):
-    last_image_url: str | None = Field(None, description="URL of the last image of the camera")
-
-
 @router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
 async def get_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> CameraWithLastImgUrl:
+) -> CameraRead:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+    cam_poses = await poses.fetch_all(
+        filters=("camera_id", camera_id),
+        order_by="id",
+    )
     if camera.last_image is None:
-        return CameraWithLastImgUrl(**camera.model_dump(), last_image_url=None)
+        return CameraRead(
+            **camera.model_dump(), last_image_url=None, poses=[PoseRead(**p.model_dump()) for p in cam_poses]
+        )
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    return CameraWithLastImgUrl(
+    return CameraRead(
         **camera.model_dump(),
         last_image_url=bucket.get_public_url(camera.last_image),
+        poses=[PoseRead(**p.model_dump()) for p in cam_poses],
     )
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
 async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[CameraWithLastImgUrl]:
+) -> List[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
     if UserRole.ADMIN in token_payload.scopes:
         cams = [elt for elt in await cameras.fetch_all(order_by="id")]
@@ -89,7 +102,17 @@ async def fetch_cameras(
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
-    return [CameraWithLastImgUrl(**cam.model_dump(), last_image_url=url) for cam, url in zip(cams, urls)]
+
+    async def get_poses(cam: Camera) -> list[PoseRead]:
+        p = await poses.fetch_all(filters=("camera_id", cam.id))
+        return [PoseRead(**elt.model_dump()) for elt in p]
+
+    poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
+
+    return [
+        CameraRead(**cam.model_dump(), last_image_url=url, poses=cam_poses)
+        for cam, url, cam_poses in zip(cams, urls, poses_list)
+    ]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
