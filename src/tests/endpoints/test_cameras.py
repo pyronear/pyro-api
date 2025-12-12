@@ -98,25 +98,38 @@ async def test_create_camera(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "cam_id", "status_code", "status_detail", "expected_idx"),
+    ("user_idx", "cam_id", "status_code", "status_detail", "expected_idx", "expected_poses"),
     [
-        (None, 1, 401, "Not authenticated", None),
-        (0, 0, 422, None, None),
-        (0, 100, 404, "Table Camera has no corresponding entry.", None),
-        (0, 1, 200, None, 0),
-        (1, 1, 200, None, 0),
-        (2, 1, 403, "Access forbidden.", 0),
+        (None, 1, 401, "Not authenticated", None, None),
+        (0, 0, 422, None, None, None),
+        (0, 100, 404, "Table Camera has no corresponding entry.", None, None),
+        (0, 1, 200, None, 0, None),
+        (1, 1, 200, None, 0, None),
+        (2, 1, 403, "Access forbidden.", 0, None),
+        (
+            0,
+            1,
+            200,
+            None,
+            0,
+            [
+                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},
+                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": "P1"},
+            ],
+        ),
     ],
 )
 @pytest.mark.asyncio
 async def test_get_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
+    pose_session: AsyncSession,
     user_idx: Union[int, None],
     cam_id: int,
     status_code: int,
     status_detail: Union[str, None],
     expected_idx: Union[int, None],
+    expected_poses: Union[list, None],
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -133,26 +146,34 @@ async def test_get_camera(
     if response.status_code // 100 == 2:
         json_response = response.json()
         assert isinstance(json_response["last_image_url"], str) or json_response["last_image_url"] is None
-        assert {k: v for k, v in json_response.items() if k != "last_image_url"} == pytest.camera_table[expected_idx]
+
+        assert "poses" in json_response
+
+        if expected_poses is not None:
+            assert "poses" in json_response
+            assert isinstance(json_response["poses"], list)
+            assert json_response["poses"] == expected_poses
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_response"),
+    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses"),
     [
-        (None, 401, "Not authenticated", None),
-        (0, 200, None, pytest.camera_table[0]),
-        (1, 200, None, pytest.camera_table[0]),
-        (2, 200, None, pytest.camera_table[1]),
+        (None, 401, "Not authenticated", None, None),
+        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
+        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
+        (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]]),
     ],
 )
 @pytest.mark.asyncio
 async def test_fetch_cameras(
     async_client: AsyncClient,
     camera_session: AsyncSession,
+    pose_session: AsyncSession,
     user_idx: Union[int, None],
     status_code: int,
     status_detail: Union[str, None],
     expected_response: Union[List[Dict[str, Any]], None],
+    expected_poses: Union[list, None],
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -168,7 +189,19 @@ async def test_fetch_cameras(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         json_response = response.json()
-        assert {k: v for k, v in json_response[0].items() if k != "last_image_url"} == expected_response
+
+        for cam in json_response:
+            assert "poses" in cam
+            assert isinstance(cam["poses"], list)
+
+        assert json_response[0]["poses"] == expected_poses
+
+        print("dico reformeted sans poses last image url ")
+        print({k: v for k, v in json_response[0].items() if k not in {"last_image_url", "poses"}})
+        print("expected")
+        print(expected_response)
+        assert {k: v for k, v in json_response[0].items() if k not in {"last_image_url", "poses"}} == expected_response
+
         assert isinstance(json_response[0]["last_image_url"], str) or json_response[0]["last_image_url"] is None
 
 
