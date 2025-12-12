@@ -89,6 +89,13 @@ def main(args):
 
     cam_auth = {"Authorization": f"Bearer {cam_token}"}
 
+    # Create a camera pose
+    payload = {
+        "camera_id": cam_id,
+        "azimuth": 45,
+    }
+    pose_id = api_request("post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
+
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Update cam last image
@@ -110,7 +117,7 @@ def main(args):
     response = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     )
@@ -126,14 +133,14 @@ def main(args):
     det_id_2 = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
     det_id_3 = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]"},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
@@ -173,6 +180,7 @@ def main(args):
     api_request("delete", f"{args.endpoint}/detections/{det_id_2}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/detections/{det_id_3}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/sequences/{sequence['id']}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/poses/{pose_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/organizations/{org_id}/", superuser_auth)
