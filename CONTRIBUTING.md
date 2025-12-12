@@ -152,17 +152,18 @@ None :)
 - `BACKEND_HOST`: the subdomain where your users will access your API (e.g "api.mydomain.com")
 
 
-### Developing your feature
+## Developing your feature
 
-#### Commits
+### Commits
 
 - **Code**: ensure to provide docstrings to your Python code. In doing so, please follow [Google-style](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) so it can ease the process of documentation later.
 - **Commit message**: please follow [Udacity guide](http://udacity.github.io/git-styleguide/)
 
-#### Tests
+### Tests
 
 In order to run the same unit tests as the CI workflows, you can run unittests locally:
 
+#### pytest
 ```shell
 make test
 ```
@@ -172,8 +173,13 @@ This will run the full suite of core API unittests. However, if you're trying to
 make run-dev
 docker-compose exec -T backend pytest tests/routes/test_XYZ.py
 ```
+#### end to end test
 
-#### Code quality
+```shell
+make e2e
+```
+
+### Code quality
 
 To run all quality checks together
 
@@ -187,7 +193,7 @@ The previous command won't modify anything in your codebase. Some fixes (import 
 make style
 ```
 
-#### Local deployment
+### Local deployment
 
 To run the API locally, the easiest way is with Docker. Launch this command in the project directory:
 
