@@ -12,7 +12,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, Upl
 from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.crud import CameraCRUD, PoseCRUD
+from app.crud import CameraCRUD
+from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
 from app.schemas.cameras import (
     CameraCreate,

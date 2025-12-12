@@ -7,7 +7,8 @@ from typing import cast
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
 
 from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
-from app.crud import CameraCRUD, PoseCRUD
+from app.crud import CameraCRUD
+from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Pose, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.poses import PoseCreate, PoseRead, PoseUpdate
