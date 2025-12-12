@@ -37,14 +37,14 @@ def test_cam_workflow(cam_token, mock_img):
     assert isinstance(response.json()["last_image"], str)
     # Check that adding bboxes works
     with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
-        cam_client.create_detection(mock_img, 123.2, None)
+        cam_client.create_detection(mock_img, 123.2, 1, None)
     with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
-        cam_client.create_detection(mock_img, 123.2, [])
-    response = cam_client.create_detection(mock_img, 123.2, [(0, 0, 1.0, 0.9, 0.5)])
+        cam_client.create_detection(mock_img, 123.2, 1, [])
+    response = cam_client.create_detection(mock_img, 12.2, 2, [(0, 0, 1.0, 0.9, 0.5)])
     assert response.status_code == 201, response.__dict__
-    response = cam_client.create_detection(mock_img, 123.2, [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)])
+    response = cam_client.create_detection(mock_img, 123.2, 1, [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)])
     assert response.status_code == 201, response.__dict__
-    response = cam_client.create_detection(mock_img, 123.2, [(0, 0, 1.0, 0.9, 0.5)])
+    response = cam_client.create_detection(mock_img, 123.2, 1, [(0, 0, 1.0, 0.9, 0.5)])
     assert response.status_code == 201, response.__dict__
     return response.json()["id"]
 
