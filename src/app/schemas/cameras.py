@@ -7,6 +7,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.poses import PoseRead
+
 __all__ = [
     "CameraCreate",
     "LastActive",
@@ -54,3 +56,12 @@ class CameraCreate(CameraEdit):
 
 class CameraName(BaseModel):
     name: str = Field(..., min_length=5, max_length=100, description="name of the camera")
+
+
+class CameraRead(CameraCreate):
+    id: int
+    last_active_at: datetime | None
+    last_image: str | None
+    last_image_url: str | None = Field(None, description="URL of the last image of the camera")
+    poses: list[PoseRead] = Field(default_factory=list)
+    created_at: datetime
