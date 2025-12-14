@@ -170,9 +170,13 @@ make test
 
 This will run the full suite of core API unittests. However, if you're trying to run some specific unittests, you can do as follows:
 ```shell
-make run-dev
-docker-compose exec -T backend pytest tests/routes/test_XYZ.py
+docker compose -f docker-compose.dev.yml up -d --build --wait
 ```
+
+```shell
+docker compose exec -T backend pytest tests/endpoints/test_cameras.py
+```
+
 #### end to end test
 
 ```shell
