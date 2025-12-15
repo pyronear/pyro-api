@@ -1,8 +1,8 @@
 Table organizations {
   id int [pk, increment]
   name varchar(100) [not null, unique]
-  telegram_id varchar [null]
-  slack_hook varchar [null]
+  telegram_id varchar
+  slack_hook varchar
 }
 
 Table users {
@@ -35,6 +35,13 @@ Table poses {
   patrol_id varchar(100)
 }
 
+Table occlusion_masks {
+  id int [pk, increment]
+  pose_id int [not null]
+  mask varchar(255) [not null]
+  created_at timestamp [not null]
+}
+
 Table sequences {
   id int [pk, increment]
   camera_id int [not null]
@@ -64,8 +71,12 @@ Table webhooks {
 Ref: users.organization_id > organizations.id
 Ref: cameras.organization_id > organizations.id
 Ref: poses.camera_id > cameras.id
+
+Ref: occlusion_masks.pose_id > poses.id
+
 Ref: sequences.camera_id > cameras.id
 Ref: sequences.pose_id > poses.id
+
 Ref: detections.camera_id > cameras.id
 Ref: detections.pose_id > poses.id
 Ref: detections.sequence_id > sequences.id
