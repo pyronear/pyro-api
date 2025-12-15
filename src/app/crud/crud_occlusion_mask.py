@@ -7,7 +7,6 @@ from typing import List
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel.sql.expression import Select
 
 from app.crud.base import BaseCRUD
 from app.models import OcclusionMask
@@ -21,6 +20,6 @@ class OcclusionMaskCRUD(BaseCRUD[OcclusionMask, OcclusionMaskCreate, OcclusionMa
         super().__init__(session, OcclusionMask)
 
     async def get_by_pose(self, pose_id: int) -> List[OcclusionMask]:
-        stmt: Select[OcclusionMask] = select(OcclusionMask).where(OcclusionMask.pose_id == pose_id)
+        stmt = select(OcclusionMask).where(OcclusionMask.pose_id == pose_id)
         results = await self.session.exec(stmt)
         return results.all()
