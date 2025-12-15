@@ -96,6 +96,10 @@ def main(args):
     }
     pose_id = api_request("post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
 
+    # Create a pose occlusion mask
+    payload = {"pose_id": pose_id, "mask": "(0.1,0.1,0.9,0.9,1)"}
+
+    occlusion_mask_id = api_request("post", f"{args.endpoint}/occlusion_masks/", agent_auth, payload)["id"]
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Update cam last image
@@ -180,6 +184,7 @@ def main(args):
     api_request("delete", f"{args.endpoint}/detections/{det_id_2}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/detections/{det_id_3}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/sequences/{sequence['id']}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/occlusion_masks/{occlusion_mask_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/poses/{pose_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
