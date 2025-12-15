@@ -67,6 +67,14 @@ class Pose(SQLModel, table=True):
     patrol_id: str | None = Field(default=None, max_length=100)
 
 
+class OcclusionMask(SQLModel, table=True):
+    __tablename__ = "occlusion_masks"
+    id: int = Field(default=None, primary_key=True)
+    pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
+    mask: str = Field(..., min_length=2, max_length=255, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
 class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
