@@ -131,13 +131,11 @@ async def test_get_pose(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "pose_id", "payload", "status_code",
-     "status_detail", "expected_updated"),
+    ("user_idx", "pose_id", "payload", "status_code", "status_detail", "expected_updated"),
     [
         (None, 1, {"azimuth": 50.0}, 401, "Not authenticated", None),
         (0, 0, {"azimuth": 50.0}, 422, None, None),
-        (0, 999, {"azimuth": 50.0}, 404,
-         "Table Pose has no corresponding entry.", None),
+        (0, 999, {"azimuth": 50.0}, 404, "Table Pose has no corresponding entry.", None),
         (2, 1, {"azimuth": 50.0}, 403, "Incompatible token scope.", None),
         (
             0,
