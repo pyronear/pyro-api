@@ -1,6 +1,7 @@
 from .base import *
 from .detections import *
 from .cameras import *
+from .poses import *
 from .login import *
 from .users import *
 from .organizations import *
