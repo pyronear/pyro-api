@@ -23,7 +23,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         ),
         (
             0,
-            {"name": "pyro-cam", "organization_id": 1, "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5},
+            {"name": "pyro-cam", "organization_id": 1,
+                "angle_of_view": 90.0, "elevation": 30.0, "lat": 3.5},
             422,
             None,
         ),
@@ -98,7 +99,8 @@ async def test_create_camera(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "cam_id", "status_code", "status_detail", "expected_idx", "expected_poses"),
+    ("user_idx", "cam_id", "status_code",
+     "status_detail", "expected_idx", "expected_poses"),
     [
         (None, 1, 401, "Not authenticated", None, None),
         (0, 0, 422, None, None, None),
@@ -113,8 +115,8 @@ async def test_create_camera(
             None,
             0,
             [
-                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},
-                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": "P1"},
+                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
+                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
             ],
         ),
     ],
@@ -145,7 +147,8 @@ async def test_get_camera(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         json_response = response.json()
-        assert isinstance(json_response["last_image_url"], str) or json_response["last_image_url"] is None
+        assert isinstance(
+            json_response["last_image_url"], str) or json_response["last_image_url"] is None
 
         assert "poses" in json_response
 
@@ -156,11 +159,14 @@ async def test_get_camera(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses"),
+    ("user_idx", "status_code", "status_detail",
+     "expected_response", "expected_poses"),
     [
         (None, 401, "Not authenticated", None, None),
-        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
-        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
+        (0, 200, None, pytest.camera_table[0], [
+         pytest.pose_table[0], pytest.pose_table[1]]),
+        (1, 200, None, pytest.camera_table[0], [
+         pytest.pose_table[0], pytest.pose_table[1]]),
         (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]]),
     ],
 )
@@ -197,12 +203,15 @@ async def test_fetch_cameras(
         assert json_response[0]["poses"] == expected_poses
 
         print("dico reformeted sans poses last image url ")
-        print({k: v for k, v in json_response[0].items() if k not in {"last_image_url", "poses"}})
+        print({k: v for k, v in json_response[0].items(
+        ) if k not in {"last_image_url", "poses"}})
         print("expected")
         print(expected_response)
-        assert {k: v for k, v in json_response[0].items() if k not in {"last_image_url", "poses"}} == expected_response
+        assert {k: v for k, v in json_response[0].items() if k not in {
+            "last_image_url", "poses"}} == expected_response
 
-        assert isinstance(json_response[0]["last_image_url"], str) or json_response[0]["last_image_url"] is None
+        assert isinstance(json_response[0]["last_image_url"],
+                          str) or json_response[0]["last_image_url"] is None
 
 
 @pytest.mark.parametrize(
@@ -314,7 +323,8 @@ async def test_heartbeat(
     if response.status_code // 100 == 2:
         assert isinstance(response.json()["last_active_at"], str)
         if pytest.camera_table[cam_idx]["last_active_at"] is not None:
-            assert response.json()["last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
+            assert response.json()[
+                "last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
         assert {k: v for k, v in response.json().items() if k != "last_active_at"} == {
             k: v for k, v in pytest.camera_table[cam_idx].items() if k != "last_active_at"
         }
@@ -354,10 +364,12 @@ async def test_update_image(
     if response.status_code // 100 == 2:
         assert isinstance(response.json()["last_active_at"], str)
         if pytest.camera_table[cam_idx]["last_active_at"] is not None:
-            assert response.json()["last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
+            assert response.json()[
+                "last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
         assert isinstance(response.json()["last_image"], str)
         if pytest.camera_table[cam_idx]["last_image"] is not None:
-            assert response.json()["last_image"] != pytest.camera_table[cam_idx]["last_image"]
+            assert response.json()[
+                "last_image"] != pytest.camera_table[cam_idx]["last_image"]
         assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "last_image"}} == {
             k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "last_image"}
         }
@@ -486,7 +498,8 @@ async def test_update_camera_location(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert {k: v for k, v in response.json().items() if k in {"lat", "lon", "elevation"}} == payload
+        assert {k: v for k, v in response.json().items() if k in {
+            "lat", "lon", "elevation"}} == payload
 
 
 @pytest.mark.parametrize(
