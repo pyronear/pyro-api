@@ -22,6 +22,9 @@ class ClientRoute(str, Enum):
     CAMERAS_HEARTBEAT = "cameras/heartbeat"
     CAMERAS_IMAGE = "cameras/image"
     CAMERAS_FETCH = "cameras/"
+    # POSES
+    POSES_CREATE = "poses/"
+    POSES_BY_ID = "poses/{pose_id}"
     # DETECTIONS
     DETECTIONS_CREATE = "detections/"
     DETECTIONS_FETCH = "detections"
@@ -148,7 +151,67 @@ class Client:
             timeout=self.timeout,
         )
 
+    # POSES
+    def create_pose(
+        self,
+        camera_id: int,
+        azimuth: float,
+        patrol_id: int | None = None,
+    ) -> Response:
+        """Create a pose for a camera
+
+        >>> api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)
+        """
+        payload = {
+            "camera_id": camera_id,
+            "azimuth": azimuth,
+        }
+        if patrol_id is not None:
+            payload["patrol_id"] = patrol_id
+
+        return requests.post(
+            urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def patch_pose(
+        self,
+        pose_id: int,
+        azimuth: float | None = None,
+        patrol_id: int | None = None,
+    ) -> Response:
+        """Update a pose
+
+        >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
+        """
+        payload = {}
+        if azimuth is not None:
+            payload["azimuth"] = azimuth
+        if patrol_id is not None:
+            payload["patrol_id"] = patrol_id
+
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_IDATCH.format(pose_id=pose_id)),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def delete_pose(self, pose_id: int) -> Response:
+        """Delete a pose
+
+        >>> api_client.delete_pose(pose_id=1)
+        """
+        return requests.delete(
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_IDTE.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
     # DETECTIONS
+
     def create_detection(
         self,
         media: bytes,
