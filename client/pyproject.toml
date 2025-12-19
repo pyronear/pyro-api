@@ -9,7 +9,7 @@ authors = [
     {name = "Pyronear", email = "contact@pyronear.org"}
 ]
 readme = "README.md"
-requires-python = ">=3.8,<4"
+requires-python = ">=3.10,<4"
 license = {file = "LICENSE"}
 keywords = ["backend", "wildfire", "alert", "client", "api"]
 classifiers = [
@@ -20,8 +20,6 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -65,7 +63,7 @@ zip-safe = true
 exclude = ["docs*", "tests*"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 files = "pyroclient/"
 show_error_codes = true
 pretty = true

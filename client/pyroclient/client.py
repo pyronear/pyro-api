@@ -317,7 +317,7 @@ class Client:
         Returns:
             HTTP response
         """
-        params = {"from_date": from_date, "limit": limit, "offset": offset}
+        params: Dict[str, str | int] = {"from_date": from_date, "limit": limit, "offset": offset}
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,
