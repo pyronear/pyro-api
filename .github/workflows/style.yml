@@ -74,7 +74,7 @@ jobs:
         run: uv pip install --system -e "client/.[quality]"
       - name: Run mypy
         run: |
-          mypy client/pyroclient
+          mypy --config-file client/pyproject.toml client/pyroclient
 
   precommit-hooks:
     runs-on: ubuntu-latest
