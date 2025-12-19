@@ -122,7 +122,7 @@ async def fetch_cameras(
 
     return [
         CameraRead(**cam.model_dump(), last_image_url=url, poses=cam_poses)
-        for cam, url, cam_poses in zip(cams, urls, poses_list)
+        for cam, url, cam_poses in zip(cams, urls, poses_list, strict=False)
     ]
 
 
