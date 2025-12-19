@@ -89,7 +89,7 @@ async def fetch_cameras(
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
-    return [CameraWithLastImgUrl(**cam.model_dump(), last_image_url=url) for cam, url in zip(cams, urls)]
+    return [CameraWithLastImgUrl(**cam.model_dump(), last_image_url=url) for cam, url in zip(cams, urls, strict=False)]
 
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
