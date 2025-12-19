@@ -193,7 +193,7 @@ class Client:
             payload["patrol_id"] = patrol_id
 
         return requests.patch(
-            urljoin(self._route_prefix, ClientRoute.POSES_BY_IDATCH.format(pose_id=pose_id)),
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
             headers=self.headers,
             json=payload,
             timeout=self.timeout,
@@ -205,7 +205,7 @@ class Client:
         >>> api_client.delete_pose(pose_id=1)
         """
         return requests.delete(
-            urljoin(self._route_prefix, ClientRoute.POSES_BY_IDTE.format(pose_id=pose_id)),
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
             headers=self.headers,
             timeout=self.timeout,
         )
