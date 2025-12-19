@@ -80,7 +80,8 @@ app.add_middleware(
 )
 
 if isinstance(settings.SENTRY_DSN, str):
-    app.add_middleware(SentryAsgiMiddleware)
+    # Sentry middleware is compatible at runtime; ignore type mismatch from Starlette signature
+    app.add_middleware(SentryAsgiMiddleware)  # type: ignore[arg-type]
 
 
 # Overrides swagger to include favicon
