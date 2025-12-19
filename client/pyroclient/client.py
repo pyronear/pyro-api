@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -217,31 +217,36 @@ class Client:
         media: bytes,
         azimuth: float,
         bboxes: List[Tuple[float, float, float, float, float]],
+        pose_id: Optional[int] = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])
+        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+            pose_id: optional, pose_id of the detection
 
         Returns:
             HTTP response
         """
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
+        data = {
+            "azimuth": azimuth,
+            "bboxes": _dump_bbox_to_json(bboxes),
+        }
+        if pose_id is not None:
+            data["pose_id"] = pose_id
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
-            data={
-                "azimuth": azimuth,
-                "bboxes": _dump_bbox_to_json(bboxes),
-            },
+            data=data,
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )
@@ -317,7 +322,7 @@ class Client:
         Returns:
             HTTP response
         """
-        params = {"from_date": from_date, "limit": limit, "offset": offset}
+        params: Dict[str, str | int] = {"from_date": from_date, "limit": limit, "offset": offset}
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,
