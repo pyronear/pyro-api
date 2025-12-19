@@ -71,7 +71,7 @@ class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    pose_id: int = Field(..., foreign_key="poses.id", nullable=True)
+    pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
     sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
     azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
@@ -83,7 +83,7 @@ class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    pose_id: int = Field(..., foreign_key="poses.id", nullable=True)
+    pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
     azimuth: float = Field(..., ge=0, lt=360)
     is_wildfire: Union[AnnotationType, None] = None
     started_at: datetime = Field(..., nullable=False)
