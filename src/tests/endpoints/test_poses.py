@@ -10,37 +10,37 @@ from sqlmodel.ext.asyncio.session import AsyncSession
     [
         (
             None,
-            {"camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},
+            {"camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
             401,
             "Not authenticated",
         ),
         (
             0,
-            {"camera_id": 1, "patrol_id": "P1"},
+            {"camera_id": 1, "patrol_id": 1},
             422,
             None,
         ),
         (
             0,
-            {"camera_id": 999, "azimuth": 45.0, "patrol_id": "P1"},
+            {"camera_id": 999, "azimuth": 45.0, "patrol_id": 1},
             404,
             "Table Camera has no corresponding entry.",
         ),
         (
             2,  # org 2
-            {"camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},  # camera 1 = org 1
+            {"camera_id": 1, "azimuth": 45.0, "patrol_id": 1},  # camera 1 = org 1
             403,
             "Incompatible token scope.",
         ),
         (
             0,
-            {"camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},
+            {"camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
             201,
             None,
         ),
         (
             1,
-            {"camera_id": 1, "azimuth": 90.0, "patrol_id": "PX"},
+            {"camera_id": 1, "azimuth": 90.0, "patrol_id": 120},
             201,
             None,
         ),
@@ -89,14 +89,14 @@ async def test_create_pose(
             1,
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": "P1"},
+            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
         ),
         (
             1,
             2,
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": "P1"},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
         ),
     ],
 )
@@ -140,18 +140,18 @@ async def test_get_pose(
         (
             0,
             1,
-            {"azimuth": 123.4, "patrol_id": "PX"},
+            {"azimuth": 123.4, "patrol_id": 123},
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": "PX"},
+            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": 123},
         ),
         (
             1,
             2,
-            {"patrol_id": "UPDATED"},
+            {"patrol_id": 456},
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": "UPDATED"},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456},
         ),
     ],
 )

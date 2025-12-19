@@ -1,82 +1,102 @@
-Table organizations {
-  id int [pk, increment]
-  name varchar(100) [not null, unique]
-  telegram_id varchar
-  slack_hook varchar
+Enum "userrole" {
+  "admin"
+  "agent"
+  "user"
 }
 
-Table users {
-  id int [pk, increment]
-  organization_id int [not null]
-  role varchar(50) [not null]
-  login varchar(50) [not null, unique]
-  hashed_password varchar(70) [not null]
-  created_at timestamp [not null]
+Enum "annotationtype" {
+  "wildfire_smoke"
+  "other_smoke"
+  "other"
 }
 
-Table cameras {
-  id int [pk, increment]
-  organization_id int [not null]
-  name varchar(100) [not null, unique]
-  angle_of_view float [not null]
-  elevation float [not null]
-  lat float [not null]
-  lon float [not null]
-  is_trustable boolean [not null]
-  last_active_at timestamp
-  last_image text
-  created_at timestamp [not null]
+Table "organizations" as O {
+  "id" int [not null]
+  "name" varchar [not null]
+  "telegram_id" varchar
+  "slack_hook" varchar
+
+  Indexes {
+    (id) [pk]
+  }
 }
 
-Table poses {
-  id int [pk, increment]
-  camera_id int [not null]
-  azimuth float [not null]
-  patrol_id varchar(100)
+Table "users" as U {
+  "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
+  "role" userrole [not null]
+  "login" varchar [not null]
+  "hashed_password" varchar [not null]
+  "created_at" timestamp [not null]
+
+  Indexes {
+    (id, login) [pk]
+  }
 }
 
-Table occlusion_masks {
-  id int [pk, increment]
-  pose_id int [not null]
-  mask varchar(255) [not null]
-  created_at timestamp [not null]
+Table "cameras" as C {
+  "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
+  "name" varchar [not null]
+  "angle_of_view" float [not null]
+  "elevation" float [not null]
+  "lat" float [not null]
+  "lon" float [not null]
+  "is_trustable" bool [not null]
+  "created_at" timestamp [not null]
+  "last_active_at" timestamp
+  "last_image" varchar
+
+  Indexes {
+    (id) [pk]
+  }
 }
 
-Table sequences {
-  id int [pk, increment]
-  camera_id int [not null]
-  pose_id int
-  azimuth float [not null]
-  is_wildfire varchar(50)
-  started_at timestamp [not null]
-  last_seen_at timestamp [not null]
+Table "poses" as P {
+  "id" int [not null]
+  "camera_id" int [ref: > C.id, not null]
+  "azimuth" float [not null]
+  "patrol_id" int
+
+  Indexes {
+    (id) [pk]
+  }
 }
 
-Table detections {
-  id int [pk, increment]
-  camera_id int [not null]
-  pose_id int
-  sequence_id int
-  azimuth float [not null]
-  bucket_key varchar [not null]
-  bboxes text [not null]
-  created_at timestamp [not null]
+Table "sequences" as S {
+  "id" int [not null]
+  "camera_id" int [ref: > C.id, not null]
+  "pose_id" int [ref: > P.id]
+  "azimuth" float [not null]
+  "is_wildfire" annotationtype
+  "started_at" timestamp [not null]
+  "last_seen_at" timestamp [not null]
+
+  Indexes {
+    (id) [pk]
+  }
 }
 
-Table webhooks {
-  id int [pk, increment]
-  url varchar [not null, unique]
+Table "detections" as D {
+  "id" int [not null]
+  "camera_id" int [ref: > C.id, not null]
+  "pose_id" int [ref: > P.id]
+  "sequence_id" int [ref: > S.id]
+  "azimuth" float [not null]
+  "bucket_key" varchar [not null]
+  "bboxes" varchar [not null]
+  "created_at" timestamp [not null]
+
+  Indexes {
+    (id) [pk]
+  }
 }
 
-Ref: users.organization_id > organizations.id
-Ref: cameras.organization_id > organizations.id
-Ref: poses.camera_id > cameras.id
+Table "webhooks" as W {
+  "id" int [not null]
+  "url" varchar [not null]
 
-Ref: occlusion_masks.pose_id > poses.id
-
-Ref: sequences.camera_id > cameras.id
-Ref: sequences.pose_id > poses.id
-
-Ref: detections.camera_id > cameras.id
-Ref: detections.pose_id > poses.id
-Ref: detections.sequence_id > sequences.id
+  Indexes {
+    (id) [pk]
+  }
+}
