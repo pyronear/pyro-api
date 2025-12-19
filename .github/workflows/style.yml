@@ -56,7 +56,8 @@ jobs:
           uv pip install --system -r requirements.txt
       - name: Run mypy
         run: |
-          mypy client/pyroclient
+          mypy --version
+          mypy
 
   mypy-client:
     runs-on: ubuntu-latest
@@ -73,8 +74,7 @@ jobs:
         run: uv pip install --system -e "client/.[quality]"
       - name: Run mypy
         run: |
-          mypy --version
-          cd client && mypy
+          mypy client/pyroclient
 
   precommit-hooks:
     runs-on: ubuntu-latest
