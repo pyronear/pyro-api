@@ -14,19 +14,24 @@ __all__ = [
 ]
 
 
-class PoseCreate(BaseModel):
+class PoseBase(BaseModel):
+    azimuth: float = Field(..., ge=0, lt=360,
+                           description="Azimuth of the centre of the position in degrees")
+    patrol_id: Optional[int] = Field(
+        None, gt=0, description="External patrol identifier")
+
+
+class PoseCreate(PoseBase):
     camera_id: int = Field(..., gt=0, description="ID of the camera")
-    azimuth: float = Field(..., ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
-    patrol_id: Optional[str] = Field(None, max_length=100, description="External patrol identifier")
 
 
 class PoseUpdate(BaseModel):
-    azimuth: Optional[float] = Field(None, ge=0, lt=360)
-    patrol_id: Optional[str] = Field(None, max_length=100)
+    azimuth: Optional[float] = Field(
+        None, ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
+    patrol_id: Optional[int] = Field(
+        None, gt=0, description="External patrol identifier")
 
 
-class PoseRead(BaseModel):
+class PoseRead(PoseBase):
     id: int
     camera_id: int
-    azimuth: float
-    patrol_id: Optional[str] = None
