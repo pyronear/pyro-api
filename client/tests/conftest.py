@@ -40,6 +40,11 @@ def cam_token():
     response = requests.post(urljoin(API_URL, "cameras"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201
     cam_id = response.json()["id"]
+    # create a pose related to the cam
+    payload = {"azimuth": 359, "patrol_id": 1, "camera_id": cam_id}
+    response = requests.post(urljoin(API_URL, "poses"), json=payload, headers=admin_headers, timeout=5)
+    assert response.status_code == 201
+
     # Create a cam token
     return requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
         "access_token"

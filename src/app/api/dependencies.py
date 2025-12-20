@@ -3,6 +3,11 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+from app.schemas.login import TokenPayload
+from app.models import User, UserRole
+from app.db import get_session
+from app.crud.crud_pose import PoseCRUD
+from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 import logging
 from typing import Dict, Type, TypeVar, Union, cast
 
@@ -16,11 +21,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
-from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
-from app.crud.crud_pose import PoseCRUD
-from app.db import get_session
-from app.models import User, UserRole
-from app.schemas.login import TokenPayload
+<< << << < HEAD
+== == == =
+>>>>>> > main
 
 JWTTemplate = TypeVar("JWTTemplate")
 logger = logging.getLogger("uvicorn.error")
@@ -72,18 +75,21 @@ def get_sequence_crud(session: AsyncSession = Depends(get_session)) -> SequenceC
 
 def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:
     try:
-        payload = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt_decode(token, settings.JWT_SECRET,
+                             algorithms=[settings.JWT_ALGORITHM])
     except (ExpiredSignatureError, InvalidSignatureError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
+            headers={
+                "WWW-Authenticate": authenticate_value} if authenticate_value else None,
         )
     except DecodeError:
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail="Invalid token.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
+            headers={
+                "WWW-Authenticate": authenticate_value} if authenticate_value else None,
         )
     return payload
 
@@ -99,7 +105,8 @@ def process_token(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid token payload.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
+            headers={
+                "WWW-Authenticate": authenticate_value} if authenticate_value else None,
         )
 
 
@@ -135,4 +142,5 @@ async def dispatch_webhook(url: str, payload: BaseModel) -> None:
             response.raise_for_status()
             logger.info(f"Successfully dispatched to {url}")
         except HTTPStatusError as e:
-            logger.error(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
