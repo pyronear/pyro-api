@@ -208,7 +208,7 @@
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -226,6 +226,9 @@
     <span class="n">CAMERAS_HEARTBEAT</span> <span class="o">=</span> <span class="s2">&quot;cameras/heartbeat&quot;</span>
     <span class="n">CAMERAS_IMAGE</span> <span class="o">=</span> <span class="s2">&quot;cameras/image&quot;</span>
     <span class="n">CAMERAS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;cameras/&quot;</span>
+    <span class="c1"># POSES</span>
+    <span class="n">POSES_CREATE</span> <span class="o">=</span> <span class="s2">&quot;poses/&quot;</span>
+    <span class="n">POSES_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">&quot;</span>
     <span class="c1"># DETECTIONS</span>
     <span class="n">DETECTIONS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;detections/&quot;</span>
     <span class="n">DETECTIONS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;detections&quot;</span>
@@ -352,37 +355,102 @@
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
+    <span class="c1"># POSES</span>
+<div class="viewcode-block" id="Client.create_pose"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_pose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">create_pose</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">camera_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a pose for a camera</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;camera_id&quot;</span><span class="p">:</span> <span class="n">camera_id</span><span class="p">,</span>
+            <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_CREATE</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.patch_pose"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.patch_pose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">patch_pose</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update a pose</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.patch_pose(pose_id=1, azimuth=90.0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;azimuth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">azimuth</span>
+        <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.delete_pose"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.delete_pose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a pose</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.delete_pose(pose_id=1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
     <span class="c1"># DETECTIONS</span>
+
 <div class="viewcode-block" id="Client.create_detection"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_detection">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">create_detection</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">bboxes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+        <span class="n">pose_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Notify the detection of a wildfire on the picture taken by a camera.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            media: byte data of the picture</span>
 <span class="sd">            azimuth: the azimuth of the camera when the picture was taken</span>
 <span class="sd">            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
+<span class="sd">            pose_id: optional, pose_id of the detection</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bboxes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bboxes must be a non-empty list of tuples with a maximum of 5 boxes&quot;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
+            <span class="s2">&quot;bboxes&quot;</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">pose_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;pose_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pose_id</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_CREATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">data</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
-                <span class="s2">&quot;bboxes&quot;</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
-            <span class="p">},</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
             <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
         <span class="p">)</span></div>
