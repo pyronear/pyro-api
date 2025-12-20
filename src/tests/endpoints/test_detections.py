@@ -18,10 +18,31 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
         (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
         (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 0),
-        (None, 1, {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 0),
+        (
+            None,
+            1,
+            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            201,
+            None,
+            0,
+        ),
+        (
+            None,
+            1,
+            {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            201,
+            None,
+            0,
+        ),
         # sequence creation
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "sequence_id": None}, 201, None, 2),
+        (
+            None,
+            1,
+            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            201,
+            None,
+            2,
+        ),
     ],
 )
 @pytest.mark.asyncio

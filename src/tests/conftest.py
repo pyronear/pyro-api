@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, Sequence, User, Webhook
+from app.models import Camera, Detection, Organization, Pose, Sequence, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -94,10 +94,33 @@ CAM_TABLE = [
     },
 ]
 
+POSE_TABLE = [
+    {
+        "id": 1,
+        "camera_id": 1,
+        "azimuth": 45.0,
+        "patrol_id": 1,
+    },
+    {
+        "id": 2,
+        "camera_id": 1,
+        "azimuth": 90.0,
+        "patrol_id": 1,
+    },
+    {
+        "id": 3,
+        "camera_id": 2,
+        "azimuth": 180.0,
+        "patrol_id": 1,
+    },
+]
+
+
 DET_TABLE = [
     {
         "id": 1,
         "camera_id": 1,
+        "pose_id": 1,
         "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
@@ -107,6 +130,7 @@ DET_TABLE = [
     {
         "id": 2,
         "camera_id": 1,
+        "pose_id": 1,
         "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
@@ -116,6 +140,7 @@ DET_TABLE = [
     {
         "id": 3,
         "camera_id": 1,
+        "pose_id": 1,
         "sequence_id": 1,
         "azimuth": 43.7,
         "bucket_key": "my_file",
@@ -125,6 +150,7 @@ DET_TABLE = [
     {
         "id": 4,
         "camera_id": 2,
+        "pose_id": 3,
         "sequence_id": 2,
         "azimuth": 74.8,
         "bucket_key": "my_file",
@@ -137,6 +163,7 @@ SEQ_TABLE = [
     {
         "id": 1,
         "camera_id": 1,
+        "pose_id": 1,
         "azimuth": 43.7,
         "is_wildfire": "wildfire_smoke",
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
@@ -145,6 +172,7 @@ SEQ_TABLE = [
     {
         "id": 2,
         "camera_id": 2,
+        "pose_id": 3,
         "azimuth": 74.8,
         "is_wildfire": None,
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
@@ -279,14 +307,12 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
 
 
 @pytest_asyncio.fixture(scope="function")
-async def sequence_session(camera_session: AsyncSession):
-    for entry in SEQ_TABLE:
-        camera_session.add(Sequence(**entry))
+async def pose_session(camera_session: AsyncSession):
+    for entry in POSE_TABLE:
+        camera_session.add(Pose(**entry))
     await camera_session.commit()
     await camera_session.exec(
-        text(
-            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
-        )
+        text(f"ALTER SEQUENCE {Pose.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in POSE_TABLE) + 1}")
     )
     await camera_session.commit()
     yield camera_session
@@ -294,23 +320,38 @@ async def sequence_session(camera_session: AsyncSession):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def detection_session(user_session: AsyncSession, sequence_session: AsyncSession):
+async def sequence_session(pose_session: AsyncSession):
+    for entry in SEQ_TABLE:
+        pose_session.add(Sequence(**entry))
+    await pose_session.commit()
+    await pose_session.exec(
+        text(
+            f"ALTER SEQUENCE {Sequence.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SEQ_TABLE) + 1}"
+        )
+    )
+    await pose_session.commit()
+    yield pose_session
+    await pose_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def detection_session(pose_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
-        user_session.add(Detection(**entry))
-    await user_session.commit()
+        sequence_session.add(Detection(**entry))
+    await sequence_session.commit()
     # Update the detection index count
-    await user_session.exec(
+    await sequence_session.exec(
         text(
             f"ALTER SEQUENCE {Detection.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in DET_TABLE) + 1}"
         )
     )
-    await user_session.commit()
+    await sequence_session.commit()
     # Create bucket files
     for entry in DET_TABLE:
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
         bucket.upload_file(entry["bucket_key"], io.BytesIO(b""))
-    yield user_session
-    await user_session.rollback()
+    yield sequence_session
+    await sequence_session.rollback()
     # Delete bucket files
     try:
         for entry in DET_TABLE:
@@ -341,6 +382,10 @@ def pytest_configure():
     pytest.camera_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in CAM_TABLE
+    ]
+    pytest.pose_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in POSE_TABLE
     ]
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}

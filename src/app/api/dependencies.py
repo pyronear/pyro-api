@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
+from app.crud.crud_pose import PoseCRUD
 from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
@@ -42,6 +43,10 @@ def get_user_crud(session: AsyncSession = Depends(get_session)) -> UserCRUD:
 
 def get_camera_crud(session: AsyncSession = Depends(get_session)) -> CameraCRUD:
     return CameraCRUD(session=session)
+
+
+def get_pose_crud(session: AsyncSession = Depends(get_session)) -> PoseCRUD:
+    return PoseCRUD(session=session)
 
 
 def get_detection_crud(session: AsyncSession = Depends(get_session)) -> DetectionCRUD:

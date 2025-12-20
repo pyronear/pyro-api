@@ -4,19 +4,37 @@ Enum "userrole" {
   "user"
 }
 
-Table "User" as U {
+Enum "annotationtype" {
+  "wildfire_smoke"
+  "other_smoke"
+  "other"
+}
+
+Table "organizations" as O {
+  "id" int [not null]
+  "name" varchar [not null]
+  "telegram_id" varchar
+  "slack_hook" varchar
+
+  Indexes {
+    (id) [pk]
+  }
+}
+
+Table "users" as U {
   "id" int [not null]
   "organization_id" int [ref: > O.id, not null]
   "role" userrole [not null]
   "login" varchar [not null]
   "hashed_password" varchar [not null]
   "created_at" timestamp [not null]
+
   Indexes {
     (id, login) [pk]
   }
 }
 
-Table "Camera" as C {
+Table "cameras" as C {
   "id" int [not null]
   "organization_id" int [ref: > O.id, not null]
   "name" varchar [not null]
@@ -28,49 +46,56 @@ Table "Camera" as C {
   "created_at" timestamp [not null]
   "last_active_at" timestamp
   "last_image" varchar
+
   Indexes {
     (id) [pk]
   }
 }
 
-Table "Sequence" as S {
+Table "poses" as P {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
   "azimuth" float [not null]
-  "is_wildfire" AnnotationType
-  "started_at" timestamp [not null]
-  "last_seen_at" timestamp [not null]
+  "patrol_id" int
+
   Indexes {
     (id) [pk]
   }
 }
 
-Table "Detection" as D {
+Table "sequences" as S {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
+  "pose_id" int [ref: > P.id]
+  "azimuth" float [not null]
+  "is_wildfire" annotationtype
+  "started_at" timestamp [not null]
+  "last_seen_at" timestamp [not null]
+
+  Indexes {
+    (id) [pk]
+  }
+}
+
+Table "detections" as D {
+  "id" int [not null]
+  "camera_id" int [ref: > C.id, not null]
+  "pose_id" int [ref: > P.id]
   "sequence_id" int [ref: > S.id]
   "azimuth" float [not null]
   "bucket_key" varchar [not null]
   "bboxes" varchar [not null]
   "created_at" timestamp [not null]
+
   Indexes {
     (id) [pk]
   }
 }
 
-Table "Organization" as O {
-  "id" int [not null]
-  "name" varchar [not null]
-  "telegram_id" varchar
-  Indexes {
-    (id) [pk]
-  }
-}
-
-
-Table "Webhook" as W {
+Table "webhooks" as W {
   "id" int [not null]
   "url" varchar [not null]
+
   Indexes {
     (id) [pk]
   }

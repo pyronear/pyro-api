@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import List, cast
+from typing import List, Optional, cast
 
 from fastapi import (
     APIRouter,
@@ -60,6 +60,7 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
+    pose_id: Optional[int] = Form(None, gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -80,7 +81,9 @@ async def create_detection(
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     det = await detections.create(
-        DetectionCreate(camera_id=token_payload.sub, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes)
+        DetectionCreate(
+            camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes
+        )
     )
     # Sequence handling
     # Check if there is a sequence that was seen recently
@@ -119,6 +122,7 @@ async def create_detection(
             sequence_ = await sequences.create(
                 Sequence(
                     camera_id=token_payload.sub,
+                    pose_id=pose_id,
                     azimuth=det.azimuth,
                     started_at=dets_[0].created_at,
                     last_seen_at=det.created_at,

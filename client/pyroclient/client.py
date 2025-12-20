@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -22,6 +22,9 @@ class ClientRoute(str, Enum):
     CAMERAS_HEARTBEAT = "cameras/heartbeat"
     CAMERAS_IMAGE = "cameras/image"
     CAMERAS_FETCH = "cameras/"
+    # POSES
+    POSES_CREATE = "poses/"
+    POSES_BY_ID = "poses/{pose_id}"
     # DETECTIONS
     DETECTIONS_CREATE = "detections/"
     DETECTIONS_FETCH = "detections"
@@ -148,37 +151,102 @@ class Client:
             timeout=self.timeout,
         )
 
+    # POSES
+    def create_pose(
+        self,
+        camera_id: int,
+        azimuth: float,
+        patrol_id: int | None = None,
+    ) -> Response:
+        """Create a pose for a camera
+
+        >>> api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)
+        """
+        payload = {
+            "camera_id": camera_id,
+            "azimuth": azimuth,
+        }
+        if patrol_id is not None:
+            payload["patrol_id"] = patrol_id
+
+        return requests.post(
+            urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def patch_pose(
+        self,
+        pose_id: int,
+        azimuth: float | None = None,
+        patrol_id: int | None = None,
+    ) -> Response:
+        """Update a pose
+
+        >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
+        """
+        payload = {}
+        if azimuth is not None:
+            payload["azimuth"] = azimuth
+        if patrol_id is not None:
+            payload["patrol_id"] = patrol_id
+
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def delete_pose(self, pose_id: int) -> Response:
+        """Delete a pose
+
+        >>> api_client.delete_pose(pose_id=1)
+        """
+        return requests.delete(
+            urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
     # DETECTIONS
+
     def create_detection(
         self,
         media: bytes,
         azimuth: float,
         bboxes: List[Tuple[float, float, float, float, float]],
+        pose_id: Optional[int] = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)])
+        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)
 
         Args:
             media: byte data of the picture
             azimuth: the azimuth of the camera when the picture was taken
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+            pose_id: optional, pose_id of the detection
 
         Returns:
             HTTP response
         """
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
+        data = {
+            "azimuth": azimuth,
+            "bboxes": _dump_bbox_to_json(bboxes),
+        }
+        if pose_id is not None:
+            data["pose_id"] = pose_id
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
-            data={
-                "azimuth": azimuth,
-                "bboxes": _dump_bbox_to_json(bboxes),
-            },
+            data=data,
             timeout=self.timeout,
             files={"file": ("logo.png", media, "image/png")},
         )
