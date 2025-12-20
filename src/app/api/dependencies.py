@@ -21,9 +21,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
-<< << << < HEAD
-== == == =
->>>>>> > main
 
 JWTTemplate = TypeVar("JWTTemplate")
 logger = logging.getLogger("uvicorn.error")
