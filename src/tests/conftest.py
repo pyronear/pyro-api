@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, Pose, Sequence, User, Webhook
+from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -115,6 +115,32 @@ POSE_TABLE = [
     },
 ]
 
+OCCLUSION_MASK_TABLE = [
+    {
+        "id": 1,
+        "pose_id": 1,
+        "mask": "(0.1,0.1,0.9,0.9,0.5)",
+        "created_at": datetime.strptime("2025-01-01T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 2,
+        "pose_id": 1,
+        "mask": "(0.1,0.1,0.9,0.9,1)",
+        "created_at": datetime.strptime("2025-01-02T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 3,
+        "pose_id": 2,
+        "mask": "(1,0.1,0.9,0.9,0.5)",
+        "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 4,
+        "pose_id": 3,
+        "mask": "(1,0.1,0.1,0.9,1)",
+        "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
+    },
+]
 
 DET_TABLE = [
     {
@@ -212,7 +238,8 @@ async def async_session() -> AsyncSession:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async_session_maker = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session_maker() as session:
         async with session.begin():
@@ -286,7 +313,8 @@ async def user_session(organization_session: AsyncSession, monkeypatch):
         organization_session.add(User(**entry))
     await organization_session.commit()
     await organization_session.exec(
-        text(f"ALTER SEQUENCE {User.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
+        text(
+            f"ALTER SEQUENCE {User.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in USER_TABLE) + 1}")
     )
     await organization_session.commit()
     yield organization_session
@@ -299,7 +327,8 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
         user_session.add(Camera(**entry))
     await user_session.commit()
     await user_session.exec(
-        text(f"ALTER SEQUENCE {Camera.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in CAM_TABLE) + 1}")
+        text(
+            f"ALTER SEQUENCE {Camera.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in CAM_TABLE) + 1}")
     )
     await user_session.commit()
     yield user_session
@@ -312,11 +341,27 @@ async def pose_session(camera_session: AsyncSession):
         camera_session.add(Pose(**entry))
     await camera_session.commit()
     await camera_session.exec(
-        text(f"ALTER SEQUENCE {Pose.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in POSE_TABLE) + 1}")
+        text(
+            f"ALTER SEQUENCE {Pose.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in POSE_TABLE) + 1}")
     )
     await camera_session.commit()
     yield camera_session
     await camera_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def occlusion_mask_session(pose_session: AsyncSession):
+    for entry in OCCLUSION_MASK_TABLE:
+        pose_session.add(OcclusionMask(**entry))
+    await pose_session.commit()
+    await pose_session.exec(
+        text(
+            f"ALTER SEQUENCE {OcclusionMask.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in OCCLUSION_MASK_TABLE) + 1}"
+        )
+    )
+    await pose_session.commit()
+    yield pose_session
+    await pose_session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -348,21 +393,24 @@ async def detection_session(pose_session: AsyncSession, sequence_session: AsyncS
     await sequence_session.commit()
     # Create bucket files
     for entry in DET_TABLE:
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
+        bucket = s3_service.get_bucket(
+            s3_service.resolve_bucket_name(entry["camera_id"]))
         bucket.upload_file(entry["bucket_key"], io.BytesIO(b""))
     yield sequence_session
     await sequence_session.rollback()
     # Delete bucket files
     try:
         for entry in DET_TABLE:
-            bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(entry["camera_id"]))
+            bucket = s3_service.get_bucket(
+                s3_service.resolve_bucket_name(entry["camera_id"]))
             bucket.delete_file(entry["bucket_key"])
     except ClientError:
         pass
 
 
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
-    token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
+    token_data = {"sub": str(access_id), "scopes": scopes,
+                  "organization_id": organizationid}
     token = create_access_token(token_data)
     return {"Authorization": f"Bearer {token}"}
 
@@ -372,30 +420,42 @@ def pytest_configure():
     pytest.get_token = get_token
     # Table
     pytest.organization_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in ORGANIZATION_TABLE
     ]
     pytest.user_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in USER_TABLE
     ]
     pytest.camera_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in CAM_TABLE
     ]
     pytest.pose_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in POSE_TABLE
     ]
+    pytest.occlusion_mask_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
+        for entry in OCCLUSION_MASK_TABLE
+    ]
     pytest.detection_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in DET_TABLE
     ]
     pytest.sequence_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in SEQ_TABLE
     ]
     pytest.webhook_table = [
-        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        {k: datetime.strftime(v, dt_format) if isinstance(
+            v, datetime) else v for k, v in entry.items()}
         for entry in WEBHOOK_TABLE
     ]
