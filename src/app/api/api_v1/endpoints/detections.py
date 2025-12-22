@@ -43,7 +43,7 @@ from app.schemas.detections import (
     DetectionSequence,
     DetectionUrl,
 )
-from app.schemas.alerts import AlertCreate
+from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.overlap import compute_overlap
@@ -129,12 +129,25 @@ async def _attach_sequence_to_alert(
 
     for g in groups:
         g_tuple = tuple(g)
+        location = group_locations.get(g_tuple)
+        start_at = min(seq_by_id[int(sid)].started_at for sid in g_tuple if int(sid) in seq_by_id)
         existing_alert_ids = {aid for sid in g_tuple for aid in mapping.get(int(sid), set())}
         if existing_alert_ids:
             target_alert_id = min(existing_alert_ids)
+            # If we now have a location and the alert is missing it (or start_at can be improved), update it
+            if isinstance(location, tuple):
+                current_alert = await alerts.get(target_alert_id, strict=True)
+                new_start_at = min(start_at, current_alert.start_at) if current_alert.start_at else start_at
+                if (
+                    current_alert.lat is None
+                    or current_alert.lon is None
+                    or (current_alert.start_at is None or new_start_at < current_alert.start_at)
+                ):
+                    await alerts.update(
+                        target_alert_id,
+                        AlertUpdate(lat=location[0], lon=location[1], start_at=new_start_at),
+                    )
         else:
-            location = group_locations.get(g_tuple)
-            start_at = min(seq_by_id[int(sid)].started_at for sid in g_tuple if int(sid) in seq_by_id)
             alert = await alerts.create(
                 AlertCreate(
                     organization_id=camera.organization_id,
