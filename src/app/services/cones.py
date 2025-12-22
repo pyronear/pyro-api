@@ -12,6 +12,6 @@ def resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, fl
     """Compute the cone azimuth and opening angle using the most confident bbox."""
     bboxes = literal_eval(bboxes_str)
     xmin, _, xmax, _, _ = max(bboxes, key=itemgetter(2))
-    cone_azimuth = azimuth + aov * ((xmin + xmax) / 2 - 0.5)
-    cone_angle = aov * (xmax - xmin)
+    cone_azimuth = round(azimuth + aov * ((xmin + xmax) / 2 - 0.5), 1)
+    cone_angle = round(aov * (xmax - xmin), 1)
     return cone_azimuth, cone_angle
