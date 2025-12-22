@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import itertools
 from datetime import datetime, timedelta
 from typing import List, Optional, cast
 
@@ -19,6 +20,8 @@ from fastapi import (
     UploadFile,
     status,
 )
+import pandas as pd
+from sqlmodel import select
 
 from app.api.dependencies import (
     dispatch_webhook,
@@ -26,12 +29,13 @@ from app.api.dependencies import (
     get_detection_crud,
     get_jwt,
     get_organization_crud,
+    get_alert_crud,
     get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Camera, Detection, Organization, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
+from app.models import AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
@@ -39,8 +43,10 @@ from app.schemas.detections import (
     DetectionSequence,
     DetectionUrl,
 )
+from app.schemas.alerts import AlertCreate
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
+from app.services.overlap import compute_overlap
 from app.services.slack import slack_client
 from app.services.cones import resolve_cone
 from app.services.storage import s3_service, upload_file
@@ -48,6 +54,108 @@ from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+
+ALERT_LOOKBACK_HOURS = 24
+
+
+async def _attach_sequence_to_alert(
+    sequence_: Sequence,
+    camera: Camera,
+    cameras: CameraCRUD,
+    sequences: SequenceCRUD,
+    alerts: AlertCRUD,
+) -> None:
+    """Assign the given sequence to an alert based on cone/time overlap."""
+    org_cameras = await cameras.fetch_all(filters=("organization_id", camera.organization_id))
+    camera_by_id = {cam.id: cam for cam in org_cameras}
+
+    if sequence_.camera_id not in camera_by_id:
+        camera_by_id[sequence_.camera_id] = camera
+
+    # Fetch recent sequences for the organization based on recency of last_seen_at
+    recent_sequences = await sequences.fetch_all(
+        in_pair=("camera_id", list(camera_by_id.keys())),
+        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(minutes=30)),
+    )
+
+    # Ensure the newly created sequence is present
+    if all(seq.id != sequence_.id for seq in recent_sequences):
+        recent_sequences.append(sequence_)
+
+    # Build DataFrame for overlap computation
+    records = []
+    for seq in recent_sequences:
+        cam = camera_by_id.get(seq.camera_id)
+        if cam is None or seq.cone_azimuth is None or seq.cone_angle is None:
+            continue
+        records.append(
+            {
+                "id": int(seq.id),
+                "lat": float(cam.lat),
+                "lon": float(cam.lon),
+                "cone_azimuth": float(seq.cone_azimuth),
+                "cone_angle": float(seq.cone_angle),
+                "is_wildfire": seq.is_wildfire,
+                "started_at": seq.started_at,
+                "last_seen_at": seq.last_seen_at,
+            }
+        )
+
+    if not records:
+        return
+
+    df = compute_overlap(pd.DataFrame.from_records(records))
+    row = df[df["id"] == int(sequence_.id)]
+    if row.empty:
+        return
+    groups = row.iloc[0]["event_groups"]
+    locations = row.iloc[0].get("event_smoke_locations", [])
+    group_locations = {tuple(g): locations[idx] if idx < len(locations) else None for idx, g in enumerate(groups)}
+
+    seq_by_id = {seq.id: seq for seq in recent_sequences}
+    seq_ids = list(seq_by_id.keys())
+
+    # Existing alert links
+    session = sequences.session
+    mapping: dict[int, set[int]] = {}
+    if seq_ids:
+        stmt = (
+            select(AlertSequence.alert_id, AlertSequence.sequence_id)
+            .where(AlertSequence.sequence_id.in_(seq_ids))
+        )
+        res = await session.exec(stmt)  # type: ignore[arg-type]
+        for aid, sid in res:
+            mapping.setdefault(int(sid), set()).add(int(aid))
+
+    to_link: List[AlertSequence] = []
+
+    for g in groups:
+        g_tuple = tuple(g)
+        existing_alert_ids = {aid for sid in g_tuple for aid in mapping.get(int(sid), set())}
+        if existing_alert_ids:
+            target_alert_id = min(existing_alert_ids)
+        else:
+            location = group_locations.get(g_tuple)
+            start_at = min(seq_by_id[int(sid)].started_at for sid in g_tuple if int(sid) in seq_by_id)
+            alert = await alerts.create(
+                AlertCreate(
+                    organization_id=camera.organization_id,
+                    lat=location[0] if isinstance(location, tuple) else None,
+                    lon=location[1] if isinstance(location, tuple) else None,
+                    start_at=start_at,
+                )
+            )
+            target_alert_id = alert.id
+        for sid in g_tuple:
+            sid_int = int(sid)
+            if target_alert_id in mapping.get(sid_int, set()):
+                continue
+            mapping.setdefault(sid_int, set()).add(target_alert_id)
+            to_link.append(AlertSequence(alert_id=target_alert_id, sequence_id=sid_int))
+
+    if to_link:
+        session.add_all(to_link)
+        await session.commit()
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
@@ -67,6 +175,7 @@ async def create_detection(
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
@@ -137,6 +246,8 @@ async def create_detection(
             det = await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
             for det_ in dets_:
                 await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
+
+            await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
 
             # Webhooks
             whs = await webhooks.fetch_all()
