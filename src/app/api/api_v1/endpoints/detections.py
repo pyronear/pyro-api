@@ -42,6 +42,7 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.slack import slack_client
+from app.services.cones import resolve_cone
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
@@ -118,12 +119,16 @@ async def create_detection(
         )
 
         if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
+            camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
+            cone_azimuth, cone_angle = resolve_cone(det.azimuth, dets_[0].bboxes, camera.angle_of_view)
             # Create new sequence
             sequence_ = await sequences.create(
                 Sequence(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
                     azimuth=det.azimuth,
+                    cone_azimuth=cone_azimuth,
+                    cone_angle=cone_angle,
                     started_at=dets_[0].created_at,
                     last_seen_at=det.created_at,
                 )
@@ -152,7 +157,6 @@ async def create_detection(
                 if org.slack_hook:
                     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
                     url = bucket.get_public_url(det.bucket_key)
-                    camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
 
                     background_tasks.add_task(
                         slack_client.notify, org.slack_hook, det.model_dump_json(), url, camera.name

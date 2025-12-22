@@ -86,6 +86,8 @@ class Sequence(SQLModel, table=True):
     pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
     azimuth: float = Field(..., ge=0, lt=360)
     is_wildfire: Union[AnnotationType, None] = None
+    cone_azimuth: Union[float, None] = Field(None, nullable=True)
+    cone_angle: Union[float, None] = Field(None, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 

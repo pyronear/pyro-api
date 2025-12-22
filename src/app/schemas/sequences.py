@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.models import AnnotationType, Sequence
 
-__all__ = ["SequenceUpdate", "SequenceWithCone"]
+__all__ = ["SequenceLabel", "SequenceUpdate", "SequenceWithCone"]
 
 
 # Accesses
@@ -22,5 +22,4 @@ class SequenceLabel(BaseModel):
 
 
 class SequenceWithCone(Sequence):
-    cone_azimuth: float
-    cone_angle: float
+    pass

@@ -3,10 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from ast import literal_eval
 from datetime import date, datetime, timedelta
-from operator import itemgetter
-from typing import Dict, List, Tuple, Union, cast
+from typing import List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlmodel import func, select
@@ -31,55 +29,6 @@ async def verify_org_rights(
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-
-
-def _resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> Tuple[float, float]:
-    bboxes = literal_eval(bboxes_str)
-    # Take the bbox with the highest confidence
-    xmin, _, xmax, _, _ = max(bboxes, key=itemgetter(2))
-    return azimuth + aov * ((xmin + xmax) / 2 - 0.5), aov * (xmax - xmin)
-
-
-async def resolve_detection_cones(
-    seq_ids: List[int], session: AsyncSession = Depends(get_session)
-) -> Dict[int, Tuple[float, float]]:
-    if not seq_ids:
-        return {}
-
-    # Define a Common Table Expression (CTE) using a window function
-    # Partition by sequence_id, order by id ascending, assign row number
-    row_number_cte = (
-        select(  # type: ignore[call-overload]
-            Detection.id.label("detection_id"),  # type: ignore[attr-defined]
-            Detection.sequence_id,
-            Detection.azimuth,
-            Detection.bboxes,
-            Detection.camera_id,
-            func.row_number()
-            .over(
-                partition_by=Detection.sequence_id,
-                order_by=Detection.id.asc(),  # type: ignore[attr-defined]
-            )
-            .label("rn"),  # Assign row number within each sequence_id group
-        )
-        .where(Detection.sequence_id.in_(seq_ids))  # type: ignore[union-attr]
-        .cte("ranked_detections")  # Create a Common Table Expression
-    )
-
-    # Main query: Select from the CTE, join with Camera, filter for row_number = 1
-    query = (
-        select(row_number_cte.c.sequence_id, row_number_cte.c.azimuth, row_number_cte.c.bboxes, Camera.angle_of_view)  # type: ignore[attr-defined]
-        # Join the CTE results with the Camera table
-        .join(Camera, row_number_cte.c.camera_id == Camera.id)
-        # Filter the CTE results to get only the row with rn = 1 (minimum id) for each sequence
-        .where(row_number_cte.c.rn == 1)
-    )
-
-    det_infos = await session.exec(query)
-    results = det_infos.all()
-
-    # For each sequence, resolve the azimuth + opening angle
-    return {seq_id: _resolve_cone(azimuth, bboxes_str, aov) for seq_id, azimuth, bboxes_str, aov in results}
 
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
@@ -142,11 +91,8 @@ async def fetch_latest_unlabeled_sequences(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceWithCone]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
-    # Limit to cameras in the same organization
-    # Get camera IDs for org
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
 
-    # Get sequences for those cameras
     fetched_sequences = (
         await session.exec(
             select(Sequence)
@@ -157,15 +103,7 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    if len(fetched_sequences) == 0:
-        return []
-    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
-    return [
-        SequenceWithCone(
-            **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
-        )
-        for elt in fetched_sequences
-    ]
+    return [SequenceWithCone(**seq.model_dump()) for seq in fetched_sequences]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -190,15 +128,7 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    if len(fetched_sequences) == 0:
-        return []
-    det_cones = await resolve_detection_cones([elt.__dict__["id"] for elt in fetched_sequences], session)
-    return [
-        SequenceWithCone(
-            **elt.__dict__, cone_azimuth=det_cones[elt.__dict__["id"]][0], cone_angle=det_cones[elt.__dict__["id"]][1]
-        )
-        for elt in fetched_sequences
-    ]
+    return [SequenceWithCone(**seq.model_dump()) for seq in fetched_sequences]
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
