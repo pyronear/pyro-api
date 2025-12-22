@@ -16,7 +16,7 @@ from app.db import get_session
 from app.models import Camera, Detection, Sequence, UserRole
 from app.schemas.detections import DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
-from app.schemas.sequences import SequenceLabel, SequenceWithCone
+from app.schemas.sequences import SequenceLabel
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
@@ -89,7 +89,7 @@ async def fetch_sequence_detections(
 async def fetch_latest_unlabeled_sequences(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[SequenceWithCone]:
+) -> List[Sequence]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
 
@@ -103,7 +103,7 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    return [SequenceWithCone(**seq.model_dump()) for seq in fetched_sequences]
+    return fetched_sequences
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -113,7 +113,7 @@ async def fetch_sequences_from_date(
     offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[SequenceWithCone]:
+) -> List[Sequence]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
     # Limit to cameras in the same organization
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
@@ -128,7 +128,7 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    return [SequenceWithCone(**seq.model_dump()) for seq in fetched_sequences]
+    return fetched_sequences
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
