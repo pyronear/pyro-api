@@ -11,7 +11,7 @@ from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
 
-__all__ = ["Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
+__all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
 
 
 class UserRole(str, Enum):
@@ -90,6 +90,22 @@ class Sequence(SQLModel, table=True):
     cone_angle: Union[float, None] = Field(None, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
+
+
+class Alert(SQLModel, table=True):
+    __tablename__ = "alerts"
+    id: int = Field(None, primary_key=True)
+    organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
+    lat: Union[float, None] = Field(default=None)
+    lon: Union[float, None] = Field(default=None)
+    start_at: Union[datetime, None] = Field(default=None, nullable=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class AlertSequence(SQLModel, table=True):
+    __tablename__ = "alerts_sequences"
+    alert_id: int = Field(primary_key=True, foreign_key="alerts.id")
+    sequence_id: int = Field(primary_key=True, foreign_key="sequences.id")
 
 
 class Organization(SQLModel, table=True):
