@@ -55,8 +55,6 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
-ALERT_LOOKBACK_HOURS = 24
-
 
 async def _attach_sequence_to_alert(
     sequence_: Sequence,
@@ -75,7 +73,7 @@ async def _attach_sequence_to_alert(
     # Fetch recent sequences for the organization based on recency of last_seen_at
     recent_sequences = await sequences.fetch_all(
         in_pair=("camera_id", list(camera_by_id.keys())),
-        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(minutes=30)),
+        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)),
     )
 
     # Ensure the newly created sequence is present
