@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.models import AnnotationType, Sequence
 
-__all__ = ["SequenceLabel", "SequenceUpdate"]
+__all__ = ["SequenceLabel", "SequenceRead", "SequenceUpdate"]
 
 
 # Accesses
@@ -19,3 +19,7 @@ class SequenceUpdate(BaseModel):
 
 class SequenceLabel(BaseModel):
     is_wildfire: AnnotationType
+
+
+class SequenceRead(Sequence):
+    pass

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import AnnotationType, Detection
 
-__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl"]
+__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionUrl", "DetectionRead", "DetectionWithUrl"]
 
 
 class DetectionLabel(BaseModel):
@@ -50,6 +50,10 @@ class DetectionCreate(Azimuth):
 
 class DetectionUrl(BaseModel):
     url: str = Field(..., description="temporary URL to access the media content")
+
+
+class DetectionRead(Detection):
+    pass
 
 
 class DetectionWithUrl(Detection):
