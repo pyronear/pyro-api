@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import List, Optional, cast
+from typing import Any, List, Optional, cast
 
 import pandas as pd
 from fastapi import (
@@ -34,7 +34,7 @@ from app.api.dependencies import (
 )
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.models import AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
+from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -119,7 +119,7 @@ async def _attach_sequence_to_alert(
     session = sequences.session
     mapping: dict[int, set[int]] = {}
     if seq_ids:
-        stmt = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
+        stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
             AlertSequence.sequence_id.in_(seq_ids)  # type: ignore[attr-defined]
         )
         res = await session.exec(stmt)

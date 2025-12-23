@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import date, datetime, timedelta
-from typing import List, Union, cast
+from typing import Any, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlalchemy import asc, desc
@@ -48,7 +48,7 @@ async def get_alert(
 async def fetch_alert_sequences(
     alert_id: int = Path(..., gt=0),
     limit: int = Query(10, description="Maximum number of sequences to fetch", ge=1, le=100),
-    desc: bool = Query(True, description="Whether to order the sequences by last_seen_at in descending order"),
+    order_desc: bool = Query(True, description="Whether to order the sequences by last_seen_at in descending order"),
     alerts: AlertCRUD = Depends(get_alert_crud),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -58,11 +58,11 @@ async def fetch_alert_sequences(
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
-    stmt = (
+    stmt: Any = (
         select(Sequence)
         .join(AlertSequence, AlertSequence.sequence_id == Sequence.id)
         .where(AlertSequence.alert_id == alert_id)
-        .order_by(desc(Sequence.last_seen_at) if desc else asc(Sequence.last_seen_at))
+        .order_by(desc(Sequence.last_seen_at) if order_desc else asc(Sequence.last_seen_at))
         .limit(limit)
     )
     res = await session.exec(stmt)
@@ -80,7 +80,7 @@ async def fetch_latest_unlabeled_alerts(
 ) -> List[AlertRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
-    alerts_stmt = (
+    alerts_stmt: Any = (
         select(Alert)
         .join(AlertSequence, AlertSequence.alert_id == Alert.id)
         .join(Sequence, Sequence.id == AlertSequence.sequence_id)
@@ -104,7 +104,7 @@ async def fetch_alerts_from_date(
 ) -> List[AlertRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
-    alerts_stmt = (
+    alerts_stmt: Any = (
         select(Alert)
         .where(Alert.organization_id == token_payload.organization_id)
         .where(func.date(Alert.started_at) == from_date)
@@ -130,7 +130,7 @@ async def delete_alert(
     verify_org_rights(token_payload.organization_id, alert)
 
     # Delete associations
-    await session.exec(delete(AlertSequence).where(AlertSequence.alert_id == alert_id))  # type: ignore[arg-type]
+    await session.exec(cast(Any, delete(AlertSequence).where(AlertSequence.alert_id == alert_id)))
     await session.commit()
     # Delete alert
     await alerts.delete(alert_id)

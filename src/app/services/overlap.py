@@ -18,9 +18,9 @@ import pandas as pd
 import pyproj
 from geopy.distance import geodesic
 from pyproj import Transformer
-from shapely.geometry import Polygon  # type: ignore
+from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform as shapely_transform  # type: ignore
+from shapely.ops import transform as shapely_transform
 
 logger = logging.getLogger(__name__)
 
@@ -354,12 +354,11 @@ def compute_overlap(
             pts.append(get_centroid_latlon(inter))
         if not pts:
             # No intersections: use centroid of available cones as best-effort location
-            polys = [projected_cones.get(sid) for sid in seq_tuple]
-            polys = [p for p in polys if p is not None]
+            polys: List[BaseGeometry] = [p for p in (projected_cones.get(sid) for sid in seq_tuple) if p is not None]
             if not polys:
                 return None
             try:
-                merged = polys[0]
+                merged: BaseGeometry = polys[0]
                 for p in polys[1:]:
                     merged = merged.union(p)
                 return get_centroid_latlon(merged)
