@@ -5,7 +5,17 @@
 
 from fastapi import APIRouter
 
-from app.api.api_v1.endpoints import alerts, cameras, detections, login, organizations, poses, sequences, users, webhooks
+from app.api.api_v1.endpoints import (
+    alerts,
+    cameras,
+    detections,
+    login,
+    organizations,
+    poses,
+    sequences,
+    users,
+    webhooks,
+)
 
 api_router = APIRouter(redirect_slashes=True)
 api_router.include_router(login.router, prefix="/login", tags=["login"])

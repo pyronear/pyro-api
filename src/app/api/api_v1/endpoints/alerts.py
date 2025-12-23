@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_alert_crud, get_jwt, get_sequence_crud
-from app.crud import AlertCRUD, SequenceCRUD
+from app.api.dependencies import get_alert_crud, get_jwt
+from app.crud import AlertCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertRead
@@ -21,7 +21,7 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 
-async def verify_org_rights(organization_id: int, alert: Alert) -> None:
+def verify_org_rights(organization_id: int, alert: Alert) -> None:
     if organization_id != alert.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
@@ -36,7 +36,7 @@ async def get_alert(
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
-        await verify_org_rights(token_payload.organization_id, alert)
+        verify_org_rights(token_payload.organization_id, alert)
 
     return AlertRead(**alert.model_dump())
 
@@ -49,14 +49,13 @@ async def fetch_alert_sequences(
     limit: int = Query(10, description="Maximum number of sequences to fetch", ge=1, le=100),
     desc: bool = Query(True, description="Whether to order the sequences by last_seen_at in descending order"),
     alerts: AlertCRUD = Depends(get_alert_crud),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[Sequence]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
     if UserRole.ADMIN not in token_payload.scopes:
-        await verify_org_rights(token_payload.organization_id, alert)
+        verify_org_rights(token_payload.organization_id, alert)
 
     stmt = (
         select(Sequence)
@@ -127,7 +126,7 @@ async def delete_alert(
 
     # Ensure alert exists and org is valid
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
-    await verify_org_rights(token_payload.organization_id, alert)
+    verify_org_rights(token_payload.organization_id, alert)
 
     # Delete associations
     await session.exec(delete(AlertSequence).where(AlertSequence.alert_id == alert_id))

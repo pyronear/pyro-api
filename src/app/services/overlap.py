@@ -366,7 +366,7 @@ def compute_overlap(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed fallback centroid for group %s: %s", seq_tuple, exc)
                 return None
-        lats, lons = zip(*pts)
+        lats, lons = zip(*pts, strict=False)
         return float(np.median(lats)), float(np.median(lons))
 
     group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {

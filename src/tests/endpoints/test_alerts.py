@@ -18,9 +18,30 @@ async def _create_alert_with_sequences(
 ) -> Tuple[Alert, List[int]]:
     now = datetime.utcnow()
     seq_payloads = [
-        dict(camera_id=camera_id, pose_id=None, azimuth=180.0, is_wildfire=None, cone_azimuth=163.4, cone_angle=1.0),
-        dict(camera_id=camera_id, pose_id=None, azimuth=25.0, is_wildfire=None, cone_azimuth=8.3, cone_angle=0.8),
-        dict(camera_id=camera_id, pose_id=None, azimuth=276.0, is_wildfire=None, cone_azimuth=276.5, cone_angle=3.0),
+        {
+            "camera_id": camera_id,
+            "pose_id": None,
+            "azimuth": 180.0,
+            "is_wildfire": None,
+            "cone_azimuth": 163.4,
+            "cone_angle": 1.0,
+        },
+        {
+            "camera_id": camera_id,
+            "pose_id": None,
+            "azimuth": 25.0,
+            "is_wildfire": None,
+            "cone_azimuth": 8.3,
+            "cone_angle": 0.8,
+        },
+        {
+            "camera_id": camera_id,
+            "pose_id": None,
+            "azimuth": 276.0,
+            "is_wildfire": None,
+            "cone_azimuth": 276.5,
+            "cone_angle": 3.0,
+        },
     ]
     sequences: List[Sequence] = []
     for idx, payload in enumerate(seq_payloads):
@@ -54,7 +75,7 @@ async def _create_alert_with_sequences(
 
 @pytest.mark.asyncio
 async def test_get_alert_and_sequences(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, _seq_ids = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
 

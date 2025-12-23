@@ -4,10 +4,10 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-import itertools
 from datetime import datetime, timedelta
 from typing import List, Optional, cast
 
+import pandas as pd
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -20,22 +20,22 @@ from fastapi import (
     UploadFile,
     status,
 )
-import pandas as pd
 from sqlmodel import select
 
 from app.api.dependencies import (
     dispatch_webhook,
+    get_alert_crud,
     get_camera_crud,
     get_detection_crud,
     get_jwt,
     get_organization_crud,
-    get_alert_crud,
     get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
 from app.models import AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
+from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
@@ -44,12 +44,11 @@ from app.schemas.detections import (
     DetectionSequence,
     DetectionUrl,
 )
-from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
+from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap
 from app.services.slack import slack_client
-from app.services.cones import resolve_cone
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
@@ -74,7 +73,11 @@ async def _attach_sequence_to_alert(
     # Fetch recent sequences for the organization based on recency of last_seen_at
     recent_sequences = await sequences.fetch_all(
         in_pair=("camera_id", list(camera_by_id.keys())),
-        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)),
+        inequality_pair=(
+            "last_seen_at",
+            ">",
+            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+        ),
     )
 
     # Ensure the newly created sequence is present
@@ -87,18 +90,16 @@ async def _attach_sequence_to_alert(
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.cone_azimuth is None or seq.cone_angle is None:
             continue
-        records.append(
-            {
-                "id": int(seq.id),
-                "lat": float(cam.lat),
-                "lon": float(cam.lon),
-                "cone_azimuth": float(seq.cone_azimuth),
-                "cone_angle": float(seq.cone_angle),
-                "is_wildfire": seq.is_wildfire,
-                "started_at": seq.started_at,
-                "last_seen_at": seq.last_seen_at,
-            }
-        )
+        records.append({
+            "id": int(seq.id),
+            "lat": float(cam.lat),
+            "lon": float(cam.lon),
+            "cone_azimuth": float(seq.cone_azimuth),
+            "cone_angle": float(seq.cone_angle),
+            "is_wildfire": seq.is_wildfire,
+            "started_at": seq.started_at,
+            "last_seen_at": seq.last_seen_at,
+        })
 
     if not records:
         return
@@ -118,10 +119,7 @@ async def _attach_sequence_to_alert(
     session = sequences.session
     mapping: dict[int, set[int]] = {}
     if seq_ids:
-        stmt = (
-            select(AlertSequence.alert_id, AlertSequence.sequence_id)
-            .where(AlertSequence.sequence_id.in_(seq_ids))
-        )
+        stmt = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.sequence_id.in_(seq_ids))
         res = await session.exec(stmt)  # type: ignore[arg-type]
         for aid, sid in res:
             mapping.setdefault(int(sid), set()).add(int(aid))
@@ -140,7 +138,9 @@ async def _attach_sequence_to_alert(
             if isinstance(location, tuple):
                 current_alert = await alerts.get(target_alert_id, strict=True)
                 new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
-                new_last_seen = max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
+                new_last_seen = (
+                    max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
+                )
                 if (
                     current_alert.lat is None
                     or current_alert.lon is None
@@ -149,7 +149,9 @@ async def _attach_sequence_to_alert(
                 ):
                     await alerts.update(
                         target_alert_id,
-                        AlertUpdate(lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen),
+                        AlertUpdate(
+                            lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen
+                        ),
                     )
         else:
             alert = await alerts.create(
@@ -349,7 +351,10 @@ async def fetch_detections(
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
-    return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")]
+    return [
+        DetectionRead(**elt.model_dump())
+        for elt in await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
+    ]
 
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
