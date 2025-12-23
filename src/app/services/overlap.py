@@ -341,10 +341,7 @@ def compute_overlap(
     # Per group localization, median of pair barycenters for robustness
     def group_smoke_location(seq_tuple: Tuple[int, ...]) -> Optional[Tuple[float, float]]:
         if len(seq_tuple) < 2:
-            # Fallback: use cone center as a proxy
-            sid = seq_tuple[0]
-            poly = projected_cones.get(sid)
-            return get_centroid_latlon(poly) if poly is not None else None
+            return None
         pts: List[Tuple[float, float]] = []
         for i, j in itertools.combinations(seq_tuple, 2):
             gi = projected_cones.get(i)
