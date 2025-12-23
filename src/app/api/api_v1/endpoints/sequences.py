@@ -14,7 +14,7 @@ from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, g
 from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import Camera, Detection, Sequence, UserRole
-from app.schemas.detections import DetectionSequence, DetectionWithUrl
+from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
 from app.services.storage import s3_service
@@ -69,7 +69,7 @@ async def fetch_sequence_detections(
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     return [
         DetectionWithUrl(
-            **elt.__dict__,
+            **DetectionRead(**elt.model_dump()).model_dump(),
             url=bucket.get_public_url(elt.bucket_key),
         )
         for elt in await detections.fetch_all(
@@ -103,7 +103,7 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    return fetched_sequences
+    return [Sequence(**elt.model_dump()) for elt in fetched_sequences]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -128,7 +128,7 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    return fetched_sequences
+    return [Sequence(**elt.model_dump()) for elt in fetched_sequences]
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")

@@ -40,6 +40,7 @@ from app.schemas.detections import (
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
     DetectionCreate,
+    DetectionRead,
     DetectionSequence,
     DetectionUrl,
 )
@@ -288,7 +289,7 @@ async def create_detection(
                         slack_client.notify, org.slack_hook, det.model_dump_json(), url, camera.name
                     )
 
-    return det
+    return DetectionRead(**det.model_dump())
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
@@ -307,7 +308,7 @@ async def get_detection(
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return detection
+    return DetectionRead(**detection.model_dump())
 
 
 @router.get("/{detection_id}/url", status_code=200)
@@ -340,15 +341,15 @@ async def fetch_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Detection]:
+) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
-        return [elt for elt in await detections.fetch_all()]
+        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all()]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
 
-    return await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
+    return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")]
 
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")

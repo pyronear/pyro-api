@@ -14,6 +14,7 @@ from app.api.dependencies import get_alert_crud, get_jwt, get_sequence_crud
 from app.crud import AlertCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, Sequence, UserRole
+from app.schemas.alerts import AlertRead
 from app.schemas.login import TokenPayload
 from app.services.telemetry import telemetry_client
 
@@ -30,14 +31,14 @@ async def get_alert(
     alert_id: int = Path(..., gt=0),
     alerts: AlertCRUD = Depends(get_alert_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Alert:
+) -> AlertRead:
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, alert)
 
-    return alert
+    return AlertRead(**alert.model_dump())
 
 
 @router.get(
@@ -76,7 +77,7 @@ async def fetch_alert_sequences(
 async def fetch_latest_unlabeled_alerts(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Alert]:
+) -> List[AlertRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
     alerts_stmt = (
@@ -90,7 +91,7 @@ async def fetch_latest_unlabeled_alerts(
         .limit(15)
     )
     alerts_res = await session.exec(alerts_stmt)
-    return alerts_res.unique().all()  # unique to deduplicate joins
+    return [AlertRead(**a.model_dump()) for a in alerts_res.unique().all()]  # unique to deduplicate joins
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
@@ -100,7 +101,7 @@ async def fetch_alerts_from_date(
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Alert]:
+) -> List[AlertRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
     alerts_stmt = (
@@ -112,7 +113,7 @@ async def fetch_alerts_from_date(
         .offset(offset)
     )
     alerts_res = await session.exec(alerts_stmt)
-    return alerts_res.all()
+    return [AlertRead(**a.model_dump()) for a in alerts_res.all()]
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")
