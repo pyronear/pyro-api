@@ -186,7 +186,9 @@ async def test_alert_recompute_after_sequence_relabel(async_client: AsyncClient,
         for seq in seqs
     ]
     df_all = compute_overlap(pd.DataFrame.from_records(records))
-    initial_loc = next((loc for locs in df_all["event_smoke_locations"].tolist() for loc in locs if loc is not None), None)
+    initial_loc = next(
+        (loc for locs in df_all["event_smoke_locations"].tolist() for loc in locs if loc is not None), None
+    )
 
     alert = Alert(
         organization_id=1,
