@@ -19,8 +19,8 @@ from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
-from app.services.storage import s3_service
 from app.services.overlap import compute_overlap
+from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -35,12 +35,13 @@ async def verify_org_rights(
 
 
 async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
-    remaining_res = await session.exec(
+    remaining_stmt: Any = (
         select(Sequence, Camera)
         .join(AlertSequence, cast(Any, AlertSequence.sequence_id) == Sequence.id)
         .join(Camera, cast(Any, Camera.id) == Sequence.camera_id)
-        .where(AlertSequence.alert_id == alert_id)
     )
+    remaining_stmt = remaining_stmt.where(AlertSequence.alert_id == alert_id)
+    remaining_res = await session.exec(remaining_stmt)
     rows = remaining_res.all()
     if not rows:
         await alerts.delete(alert_id)
@@ -55,18 +56,16 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
     if len(rows) >= 2:
         records = []
         for seq, cam in zip(seqs, cams, strict=False):
-            records.append(
-                {
-                    "id": seq.id,
-                    "lat": cam.lat,
-                    "lon": cam.lon,
-                    "cone_azimuth": seq.cone_azimuth,
-                    "cone_angle": seq.cone_angle,
-                    "is_wildfire": seq.is_wildfire,
-                    "started_at": seq.started_at,
-                    "last_seen_at": seq.last_seen_at,
-                }
-            )
+            records.append({
+                "id": seq.id,
+                "lat": cam.lat,
+                "lon": cam.lon,
+                "cone_azimuth": seq.cone_azimuth,
+                "cone_angle": seq.cone_angle,
+                "is_wildfire": seq.is_wildfire,
+                "started_at": seq.started_at,
+                "last_seen_at": seq.last_seen_at,
+            })
         df = compute_overlap(pd.DataFrame.from_records(records))
         loc = next((loc for locs in df["event_smoke_locations"].tolist() for loc in locs if loc is not None), None)
 
@@ -228,7 +227,9 @@ async def label_sequence(
 
     # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
     if payload.is_wildfire is not None and payload.is_wildfire != AnnotationType.WILDFIRE_SMOKE:
-        alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
+        alert_ids_res = await session.exec(
+            select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id)
+        )
         alert_ids = list(alert_ids_res.all())
         if alert_ids:
             delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
