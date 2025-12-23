@@ -4,13 +4,14 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from typing import List, cast
+from typing import Any, List, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
+from sqlmodel import delete, select
 
 from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
-from app.models import Organization, UserRole
+from app.models import Alert, AlertSequence, Organization, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.organizations import OrganizationCreate, SlackHook, TelegramChannelId
 from app.services.slack import slack_client
@@ -71,6 +72,17 @@ async def delete_organization(
     telemetry_client.capture(
         token_payload.sub, event="organizations-deletion", properties={"organization_id": organization_id}
     )
+    # Remove alerts and their associations for this organization to satisfy FK constraints
+    org_session = organizations.session
+    alert_ids_res = await org_session.exec(select(Alert.id).where(Alert.organization_id == organization_id))
+    alert_ids = list(alert_ids_res.all())
+    if alert_ids:
+        delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(alert_ids))
+        delete_alerts: Any = delete(Alert).where(cast(Any, Alert.id).in_(alert_ids))
+        await org_session.exec(delete_links)
+        await org_session.exec(delete_alerts)
+        await org_session.commit()
+
     bucket_name = s3_service.resolve_bucket_name(organization_id)
     if not (await s3_service.delete_bucket(bucket_name)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")

@@ -7,13 +7,13 @@ from datetime import date, datetime, timedelta
 from typing import List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
-from sqlmodel import func, select
+from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
-from app.models import Camera, Detection, Sequence, UserRole
+from app.models import AlertSequence, Camera, Detection, Sequence, UserRole
 from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
@@ -144,6 +144,9 @@ async def delete_sequence(
     det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
     for det_id in det_ids.all():
         await detections.update(det_id, DetectionSequence(sequence_id=None))
+    # Drop alert links for this sequence to avoid FK issues
+    await session.exec(delete(AlertSequence).where(AlertSequence.sequence_id == sequence_id))
+    await session.commit()
     # Delete the sequence
     await sequences.delete(sequence_id)
 
