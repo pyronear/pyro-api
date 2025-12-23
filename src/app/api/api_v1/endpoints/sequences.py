@@ -10,10 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
-from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
+from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
-from app.models import AlertSequence, Camera, Detection, Sequence, UserRole
+from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
+from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
@@ -158,6 +159,8 @@ async def label_sequence(
     sequence_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    alerts: AlertCRUD = Depends(get_alert_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Sequence:
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
@@ -166,4 +169,41 @@ async def label_sequence(
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
-    return await sequences.update(sequence_id, payload)
+    updated = await sequences.update(sequence_id, payload)
+
+    # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
+    if payload.is_wildfire is not None and payload.is_wildfire != AnnotationType.WILDFIRE_SMOKE:
+        alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
+        alert_ids = list(alert_ids_res.all())
+        if alert_ids:
+            delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+            await session.exec(delete_links)
+            await session.commit()
+            for aid in alert_ids:
+                remaining_res = await session.exec(
+                    select(Sequence)
+                    .join(AlertSequence, cast(Any, AlertSequence.sequence_id) == Sequence.id)
+                    .where(AlertSequence.alert_id == aid)
+                )
+                remaining = remaining_res.all()
+                if not remaining:
+                    await alerts.delete(aid)
+                    continue
+                new_start = min(seq.started_at for seq in remaining)
+                new_last = max(seq.last_seen_at for seq in remaining)
+                await alerts.update(aid, AlertUpdate(started_at=new_start, last_seen_at=new_last, lat=None, lon=None))
+        # Create a fresh alert for this sequence alone
+        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+        new_alert = await alerts.create(
+            AlertCreate(
+                organization_id=camera.organization_id,
+                started_at=sequence.started_at,
+                last_seen_at=sequence.last_seen_at,
+                lat=None,
+                lon=None,
+            )
+        )
+        session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+        await session.commit()
+
+    return updated
