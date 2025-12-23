@@ -119,8 +119,10 @@ async def _attach_sequence_to_alert(
     session = sequences.session
     mapping: dict[int, set[int]] = {}
     if seq_ids:
-        stmt = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.sequence_id.in_(seq_ids))
-        res = await session.exec(stmt)  # type: ignore[arg-type]
+        stmt = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
+            AlertSequence.sequence_id.in_(seq_ids)  # type: ignore[attr-defined]
+        )
+        res = await session.exec(stmt)
         for aid, sid in res:
             mapping.setdefault(int(sid), set()).add(int(aid))
 
@@ -136,7 +138,7 @@ async def _attach_sequence_to_alert(
             target_alert_id = min(existing_alert_ids)
             # If we now have a location and the alert is missing it (or start_at can be improved), update it
             if isinstance(location, tuple):
-                current_alert = await alerts.get(target_alert_id, strict=True)
+                current_alert = cast(Alert, await alerts.get(target_alert_id, strict=True))
                 new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
                 new_last_seen = (
                     max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at

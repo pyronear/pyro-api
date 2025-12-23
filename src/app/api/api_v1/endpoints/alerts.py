@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
+from sqlalchemy import asc, desc
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -61,7 +62,7 @@ async def fetch_alert_sequences(
         select(Sequence)
         .join(AlertSequence, AlertSequence.sequence_id == Sequence.id)
         .where(AlertSequence.alert_id == alert_id)
-        .order_by(Sequence.last_seen_at.desc() if desc else Sequence.last_seen_at.asc())  # type: ignore[arg-type]
+        .order_by(desc(Sequence.last_seen_at) if desc else asc(Sequence.last_seen_at))
         .limit(limit)
     )
     res = await session.exec(stmt)
@@ -129,7 +130,7 @@ async def delete_alert(
     verify_org_rights(token_payload.organization_id, alert)
 
     # Delete associations
-    await session.exec(delete(AlertSequence).where(AlertSequence.alert_id == alert_id))
+    await session.exec(delete(AlertSequence).where(AlertSequence.alert_id == alert_id))  # type: ignore[arg-type]
     await session.commit()
     # Delete alert
     await alerts.delete(alert_id)

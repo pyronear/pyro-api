@@ -160,6 +160,16 @@ check_untyped_defs = true
 implicit_reexport = false
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]
+[[tool.mypy.overrides]]
+module = [
+    "pandas",
+    "pandas.*",
+    "numpy",
+    "pyproj",
+    "shapely.*",
+    "geopy.*",
+]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
