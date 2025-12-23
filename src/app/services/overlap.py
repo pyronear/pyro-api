@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import itertools
+import logging
 from collections import defaultdict
 from math import atan2, cos, radians, sin, sqrt
 from typing import Dict, List, Optional, Tuple
@@ -20,6 +21,8 @@ from pyproj import Transformer
 from shapely.geometry import Polygon  # type: ignore
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform as shapely_transform  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -302,9 +305,13 @@ def compute_overlap(
         return df
 
     # Precompute cones in Web Mercator
-    projected_cones: Dict[int, Polygon] = {
-        int(row["id"]): get_projected_cone(row, r_km, r_min_km) for _, row in df_valid.iterrows()
-    }
+    projected_cones: Dict[int, Polygon] = {}
+    for _, row in df_valid.iterrows():
+        sid = int(row["id"])
+        try:
+            projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
 
     # Phase 1, build overlap graph gated by time overlap
     ids = df_valid["id"].astype(int).tolist()
@@ -334,15 +341,34 @@ def compute_overlap(
     # Per group localization, median of pair barycenters for robustness
     def group_smoke_location(seq_tuple: Tuple[int, ...]) -> Optional[Tuple[float, float]]:
         if len(seq_tuple) < 2:
-            return None
+            # Fallback: use cone center as a proxy
+            sid = seq_tuple[0]
+            poly = projected_cones.get(sid)
+            return get_centroid_latlon(poly) if poly is not None else None
         pts: List[Tuple[float, float]] = []
         for i, j in itertools.combinations(seq_tuple, 2):
-            inter = projected_cones[i].intersection(projected_cones[j])
+            gi = projected_cones.get(i)
+            gj = projected_cones.get(j)
+            if gi is None or gj is None:
+                continue
+            inter = gi.intersection(gj)
             if inter.is_empty or inter.area <= 0:
                 continue
             pts.append(get_centroid_latlon(inter))
         if not pts:
-            return None
+            # No intersections: use centroid of available cones as best-effort location
+            polys = [projected_cones.get(sid) for sid in seq_tuple]
+            polys = [p for p in polys if p is not None]
+            if not polys:
+                return None
+            try:
+                merged = polys[0]
+                for p in polys[1:]:
+                    merged = merged.union(p)
+                return get_centroid_latlon(merged)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed fallback centroid for group %s: %s", seq_tuple, exc)
+                return None
         lats, lons = zip(*pts)
         return float(np.median(lats)), float(np.median(lons))
 
