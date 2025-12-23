@@ -45,9 +45,9 @@ def test_compute_overlap_groups_and_locations() -> None:
     row1 = df[df["id"] == 1].iloc[0]
     row4 = df[df["id"] == 4].iloc[0]
 
-    assert [(1, 2, 3)] == row1["event_groups"]
+    assert row1["event_groups"] == [(1, 2, 3)]
     assert row1["event_smoke_locations"][0] is not None
 
     # Non-overlapping singleton keeps its own group and no location
-    assert [(4,)] == row4["event_groups"]
+    assert row4["event_groups"] == [(4,)]
     assert row4["event_smoke_locations"] == [None]
