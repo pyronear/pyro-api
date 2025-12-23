@@ -48,7 +48,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return entry
 
     async def get_by(self, field_name: str, val: Union[str, int], strict: bool = False) -> Union[ModelType, None]:
-        statement = select(self.model).where(getattr(self.model, field_name) == val)  # type: ignore[var-annotated]
+        statement: Any = select(self.model).where(getattr(self.model, field_name) == val)
         results = await self.session.exec(statement=statement)
         entry = results.one_or_none()
         if strict and entry is None:
@@ -68,7 +68,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> List[ModelType]:
-        statement = select(self.model)  # type: ignore[var-annotated]
+        statement: Any = select(self.model)
         if isinstance(filters, tuple):
             statement = statement.where(getattr(self.model, filters[0]) == filters[1])
         elif isinstance(filters, list):
@@ -126,6 +126,6 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.session.commit()
 
     async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
-        statement = select(self.model).where(getattr(self.model, field_name).in_(list_))  # type: ignore[var-annotated]
+        statement: Any = select(self.model).where(getattr(self.model, field_name).in_(list_))
         results = await self.session.exec(statement)
-        return results.all()
+        return list(results.all())

@@ -58,15 +58,13 @@ async def fetch_alert_sequences(
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
-    stmt: Any = (
-        select(Sequence)
-        .join(AlertSequence, AlertSequence.sequence_id == Sequence.id)
-        .where(AlertSequence.alert_id == alert_id)
-        .order_by(desc(Sequence.last_seen_at) if order_desc else asc(Sequence.last_seen_at))
-        .limit(limit)
-    )
-    res = await session.exec(stmt)
-    return res.all()
+    order_clause: Any = desc(cast(Any, Sequence.last_seen_at)) if order_desc else asc(cast(Any, Sequence.last_seen_at))
+
+    seq_stmt: Any = select(Sequence).join(AlertSequence, cast(Any, AlertSequence.sequence_id == Sequence.id))
+    seq_stmt = seq_stmt.where(AlertSequence.alert_id == alert_id).order_by(order_clause).limit(limit)
+
+    res = await session.exec(seq_stmt)
+    return list(res.all())
 
 
 @router.get(
@@ -80,11 +78,10 @@ async def fetch_latest_unlabeled_alerts(
 ) -> List[AlertRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
-    alerts_stmt: Any = (
-        select(Alert)
-        .join(AlertSequence, AlertSequence.alert_id == Alert.id)
-        .join(Sequence, Sequence.id == AlertSequence.sequence_id)
-        .where(Alert.organization_id == token_payload.organization_id)
+    alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
+    alerts_stmt = alerts_stmt.join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+    alerts_stmt = (
+        alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
         .where(Sequence.last_seen_at > datetime.utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
@@ -130,7 +127,8 @@ async def delete_alert(
     verify_org_rights(token_payload.organization_id, alert)
 
     # Delete associations
-    await session.exec(cast(Any, delete(AlertSequence).where(AlertSequence.alert_id == alert_id)))
+    delete_stmt: Any = delete(AlertSequence).where(AlertSequence.alert_id == cast(Any, alert_id))
+    await session.exec(delete_stmt)
     await session.commit()
     # Delete alert
     await alerts.delete(alert_id)

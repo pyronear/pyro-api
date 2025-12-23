@@ -168,6 +168,10 @@ module = [
     "pyproj",
     "shapely.*",
     "geopy.*",
+    "passlib",
+    "passlib.*",
+    "requests",
+    "requests.*",
 ]
 ignore_missing_imports = true
 
