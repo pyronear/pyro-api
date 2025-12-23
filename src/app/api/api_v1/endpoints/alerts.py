@@ -86,7 +86,7 @@ async def fetch_latest_unlabeled_alerts(
         .where(Alert.organization_id == token_payload.organization_id)
         .where(Sequence.last_seen_at > datetime.utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
-        .order_by(Alert.start_at.desc().nullslast())  # type: ignore[attr-defined]
+        .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
         .limit(15)
     )
     alerts_res = await session.exec(alerts_stmt)
@@ -106,8 +106,8 @@ async def fetch_alerts_from_date(
     alerts_stmt = (
         select(Alert)
         .where(Alert.organization_id == token_payload.organization_id)
-        .where(func.date(Alert.start_at) == from_date)
-        .order_by(Alert.start_at.desc().nullslast())  # type: ignore[attr-defined]
+        .where(func.date(Alert.started_at) == from_date)
+        .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
         .limit(limit)
         .offset(offset)
     )

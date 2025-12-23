@@ -15,16 +15,17 @@ class AlertCreate(BaseModel):
     organization_id: int = Field(..., gt=0)
     lat: Optional[float] = None
     lon: Optional[float] = None
-    start_at: Optional[datetime] = None
+    started_at: datetime
+    last_seen_at: datetime
 
 
 class AlertUpdate(BaseModel):
     organization_id: Optional[int] = Field(None, gt=0)
     lat: Optional[float] = None
     lon: Optional[float] = None
-    start_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    last_seen_at: Optional[datetime] = None
 
 
 class AlertRead(AlertCreate):
     id: int
-    created_at: datetime

@@ -98,8 +98,8 @@ class Alert(SQLModel, table=True):
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
     lat: Union[float, None] = Field(default=None)
     lon: Union[float, None] = Field(default=None)
-    start_at: Union[datetime, None] = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    started_at: datetime = Field(..., nullable=False)
+    last_seen_at: datetime = Field(..., nullable=False)
 
 
 class AlertSequence(SQLModel, table=True):

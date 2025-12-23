@@ -131,21 +131,24 @@ async def _attach_sequence_to_alert(
         g_tuple = tuple(g)
         location = group_locations.get(g_tuple)
         start_at = min(seq_by_id[int(sid)].started_at for sid in g_tuple if int(sid) in seq_by_id)
+        last_seen_at = max(seq_by_id[int(sid)].last_seen_at for sid in g_tuple if int(sid) in seq_by_id)
         existing_alert_ids = {aid for sid in g_tuple for aid in mapping.get(int(sid), set())}
         if existing_alert_ids:
             target_alert_id = min(existing_alert_ids)
             # If we now have a location and the alert is missing it (or start_at can be improved), update it
             if isinstance(location, tuple):
                 current_alert = await alerts.get(target_alert_id, strict=True)
-                new_start_at = min(start_at, current_alert.start_at) if current_alert.start_at else start_at
+                new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
+                new_last_seen = max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
                 if (
                     current_alert.lat is None
                     or current_alert.lon is None
-                    or (current_alert.start_at is None or new_start_at < current_alert.start_at)
+                    or (current_alert.started_at is None or new_start_at < current_alert.started_at)
+                    or (current_alert.last_seen_at is None or new_last_seen > current_alert.last_seen_at)
                 ):
                     await alerts.update(
                         target_alert_id,
-                        AlertUpdate(lat=location[0], lon=location[1], start_at=new_start_at),
+                        AlertUpdate(lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen),
                     )
         else:
             alert = await alerts.create(
@@ -153,7 +156,8 @@ async def _attach_sequence_to_alert(
                     organization_id=camera.organization_id,
                     lat=location[0] if isinstance(location, tuple) else None,
                     lon=location[1] if isinstance(location, tuple) else None,
-                    start_at=start_at,
+                    started_at=start_at,
+                    last_seen_at=last_seen_at,
                 )
             )
             target_alert_id = alert.id
