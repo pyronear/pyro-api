@@ -1,8 +1,13 @@
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Union
 
-import pytest
+import pytest  # type: ignore
 from httpx import AsyncClient
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.models import Alert, AlertSequence, Camera, Detection, Sequence
+from app.schemas.sequences import SequenceLabel
 
 
 @pytest.mark.parametrize(
@@ -216,3 +221,157 @@ async def test_latest_sequences(
         assert response.json() == expected_result
         assert all(isinstance(elt["cone_azimuth"], float) for elt in response.json())
         assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
+
+
+@pytest.mark.asyncio
+async def test_sequence_label_updates_alerts(async_client: AsyncClient, detection_session: AsyncSession):
+    # Create a sequence linked to a camera and an alert
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    now = datetime.utcnow()
+    seq1 = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        azimuth=180.0,
+        cone_azimuth=170.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=20),
+    )
+    seq2 = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        azimuth=182.0,
+        cone_azimuth=172.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=25),
+        last_seen_at=now - timedelta(seconds=10),
+    )
+    detection_session.add(seq1)
+    detection_session.add(seq2)
+    await detection_session.commit()
+    await detection_session.refresh(seq1)
+    await detection_session.refresh(seq2)
+
+    alert = Alert(
+        organization_id=camera.organization_id,
+        lat=1.0,
+        lon=2.0,
+        started_at=min(seq1.started_at, seq2.started_at),
+        last_seen_at=max(seq1.last_seen_at, seq2.last_seen_at),
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq1.id))
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq2.id))
+    await detection_session.commit()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+
+    # Keep original timings to avoid accessing expired ORM objects
+    seq1_start, seq1_last = seq1.started_at, seq1.last_seen_at
+    seq2_start, seq2_last = seq2.started_at, seq2.last_seen_at
+
+    resp = await async_client.patch(
+        f"/sequences/{seq1.id}/label",
+        json={"is_wildfire": SequenceLabel(is_wildfire="other_smoke").is_wildfire},
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+
+    alerts_res = await detection_session.exec(select(Alert).execution_options(populate_existing=True))
+    alerts_rows = alerts_res.all()
+    assert len(alerts_rows) == 2
+    mappings_res = await detection_session.exec(
+        select(AlertSequence.alert_id, AlertSequence.sequence_id).execution_options(populate_existing=True)
+    )
+    mappings = {(aid, sid) for aid, sid in mappings_res.all()}
+
+    row_by_id = {row.id: row for row in alerts_rows}
+    new_alert_row = next(row for aid, row in row_by_id.items() if aid != alert.id)
+    updated_alert_row = row_by_id[alert.id]
+
+    assert (new_alert_row.id, seq1.id) in mappings
+    assert (updated_alert_row.id, seq1.id) not in mappings
+    assert (updated_alert_row.id, seq2.id) in mappings
+
+    assert updated_alert_row.started_at == seq2_start
+    assert updated_alert_row.last_seen_at == seq2_last
+    assert updated_alert_row.lat is None
+    assert updated_alert_row.lon is None
+
+    assert new_alert_row.started_at == seq1_start
+    assert new_alert_row.last_seen_at == seq1_last
+    assert new_alert_row.lat is None
+    assert new_alert_row.lon is None
+
+
+@pytest.mark.asyncio
+async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncClient, detection_session: AsyncSession):
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    now = datetime.utcnow()
+    seq = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        azimuth=45.0,
+        cone_azimuth=40.0,
+        cone_angle=10.0,
+        is_wildfire=None,
+        started_at=now,
+        last_seen_at=now,
+    )
+    detection = Detection(
+        camera_id=camera.id,
+        pose_id=None,
+        sequence_id=None,
+        azimuth=45.0,
+        bucket_key="tmp",
+        bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
+        created_at=now,
+    )
+    detection_session.add(seq)
+    detection_session.add(detection)
+    await detection_session.commit()
+    await detection_session.refresh(seq)
+    await detection_session.refresh(detection)
+
+    alert = Alert(
+        organization_id=camera.organization_id,
+        lat=None,
+        lon=None,
+        started_at=now,
+        last_seen_at=now,
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+    await detection_session.commit()
+
+    # Link detection to sequence
+    detection.sequence_id = seq.id
+    detection_session.add(detection)
+    await detection_session.commit()
+
+    auth = pytest.get_token(pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"])
+    resp = await async_client.delete(f"/sequences/{seq.id}", headers=auth)
+    assert resp.status_code == 200, resp.text
+
+    # Alert and mapping should be gone
+    mappings_res = await detection_session.exec(select(AlertSequence))
+    assert mappings_res.all() == []
+    alerts_res = await detection_session.exec(select(Alert))
+    assert alerts_res.all() == []
+
+    # Detection should have sequence_id cleared
+    det_res = await detection_session.exec(
+        select(Detection).where(Detection.id == detection.id).execution_options(populate_existing=True)
+    )
+    det = det_res.one()
+    assert det.sequence_id is None
