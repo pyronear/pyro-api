@@ -359,7 +359,9 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     detection_session.add(detection)
     await detection_session.commit()
 
-    auth = pytest.get_token(pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"])
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
     resp = await async_client.delete(f"/sequences/{seq.id}", headers=auth)
     assert resp.status_code == 200, resp.text
 
