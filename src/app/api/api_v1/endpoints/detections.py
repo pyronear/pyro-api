@@ -188,7 +188,6 @@ async def create_detection(
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
-    azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
     pose_id: Optional[int] = Form(None, gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -210,20 +209,18 @@ async def create_detection(
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    det = await detections.create(
-        DetectionCreate(
-            camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes
-        )
-    )
+    det = await detections.create(DetectionCreate(camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, bboxes=bboxes))
     # Sequence handling
     # Check if there is a sequence that was seen recently
+    seq_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub)]
+    if pose_id is not None:
+        seq_filters.append(("pose_id", pose_id))
+    else:
+        seq_filters.append(("azimuth", det.azimuth))
+
     sequence = await sequences.fetch_all(
-        filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
-        inequality_pair=(
-            "last_seen_at",
-            ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
-        ),
+        filters=seq_filters,
+        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)),
         order_by="last_seen_at",
         order_desc=True,
         limit=1,
@@ -235,13 +232,15 @@ async def create_detection(
         await detections.update(det.id, DetectionSequence(sequence_id=sequence[0].id))
     else:
         # Check if we've reached the threshold of detections per interval
+        det_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub)]
+        if pose_id is not None:
+            det_filters.append(("pose_id", pose_id))
+        else:
+            det_filters.append(("azimuth", det.azimuth))
+
         dets_ = await detections.fetch_all(
-            filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
-            inequality_pair=(
-                "created_at",
-                ">",
-                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
-            ),
+            filters=det_filters,
+            inequality_pair=("created_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS)),
             order_by="created_at",
             order_desc=False,
             limit=settings.SEQUENCE_MIN_INTERVAL_DETS,
