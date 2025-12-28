@@ -332,9 +332,8 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     )
     detection = Detection(
         camera_id=camera.id,
-        pose_id=None,
+        pose_id=1,
         sequence_id=None,
-        azimuth=45.0,
         bucket_key="tmp",
         bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
         created_at=now,

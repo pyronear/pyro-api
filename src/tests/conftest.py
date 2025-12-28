@@ -150,6 +150,7 @@ DET_TABLE = [
         "sequence_id": 1,
         "bucket_key": "my_file",
         "bboxes": "[(.1,.1,.7,.8,.9)]",
+        "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
     {
@@ -159,6 +160,7 @@ DET_TABLE = [
         "sequence_id": 1,
         "bucket_key": "my_file",
         "bboxes": "[(.1,.1,.7,.8,.9)]",
+        "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
@@ -168,6 +170,7 @@ DET_TABLE = [
         "sequence_id": 1,
         "bucket_key": "my_file",
         "bboxes": "[(.1,.1,.7,.8,.9)]",
+        "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
@@ -177,6 +180,7 @@ DET_TABLE = [
         "sequence_id": 2,
         "bucket_key": "my_file",
         "bboxes": "[(.1,.1,.7,.8,.9)]",
+        "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
