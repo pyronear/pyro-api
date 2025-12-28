@@ -320,7 +320,6 @@ async def create_detection(
         order_desc=True,
         limit=1,
     )
-
     if len(sequence) == 1:
         # Add detection to existing sequence
         await sequences.update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
