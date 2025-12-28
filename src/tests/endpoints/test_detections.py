@@ -22,8 +22,8 @@ from app.services.cones import resolve_cone
         (2, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
         (None, 0, {}, 422, None, None),
         (None, 0, {"pose_id": 3, "bboxes": []}, 422, None, None),
-        (None, 1, {"pose_id": 3, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
-        (None, 1, {"pose_id": 3, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
+        (None, 1, {"pose_id": 1, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
+        (None, 1, {"pose_id": 1, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
         (
             None,
             1,
