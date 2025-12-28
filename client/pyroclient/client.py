@@ -316,10 +316,10 @@ class Client:
         """
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
-        data = {
+        data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),
         }
-        data["pose_id"] = pose_id
+        data["pose_id"] = str(pose_id)
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
