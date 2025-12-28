@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, cast
+from typing import Any, List, cast
 
 import pandas as pd
 from fastapi import (
@@ -29,12 +29,13 @@ from app.api.dependencies import (
     get_detection_crud,
     get_jwt,
     get_organization_crud,
+    get_pose_crud,
     get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -188,7 +189,7 @@ async def create_detection(
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
-    pose_id: Optional[int] = Form(None, gt=0, description="pose id of the detection"),
+    pose_id: int = Form(..., gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -196,6 +197,7 @@ async def create_detection(
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -209,18 +211,23 @@ async def create_detection(
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    det = await detections.create(DetectionCreate(camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, bboxes=bboxes))
+    det = await detections.create(
+        DetectionCreate(camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, bboxes=bboxes)
+    )
+    pose = cast(Pose, await poses.get(pose_id, strict=True))
+    if pose.camera_id != token_payload.sub:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid pose for this camera.")
     # Sequence handling
     # Check if there is a sequence that was seen recently
-    seq_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub)]
-    if pose_id is not None:
-        seq_filters.append(("pose_id", pose_id))
-    else:
-        seq_filters.append(("azimuth", det.azimuth))
+    seq_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub), ("pose_id", pose_id)]
 
     sequence = await sequences.fetch_all(
         filters=seq_filters,
-        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)),
+        inequality_pair=(
+            "last_seen_at",
+            ">",
+            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+        ),
         order_by="last_seen_at",
         order_desc=True,
         limit=1,
@@ -232,15 +239,15 @@ async def create_detection(
         await detections.update(det.id, DetectionSequence(sequence_id=sequence[0].id))
     else:
         # Check if we've reached the threshold of detections per interval
-        det_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub)]
-        if pose_id is not None:
-            det_filters.append(("pose_id", pose_id))
-        else:
-            det_filters.append(("azimuth", det.azimuth))
+        det_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub), ("pose_id", pose_id)]
 
         dets_ = await detections.fetch_all(
             filters=det_filters,
-            inequality_pair=("created_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS)),
+            inequality_pair=(
+                "created_at",
+                ">",
+                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+            ),
             order_by="created_at",
             order_desc=False,
             limit=settings.SEQUENCE_MIN_INTERVAL_DETS,
@@ -248,13 +255,13 @@ async def create_detection(
 
         if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
             camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
-            cone_azimuth, cone_angle = resolve_cone(det.azimuth, dets_[0].bboxes, camera.angle_of_view)
+            cone_azimuth, cone_angle = resolve_cone(pose.azimuth, dets_[0].bboxes, camera.angle_of_view)
             # Create new sequence
             sequence_ = await sequences.create(
                 Sequence(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
-                    azimuth=det.azimuth,
+                    azimuth=pose.azimuth,
                     cone_azimuth=cone_azimuth,
                     cone_angle=cone_angle,
                     started_at=dets_[0].created_at,

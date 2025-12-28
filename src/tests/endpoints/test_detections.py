@@ -278,7 +278,9 @@ async def test_create_detection_creates_sequence(
     assert camera is not None
     pose = await detection_session.get(Pose, payload["pose_id"])
     assert pose is not None
-    expected_cone_azimuth, expected_cone_angle = resolve_cone(pose.azimuth, str(payload["bboxes"]), camera.angle_of_view)
+    expected_cone_azimuth, expected_cone_angle = resolve_cone(
+        pose.azimuth, str(payload["bboxes"]), camera.angle_of_view
+    )
     assert seq_res.cone_azimuth == pytest.approx(expected_cone_azimuth)
     assert seq_res.cone_angle == pytest.approx(expected_cone_angle)
     # Detection references the sequence
