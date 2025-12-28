@@ -81,7 +81,6 @@ class Detection(SQLModel, table=True):
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
     sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
-    azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

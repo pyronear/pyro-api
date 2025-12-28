@@ -11,21 +11,11 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import AnnotationType, Detection
 
-__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
+__all__ = ["DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
 
 
 class DetectionLabel(BaseModel):
     is_wildfire: AnnotationType
-
-
-class Azimuth(BaseModel):
-    azimuth: float = Field(
-        ...,
-        ge=0,
-        lt=360,
-        description="angle between north and direction in degrees",
-        json_schema_extra={"examples": [110]},
-    )
 
 
 # Regex for a float between 0 and 1, with a maximum of 3 decimals
@@ -35,7 +25,7 @@ BOXES_PATTERN = rf"^\[{BOX_PATTERN}(,{BOX_PATTERN})*\]$"
 COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
 
-class DetectionCreate(Azimuth):
+class DetectionCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
     pose_id: Optional[int] = Field(None, gt=0)
     bucket_key: str

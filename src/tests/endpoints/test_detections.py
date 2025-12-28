@@ -9,35 +9,25 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
-from app.models import AlertSequence, Camera, Detection, Sequence
+from app.models import AlertSequence, Camera, Detection, Pose, Sequence
 from app.services.cones import resolve_cone
 
 
 @pytest.mark.parametrize(
     ("user_idx", "cam_idx", "payload", "status_code", "status_detail", "repeat"),
     [
-        (None, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated", None),
-        (0, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (1, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (2, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (None, 0, {"azimuth": "hello"}, 422, None, None),
+        (None, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated", None),
+        (0, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (1, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (2, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
         (None, 0, {}, 422, None, None),
-        (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
-        (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None, None),
+        (None, 0, {"pose_id": 3, "bboxes": []}, 422, None, None),
+        (None, 1, {"pose_id": 3, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
+        (None, 1, {"pose_id": 3, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
         (
             None,
             1,
-            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
-            201,
-            None,
-            0,
-        ),
-        (
-            None,
-            1,
-            {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
             201,
             None,
             0,
@@ -46,7 +36,7 @@ from app.services.cones import resolve_cone
         (
             None,
             1,
-            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
             201,
             None,
             2,
@@ -86,13 +76,11 @@ async def test_create_detection(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert {
-            k: v
-            for k, v in response.json().items()
-            if k not in {"created_at", "updated_at", "id", "bucket_key", "camera_id"}
-        } == payload
-        assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
-        assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
+        data = response.json()
+        assert data["pose_id"] == payload.get("pose_id")
+        assert data["bboxes"] == payload["bboxes"]
+        assert data["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
+        assert data["camera_id"] == pytest.camera_table[cam_idx]["id"]
     if isinstance(repeat, int) and repeat > 0:
         det_ids = [response.json()["id"]]
         for _ in range(repeat):
@@ -272,8 +260,7 @@ async def test_create_detection_creates_sequence(
     mock_img = b"img"
     auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
     payload = {
-        "azimuth": 120.0,
-        "pose_id": None,
+        "pose_id": 1,
         "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
     }
     resp = await async_client.post(
@@ -289,10 +276,10 @@ async def test_create_detection_creates_sequence(
     assert seq_res.cone_angle is not None
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
+    pose = await detection_session.get(Pose, payload["pose_id"])
+    assert pose is not None
     expected_sequence_azimuth, expected_cone_angle = resolve_cone(
-        float(payload["azimuth"] if payload["azimuth"] is not None else 0.0),
-        str(payload["bboxes"]),
-        camera.angle_of_view,
+        pose.azimuth, str(payload["bboxes"]), camera.angle_of_view
     )
     assert seq_res.sequence_azimuth == pytest.approx(expected_sequence_azimuth)
     assert seq_res.cone_angle == pytest.approx(expected_cone_angle)
