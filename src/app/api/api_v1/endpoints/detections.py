@@ -279,10 +279,10 @@ async def create_detection(
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -311,7 +311,11 @@ async def create_detection(
 
     sequence = await sequences.fetch_all(
         filters=seq_filters,
-        inequality_pair=("last_seen_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)),
+        inequality_pair=(
+            "last_seen_at",
+            ">",
+            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+        ),
         order_by="last_seen_at",
         order_desc=True,
         limit=1,
@@ -327,7 +331,11 @@ async def create_detection(
 
         dets_ = await detections.fetch_all(
             filters=det_filters,
-            inequality_pair=("created_at", ">", datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS)),
+            inequality_pair=(
+                "created_at",
+                ">",
+                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+            ),
             order_by="created_at",
             order_desc=False,
             limit=settings.SEQUENCE_MIN_INTERVAL_DETS,
