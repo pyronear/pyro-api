@@ -27,7 +27,7 @@ COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
 class DetectionCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
-    pose_id: Optional[int] = Field(None, gt=0)
+    pose_id: int = Field(..., gt=0)
     bucket_key: str
     bboxes: str = Field(
         ...,
@@ -36,6 +36,7 @@ class DetectionCreate(BaseModel):
         description="string representation of list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
         json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9, 0.5)]"]},
     )
+    others_bboxes: Optional[str] = Field(None)
 
 
 class DetectionUrl(BaseModel):

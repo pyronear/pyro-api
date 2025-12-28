@@ -53,7 +53,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
     new_start = min(seq.started_at for seq in seqs)
     new_last = max(seq.last_seen_at for seq in seqs)
 
-    loc: Union[tuple[float, float], None] = None
+    loc: tuple[float, float] | None = None
     if len(rows) >= 2:
         records = []
         for seq, cam in zip(seqs, cams, strict=False):
