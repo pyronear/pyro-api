@@ -267,6 +267,17 @@ async def create_detection(
     )
 
     camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
+
+    def parse_bbox(bbox_str: str) -> tuple[float, float, float, float, float]:
+        try:
+            parsed = literal_eval(bbox_str)
+            raw = tuple(map(float, parsed[0][:5]))
+            return cast(tuple[float, float, float, float, float], raw)
+        except (ValueError, SyntaxError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unable to parse detection bounding box."
+            )
+
     # Prepare candidate sequence
     candidate_seq = sequence[0] if sequence else None
     candidate_bbox: tuple[float, float, float, float, float] | None = None
@@ -283,16 +294,6 @@ async def create_detection(
                 candidate_bbox = tuple(map(float, parsed_last[0]))  # type: ignore[assignment]
             except (ValueError, SyntaxError):
                 candidate_bbox = None
-
-        def parse_bbox(bbox_str: str) -> tuple[float, float, float, float, float]:
-            try:
-                parsed = literal_eval(bbox_str)
-                raw = tuple(map(float, parsed[0][:5]))
-                return cast(tuple[float, float, float, float, float], raw)
-            except (ValueError, SyntaxError):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unable to parse detection bounding box."
-                )
 
     def overlaps(b1: tuple[float, float, float, float, float], b2: tuple[float, float, float, float, float]) -> bool:
         xmin1, ymin1, xmax1, ymax1, _ = b1
