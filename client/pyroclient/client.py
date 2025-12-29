@@ -180,9 +180,9 @@ class Client:
             timeout=self.timeout,
         )
 
-    def get_current_poses(self, camera_id: int | None = None) -> Response:
-        """Fetch poses, optionally filtered by camera_id."""
-        params: Dict[str, int] | None = {"camera_id": camera_id} if camera_id is not None else None
+    def get_current_poses(self) -> Response:
+        """Fetch poses for the authenticated camera."""
+        params: Dict[str, int] | None = None
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
             headers=self.headers,
