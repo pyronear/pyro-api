@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -176,7 +176,17 @@ class Client:
             timeout=self.timeout,
         )
 
-    def patch_pose(
+    def get_current_poses(self) -> Response:
+        """Fetch poses for the authenticated camera."""
+        params: Dict[str, int] | None = None
+        return requests.get(
+            urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
+            headers=self.headers,
+            params=params,
+            timeout=self.timeout,
+        )
+
+    def update_pose(
         self,
         pose_id: int,
         azimuth: float | None = None,
@@ -184,9 +194,9 @@ class Client:
     ) -> Response:
         """Update a pose
 
-        >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
+        >>> api_client.update_pose(pose_id=1, azimuth=90.0)
         """
-        payload = {}
+        payload: Dict[str, float | int] = {}
         if azimuth is not None:
             payload["azimuth"] = azimuth
         if patrol_id is not None:
@@ -198,6 +208,9 @@ class Client:
             json=payload,
             timeout=self.timeout,
         )
+
+    # Backward compatibility alias
+    patch_pose = update_pose
 
     def delete_pose(self, pose_id: int) -> Response:
         """Delete a pose
@@ -215,34 +228,30 @@ class Client:
     def create_detection(
         self,
         media: bytes,
-        azimuth: float,
         bboxes: List[Tuple[float, float, float, float, float]],
-        pose_id: Optional[int] = None,
+        pose_id: int,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
-        >>> response = api_client.create_detection(data, azimuth=124.2, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)
+        >>> response = api_client.create_detection(data, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)
 
         Args:
             media: byte data of the picture
-            azimuth: the azimuth of the camera when the picture was taken
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
-            pose_id: optional, pose_id of the detection
+            pose_id: pose_id of the detection
 
         Returns:
             HTTP response
         """
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
-        data = {
-            "azimuth": azimuth,
+        data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),
         }
-        if pose_id is not None:
-            data["pose_id"] = pose_id
+        data["pose_id"] = str(pose_id)
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
