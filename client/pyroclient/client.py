@@ -180,7 +180,17 @@ class Client:
             timeout=self.timeout,
         )
 
-    def patch_pose(
+    def get_current_poses(self, camera_id: int | None = None) -> Response:
+        """Fetch poses, optionally filtered by camera_id."""
+        params: Dict[str, int] | None = {"camera_id": camera_id} if camera_id is not None else None
+        return requests.get(
+            urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
+            headers=self.headers,
+            params=params,
+            timeout=self.timeout,
+        )
+
+    def update_pose(
         self,
         pose_id: int,
         azimuth: float | None = None,
@@ -188,9 +198,9 @@ class Client:
     ) -> Response:
         """Update a pose
 
-        >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
+        >>> api_client.update_pose(pose_id=1, azimuth=90.0)
         """
-        payload = {}
+        payload: Dict[str, float | int] = {}
         if azimuth is not None:
             payload["azimuth"] = azimuth
         if patrol_id is not None:
@@ -202,6 +212,9 @@ class Client:
             json=payload,
             timeout=self.timeout,
         )
+
+    # Backward compatibility alias
+    patch_pose = update_pose
 
     def delete_pose(self, pose_id: int) -> Response:
         """Delete a pose
