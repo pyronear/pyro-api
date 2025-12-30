@@ -96,8 +96,8 @@ class Alert(SQLModel, table=True):
     __tablename__ = "alerts"
     id: int = Field(None, primary_key=True)
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
-    lat: Union[float, None] = Field(default=None)
-    lon: Union[float, None] = Field(default=None)
+    lat: Union[float, None] = Field(default=None, gt=-90, lt=90, nullable=True)
+    lon: Union[float, None] = Field(default=None, gt=-180, lt=180, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 
