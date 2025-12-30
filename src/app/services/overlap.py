@@ -124,7 +124,7 @@ def _build_cone_polygon(
     return Polygon([(lon, lat), *outer_points]).buffer(0)
 
 
-def _project_polygon_to_3857(polygon: Polygon) -> Polygon:
+def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
     """
     Project a polygon from EPSG:4326 to EPSG:3857.
 
@@ -168,7 +168,7 @@ def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
         float(r_km),
         float(r_min_km),
     )
-    return _project_polygon_to_3857(poly)
+    return _project_polygon_from_4326_to_3857(poly)
 
 
 def _compute_localized_groups_from_cliques(
