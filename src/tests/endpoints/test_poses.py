@@ -221,3 +221,47 @@ async def test_delete_pose(
 
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "cam_idx", "pose_id", "status_code", "expected_count"),
+    [
+        (None, None, 1, 401, None),
+        (0, None, 1, 200, 2),  # admin
+        (1, None, 1, 200, 2),  # agent
+        (2, None, 1, 200, 2),  # user
+        (None, 0, 1, 200, 2),  # cam
+        (None, 1, 1, 200, 2),  # cam from other org
+    ],
+)
+@pytest.mark.asyncio
+async def test_list_pose_occlusion_masks(
+    async_client: AsyncClient,
+    occlusion_mask_session: AsyncSession,
+    user_idx: Union[int, None],
+    cam_idx: Union[int, None],
+    pose_id: int,
+    status_code: int,
+    expected_count: Union[int, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+    elif isinstance(cam_idx, int):
+        auth = pytest.get_token(
+            pytest.camera_table[cam_idx]["id"],
+            ["camera"],
+            pytest.camera_table[cam_idx]["organization_id"],
+        )
+
+    response = await async_client.get(f"/poses/{pose_id}/occlusion_masks", headers=auth)
+
+    assert response.status_code == status_code, print(response.__dict__)
+
+    if status_code == 200:
+        assert isinstance(response.json(), list)
+        assert len(response.json()) == expected_count

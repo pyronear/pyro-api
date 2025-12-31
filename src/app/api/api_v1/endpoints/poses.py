@@ -2,15 +2,17 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
-from typing import cast
+from typing import List, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
 
-from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
+from app.api.dependencies import get_camera_crud, get_jwt, get_occlusion_mask_crud, get_pose_crud
 from app.crud import CameraCRUD
+from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
-from app.models import Camera, Pose, UserRole
+from app.models import Camera, Pose, Role, UserRole
 from app.schemas.login import TokenPayload
+from app.schemas.occlusion_masks import OcclusionMaskRead
 from app.schemas.poses import PoseCreate, PoseRead, PoseUpdate
 from app.services.telemetry import telemetry_client
 
@@ -83,3 +85,21 @@ async def delete_pose(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="poses-deletion", properties={"pose_id": pose_id})
     await poses.delete(pose_id)
+
+
+@router.get(
+    "/{pose_id}/occlusion_masks",
+    status_code=status.HTTP_200_OK,
+    summary="List occlusion masks for a pose",
+)
+async def list_pose_masks(
+    pose_id: int = Path(..., gt=0),
+    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
+    token_payload: TokenPayload = Security(
+        get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA]
+    ),
+) -> List[OcclusionMaskRead]:
+    telemetry_client.capture(token_payload.sub, event="occlusion_masks-list", properties={"pose_id": pose_id})
+
+    rows = await masks.get_by_pose(pose_id)
+    return [OcclusionMaskRead(**row.model_dump()) for row in rows]
