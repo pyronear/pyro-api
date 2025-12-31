@@ -47,17 +47,14 @@ def main(args):
 
     # Create an organization
     org_name = "my_org"
-    org_id = api_request(
-        "post", f"{args.endpoint}/organizations/", superuser_auth, {"name": org_name})["id"]
+    org_id = api_request("post", f"{args.endpoint}/organizations/", superuser_auth, {"name": org_name})["id"]
 
     agent_login = "my_user"
     agent_pwd = "my_pwd"  # noqa S105
 
     # create a user
-    payload = {"organization_id": org_id, "login": agent_login,
-               "password": agent_pwd, "role": "agent"}
-    user_id = api_request(
-        "post", f"{args.endpoint}/users/", superuser_auth, payload)["id"]
+    payload = {"organization_id": org_id, "login": agent_login, "password": agent_pwd, "role": "agent"}
+    user_id = api_request("post", f"{args.endpoint}/users/", superuser_auth, payload)["id"]
     agent_auth = {
         "Authorization": f"Bearer {get_token(args.endpoint, agent_login, agent_pwd)}",
         "Content-Type": "application/json",
@@ -69,8 +66,7 @@ def main(args):
     api_request("get", f"{args.endpoint}/users", superuser_auth)
     # Modify access
     new_pwd = "my_new_pwd"  # noqa S105
-    api_request("patch", f"{args.endpoint}/users/{user_id}/",
-                superuser_auth, {"password": new_pwd})
+    api_request("patch", f"{args.endpoint}/users/{user_id}/", superuser_auth, {"password": new_pwd})
 
     # Create a camera
     camera_name = "my_device"
@@ -83,8 +79,7 @@ def main(args):
         "lon": 4.5,
         "azimuth": 110,
     }
-    cam_id = api_request(
-        "post", f"{args.endpoint}/cameras/", agent_auth, payload)["id"]
+    cam_id = api_request("post", f"{args.endpoint}/cameras/", agent_auth, payload)["id"]
 
     cam_token = requests.post(
         f"{args.endpoint}/cameras/{cam_id}/token",
@@ -99,12 +94,10 @@ def main(args):
         "camera_id": cam_id,
         "azimuth": 45,
     }
-    pose_id = api_request(
-        "post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
+    pose_id = api_request("post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
 
     # Take a picture
-    file_bytes = requests.get(
-        "https://pyronear.org/img/logo.png", timeout=5).content
+    file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Update cam last image
     response = requests.patch(
         f"{args.endpoint}/cameras/image",
@@ -115,19 +108,16 @@ def main(args):
     assert response.status_code == 200, response.text
     assert response.json()["last_image"] is not None
     # Check that URL is displayed when we fetch all cameras
-    response = requests.get(f"{args.endpoint}/cameras",
-                            headers=agent_auth, timeout=5)
+    response = requests.get(f"{args.endpoint}/cameras", headers=agent_auth, timeout=5)
     assert response.status_code == 200, response.text
     assert response.json()[0]["last_image_url"] is not None
 
-    file_bytes = requests.get(
-        "https://pyronear.org/img/logo.png", timeout=5).content
+    file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
     # Create a detection
     response = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6,
-              "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     )
@@ -137,23 +127,20 @@ def main(args):
 
     # Fetch detections & their URLs
     api_request("get", f"{args.endpoint}/detections", agent_auth)
-    api_request(
-        "get", f"{args.endpoint}/detections/{detection_id}/url", agent_auth)
+    api_request("get", f"{args.endpoint}/detections/{detection_id}/url", agent_auth)
 
     # Create a sequence by adding two additional detections
     det_id_2 = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6,
-              "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
     det_id_3 = requests.post(
         f"{args.endpoint}/detections",
         headers=cam_auth,
-        data={"azimuth": 45.6,
-              "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
+        data={"azimuth": 45.6, "bboxes": "[(0.1,0.1,0.8,0.8,0.5)]", "pose_id": pose_id},
         files={"file": ("logo.png", file_bytes, "image/png")},
         timeout=5,
     ).json()["id"]
@@ -164,51 +151,39 @@ def main(args):
     assert sequence["last_seen_at"] > sequence["started_at"]
     assert sequence["azimuth"] == response.json()["azimuth"]
     # Fetch the latest sequence
-    assert len(api_request(
-        "get", f"{args.endpoint}/sequences/unlabeled/latest", agent_auth)) == 1
+    assert len(api_request("get", f"{args.endpoint}/sequences/unlabeled/latest", agent_auth)) == 1
     # Fetch from date
-    assert len(api_request(
-        "get", f"{args.endpoint}/sequences/all/fromdate?from_date=2019-09-10", agent_auth)) == 0
+    assert len(api_request("get", f"{args.endpoint}/sequences/all/fromdate?from_date=2019-09-10", agent_auth)) == 0
     assert (
-        len(api_request(
-            "get", f"{args.endpoint}/sequences/all/fromdate?from_date={today.isoformat()}", agent_auth))
+        len(api_request("get", f"{args.endpoint}/sequences/all/fromdate?from_date={today.isoformat()}", agent_auth))
         == 1
     )
     # Label the sequence
     api_request(
-        "patch", f"{args.endpoint}/sequences/{sequence['id']}/label", agent_auth, {
-            "is_wildfire": "wildfire_smoke"}
+        "patch", f"{args.endpoint}/sequences/{sequence['id']}/label", agent_auth, {"is_wildfire": "wildfire_smoke"}
     )
     # Check the sequence's detections
-    dets = api_request(
-        "get", f"{args.endpoint}/sequences/{sequence['id']}/detections", agent_auth)
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections", agent_auth)
     assert len(dets) == 3
     assert dets[0]["id"] == det_id_3
     assert dets[1]["id"] == det_id_2
     assert dets[2]["id"] == detection_id
-    dets = api_request(
-        "get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1", agent_auth)
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1", agent_auth)
     assert len(dets) == 1
     assert dets[0]["id"] == det_id_3
-    dets = api_request(
-        "get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1&desc=false", agent_auth)
+    dets = api_request("get", f"{args.endpoint}/sequences/{sequence['id']}/detections?limit=1&desc=false", agent_auth)
     assert len(dets) == 1
     assert dets[0]["id"] == detection_id
 
     # Cleaning (order is important because of foreign key protection in existing tables)
-    api_request(
-        "delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
-    api_request(
-        "delete", f"{args.endpoint}/detections/{det_id_2}/", superuser_auth)
-    api_request(
-        "delete", f"{args.endpoint}/detections/{det_id_3}/", superuser_auth)
-    api_request(
-        "delete", f"{args.endpoint}/sequences/{sequence['id']}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/detections/{detection_id}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/detections/{det_id_2}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/detections/{det_id_3}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/sequences/{sequence['id']}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/poses/{pose_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/cameras/{cam_id}/", superuser_auth)
     api_request("delete", f"{args.endpoint}/users/{user_id}/", superuser_auth)
-    api_request(
-        "delete", f"{args.endpoint}/organizations/{org_id}/", superuser_auth)
+    api_request("delete", f"{args.endpoint}/organizations/{org_id}/", superuser_auth)
     print(f"SUCCESS in {time.time() - start_ts:.3}s")
 
     return
@@ -219,8 +194,7 @@ def parse_args():
         description="Pyronear API End-to-End test", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("--endpoint", type=str,
-                        default="http://localhost:5050/api/v1", help="the API endpoint")
+    parser.add_argument("--endpoint", type=str, default="http://localhost:5050/api/v1", help="the API endpoint")
 
     return parser.parse_args()
 
