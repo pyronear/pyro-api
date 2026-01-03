@@ -88,13 +88,13 @@ async def _attach_sequence_to_alert(
     records = []
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
-        if cam is None or seq.cone_azimuth is None or seq.cone_angle is None:
+        if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
             continue
         records.append({
             "id": int(seq.id),
             "lat": float(cam.lat),
             "lon": float(cam.lon),
-            "cone_azimuth": float(seq.cone_azimuth),
+            "sequence_azimuth": float(seq.sequence_azimuth),
             "cone_angle": float(seq.cone_angle),
             "is_wildfire": seq.is_wildfire,
             "started_at": seq.started_at,
@@ -256,7 +256,7 @@ async def create_detection(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
                     azimuth=det.azimuth,
-                    cone_azimuth=cone_azimuth,
+                    sequence_azimuth=cone_azimuth,
                     cone_angle=cone_angle,
                     started_at=dets_[0].created_at,
                     last_seen_at=det.created_at,

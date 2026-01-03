@@ -60,7 +60,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
                 "id": seq.id,
                 "lat": cam.lat,
                 "lon": cam.lon,
-                "cone_azimuth": seq.cone_azimuth,
+                "sequence_azimuth": seq.sequence_azimuth,
                 "cone_angle": seq.cone_angle,
                 "is_wildfire": seq.is_wildfire,
                 "started_at": seq.started_at,

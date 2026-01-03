@@ -149,7 +149,7 @@ def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
     Parameters
     ----------
     row : pd.Series
-        Row with fields: lat, lon, cone_azimuth, cone_angle.
+        Row with fields: lat, lon, sequence_azimuth, cone_angle.
     r_km : float
         Outer radius of the camera detection cone in kilometers.
     r_min_km : float
@@ -163,7 +163,7 @@ def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
     poly = _build_cone_polygon(
         float(row["lat"]),
         float(row["lon"]),
-        float(row["cone_azimuth"]),
+        float(row["sequence_azimuth"]),
         float(row["cone_angle"]),
         float(r_km),
         float(r_min_km),
@@ -277,7 +277,7 @@ def compute_overlap(
     Parameters
     ----------
     api_sequences : pd.DataFrame
-        Input with fields: id, lat, lon, cone_azimuth, cone_angle, is_wildfire,
+        Input with fields: id, lat, lon, sequence_azimuth, cone_angle, is_wildfire,
         started_at, last_seen_at.
     r_km : float
         Outer radius of the camera detection cone in kilometers.

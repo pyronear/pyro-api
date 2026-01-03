@@ -182,7 +182,7 @@ async def test_fetch_sequences_from_date(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() == expected_result
-        assert all(isinstance(elt["cone_azimuth"], float) for elt in response.json())
+        assert all(isinstance(elt["sequence_azimuth"], float) for elt in response.json())
         assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
 
 
@@ -219,7 +219,7 @@ async def test_latest_sequences(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() == expected_result
-        assert all(isinstance(elt["cone_azimuth"], float) for elt in response.json())
+        assert all(isinstance(elt["sequence_azimuth"], float) for elt in response.json())
         assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
 
 
@@ -233,7 +233,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
         camera_id=camera.id,
         pose_id=None,
         azimuth=180.0,
-        cone_azimuth=170.0,
+        sequence_azimuth=170.0,
         cone_angle=5.0,
         is_wildfire=None,
         started_at=now - timedelta(seconds=30),
@@ -243,7 +243,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
         camera_id=camera.id,
         pose_id=None,
         azimuth=182.0,
-        cone_azimuth=172.0,
+        sequence_azimuth=172.0,
         cone_angle=5.0,
         is_wildfire=None,
         started_at=now - timedelta(seconds=25),
@@ -320,7 +320,7 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
         camera_id=camera.id,
         pose_id=None,
         azimuth=45.0,
-        cone_azimuth=40.0,
+        sequence_azimuth=40.0,
         cone_angle=10.0,
         is_wildfire=None,
         started_at=now,

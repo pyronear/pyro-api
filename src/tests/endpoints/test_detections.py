@@ -285,16 +285,16 @@ async def test_create_detection_creates_sequence(
 
     seq_res = await detection_session.get(Sequence, data["sequence_id"])
     assert seq_res is not None
-    assert seq_res.cone_azimuth is not None
+    assert seq_res.sequence_azimuth is not None
     assert seq_res.cone_angle is not None
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
-    expected_cone_azimuth, expected_cone_angle = resolve_cone(
+    expected_sequence_azimuth, expected_cone_angle = resolve_cone(
         float(payload["azimuth"] if payload["azimuth"] is not None else 0.0),
         str(payload["bboxes"]),
         camera.angle_of_view,
     )
-    assert seq_res.cone_azimuth == pytest.approx(expected_cone_azimuth)
+    assert seq_res.sequence_azimuth == pytest.approx(expected_sequence_azimuth)
     assert seq_res.cone_angle == pytest.approx(expected_cone_angle)
     # Detection references the sequence
     det_res = await detection_session.get(Detection, data["id"])
@@ -330,7 +330,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         camera_id=cam1.id,
         pose_id=None,
         azimuth=0.0,
-        cone_azimuth=0.0,
+        sequence_azimuth=0.0,
         cone_angle=90.0,
         is_wildfire=None,
         started_at=now - timedelta(seconds=30),
@@ -340,7 +340,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         camera_id=cam2.id,
         pose_id=None,
         azimuth=5.0,
-        cone_azimuth=5.0,
+        sequence_azimuth=5.0,
         cone_angle=90.0,
         is_wildfire=None,
         started_at=now - timedelta(seconds=25),
