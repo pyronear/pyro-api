@@ -329,7 +329,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     seq1 = Sequence(
         camera_id=cam1.id,
         pose_id=None,
-        azimuth=0.0,
+        camera_azimuth=0.0,
         sequence_azimuth=0.0,
         cone_angle=90.0,
         is_wildfire=None,
@@ -339,7 +339,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     seq2 = Sequence(
         camera_id=cam2.id,
         pose_id=None,
-        azimuth=5.0,
+        camera_azimuth=5.0,
         sequence_azimuth=5.0,
         cone_angle=90.0,
         is_wildfire=None,

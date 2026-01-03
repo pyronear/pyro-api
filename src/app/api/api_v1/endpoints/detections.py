@@ -218,7 +218,7 @@ async def create_detection(
     # Sequence handling
     # Check if there is a sequence that was seen recently
     sequence = await sequences.fetch_all(
-        filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
+        filters=[("camera_id", token_payload.sub), ("camera_azimuth", det.azimuth)],
         inequality_pair=(
             "last_seen_at",
             ">",
@@ -255,7 +255,7 @@ async def create_detection(
                 Sequence(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
-                    azimuth=det.azimuth,
+                    camera_azimuth=det.azimuth,
                     sequence_azimuth=cone_azimuth,
                     cone_angle=cone_angle,
                     started_at=dets_[0].created_at,

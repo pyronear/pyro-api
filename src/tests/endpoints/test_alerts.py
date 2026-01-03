@@ -24,7 +24,7 @@ async def _create_alert_with_sequences(
         {
             "camera_id": camera_id,
             "pose_id": None,
-            "azimuth": 180.0,
+            "camera_azimuth": 180.0,
             "is_wildfire": None,
             "sequence_azimuth": 163.4,
             "cone_angle": 1.0,
@@ -32,7 +32,7 @@ async def _create_alert_with_sequences(
         {
             "camera_id": camera_id,
             "pose_id": None,
-            "azimuth": 25.0,
+            "camera_azimuth": 25.0,
             "is_wildfire": None,
             "sequence_azimuth": 8.3,
             "cone_angle": 0.8,
@@ -40,7 +40,7 @@ async def _create_alert_with_sequences(
         {
             "camera_id": camera_id,
             "pose_id": None,
-            "azimuth": 276.0,
+            "camera_azimuth": 276.0,
             "is_wildfire": None,
             "sequence_azimuth": 276.5,
             "cone_angle": 3.0,
@@ -147,16 +147,16 @@ async def test_alert_recompute_after_sequence_relabel(async_client: AsyncClient,
     now = datetime.utcnow()
     camera_id = 1
     seq_specs = [
-        {"azimuth": 0.0, "sequence_azimuth": 0.0, "cone_angle": 20.0, "offset": 2},
-        {"azimuth": 5.0, "sequence_azimuth": 5.0, "cone_angle": 20.0, "offset": 1},
-        {"azimuth": 350.0, "sequence_azimuth": 350.0, "cone_angle": 20.0, "offset": 0},
+        {"camera_azimuth": 0.0, "sequence_azimuth": 0.0, "cone_angle": 20.0, "offset": 2},
+        {"camera_azimuth": 5.0, "sequence_azimuth": 5.0, "cone_angle": 20.0, "offset": 1},
+        {"camera_azimuth": 350.0, "sequence_azimuth": 350.0, "cone_angle": 20.0, "offset": 0},
     ]
     seqs: List[Sequence] = []
     for spec in seq_specs:
         seq = Sequence(
             camera_id=camera_id,
             pose_id=None,
-            azimuth=spec["azimuth"],
+            camera_azimuth=spec["camera_azimuth"],
             is_wildfire=None,
             sequence_azimuth=spec["sequence_azimuth"],
             cone_angle=spec["cone_angle"],

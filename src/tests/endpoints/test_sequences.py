@@ -232,7 +232,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
     seq1 = Sequence(
         camera_id=camera.id,
         pose_id=None,
-        azimuth=180.0,
+        camera_azimuth=180.0,
         sequence_azimuth=170.0,
         cone_angle=5.0,
         is_wildfire=None,
@@ -242,7 +242,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
     seq2 = Sequence(
         camera_id=camera.id,
         pose_id=None,
-        azimuth=182.0,
+        camera_azimuth=182.0,
         sequence_azimuth=172.0,
         cone_angle=5.0,
         is_wildfire=None,
@@ -319,7 +319,7 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     seq = Sequence(
         camera_id=camera.id,
         pose_id=None,
-        azimuth=45.0,
+        camera_azimuth=45.0,
         sequence_azimuth=40.0,
         cone_angle=10.0,
         is_wildfire=None,
