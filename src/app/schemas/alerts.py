@@ -8,23 +8,25 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-__all__ = ["AlertCreate", "AlertRead", "AlertUpdate"]
+__all__ = ["AlertBase", "AlertCreate", "AlertRead", "AlertUpdate"]
 
 
-class AlertCreate(BaseModel):
-    organization_id: int = Field(..., gt=0)
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    started_at: datetime
-    last_seen_at: datetime
-
-
-class AlertUpdate(BaseModel):
+class AlertBase(BaseModel):
     organization_id: Optional[int] = Field(None, gt=0)
     lat: Optional[float] = None
     lon: Optional[float] = None
     started_at: Optional[datetime] = None
     last_seen_at: Optional[datetime] = None
+
+
+class AlertCreate(AlertBase):
+    organization_id: int = Field(..., gt=0)
+    started_at: datetime
+    last_seen_at: datetime
+
+
+class AlertUpdate(AlertBase):
+    pass
 
 
 class AlertRead(AlertCreate):
