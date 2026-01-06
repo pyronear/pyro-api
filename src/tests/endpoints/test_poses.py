@@ -229,9 +229,9 @@ async def test_delete_pose(
         (None, None, 1, 401, None),
         (0, None, 1, 200, 2),  # admin
         (1, None, 1, 200, 2),  # agent
-        (2, None, 1, 200, 2),  # user
+        (2, None, 1, 403, 2),  # user from other org
         (None, 0, 1, 200, 2),  # cam
-        (None, 1, 1, 200, 2),  # cam from other org
+        (None, 1, 1, 403, 2),  # cam from other org
     ],
 )
 @pytest.mark.asyncio

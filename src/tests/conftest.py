@@ -119,25 +119,25 @@ OCCLUSION_MASK_TABLE = [
     {
         "id": 1,
         "pose_id": 1,
-        "mask": "(0.1,0.1,0.9,0.9,0.5)",
+        "mask": "(0.1,0.1,0.9,0.9)",
         "created_at": datetime.strptime("2025-01-01T00:00:00.000000", dt_format),
     },
     {
         "id": 2,
         "pose_id": 1,
-        "mask": "(0.1,0.1,0.9,0.9,1)",
+        "mask": "(0.1,0.1,0.9,0.9)",
         "created_at": datetime.strptime("2025-01-02T00:00:00.000000", dt_format),
     },
     {
         "id": 3,
         "pose_id": 2,
-        "mask": "(1,0.1,0.9,0.9,0.5)",
+        "mask": "(1,0.1,0.9,0.9)",
         "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
     },
     {
         "id": 4,
         "pose_id": 3,
-        "mask": "(1,0.1,0.1,0.9,1)",
+        "mask": "(1,0.1,0.1,0.9)",
         "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
     },
 ]
