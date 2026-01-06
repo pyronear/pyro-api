@@ -74,6 +74,37 @@ async def create_mask(
     return OcclusionMaskRead(**db_obj.model_dump())
 
 
+@router.get(
+    "/{mask_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get info about an occlusion mask",
+)
+async def get_mask(
+    mask_id: int = Path(..., gt=0),
+    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(
+        get_jwt,
+        scopes=[UserRole.ADMIN, UserRole.AGENT],
+    ),
+) -> OcclusionMaskRead:
+    mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
+    pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
+    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+
+    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+    telemetry_client.capture(
+        token_payload.sub,
+        event="occlusion_masks-get",
+        properties={"mask_id": mask_id},
+    )
+
+    return OcclusionMaskRead(**mask.model_dump())
+
+
 @router.patch(
     "/{mask_id}",
     status_code=status.HTTP_200_OK,
