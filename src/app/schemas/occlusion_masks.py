@@ -16,8 +16,8 @@ class OcclusionMaskCreate(BaseModel):
         ...,
         min_length=2,
         max_length=255,
-        description="string representation of tuple where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
-        json_schema_extra={"examples": ["(0.1,0.1,0.9,0.9,0.5)"]},
+        description="string representation of tuple where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax",
+        json_schema_extra={"examples": ["(0.1,0.1,0.9,0.9)"]},
     )
 
 
@@ -26,8 +26,8 @@ class OcclusionMaskUpdate(BaseModel):
         ...,
         min_length=2,
         max_length=255,
-        description="string representation of tuple where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
-        json_schema_extra={"examples": ["(0.1,0.1,0.9,0.9,0.5)"]},
+        description="string representation of tuple where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax",
+        json_schema_extra={"examples": ["(0.1,0.1,0.9,0.9)"]},
     )
 
 

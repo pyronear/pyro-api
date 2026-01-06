@@ -28,7 +28,7 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 FLOAT_PATTERN = r"(0?\.[0-9]{1,3}|0|1)"
-MASK_PATTERN = rf"^\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)$"
+MASK_PATTERN = rf"^\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)$"
 mask_regex = re.compile(MASK_PATTERN)
 
 
@@ -36,7 +36,7 @@ def validate_mask(mask: str) -> None:
     if not mask_regex.match(mask):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=("Invalid mask format. Expected: (xmin, ymin, xmax, ymax, conf) with float values in [0,1]."),
+            detail=("Invalid mask format. Expected: (xmin, ymin, xmax, ymax) with float values in [0,1]."),
         )
 
 
