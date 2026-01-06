@@ -56,6 +56,12 @@ def test_agent_workflow(test_cam_workflow, agent_token):
     assert len(response) == 1
     response = agent_client.label_sequence(response[0]["id"], "wildfire_smoke")
     assert response.status_code == 200, response.__dict__
+    response = agent_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")  # occlusion mask creation
+    assert response.status_code == 201, response.__dict__
+    print("reponseeee creation du mask")
+    print(response.json())
+    response = agent_client.delete_occlusion_mask(mask_id=response.json()["id"])  # occlusion mask deletion
+    assert response.status_code == 200, response.__dict__
 
 
 def test_user_workflow(test_cam_workflow, user_token):

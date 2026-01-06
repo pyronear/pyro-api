@@ -25,6 +25,10 @@ class ClientRoute(str, Enum):
     # POSES
     POSES_CREATE = "poses/"
     POSES_BY_ID = "poses/{pose_id}"
+    POSES_MASKS_BY_ID = "poses/{pose_id}/occlusion_masks"
+    # OCCLUSION MASKS
+    OCCLUSION_MASKS_CREATE = "occlusion_masks"
+    OCCLUSION_MASKS_BY_ID = "occlusion_masks/{mask_id}"
     # DETECTIONS
     DETECTIONS_CREATE = "detections/"
     DETECTIONS_FETCH = "detections"
@@ -206,6 +210,83 @@ class Client:
         """
         return requests.delete(
             urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def list_pose_masks(self, pose_id: int) -> Response:
+        """List occlusion masks for a pose (given its pose_id)
+
+        >>> api_client.list_pose_masks(pose_id=1)
+        """
+        return requests.get(
+            urljoin(self._route_prefix, ClientRoute.POSES_MASKS_BY_ID.format(pose_id=pose_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    # OCCLUSION MASKS
+
+    def create_occlusion_mask(
+        self,
+        pose_id: int,
+        mask: str,
+    ) -> Response:
+        """Create a create occlusion_mask for a pose
+
+        >>> api_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")
+        """
+        payload = {
+            "pose_id": pose_id,
+            "mask": mask,
+        }
+
+        return requests.post(
+            urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_CREATE),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def patch_occlusion_mask(
+        self,
+        mask_id: int,
+        mask: str,
+    ) -> Response:
+        """Update an occlusion mask
+
+        >>> api_client.patch_occlusion_mask(mask_id=1, mask="(0.1,0.2,0.9,0.3)")
+        """
+        payload = {"mask": mask}
+
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_BY_ID.format(mask_id=mask_id)),
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+    def get_occlusion_mask(
+        self,
+        mask_id: int,
+    ) -> Response:
+        """get mask from occlusion mask
+
+        >>> api_client.get_occlusion_mask(mask_id=1")
+        """
+        return requests.get(
+            urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_BY_ID.format(mask_id=mask_id)),
+            headers=self.headers,
+            timeout=self.timeout,
+        )
+
+    def delete_occlusion_mask(self, mask_id: int) -> Response:
+        """Delete an occlusion mask
+
+        >>> api_client.delete_occlusion_mask(mask_id=1)
+        """
+        return requests.delete(
+            urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_BY_ID.format(mask_id=mask_id)),
             headers=self.headers,
             timeout=self.timeout,
         )
