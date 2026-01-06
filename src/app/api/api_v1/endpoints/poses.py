@@ -95,11 +95,18 @@ async def delete_pose(
 async def list_pose_masks(
     pose_id: int = Path(..., gt=0),
     masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(
         get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA]
     ),
 ) -> List[OcclusionMaskRead]:
     telemetry_client.capture(token_payload.sub, event="occlusion_masks-list", properties={"pose_id": pose_id})
+    pose = cast(Pose, await poses.get(pose_id, strict=True))
+    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+
+    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     rows = await masks.get_by_pose(pose_id)
     return [OcclusionMaskRead(**row.model_dump()) for row in rows]
