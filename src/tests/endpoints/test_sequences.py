@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Union
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest  # type: ignore
+from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Alert, AlertSequence, Camera, Detection, Sequence
+from app.api.api_v1.endpoints.sequences import label_sequence
+from app.models import Alert, AlertSequence, Camera, Detection, Sequence, AnnotationType, UserRole
+from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
 
 
@@ -377,3 +381,149 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     )
     det = det_res.one()
     assert det.sequence_id is None
+
+
+#
+# NEW UNIT TESTS FOR label_sequence
+#
+
+
+@pytest.mark.asyncio
+@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
+    mock_refresh_alert_state: AsyncMock,
+):
+    """Verify that labeling a sequence as non-wildfire smoke removes it from an existing alert,
+    refreshes that alert, and creates a new alert for the sequence."""
+
+    # 1. Mocks Setup
+    mock_sequence = Sequence(
+        id=1,
+        camera_id=1,
+        is_wildfire=None,
+        started_at=datetime.utcnow(),
+        last_seen_at=datetime.utcnow(),
+    )
+    mock_camera = Camera(id=1, organization_id=1)
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+    # The function returns the result of the update call, so we make sure the mock returns the updated object
+    mock_sequences_crud.update.return_value = Sequence(
+        id=1,
+        camera_id=1,
+        is_wildfire=AnnotationType.OTHER_SMOKE,
+        started_at=mock_sequence.started_at,
+        last_seen_at=mock_sequence.last_seen_at,
+    )
+
+    mock_cameras_crud = AsyncMock()
+    mock_cameras_crud.get.return_value = mock_camera
+
+    mock_alerts_crud = AsyncMock()
+    mock_alerts_crud.create.return_value = MagicMock(id=99)  # New alert created
+
+    # Mock for session.exec to return an alert_id
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()  # .add is synchronous
+    mock_exec_result = MagicMock()
+    mock_exec_result.all.return_value = [101]  # Belongs to alert 101
+    mock_session.exec.return_value = mock_exec_result
+
+    mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.AGENT], organization_id=1)
+    payload = SequenceLabel(is_wildfire=AnnotationType.OTHER_SMOKE)
+
+    # 2. Call the function
+    updated_sequence = await label_sequence(
+        payload=payload,
+        sequence_id=1,
+        cameras=mock_cameras_crud,
+        sequences=mock_sequences_crud,
+        alerts=mock_alerts_crud,
+        session=mock_session,
+        token_payload=mock_token_payload,
+    )
+
+    # 3. Assertions
+    mock_sequences_crud.get.assert_called_once_with(1, strict=True)
+    mock_sequences_crud.update.assert_called_once_with(1, payload)
+
+    # Verify it was removed from the old alert and the alert was refreshed
+    # Two session.exec calls: one to get alert_ids, one to delete links
+    assert mock_session.exec.call_count == 2
+    mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud)
+
+    # Verify a new alert was created for this sequence
+    mock_alerts_crud.create.assert_called_once()
+    # Verify the new alert link was added
+    mock_session.add.assert_called_once()
+
+    assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
+
+
+@pytest.mark.asyncio
+async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
+    """Verify that labeling a sequence as wildfire smoke does NOT trigger an alert refresh."""
+
+    # 1. Mocks Setup
+    mock_sequence = Sequence(id=1, camera_id=1, is_wildfire=None)
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+    mock_sequences_crud.update.return_value = mock_sequence
+
+    mock_alerts_crud = AsyncMock()  # Should not be called
+    mock_session = AsyncMock()
+
+    mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.ADMIN], organization_id=1)
+    payload = SequenceLabel(is_wildfire=AnnotationType.WILDFIRE_SMOKE)
+
+    # 2. Call the function
+    await label_sequence(
+        payload=payload,
+        sequence_id=1,
+        cameras=AsyncMock(),  # Not used for ADMIN
+        sequences=mock_sequences_crud,
+        alerts=mock_alerts_crud,
+        session=mock_session,
+        token_payload=mock_token_payload,
+    )
+
+    # 3. Assertions
+    mock_sequences_crud.update.assert_called_once_with(1, payload)
+    mock_session.exec.assert_not_called()
+    mock_alerts_crud.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_unit_label_sequence_forbidden_for_wrong_org():
+    """Verify that an AGENT from a different organization cannot label the sequence."""
+
+    # 1. Mocks Setup
+    mock_sequence = Sequence(id=1, camera_id=1)
+    mock_camera = Camera(id=1, organization_id=10)  # Camera belongs to org 10
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+
+    mock_cameras_crud = AsyncMock()
+    mock_cameras_crud.get.return_value = mock_camera
+
+    # User is from org 1
+    mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.AGENT], organization_id=1)
+    payload = SequenceLabel(is_wildfire=AnnotationType.OTHER_SMOKE)
+
+    # 2. Call and assert exception
+    with pytest.raises(HTTPException) as exc_info:
+        await label_sequence(
+            payload=payload,
+            sequence_id=1,
+            cameras=mock_cameras_crud,
+            sequences=mock_sequences_crud,
+            alerts=AsyncMock(),
+            session=AsyncMock(),
+            token_payload=mock_token_payload,
+        )
+
+    assert exc_info.value.status_code == 403
+
