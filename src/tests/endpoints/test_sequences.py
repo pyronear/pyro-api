@@ -383,9 +383,71 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     assert det.sequence_id is None
 
 
-#
-# NEW UNIT TESTS FOR label_sequence
-#
+@pytest.mark.asyncio
+async def test_delete_sequence_refreshes_alert(async_client: AsyncClient, detection_session: AsyncSession):
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    now = datetime.utcnow()
+    seq1 = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        camera_azimuth=180.0,
+        sequence_azimuth=None,
+        cone_angle=None,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=20),
+        last_seen_at=now - timedelta(seconds=10),
+    )
+    seq2 = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        camera_azimuth=182.0,
+        sequence_azimuth=None,
+        cone_angle=None,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=5),
+        last_seen_at=now,
+    )
+    detection_session.add(seq1)
+    detection_session.add(seq2)
+    await detection_session.commit()
+    await detection_session.refresh(seq1)
+    await detection_session.refresh(seq2)
+
+    alert = Alert(
+        organization_id=camera.organization_id,
+        lat=1.0,
+        lon=2.0,
+        started_at=seq1.started_at,
+        last_seen_at=seq2.last_seen_at,
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq1.id))
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq2.id))
+    await detection_session.commit()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.delete(f"/sequences/{seq1.id}", headers=auth)
+    assert resp.status_code == 200, resp.text
+
+    alert_res = await detection_session.exec(
+        select(Alert).where(Alert.id == alert.id).execution_options(populate_existing=True)
+    )
+    alert_row = alert_res.one()
+    assert alert_row.started_at == seq2.started_at
+    assert alert_row.last_seen_at == seq2.last_seen_at
+    assert alert_row.lat is None
+    assert alert_row.lon is None
+
+    mappings_res = await detection_session.exec(
+        select(AlertSequence).where(AlertSequence.alert_id == alert.id).execution_options(populate_existing=True)
+    )
+    mappings = {(mapping.alert_id, mapping.sequence_id) for mapping in mappings_res.all()}
+    assert mappings == {(alert.id, seq2.id)}
 
 
 @pytest.mark.asyncio
