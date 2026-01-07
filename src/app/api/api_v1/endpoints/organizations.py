@@ -72,17 +72,6 @@ async def delete_organization(
     telemetry_client.capture(
         token_payload.sub, event="organizations-deletion", properties={"organization_id": organization_id}
     )
-    # Remove alerts and their associations for this organization to satisfy FK constraints
-    org_session = organizations.session
-    alert_ids_res = await org_session.exec(select(Alert.id).where(Alert.organization_id == organization_id))
-    alert_ids = list(alert_ids_res.all())
-    if alert_ids:
-        delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(alert_ids))
-        delete_alerts: Any = delete(Alert).where(cast(Any, Alert.id).in_(alert_ids))
-        await org_session.exec(delete_links)
-        await org_session.exec(delete_alerts)
-        await org_session.commit()
-
     bucket_name = s3_service.resolve_bucket_name(organization_id)
     if not (await s3_service.delete_bucket(bucket_name)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create bucket")
