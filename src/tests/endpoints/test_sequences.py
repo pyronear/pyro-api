@@ -9,7 +9,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.sequences import label_sequence
-from app.models import Alert, AlertSequence, Camera, Detection, Sequence, AnnotationType, UserRole
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
 
@@ -395,7 +395,6 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 ):
     """Verify that labeling a sequence as non-wildfire smoke removes it from an existing alert,
     refreshes that alert, and creates a new alert for the sequence."""
-
     # 1. Mocks Setup
     mock_sequence = Sequence(
         id=1,
@@ -464,7 +463,6 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 @pytest.mark.asyncio
 async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
     """Verify that labeling a sequence as wildfire smoke does NOT trigger an alert refresh."""
-
     # 1. Mocks Setup
     mock_sequence = Sequence(id=1, camera_id=1, is_wildfire=None)
 
@@ -498,7 +496,6 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
 @pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
-
     # 1. Mocks Setup
     mock_sequence = Sequence(id=1, camera_id=1)
     mock_camera = Camera(id=1, organization_id=10)  # Camera belongs to org 10
@@ -526,4 +523,3 @@ async def test_unit_label_sequence_forbidden_for_wrong_org():
         )
 
     assert exc_info.value.status_code == 403
-
