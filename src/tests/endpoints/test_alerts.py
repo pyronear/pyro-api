@@ -13,7 +13,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.models import Alert, AlertSequence, AnnotationType, Camera, Organization, Sequence
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
 
 
@@ -193,12 +193,21 @@ async def test_triangulation_creates_single_alert(
     for camera in cameras:
         await detection_session.refresh(camera)
 
+    poses: List[Pose] = []
+    for camera, spec in zip(cameras, camera_specs, strict=False):
+        pose = Pose(camera_id=camera.id, azimuth=spec["azimuth"])
+        detection_session.add(pose)
+        poses.append(pose)
+    await detection_session.commit()
+    for pose in poses:
+        await detection_session.refresh(pose)
+
     for _ in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
-        for camera, spec in zip(cameras, camera_specs, strict=False):
+        for camera, spec, pose in zip(cameras, camera_specs, poses, strict=False):
             auth = pytest.get_token(camera.id, ["camera"], organization.id)
             response = await async_client.post(
                 "/detections",
-                data={"azimuth": spec["azimuth"], "bboxes": spec["bboxes"]},
+                data={"pose_id": pose.id, "bboxes": spec["bboxes"]},
                 files={"file": ("logo.png", mock_img, "image/png")},
                 headers=auth,
             )

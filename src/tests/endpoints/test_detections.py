@@ -89,13 +89,8 @@ async def test_create_detection(
         data = response.json()
         assert data["pose_id"] == payload.get("pose_id")
         if isinstance(payload.get("bboxes"), str):
-            boxes = literal_eval(payload["bboxes"])
-            if len(boxes) > 1:
-                assert literal_eval(data["bboxes"])[0] == tuple(boxes[0])
-                assert data["others_bboxes"] is not None
-            else:
-                assert data["bboxes"] == payload["bboxes"]
-                assert data.get("others_bboxes") is None
+            assert data["bboxes"] == payload["bboxes"]
+            assert data.get("others_bboxes") is None
         assert data["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert data["camera_id"] == pytest.camera_table[cam_idx]["id"]
     created_ids: List[int] = []
@@ -125,28 +120,30 @@ async def test_create_detection(
             assert response.json()["sequence_id"] == sequence_id
         created_ids.extend(det_ids)
 
-    # Multi-bbox input should create multiple detections
+    # Multi-bbox input should be stored as-is in a single detection
     if response.status_code == 201 and isinstance(payload.get("bboxes"), str) and repeat in (0, None):
         boxes = literal_eval(payload["bboxes"])
         if len(boxes) <= 1:
             return
         bucket_key = response.json()["bucket_key"]
         latest_res = await detection_session.exec(
-            select(Detection).where(Detection.bucket_key == bucket_key).order_by(Detection.id.desc()).limit(len(boxes))  # type: ignore[attr-defined]
+            select(Detection).where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
         )
         dets = latest_res.all()
-        assert len(dets) == len(boxes)
-        assert all(det.bucket_key == bucket_key for det in dets)
-        assert all(det.pose_id == payload["pose_id"] for det in dets)
-        assert any(det.others_bboxes is not None for det in dets)
+        assert len(dets) == 1
+        assert dets[0].pose_id == payload["pose_id"]
+        assert dets[0].bboxes == payload["bboxes"]
+        assert dets[0].others_bboxes is None
 
 
 @pytest.mark.asyncio
-async def test_create_detection_creates_new_sequence_on_bbox_split(
+async def test_create_detection_requires_threshold_for_sequence(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     mock_img: bytes,
+    monkeypatch,
 ):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 3)
     auth = pytest.get_token(
         pytest.camera_table[0]["id"],
         ["camera"],
@@ -158,17 +155,14 @@ async def test_create_detection_creates_new_sequence_on_bbox_split(
         "/detections", data=payload1, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert resp1.status_code == 201, resp1.text
-    seq_id_1 = resp1.json()["sequence_id"]
-    assert isinstance(seq_id_1, int)
+    assert resp1.json()["sequence_id"] is None
 
     payload2 = {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.9)]"}
     resp2 = await async_client.post(
         "/detections", data=payload2, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert resp2.status_code == 201, resp2.text
-    seq_id_2 = resp2.json()["sequence_id"]
-    assert isinstance(seq_id_2, int)
-    assert seq_id_2 != seq_id_1
+    assert resp2.json()["sequence_id"] is None
 
 
 @pytest.mark.parametrize(
