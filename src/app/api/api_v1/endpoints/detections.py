@@ -21,6 +21,7 @@ from fastapi import (
     status,
 )
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
     dispatch_webhook,
@@ -126,7 +127,7 @@ def _resolve_groups_and_locations(
     return groups, group_locations
 
 
-async def _fetch_alert_mapping(session: Any, seq_ids: List[int]) -> Dict[int, Set[int]]:
+async def _fetch_alert_mapping(session: AsyncSession, seq_ids: List[int]) -> Dict[int, Set[int]]:
     mapping: Dict[int, Set[int]] = {}
     if not seq_ids:
         return mapping
