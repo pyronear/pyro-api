@@ -261,6 +261,104 @@ def _compute_localized_groups_from_cliques(
     return keep
 
 
+def _prepare_sequences_df(api_sequences: pd.DataFrame) -> pd.DataFrame:
+    df = api_sequences.copy()
+    df["id"] = df["id"].astype(int)
+    df["started_at"] = pd.to_datetime(df["started_at"])
+    df["last_seen_at"] = pd.to_datetime(df["last_seen_at"])
+    return df
+
+
+def _filter_valid_sequences(df: pd.DataFrame) -> pd.DataFrame:
+    # Keep positives and unknowns
+    return df[df["is_wildfire"].isin([None, "wildfire_smoke"])]
+
+
+def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float) -> Dict[int, Polygon]:
+    projected_cones: Dict[int, Polygon] = {}
+    for _, row in df_valid.iterrows():
+        sid = int(row["id"])
+        try:
+            projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
+    return projected_cones
+
+
+def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, Polygon]) -> List[Tuple[int, int]]:
+    ids = df_valid["id"].astype(int).tolist()
+    rows_by_id: Dict[int, Dict[str, pd.Timestamp]] = df_valid.set_index("id")[["started_at", "last_seen_at"]].to_dict(
+        "index"
+    )
+    overlapping_pairs: List[Tuple[int, int]] = []
+    for i, id1 in enumerate(ids):
+        row1 = rows_by_id[id1]
+        for id2 in ids[i + 1 :]:
+            row2 = rows_by_id[id2]
+            # Require overlapping time windows
+            if row1["started_at"] > row2["last_seen_at"] or row2["started_at"] > row1["last_seen_at"]:
+                continue
+            # Spatial overlap test
+            if projected_cones[id1].intersects(projected_cones[id2]):
+                overlapping_pairs.append((id1, id2))
+    return overlapping_pairs
+
+
+def _build_overlap_cliques(overlapping_pairs: List[Tuple[int, int]]) -> List[Tuple[int, ...]]:
+    graph = nx.Graph()
+    graph.add_edges_from(overlapping_pairs)
+    return [tuple(sorted(c)) for c in nx.find_cliques(graph) if len(c) >= 2]
+
+
+def _group_smoke_location(
+    seq_tuple: Tuple[int, ...],
+    projected_cones: Dict[int, Polygon],
+) -> Optional[Tuple[float, float]]:
+    if len(seq_tuple) < 2:
+        return None
+    pts: List[Tuple[float, float]] = []
+    for i, j in itertools.combinations(seq_tuple, 2):
+        gi = projected_cones.get(i)
+        gj = projected_cones.get(j)
+        if gi is None or gj is None:
+            continue
+        inter = gi.intersection(gj)
+        if inter.is_empty or inter.area <= 0:
+            continue
+        pts.append(get_centroid_latlon(inter))
+    if not pts:
+        # No intersections: use centroid of available cones as best-effort location
+        polys: List[BaseGeometry] = [p for p in (projected_cones.get(sid) for sid in seq_tuple) if p is not None]
+        if not polys:
+            return None
+        try:
+            merged: BaseGeometry = polys[0]
+            for p in polys[1:]:
+                merged = merged.union(p)
+            return get_centroid_latlon(merged)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed fallback centroid for group %s: %s", seq_tuple, exc)
+            return None
+    lats, lons = zip(*pts, strict=False)
+    return float(np.median(lats)), float(np.median(lons))
+
+
+def _attach_groups_to_df(
+    df: pd.DataFrame,
+    localized_groups: List[Tuple[int, ...]],
+    group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]],
+) -> None:
+    seq_to_groups: Dict[int, List[Tuple[int, ...]]] = defaultdict(list)
+    seq_to_smokes: Dict[int, List[Optional[Tuple[float, float]]]] = defaultdict(list)
+    for g in localized_groups:
+        smo = group_to_smoke[g]
+        for sid in g:
+            seq_to_groups[sid].append(g)
+            seq_to_smokes[sid].append(smo)
+    df["event_groups"] = df["id"].astype(int).map(lambda sid: seq_to_groups.get(sid, [(sid,)]))
+    df["event_smoke_locations"] = df["id"].astype(int).map(lambda sid: seq_to_smokes.get(sid, []))
+
+
 def compute_overlap(
     api_sequences: pd.DataFrame,
     r_km: float = 35.0,
@@ -291,13 +389,8 @@ def compute_overlap(
     pd.DataFrame
         DataFrame copy including event_groups and event_smoke_locations columns.
     """
-    df = api_sequences.copy()
-    df["id"] = df["id"].astype(int)
-    df["started_at"] = pd.to_datetime(df["started_at"])
-    df["last_seen_at"] = pd.to_datetime(df["last_seen_at"])
-
-    # keep positives and unknowns
-    df_valid = df[df["is_wildfire"].isin([None, "wildfire_smoke"])]
+    df = _prepare_sequences_df(api_sequences)
+    df_valid = _filter_valid_sequences(df)
 
     if df_valid.empty:
         df["event_groups"] = df["id"].astype(int).map(lambda sid: [(sid,)])
@@ -305,83 +398,21 @@ def compute_overlap(
         return df
 
     # Precompute cones in Web Mercator
-    projected_cones: Dict[int, Polygon] = {}
-    for _, row in df_valid.iterrows():
-        sid = int(row["id"])
-        try:
-            projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
+    projected_cones = _build_projected_cones(df_valid, r_km, r_min_km)
 
     # Phase 1, build overlap graph gated by time overlap
-    ids = df_valid["id"].astype(int).tolist()
-    rows_by_id: Dict[int, Dict[str, pd.Timestamp]] = df_valid.set_index("id")[["started_at", "last_seen_at"]].to_dict(
-        "index"
-    )
-
-    overlapping_pairs: List[Tuple[int, int]] = []
-    for i, id1 in enumerate(ids):
-        row1 = rows_by_id[id1]
-        for id2 in ids[i + 1 :]:
-            row2 = rows_by_id[id2]
-            # Require overlapping time windows
-            if row1["started_at"] > row2["last_seen_at"] or row2["started_at"] > row1["last_seen_at"]:
-                continue
-            # Spatial overlap test
-            if projected_cones[id1].intersects(projected_cones[id2]):
-                overlapping_pairs.append((id1, id2))
-
-    graph = nx.Graph()
-    graph.add_edges_from(overlapping_pairs)
-    cliques = [tuple(sorted(c)) for c in nx.find_cliques(graph) if len(c) >= 2]
+    overlapping_pairs = _find_overlapping_pairs(df_valid, projected_cones)
+    cliques = _build_overlap_cliques(overlapping_pairs)
 
     # Phase 2, localized groups from cliques
     localized_groups = _compute_localized_groups_from_cliques(df, cliques, projected_cones, max_dist_km)
 
     # Per group localization, median of pair barycenters for robustness
-    def group_smoke_location(seq_tuple: Tuple[int, ...]) -> Optional[Tuple[float, float]]:
-        if len(seq_tuple) < 2:
-            return None
-        pts: List[Tuple[float, float]] = []
-        for i, j in itertools.combinations(seq_tuple, 2):
-            gi = projected_cones.get(i)
-            gj = projected_cones.get(j)
-            if gi is None or gj is None:
-                continue
-            inter = gi.intersection(gj)
-            if inter.is_empty or inter.area <= 0:
-                continue
-            pts.append(get_centroid_latlon(inter))
-        if not pts:
-            # No intersections: use centroid of available cones as best-effort location
-            polys: List[BaseGeometry] = [p for p in (projected_cones.get(sid) for sid in seq_tuple) if p is not None]
-            if not polys:
-                return None
-            try:
-                merged: BaseGeometry = polys[0]
-                for p in polys[1:]:
-                    merged = merged.union(p)
-                return get_centroid_latlon(merged)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed fallback centroid for group %s: %s", seq_tuple, exc)
-                return None
-        lats, lons = zip(*pts, strict=False)
-        return float(np.median(lats)), float(np.median(lons))
-
     group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {
-        g: group_smoke_location(g) for g in localized_groups
+        g: _group_smoke_location(g, projected_cones) for g in localized_groups
     }
 
     # Attach back to df
-    seq_to_groups: Dict[int, List[Tuple[int, ...]]] = defaultdict(list)
-    seq_to_smokes: Dict[int, List[Optional[Tuple[float, float]]]] = defaultdict(list)
-    for g in localized_groups:
-        smo = group_to_smoke[g]
-        for sid in g:
-            seq_to_groups[sid].append(g)
-            seq_to_smokes[sid].append(smo)
-
-    df["event_groups"] = df["id"].astype(int).map(lambda sid: seq_to_groups.get(sid, [(sid,)]))
-    df["event_smoke_locations"] = df["id"].astype(int).map(lambda sid: seq_to_smokes.get(sid, []))
+    _attach_groups_to_df(df, localized_groups, group_to_smoke)
 
     return df

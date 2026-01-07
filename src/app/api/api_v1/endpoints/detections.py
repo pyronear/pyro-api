@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import pandas as pd
 from fastapi import (
@@ -56,36 +56,41 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 
-async def _attach_sequence_to_alert(
-    sequence_: Sequence,
+async def _get_camera_by_id(
     camera: Camera,
     cameras: CameraCRUD,
-    sequences: SequenceCRUD,
-    alerts: AlertCRUD,
-) -> None:
-    """Assign the given sequence to an alert based on cone/time overlap."""
+    sequence_camera_id: int,
+) -> Dict[int, Camera]:
     org_cameras = await cameras.fetch_all(filters=("organization_id", camera.organization_id))
     camera_by_id = {cam.id: cam for cam in org_cameras}
+    if sequence_camera_id not in camera_by_id:
+        camera_by_id[sequence_camera_id] = camera
+    return camera_by_id
 
-    if sequence_.camera_id not in camera_by_id:
-        camera_by_id[sequence_.camera_id] = camera
 
-    # Fetch recent sequences for the organization based on recency of last_seen_at
+async def _get_recent_sequences(
+    sequences: SequenceCRUD,
+    camera_ids: List[int],
+    sequence_: Sequence,
+) -> List[Sequence]:
     recent_sequences = await sequences.fetch_all(
-        in_pair=("camera_id", list(camera_by_id.keys())),
+        in_pair=("camera_id", camera_ids),
         inequality_pair=(
             "last_seen_at",
             ">",
             datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
     )
-
-    # Ensure the newly created sequence is present
     if all(seq.id != sequence_.id for seq in recent_sequences):
         recent_sequences.append(sequence_)
+    return recent_sequences
 
-    # Build DataFrame for overlap computation
-    records = []
+
+def _build_overlap_records(
+    recent_sequences: List[Sequence],
+    camera_by_id: Dict[int, Camera],
+) -> List[Dict[str, Any]]:
+    records: List[Dict[str, Any]] = []
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
@@ -100,78 +105,157 @@ async def _attach_sequence_to_alert(
             "started_at": seq.started_at,
             "last_seen_at": seq.last_seen_at,
         })
+    return records
 
+
+def _resolve_groups_and_locations(
+    records: List[Dict[str, Any]],
+    sequence_id: int,
+) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
-        return
-
+        return None
     df = compute_overlap(pd.DataFrame.from_records(records))
-    row = df[df["id"] == int(sequence_.id)]
+    row = df[df["id"] == int(sequence_id)]
     if row.empty:
-        return
-    groups = row.iloc[0]["event_groups"]
+        return None
+    groups = [tuple(g) for g in row.iloc[0]["event_groups"]]
     locations = row.iloc[0].get("event_smoke_locations", [])
-    group_locations = {tuple(g): locations[idx] if idx < len(locations) else None for idx, g in enumerate(groups)}
+    group_locations: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {}
+    for idx, group in enumerate(groups):
+        group_locations[group] = locations[idx] if idx < len(locations) else None
+    return groups, group_locations
+
+
+async def _fetch_alert_mapping(session: Any, seq_ids: List[int]) -> Dict[int, Set[int]]:
+    mapping: Dict[int, Set[int]] = {}
+    if not seq_ids:
+        return mapping
+    stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
+        AlertSequence.sequence_id.in_(seq_ids)  # type: ignore[attr-defined]
+    )
+    res = await session.exec(stmt)
+    for aid, sid in res:
+        mapping.setdefault(int(sid), set()).add(int(aid))
+    return mapping
+
+
+def _group_time_bounds(
+    group: Tuple[int, ...],
+    seq_by_id: Dict[int, Sequence],
+) -> Tuple[datetime, datetime]:
+    start_at = min(seq_by_id[int(sid)].started_at for sid in group if int(sid) in seq_by_id)
+    last_seen_at = max(seq_by_id[int(sid)].last_seen_at for sid in group if int(sid) in seq_by_id)
+    return start_at, last_seen_at
+
+
+def _collect_existing_alert_ids(group: Tuple[int, ...], mapping: Dict[int, Set[int]]) -> Set[int]:
+    return {aid for sid in group for aid in mapping.get(int(sid), set())}
+
+
+async def _maybe_update_alert(
+    alerts: AlertCRUD,
+    target_alert_id: int,
+    location: Tuple[float, float],
+    start_at: datetime,
+    last_seen_at: datetime,
+) -> None:
+    current_alert = cast(Alert, await alerts.get(target_alert_id, strict=True))
+    new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
+    new_last_seen = max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
+    if (
+        current_alert.lat is None
+        or current_alert.lon is None
+        or (current_alert.started_at is None or new_start_at < current_alert.started_at)
+        or (current_alert.last_seen_at is None or new_last_seen > current_alert.last_seen_at)
+    ):
+        await alerts.update(
+            target_alert_id,
+            AlertUpdate(lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen),
+        )
+
+
+async def _get_or_create_alert_id(
+    existing_alert_ids: Set[int],
+    location: Optional[Tuple[float, float]],
+    organization_id: int,
+    start_at: datetime,
+    last_seen_at: datetime,
+    alerts: AlertCRUD,
+) -> int:
+    if existing_alert_ids:
+        target_alert_id = min(existing_alert_ids)
+        if isinstance(location, tuple):
+            await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
+        return target_alert_id
+    alert = await alerts.create(
+        AlertCreate(
+            organization_id=organization_id,
+            lat=location[0] if isinstance(location, tuple) else None,
+            lon=location[1] if isinstance(location, tuple) else None,
+            started_at=start_at,
+            last_seen_at=last_seen_at,
+        )
+    )
+    return alert.id
+
+
+def _build_links_for_group(
+    group: Tuple[int, ...],
+    target_alert_id: int,
+    mapping: Dict[int, Set[int]],
+) -> List[AlertSequence]:
+    links: List[AlertSequence] = []
+    for sid in group:
+        sid_int = int(sid)
+        if target_alert_id in mapping.get(sid_int, set()):
+            continue
+        mapping.setdefault(sid_int, set()).add(target_alert_id)
+        links.append(AlertSequence(alert_id=target_alert_id, sequence_id=sid_int))
+    return links
+
+
+async def _attach_sequence_to_alert(
+    sequence_: Sequence,
+    camera: Camera,
+    cameras: CameraCRUD,
+    sequences: SequenceCRUD,
+    alerts: AlertCRUD,
+) -> None:
+    """Assign the given sequence to an alert based on cone/time overlap."""
+    camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
+
+    # Fetch recent sequences for the organization based on recency of last_seen_at
+    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_)
+
+    # Build DataFrame for overlap computation
+    records = _build_overlap_records(recent_sequences, camera_by_id)
+    resolved = _resolve_groups_and_locations(records, int(sequence_.id))
+    if resolved is None:
+        return
+    groups, group_locations = resolved
 
     seq_by_id = {seq.id: seq for seq in recent_sequences}
     seq_ids = list(seq_by_id.keys())
 
     # Existing alert links
     session = sequences.session
-    mapping: dict[int, set[int]] = {}
-    if seq_ids:
-        stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
-            AlertSequence.sequence_id.in_(seq_ids)  # type: ignore[attr-defined]
-        )
-        res = await session.exec(stmt)
-        for aid, sid in res:
-            mapping.setdefault(int(sid), set()).add(int(aid))
+    mapping = await _fetch_alert_mapping(session, seq_ids)
 
     to_link: List[AlertSequence] = []
 
     for g in groups:
-        g_tuple = tuple(g)
-        location = group_locations.get(g_tuple)
-        start_at = min(seq_by_id[int(sid)].started_at for sid in g_tuple if int(sid) in seq_by_id)
-        last_seen_at = max(seq_by_id[int(sid)].last_seen_at for sid in g_tuple if int(sid) in seq_by_id)
-        existing_alert_ids = {aid for sid in g_tuple for aid in mapping.get(int(sid), set())}
-        if existing_alert_ids:
-            target_alert_id = min(existing_alert_ids)
-            # If we now have a location and the alert is missing it (or start_at can be improved), update it
-            if isinstance(location, tuple):
-                current_alert = cast(Alert, await alerts.get(target_alert_id, strict=True))
-                new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
-                new_last_seen = (
-                    max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
-                )
-                if (
-                    current_alert.lat is None
-                    or current_alert.lon is None
-                    or (current_alert.started_at is None or new_start_at < current_alert.started_at)
-                    or (current_alert.last_seen_at is None or new_last_seen > current_alert.last_seen_at)
-                ):
-                    await alerts.update(
-                        target_alert_id,
-                        AlertUpdate(
-                            lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen
-                        ),
-                    )
-        else:
-            alert = await alerts.create(
-                AlertCreate(
-                    organization_id=camera.organization_id,
-                    lat=location[0] if isinstance(location, tuple) else None,
-                    lon=location[1] if isinstance(location, tuple) else None,
-                    started_at=start_at,
-                    last_seen_at=last_seen_at,
-                )
-            )
-            target_alert_id = alert.id
-        for sid in g_tuple:
-            sid_int = int(sid)
-            if target_alert_id in mapping.get(sid_int, set()):
-                continue
-            mapping.setdefault(sid_int, set()).add(target_alert_id)
-            to_link.append(AlertSequence(alert_id=target_alert_id, sequence_id=sid_int))
+        location = group_locations.get(g)
+        start_at, last_seen_at = _group_time_bounds(g, seq_by_id)
+        existing_alert_ids = _collect_existing_alert_ids(g, mapping)
+        target_alert_id = await _get_or_create_alert_id(
+            existing_alert_ids,
+            location,
+            camera.organization_id,
+            start_at,
+            last_seen_at,
+            alerts,
+        )
+        to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
 
     if to_link:
         session.add_all(to_link)
