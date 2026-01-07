@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from fastapi import APIRouter
+
 from app.api.api_v1.endpoints import (
     alerts,
     cameras,
