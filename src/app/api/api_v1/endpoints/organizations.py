@@ -4,14 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from typing import Any, List, cast
+from typing import List, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
-from sqlmodel import delete, select
 
 from app.api.dependencies import get_jwt, get_organization_crud
 from app.crud import OrganizationCRUD
-from app.models import Alert, AlertSequence, Organization, UserRole
+from app.models import Organization, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.organizations import OrganizationCreate, SlackHook, TelegramChannelId
 from app.services.slack import slack_client
