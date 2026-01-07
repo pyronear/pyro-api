@@ -256,10 +256,28 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.create_occlusion_mask">
+<span class="sig-name descname"><span class="pre">create_occlusion_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pose_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_occlusion_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_occlusion_mask" title="Permalink to this definition">#</a></dt>
+<dd><p>Create a create occlusion_mask for a pose</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">create_occlusion_mask</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="s2">&quot;(0.1,0.1,0.9,0.9)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.create_pose">
 <span class="sig-name descname"><span class="pre">create_pose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">camera_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patrol_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.create_pose"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.create_pose" title="Permalink to this definition">#</a></dt>
 <dd><p>Create a pose for a camera</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">create_pose</span><span class="p">(</span><span class="n">camera_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">azimuth</span><span class="o">=</span><span class="mf">120.5</span><span class="p">,</span> <span class="n">patrol_id</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.delete_occlusion_mask">
+<span class="sig-name descname"><span class="pre">delete_occlusion_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.delete_occlusion_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.delete_occlusion_mask" title="Permalink to this definition">#</a></dt>
+<dd><p>Delete an occlusion mask</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">delete_occlusion_mask</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -403,6 +421,15 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.get_occlusion_mask">
+<span class="sig-name descname"><span class="pre">get_occlusion_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.get_occlusion_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.get_occlusion_mask" title="Permalink to this definition">#</a></dt>
+<dd><p>get mask from occlusion mask</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">get_occlusion_mask</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="mi">1</span><span class="s2">&quot;)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.heartbeat">
 <span class="sig-name descname"><span class="pre">heartbeat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">#</a></dt>
 <dd><p>Update the last ping of the camera</p>
@@ -438,6 +465,24 @@
 <dd class="field-even"><p>HTTP response</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.list_pose_masks">
+<span class="sig-name descname"><span class="pre">list_pose_masks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pose_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.list_pose_masks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.list_pose_masks" title="Permalink to this definition">#</a></dt>
+<dd><p>List occlusion masks for a pose (given its pose_id)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">list_pose_masks</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.patch_occlusion_mask">
+<span class="sig-name descname"><span class="pre">patch_occlusion_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.patch_occlusion_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.patch_occlusion_mask" title="Permalink to this definition">#</a></dt>
+<dd><p>Update an occlusion mask</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span><span class="o">.</span><span class="n">patch_occlusion_mask</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="s2">&quot;(0.1,0.2,0.9,0.3)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -537,7 +582,9 @@
 <li><a class="reference internal" href="#api-client">API Client</a><ul>
 <li><a class="reference internal" href="#pyroclient.client.Client"><code class="docutils literal notranslate"><span class="pre">Client</span></code></a><ul>
 <li><a class="reference internal" href="#pyroclient.client.Client.create_detection"><code class="docutils literal notranslate"><span class="pre">Client.create_detection()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.create_occlusion_mask"><code class="docutils literal notranslate"><span class="pre">Client.create_occlusion_mask()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.create_pose"><code class="docutils literal notranslate"><span class="pre">Client.create_pose()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.delete_occlusion_mask"><code class="docutils literal notranslate"><span class="pre">Client.delete_occlusion_mask()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.delete_pose"><code class="docutils literal notranslate"><span class="pre">Client.delete_pose()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_cameras"><code class="docutils literal notranslate"><span class="pre">Client.fetch_cameras()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_detections"><code class="docutils literal notranslate"><span class="pre">Client.fetch_detections()</span></code></a></li>
@@ -546,8 +593,11 @@
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_sequences_detections"><code class="docutils literal notranslate"><span class="pre">Client.fetch_sequences_detections()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.fetch_sequences_from_date"><code class="docutils literal notranslate"><span class="pre">Client.fetch_sequences_from_date()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.get_detection_url"><code class="docutils literal notranslate"><span class="pre">Client.get_detection_url()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.get_occlusion_mask"><code class="docutils literal notranslate"><span class="pre">Client.get_occlusion_mask()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.heartbeat"><code class="docutils literal notranslate"><span class="pre">Client.heartbeat()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.label_sequence"><code class="docutils literal notranslate"><span class="pre">Client.label_sequence()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.list_pose_masks"><code class="docutils literal notranslate"><span class="pre">Client.list_pose_masks()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.patch_occlusion_mask"><code class="docutils literal notranslate"><span class="pre">Client.patch_occlusion_mask()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.patch_pose"><code class="docutils literal notranslate"><span class="pre">Client.patch_pose()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.update_last_image"><code class="docutils literal notranslate"><span class="pre">Client.update_last_image()</span></code></a></li>
 </ul>

@@ -229,6 +229,10 @@
     <span class="c1"># POSES</span>
     <span class="n">POSES_CREATE</span> <span class="o">=</span> <span class="s2">&quot;poses/&quot;</span>
     <span class="n">POSES_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">&quot;</span>
+    <span class="n">POSES_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">/occlusion_masks&quot;</span>
+    <span class="c1"># OCCLUSION MASKS</span>
+    <span class="n">OCCLUSION_MASKS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;occlusion_masks&quot;</span>
+    <span class="n">OCCLUSION_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;occlusion_masks/</span><span class="si">{mask_id}</span><span class="s2">&quot;</span>
     <span class="c1"># DETECTIONS</span>
     <span class="n">DETECTIONS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;detections/&quot;</span>
     <span class="n">DETECTIONS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;detections&quot;</span>
@@ -410,6 +414,83 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.list_pose_masks"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.list_pose_masks">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">list_pose_masks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List occlusion masks for a pose (given its pose_id)</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.list_pose_masks(pose_id=1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># OCCLUSION MASKS</span>
+
+<div class="viewcode-block" id="Client.create_occlusion_mask"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.create_occlusion_mask">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">create_occlusion_mask</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a create occlusion_mask for a pose</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.create_occlusion_mask(pose_id=1, mask=&quot;(0.1,0.1,0.9,0.9)&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;pose_id&quot;</span><span class="p">:</span> <span class="n">pose_id</span><span class="p">,</span>
+            <span class="s2">&quot;mask&quot;</span><span class="p">:</span> <span class="n">mask</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_CREATE</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.patch_occlusion_mask"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.patch_occlusion_mask">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">patch_occlusion_mask</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update an occlusion mask</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.patch_occlusion_mask(mask_id=1, mask=&quot;(0.1,0.2,0.9,0.3)&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mask&quot;</span><span class="p">:</span> <span class="n">mask</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.get_occlusion_mask"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_occlusion_mask">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_occlusion_mask</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;get mask from occlusion mask</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.get_occlusion_mask(mask_id=1&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Client.delete_occlusion_mask"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.delete_occlusion_mask">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_occlusion_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete an occlusion mask</span>
+
+<span class="sd">        &gt;&gt;&gt; api_client.delete_occlusion_mask(mask_id=1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
