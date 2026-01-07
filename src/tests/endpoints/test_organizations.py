@@ -1,13 +1,12 @@
-from typing import Any, Dict, List, Union
 from datetime import datetime
+from typing import Any, Dict, List, Union
 
 import pytest
+from fastapi import status  # Import status
 from httpx import AsyncClient
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import status # Import status
 
-from app.models import Alert, AlertSequence, Organization, Sequence, Camera, Pose
+from app.models import Alert, AlertSequence, Camera, Organization, Pose, Sequence
 from app.services.storage import s3_service
 
 
@@ -236,7 +235,7 @@ async def test_delete_organization_with_alerts_and_sequences(
     # 2. Create an alert associated with the new organization
     new_alert = Alert(
         id=9999,
-        organization_id=new_organization.id, # This alert is linked to the organization to be deleted
+        organization_id=new_organization.id,  # This alert is linked to the organization to be deleted
         event_at=datetime.utcnow(),
         score=0.9,
         latitude=10.0,
@@ -253,7 +252,7 @@ async def test_delete_organization_with_alerts_and_sequences(
     # 3. Create an alert sequence associated with the new alert
     new_alert_sequence = AlertSequence(
         alert_id=new_alert.id,
-        sequence_id=dummy_sequence.id, # Link to the dummy sequence (not to be deleted)
+        sequence_id=dummy_sequence.id,  # Link to the dummy sequence (not to be deleted)
     )
     async_session.add(new_alert_sequence)
     await async_session.commit()
@@ -274,7 +273,7 @@ async def test_delete_organization_with_alerts_and_sequences(
     # Verify that the S3 bucket is also deleted
     with pytest.raises(ValueError, match="unable to access bucket"):
         s3_service.get_bucket(s3_service.resolve_bucket_name(new_organization.id))
-    
+
     # Assert that the dummy camera, pose, sequence, and their organization are NOT deleted
     dummy_cam_org_in_db = await async_session.get(Organization, dummy_cam_organization.id)
     assert dummy_cam_org_in_db is not None
@@ -287,7 +286,6 @@ async def test_delete_organization_with_alerts_and_sequences(
 
     dummy_sequence_in_db = await async_session.get(Sequence, dummy_sequence.id)
     assert dummy_sequence_in_db is not None
-
 
 
 @pytest.mark.parametrize(
