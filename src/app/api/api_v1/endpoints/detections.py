@@ -301,9 +301,7 @@ async def create_detection(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     det = await detections.create(
-        DetectionCreate(
-            camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, bboxes=bboxes
-        )
+        DetectionCreate(camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, bboxes=bboxes)
     )
     # Sequence handling
     # Check if there is a sequence that was seen recently
