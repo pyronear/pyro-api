@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, Organization, Pose, Sequence, User, Webhook
+from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -115,6 +115,32 @@ POSE_TABLE = [
     },
 ]
 
+OCCLUSION_MASK_TABLE = [
+    {
+        "id": 1,
+        "pose_id": 1,
+        "mask": "(0.1,0.1,0.9,0.9)",
+        "created_at": datetime.strptime("2025-01-01T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 2,
+        "pose_id": 1,
+        "mask": "(0.1,0.1,0.9,0.9)",
+        "created_at": datetime.strptime("2025-01-02T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 3,
+        "pose_id": 2,
+        "mask": "(1,0.1,0.9,0.9)",
+        "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
+    },
+    {
+        "id": 4,
+        "pose_id": 3,
+        "mask": "(1,0.1,0.1,0.9)",
+        "created_at": datetime.strptime("2025-01-03T00:00:00.000000", dt_format),
+    },
+]
 
 DET_TABLE = [
     {
@@ -320,6 +346,21 @@ async def pose_session(camera_session: AsyncSession):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def occlusion_mask_session(pose_session: AsyncSession):
+    for entry in OCCLUSION_MASK_TABLE:
+        pose_session.add(OcclusionMask(**entry))
+    await pose_session.commit()
+    await pose_session.exec(
+        text(
+            f"ALTER SEQUENCE {OcclusionMask.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in OCCLUSION_MASK_TABLE) + 1}"
+        )
+    )
+    await pose_session.commit()
+    yield pose_session
+    await pose_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
 async def sequence_session(pose_session: AsyncSession):
     for entry in SEQ_TABLE:
         pose_session.add(Sequence(**entry))
@@ -386,6 +427,10 @@ def pytest_configure():
     pytest.pose_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in POSE_TABLE
+    ]
+    pytest.occlusion_mask_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in OCCLUSION_MASK_TABLE
     ]
     pytest.detection_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
