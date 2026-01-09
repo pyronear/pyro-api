@@ -79,7 +79,7 @@ async def _create_alert_with_sequences(
 
 @pytest.mark.asyncio
 async def test_get_alert_and_sequences(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, _seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
 
@@ -89,11 +89,13 @@ async def test_get_alert_and_sequences(async_client: AsyncClient, detection_sess
 
     resp = await async_client.get(f"/alerts/{alert.id}", headers=auth)
     assert resp.status_code == 200, resp.text
-    assert resp.json()["id"] == alert.id
-    assert resp.json()["lat"] == pytest.approx(alert.lat)
-    assert resp.json()["lon"] == pytest.approx(alert.lon)
-    assert resp.json()["started_at"] == alert.started_at.isoformat()
-    assert resp.json()["last_seen_at"] == alert.last_seen_at.isoformat()
+    payload = resp.json()
+    assert payload["id"] == alert.id
+    assert payload["lat"] == pytest.approx(alert.lat)
+    assert payload["lon"] == pytest.approx(alert.lon)
+    assert payload["started_at"] == alert.started_at.isoformat()
+    assert payload["last_seen_at"] == alert.last_seen_at.isoformat()
+    assert {seq["id"] for seq in payload["sequences"]} == set(seq_ids)
 
     resp = await async_client.get(f"/alerts/{alert.id}/sequences?limit=5&desc=true", headers=auth)
     assert resp.status_code == 200, resp.text
@@ -104,7 +106,7 @@ async def test_get_alert_and_sequences(async_client: AsyncClient, detection_sess
 
 @pytest.mark.asyncio
 async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, _ = await _create_alert_with_sequences(
+    alert, seq_ids = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
 
@@ -120,11 +122,12 @@ async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_sess
     assert returned["lon"] == pytest.approx(alert.lon)
     assert returned["started_at"] == alert.started_at.isoformat()
     assert returned["last_seen_at"] == alert.last_seen_at.isoformat()
+    assert {seq["id"] for seq in returned["sequences"]} == set(seq_ids)
 
 
 @pytest.mark.asyncio
 async def test_alerts_from_date(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, _ = await _create_alert_with_sequences(
+    alert, seq_ids = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
     date_str = alert.started_at.date().isoformat()
@@ -140,6 +143,8 @@ async def test_alerts_from_date(async_client: AsyncClient, detection_session: As
     returned = resp.json()
     started_times = [item["started_at"] for item in returned]
     assert started_times == sorted(started_times, reverse=True)
+    alert_payload = next(item for item in returned if item["id"] == alert.id)
+    assert {seq["id"] for seq in alert_payload["sequences"]} == set(seq_ids)
 
 
 @pytest.mark.asyncio

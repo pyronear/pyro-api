@@ -5,7 +5,7 @@
 
 
 from datetime import date, datetime, timedelta
-from typing import Any, List, Union, cast
+from typing import Any, Dict, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlalchemy import asc, desc
@@ -16,8 +16,9 @@ from app.api.dependencies import get_alert_crud, get_jwt
 from app.crud import AlertCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, Sequence, UserRole
-from app.schemas.alerts import AlertRead
+from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
+from app.schemas.sequences import SequenceRead
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -28,19 +29,45 @@ def verify_org_rights(organization_id: int, alert: Alert) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
+async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[int]) -> Dict[int, List[Sequence]]:
+    mapping: Dict[int, List[Sequence]] = {}
+    if not alert_ids:
+        return mapping
+    seq_stmt: Any = (
+        select(AlertSequence.alert_id, Sequence)
+        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+        .where(AlertSequence.alert_id.in_(alert_ids))  # type: ignore[attr-defined]
+        .order_by(AlertSequence.alert_id, desc(cast(Any, Sequence.last_seen_at)))
+    )
+    res = await session.exec(seq_stmt)
+    for alert_id, sequence in res.all():
+        mapping.setdefault(int(alert_id), []).append(sequence)
+    return mapping
+
+
+def _serialize_alert(alert: Alert, sequences: List[Sequence]) -> AlertReadWithSequences:
+    return AlertReadWithSequences(
+        **alert.model_dump(),
+        sequences=[SequenceRead(**seq.model_dump()) for seq in sequences],
+    )
+
+
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
 async def get_alert(
     alert_id: int = Path(..., gt=0),
     alerts: AlertCRUD = Depends(get_alert_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> AlertRead:
+) -> AlertReadWithSequences:
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
-    return AlertRead(**alert.model_dump())
+    alert_id_int = int(alert.id)
+    seq_map = await _fetch_sequences_by_alert_ids(session, [alert_id_int])
+    return _serialize_alert(alert, seq_map.get(alert_id_int, []))
 
 
 @router.get(
@@ -76,7 +103,7 @@ async def fetch_alert_sequences(
 async def fetch_latest_unlabeled_alerts(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[AlertRead]:
+) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
     alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
@@ -89,7 +116,10 @@ async def fetch_latest_unlabeled_alerts(
         .limit(15)
     )
     alerts_res = await session.exec(alerts_stmt)
-    return [AlertRead(**a.model_dump()) for a in alerts_res.unique().all()]  # unique to deduplicate joins
+    alerts = alerts_res.unique().all()
+    alert_ids = [int(alert.id) for alert in alerts]
+    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
+    return [_serialize_alert(alert, seq_map.get(int(alert.id), [])) for alert in alerts]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
@@ -99,7 +129,7 @@ async def fetch_alerts_from_date(
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[AlertRead]:
+) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
     alerts_stmt: Any = (
@@ -111,7 +141,10 @@ async def fetch_alerts_from_date(
         .offset(offset)
     )
     alerts_res = await session.exec(alerts_stmt)
-    return [AlertRead(**a.model_dump()) for a in alerts_res.all()]
+    alerts = alerts_res.all()
+    alert_ids = [int(alert.id) for alert in alerts]
+    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
+    return [_serialize_alert(alert, seq_map.get(int(alert.id), [])) for alert in alerts]
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")

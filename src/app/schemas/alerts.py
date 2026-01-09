@@ -4,11 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-__all__ = ["AlertBase", "AlertCreate", "AlertRead", "AlertUpdate"]
+from app.schemas.sequences import SequenceRead
+
+__all__ = ["AlertBase", "AlertCreate", "AlertRead", "AlertReadWithSequences", "AlertUpdate"]
 
 
 class AlertBase(BaseModel):
@@ -31,3 +33,7 @@ class AlertUpdate(AlertBase):
 
 class AlertRead(AlertCreate):
     id: int
+
+
+class AlertReadWithSequences(AlertRead):
+    sequences: List[SequenceRead] = Field(default_factory=list)
