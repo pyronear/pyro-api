@@ -26,7 +26,7 @@ def mock_img():
 
 
 @pytest.fixture(scope="session")
-def cam_token():
+def cam_setup():
     admin_headers = {"Authorization": f"Bearer {SUPERADMIN_TOKEN}"}
     payload = {
         "name": "pyro-camera-01",
@@ -44,11 +44,22 @@ def cam_token():
     payload = {"azimuth": 359, "patrol_id": 1, "camera_id": cam_id}
     response = requests.post(urljoin(API_URL, "poses"), json=payload, headers=admin_headers, timeout=5)
     assert response.status_code == 201
+    pose_id = response.json()["id"]
 
-    # Create a cam token
-    return requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
+    cam_token = requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
         "access_token"
     ]
+    return {"token": cam_token, "pose_id": pose_id}
+
+
+@pytest.fixture(scope="session")
+def cam_token(cam_setup):
+    return cam_setup["token"]
+
+
+@pytest.fixture(scope="session")
+def cam_pose_id(cam_setup):
+    return cam_setup["pose_id"]
 
 
 @pytest.fixture(scope="session")

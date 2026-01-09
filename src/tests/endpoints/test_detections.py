@@ -1,35 +1,34 @@
+from ast import literal_eval
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Union
 
-import pytest
+import pytest  # type: ignore
 from httpx import AsyncClient
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
+from app.core.config import settings
+from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
+from app.models import AlertSequence, Camera, Detection, Pose, Sequence
+from app.services.cones import resolve_cone
 
 
 @pytest.mark.parametrize(
     ("user_idx", "cam_idx", "payload", "status_code", "status_detail", "repeat"),
     [
-        (None, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated", None),
-        (0, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (1, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (2, None, {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
-        (None, 0, {"azimuth": "hello"}, 422, None, None),
+        (None, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 401, "Not authenticated", None),
+        (0, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (1, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
+        (2, None, {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 403, "Incompatible token scope.", None),
         (None, 0, {}, 422, None, None),
-        (None, 0, {"azimuth": 45.6, "bboxes": []}, 422, None, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
-        (None, 1, {"azimuth": 45.6, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
-        (None, 1, {"azimuth": 360, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}, 422, None, None),
+        (None, 0, {"pose_id": 3, "bboxes": []}, 422, None, None),
+        (None, 1, {"pose_id": 1, "bboxes": (0.6, 0.6, 0.6, 0.6, 0.6)}, 422, None, None),
+        (None, 1, {"pose_id": 1, "bboxes": "[(0.6, 0.6, 0.6, 0.6, 0.6)]"}, 422, None, None),
         (
             None,
             1,
-            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
-            201,
-            None,
-            0,
-        ),
-        (
-            None,
-            1,
-            {"azimuth": 0, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
             201,
             None,
             0,
@@ -38,10 +37,19 @@ from sqlmodel.ext.asyncio.session import AsyncSession
         (
             None,
             1,
-            {"azimuth": 45.6, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]", "pose_id": 3, "sequence_id": None},
+            {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
             201,
             None,
             2,
+        ),
+        # multiple bboxes produce multiple detections
+        (
+            None,
+            1,
+            {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"},
+            201,
+            None,
+            0,
         ),
     ],
 )
@@ -78,13 +86,15 @@ async def test_create_detection(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert {
-            k: v
-            for k, v in response.json().items()
-            if k not in {"created_at", "updated_at", "id", "bucket_key", "camera_id"}
-        } == payload
-        assert response.json()["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
-        assert response.json()["camera_id"] == pytest.camera_table[cam_idx]["id"]
+        data = response.json()
+        assert data["pose_id"] == payload.get("pose_id")
+        if isinstance(payload.get("bboxes"), str):
+            assert data["bboxes"] == payload["bboxes"]
+            assert data.get("others_bboxes") is None
+        assert data["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
+        assert data["camera_id"] == pytest.camera_table[cam_idx]["id"]
+    created_ids: List[int] = []
+    created_ids.append(response.json()["id"]) if response.status_code // 100 == 2 else None
     if isinstance(repeat, int) and repeat > 0:
         det_ids = [response.json()["id"]]
         for _ in range(repeat):
@@ -108,6 +118,51 @@ async def test_create_detection(
             )
             assert response.status_code == 200
             assert response.json()["sequence_id"] == sequence_id
+        created_ids.extend(det_ids)
+
+    # Multi-bbox input should be stored as-is in a single detection
+    if response.status_code == 201 and isinstance(payload.get("bboxes"), str) and repeat in (0, None):
+        boxes = literal_eval(payload["bboxes"])
+        if len(boxes) <= 1:
+            return
+        bucket_key = response.json()["bucket_key"]
+        latest_res = await detection_session.exec(
+            select(Detection).where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        )
+        dets = latest_res.all()
+        assert len(dets) == 1
+        assert dets[0].pose_id == payload["pose_id"]
+        assert dets[0].bboxes == payload["bboxes"]
+        assert dets[0].others_bboxes is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_requires_threshold_for_sequence(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+    monkeypatch,
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 3)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+
+    payload1 = {"pose_id": 1, "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    resp1 = await async_client.post(
+        "/detections", data=payload1, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert resp1.status_code == 201, resp1.text
+    assert resp1.json()["sequence_id"] is None
+
+    payload2 = {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.9)]"}
+    resp2 = await async_client.post(
+        "/detections", data=payload2, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert resp2.status_code == 201, resp2.text
+    assert resp2.json()["sequence_id"] is None
 
 
 @pytest.mark.parametrize(
@@ -253,3 +308,106 @@ async def test_delete_detection(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_creates_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, monkeypatch
+):
+    # Force sequence creation on first detection
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    mock_img = b"img"
+    auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
+    payload = {
+        "pose_id": 1,
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+    }
+    resp = await async_client.post(
+        "/detections", data=payload, files={"file": ("img.png", mock_img, "image/png")}, headers=auth
+    )
+    assert resp.status_code == 201, resp.text
+    data = resp.json()
+    assert data["sequence_id"] is not None
+
+    seq_res = await detection_session.get(Sequence, data["sequence_id"])
+    assert seq_res is not None
+    assert seq_res.sequence_azimuth is not None
+    assert seq_res.cone_angle is not None
+    camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
+    assert camera is not None
+    pose = await detection_session.get(Pose, payload["pose_id"])
+    assert pose is not None
+    expected_sequence_azimuth, expected_cone_angle = resolve_cone(
+        pose.azimuth, str(payload["bboxes"]), camera.angle_of_view
+    )
+    assert seq_res.sequence_azimuth == pytest.approx(expected_sequence_azimuth)
+    assert seq_res.cone_angle == pytest.approx(expected_cone_angle)
+    # Detection references the sequence
+    det_res = await detection_session.get(Detection, data["id"])
+    assert det_res is not None
+    assert det_res.sequence_id == seq_res.id
+
+
+@pytest.mark.asyncio
+async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSession):
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = datetime.utcnow()
+    cam1 = await detection_session.get(Camera, 1)
+    assert cam1 is not None
+    cam2 = Camera(
+        organization_id=1,
+        name="cam-3",
+        angle_of_view=90.0,
+        elevation=100.0,
+        lat=3.7,
+        lon=-45.0,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    detection_session.add(cam2)
+    await detection_session.commit()
+    await detection_session.refresh(cam2)
+
+    seq1 = Sequence(
+        camera_id=cam1.id,
+        pose_id=None,
+        camera_azimuth=0.0,
+        sequence_azimuth=0.0,
+        cone_angle=90.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=20),
+    )
+    seq2 = Sequence(
+        camera_id=cam2.id,
+        pose_id=None,
+        camera_azimuth=5.0,
+        sequence_azimuth=5.0,
+        cone_angle=90.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=25),
+        last_seen_at=now - timedelta(seconds=10),
+    )
+    detection_session.add(seq1)
+    detection_session.add(seq2)
+    await detection_session.commit()
+    await detection_session.refresh(seq1)
+    await detection_session.refresh(seq2)
+
+    await _attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud)
+
+    alerts = await alert_crud.fetch_all()
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.started_at == min(seq1.started_at, seq2.started_at)
+    assert alert.last_seen_at == max(seq1.last_seen_at, seq2.last_seen_at)
+    assert alert.lat is not None
+    assert alert.lon is not None
+
+    mappings_res = await detection_session.exec(select(AlertSequence))
+    mappings = mappings_res.all()
+    assert {(m.alert_id, m.sequence_id) for m in mappings} == {(alert.id, seq1.id), (alert.id, seq2.id)}
