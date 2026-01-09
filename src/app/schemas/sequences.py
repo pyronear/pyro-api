@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from app.models import AnnotationType, Sequence
 
-__all__ = ["SequenceUpdate", "SequenceWithCone"]
+__all__ = ["SequenceLabel", "SequenceRead", "SequenceUpdate"]
 
 
 # Accesses
@@ -21,6 +21,5 @@ class SequenceLabel(BaseModel):
     is_wildfire: AnnotationType
 
 
-class SequenceWithCone(Sequence):
-    cone_azimuth: float
-    cone_angle: float
+class SequenceRead(Sequence):
+    pass

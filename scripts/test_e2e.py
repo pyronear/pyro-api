@@ -149,7 +149,7 @@ def main(args):
     assert sequence["camera_id"] == cam_id
     assert sequence["started_at"] == response.json()["created_at"]
     assert sequence["last_seen_at"] > sequence["started_at"]
-    assert sequence["azimuth"] == response.json()["azimuth"]
+    assert sequence["camera_azimuth"] == response.json()["azimuth"]
     # Fetch the latest sequence
     assert len(api_request("get", f"{args.endpoint}/sequences/unlabeled/latest", agent_auth)) == 1
     # Fetch from date
