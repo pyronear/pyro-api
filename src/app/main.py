@@ -80,7 +80,7 @@ app.add_middleware(
 )
 
 if isinstance(settings.SENTRY_DSN, str):
-    # Sentry middleware is compatible at runtime; ignore type mismatch from Starlette signature
+    # Sentry middleware is compatible at runtime
     app.add_middleware(SentryAsgiMiddleware)  # type: ignore[arg-type]
 
 

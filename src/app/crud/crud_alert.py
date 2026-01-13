@@ -3,18 +3,15 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-
-from typing import Union
-
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
-from app.models import Sequence
-from app.schemas.sequences import SequenceLabel, SequenceUpdate
+from app.models import Alert
+from app.schemas.alerts import AlertCreate, AlertUpdate
 
-__all__ = ["SequenceCRUD"]
+__all__ = ["AlertCRUD"]
 
 
-class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLabel]]):
+class AlertCRUD(BaseCRUD[Alert, AlertCreate, AlertUpdate]):
     def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session, Sequence)
+        super().__init__(session, Alert)
