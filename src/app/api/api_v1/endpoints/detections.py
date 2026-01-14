@@ -35,8 +35,8 @@ from app.api.dependencies import (
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -308,7 +308,7 @@ async def create_detection(
     seq_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub), ("pose_id", pose_id)]
 
     sequence = await sequences.fetch_all(
-        filters=seq_filters,
+        filters=[("camera_id", token_payload.sub), ("camera_azimuth", det.azimuth)],
         inequality_pair=(
             "last_seen_at",
             ">",
@@ -340,13 +340,13 @@ async def create_detection(
 
         if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
             camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
-            cone_azimuth, cone_angle = resolve_cone(pose.azimuth, dets_[0].bboxes, camera.angle_of_view)
+            cone_azimuth, cone_angle = resolve_cone(det.azimuth, dets_[0].bboxes, camera.angle_of_view)
             # Create new sequence
             sequence_ = await sequences.create(
                 Sequence(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
-                    camera_azimuth=pose.azimuth,
+                    camera_azimuth=det.azimuth,
                     sequence_azimuth=cone_azimuth,
                     cone_angle=cone_angle,
                     started_at=dets_[0].created_at,

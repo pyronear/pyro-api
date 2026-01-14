@@ -1,4 +1,3 @@
-from ast import literal_eval
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Union
 
@@ -10,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
-from app.models import AlertSequence, Camera, Detection, Pose, Sequence
+from app.models import AlertSequence, Camera, Detection, Sequence
 from app.services.cones import resolve_cone
 
 
@@ -319,7 +318,8 @@ async def test_create_detection_creates_sequence(
     mock_img = b"img"
     auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
     payload = {
-        "pose_id": 1,
+        "azimuth": 120.0,
+        "pose_id": None,
         "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
     }
     resp = await async_client.post(
@@ -335,10 +335,10 @@ async def test_create_detection_creates_sequence(
     assert seq_res.cone_angle is not None
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
-    pose = await detection_session.get(Pose, payload["pose_id"])
-    assert pose is not None
     expected_sequence_azimuth, expected_cone_angle = resolve_cone(
-        pose.azimuth, str(payload["bboxes"]), camera.angle_of_view
+        float(payload["azimuth"] if payload["azimuth"] is not None else 0.0),
+        str(payload["bboxes"]),
+        camera.angle_of_view,
     )
     assert seq_res.sequence_azimuth == pytest.approx(expected_sequence_azimuth)
     assert seq_res.cone_angle == pytest.approx(expected_cone_angle)
