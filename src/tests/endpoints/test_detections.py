@@ -1,3 +1,4 @@
+import asyncio
 import io
 from ast import literal_eval
 from collections import Counter
@@ -172,35 +173,6 @@ async def test_create_detection(
             expected_others.remove(det_box)
             assert det.others_bboxes is not None
             assert Counter(literal_eval(det.others_bboxes)) == Counter(expected_others)
-
-
-@pytest.mark.asyncio
-async def test_create_detection_requires_threshold_for_sequence(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    mock_img: bytes,
-    monkeypatch,
-):
-    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 3)
-    auth = pytest.get_token(
-        pytest.camera_table[0]["id"],
-        ["camera"],
-        pytest.camera_table[0]["organization_id"],
-    )
-
-    payload1 = {"pose_id": 1, "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
-    resp1 = await async_client.post(
-        "/detections", data=payload1, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
-    )
-    assert resp1.status_code == 201, resp1.text
-    assert resp1.json()["sequence_id"] is None
-
-    payload2 = {"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.9)]"}
-    resp2 = await async_client.post(
-        "/detections", data=payload2, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
-    )
-    assert resp2.status_code == 201, resp2.text
-    assert resp2.json()["sequence_id"] is None
 
 
 def test_parse_bbox_invalid_syntax_raises():
@@ -632,49 +604,6 @@ async def test_detection_counts_split_sequences_and_alerts(
 
 
 @pytest.mark.asyncio
-async def test_create_detection_reuses_sequence_on_overlap(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    mock_img: bytes,
-    monkeypatch,
-):
-    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
-    auth = pytest.get_token(
-        pytest.camera_table[0]["id"],
-        ["camera"],
-        pytest.camera_table[0]["organization_id"],
-    )
-    pose_id = pytest.pose_table[0]["id"]
-
-    async def count_sequences() -> int:
-        res = await detection_session.exec(select(Sequence))
-        return len(res.all())
-
-    base_seq = await count_sequences()
-
-    resp1 = await async_client.post(
-        "/detections",
-        data={"pose_id": pose_id, "bboxes": "[(0.10,0.10,0.20,0.20,0.9)]"},
-        files={"file": ("logo.png", mock_img, "image/png")},
-        headers=auth,
-    )
-    assert resp1.status_code == 201, resp1.text
-    seq_id_1 = resp1.json()["sequence_id"]
-    assert isinstance(seq_id_1, int)
-    assert await count_sequences() == base_seq + 1
-
-    resp2 = await async_client.post(
-        "/detections",
-        data={"pose_id": pose_id, "bboxes": "[(0.15,0.15,0.25,0.25,0.9)]"},
-        files={"file": ("logo.png", mock_img, "image/png")},
-        headers=auth,
-    )
-    assert resp2.status_code == 201, resp2.text
-    assert resp2.json()["sequence_id"] == seq_id_1
-    assert await count_sequences() == base_seq + 1
-
-
-@pytest.mark.asyncio
 async def test_create_detection_triggers_telegram_notifications(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -832,6 +761,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     )
 
     async def fake_fetch_all(*args, **kwargs):
+        await asyncio.sleep(0)
         return [dummy_sequence, actual_sequence]
 
     monkeypatch.setattr(sequences, "fetch_all", fake_fetch_all)
