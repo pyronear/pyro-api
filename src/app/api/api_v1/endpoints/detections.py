@@ -35,8 +35,8 @@ from app.api.dependencies import (
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOXES_PATTERN,
@@ -305,8 +305,6 @@ async def create_detection(
     )
     # Sequence handling
     # Check if there is a sequence that was seen recently
-    seq_filters: List[tuple[str, Any]] = [("camera_id", token_payload.sub), ("pose_id", pose_id)]
-
     sequence = await sequences.fetch_all(
         filters=[("camera_id", token_payload.sub), ("camera_azimuth", det.azimuth)],
         inequality_pair=(

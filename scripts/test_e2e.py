@@ -95,7 +95,6 @@ def main(args):
         "azimuth": 45,
     }
     pose_id = api_request("post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
-    pose_azimuth = payload["azimuth"]
 
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
