@@ -102,7 +102,8 @@ async def test_create_detection(
         assert data["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert data["camera_id"] == pytest.camera_table[cam_idx]["id"]
     created_ids: List[int] = []
-    created_ids.append(response.json()["id"]) if response.status_code // 100 == 2 else None
+    if response.status_code // 100 == 2:
+        created_ids.append(response.json()["id"])
     if isinstance(repeat, int) and repeat > 0:
         det_ids = [response.json()["id"]]
         for _ in range(repeat):
