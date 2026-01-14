@@ -78,6 +78,50 @@ async def test_create_pose(
 
 
 @pytest.mark.parametrize(
+    ("cam_idx", "payload", "status_code", "status_detail"),
+    [
+        (
+            0,
+            {"camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
+            201,
+            None,
+        ),
+        (
+            0,
+            {"camera_id": 2, "azimuth": 45.0, "patrol_id": 1},
+            403,
+            "Access forbidden.",
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_pose_camera_scope(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    cam_idx: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = pytest.get_token(
+        pytest.camera_table[cam_idx]["id"],
+        ["camera"],
+        pytest.camera_table[cam_idx]["organization_id"],
+    )
+
+    response = await async_client.post("/poses", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+
+    if response.status_code == 201:
+        json_resp = response.json()
+        assert json_resp["camera_id"] == payload["camera_id"]
+        assert json_resp["azimuth"] == payload["azimuth"]
+        assert json_resp.get("patrol_id") == payload.get("patrol_id")
+
+
+@pytest.mark.parametrize(
     ("user_idx", "pose_id", "status_code", "status_detail", "expected_pose"),
     [
         (None, 1, 401, "Not authenticated", None),
@@ -184,6 +228,40 @@ async def test_update_pose(
     if response.status_code == 200:
         json_resp = response.json()
         assert json_resp == expected_updated
+
+
+@pytest.mark.parametrize(
+    ("cam_idx", "pose_id", "payload", "status_code", "status_detail"),
+    [
+        (0, 1, {"azimuth": 111.1}, 200, None),
+        (0, 3, {"azimuth": 111.1}, 403, "Access forbidden."),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_pose_camera_scope(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    cam_idx: int,
+    pose_id: int,
+    payload: dict,
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = pytest.get_token(
+        pytest.camera_table[cam_idx]["id"],
+        ["camera"],
+        pytest.camera_table[cam_idx]["organization_id"],
+    )
+
+    response = await async_client.patch(f"/poses/{pose_id}", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code == 200:
+        json_resp = response.json()
+        assert json_resp["id"] == pose_id
+        assert json_resp["azimuth"] == payload["azimuth"]
 
 
 @pytest.mark.parametrize(
