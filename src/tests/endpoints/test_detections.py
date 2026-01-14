@@ -10,7 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
-from app.models import AlertSequence, Camera, Detection, Sequence
+from app.models import AlertSequence, Camera, Detection, Pose, Sequence
 from app.services.cones import resolve_cone
 
 
@@ -318,9 +318,12 @@ async def test_create_detection_creates_sequence(
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     mock_img = b"img"
     auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=120.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
     payload = {
-        "azimuth": 120.0,
-        "pose_id": None,
+        "pose_id": pose.id,
         "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
     }
     resp = await async_client.post(
@@ -337,7 +340,7 @@ async def test_create_detection_creates_sequence(
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
     expected_sequence_azimuth, expected_cone_angle = resolve_cone(
-        float(payload["azimuth"] if payload["azimuth"] is not None else 0.0),
+        float(pose.azimuth),
         str(payload["bboxes"]),
         camera.angle_of_view,
     )

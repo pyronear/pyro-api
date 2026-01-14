@@ -9,7 +9,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.sequences import label_sequence
-from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
 
@@ -320,9 +320,13 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
     now = datetime.utcnow()
+    pose = Pose(camera_id=camera.id, azimuth=45.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
     seq = Sequence(
         camera_id=camera.id,
-        pose_id=None,
+        pose_id=pose.id,
         camera_azimuth=45.0,
         sequence_azimuth=40.0,
         cone_angle=10.0,
@@ -332,9 +336,8 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
     )
     detection = Detection(
         camera_id=camera.id,
-        pose_id=None,
+        pose_id=pose.id,
         sequence_id=None,
-        azimuth=45.0,
         bucket_key="tmp",
         bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
         created_at=now,
