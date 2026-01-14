@@ -41,6 +41,16 @@ async def create_pose(
     return PoseRead(**db_pose.model_dump())
 
 
+@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch poses for the authenticated camera")
+async def list_current_poses(
+    poses: PoseCRUD = Depends(get_pose_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
+) -> List[PoseRead]:
+    telemetry_client.capture(f"camera|{token_payload.sub}", event="poses-list")
+    rows = await poses.fetch_all(filters=("camera_id", token_payload.sub), order_by="id")
+    return [PoseRead(**row.model_dump()) for row in rows]
+
+
 @router.get("/{pose_id}", status_code=status.HTTP_200_OK, summary="Fetch information of a specific pose")
 async def get_pose(
     pose_id: int = Path(..., gt=0),
