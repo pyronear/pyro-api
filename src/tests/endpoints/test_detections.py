@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
-from app.models import AlertSequence, Camera, Detection, Pose, Sequence
+from app.models import Alert, AlertSequence, Camera, Detection, Pose, Sequence
 from app.services.cones import resolve_cone
 
 
@@ -182,6 +182,83 @@ async def test_create_detection_requires_threshold_for_sequence(
     )
     assert resp2.status_code == 201, resp2.text
     assert resp2.json()["sequence_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_detection_counts_split_sequences_and_alerts(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+    monkeypatch,
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose_id = pytest.pose_table[0]["id"]
+
+    bbox_a = "[(0.05,0.05,0.10,0.10,0.9)]"
+    bbox_b = "[(0.90,0.90,0.95,0.95,0.9)]"
+    bbox_both = "[(0.05,0.05,0.10,0.10,0.9),(0.90,0.90,0.95,0.95,0.9)]"
+
+    async def count(model):
+        res = await detection_session.exec(select(model))
+        return len(res.all())
+
+    base_det = await count(Detection)
+    base_seq = await count(Sequence)
+    base_alert = await count(Alert)
+    base_map = await count(AlertSequence)
+
+    resp1 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": bbox_a},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp1.status_code == 201, resp1.text
+    assert await count(Detection) == base_det + 1
+    assert await count(Sequence) == base_seq + 1
+    assert await count(Alert) == base_alert + 1
+    assert await count(AlertSequence) == base_map + 1
+
+    resp2 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": bbox_a},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp2.status_code == 201, resp2.text
+    assert await count(Detection) == base_det + 2
+    assert await count(Sequence) == base_seq + 1
+    assert await count(Alert) == base_alert + 1
+    assert await count(AlertSequence) == base_map + 1
+
+    resp3 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": bbox_b},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp3.status_code == 201, resp3.text
+    assert await count(Detection) == base_det + 3
+    assert await count(Sequence) == base_seq + 2
+    assert await count(Alert) == base_alert + 2
+    assert await count(AlertSequence) == base_map + 2
+
+    resp4 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": bbox_both},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp4.status_code == 201, resp4.text
+    assert await count(Detection) == base_det + 5
+    assert await count(Sequence) == base_seq + 2
+    assert await count(Alert) == base_alert + 2
+    assert await count(AlertSequence) == base_map + 2
 
 
 @pytest.mark.parametrize(
