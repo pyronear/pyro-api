@@ -1,4 +1,5 @@
 from ast import literal_eval
+from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Union
 
@@ -89,8 +90,15 @@ async def test_create_detection(
         data = response.json()
         assert data["pose_id"] == payload.get("pose_id")
         if isinstance(payload.get("bboxes"), str):
-            assert data["bboxes"] == payload["bboxes"]
-            assert data.get("others_bboxes") is None
+            boxes = literal_eval(payload["bboxes"])
+            if len(boxes) <= 1:
+                assert data["bboxes"] == payload["bboxes"]
+                assert data.get("others_bboxes") is None
+            else:
+                det_boxes = literal_eval(data["bboxes"])
+                assert len(det_boxes) == 1
+                assert det_boxes[0] in boxes
+                assert data.get("others_bboxes") is not None
         assert data["id"] == max(entry["id"] for entry in pytest.detection_table) + 1
         assert data["camera_id"] == pytest.camera_table[cam_idx]["id"]
     created_ids: List[int] = []
@@ -120,7 +128,7 @@ async def test_create_detection(
             assert response.json()["sequence_id"] == sequence_id
         created_ids.extend(det_ids)
 
-    # Multi-bbox input should be stored as-is in a single detection
+    # Multi-bbox input should create one detection per bbox and store siblings in others_bboxes
     if response.status_code == 201 and isinstance(payload.get("bboxes"), str) and repeat in (0, None):
         boxes = literal_eval(payload["bboxes"])
         if len(boxes) <= 1:
@@ -130,10 +138,21 @@ async def test_create_detection(
             select(Detection).where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
         )
         dets = latest_res.all()
-        assert len(dets) == 1
-        assert dets[0].pose_id == payload["pose_id"]
-        assert dets[0].bboxes == payload["bboxes"]
-        assert dets[0].others_bboxes is None
+        assert len(dets) == len(boxes)
+        assert {det.pose_id for det in dets} == {payload["pose_id"]}
+        assert {det.bucket_key for det in dets} == {bucket_key}
+        box_counter = Counter(boxes)
+        for det in dets:
+            det_boxes = literal_eval(det.bboxes)
+            assert len(det_boxes) == 1
+            det_box = det_boxes[0]
+            assert det_box in box_counter
+            expected_others = []
+            for box, count in box_counter.items():
+                expected_others.extend([box] * count)
+            expected_others.remove(det_box)
+            assert det.others_bboxes is not None
+            assert Counter(literal_eval(det.others_bboxes)) == Counter(expected_others)
 
 
 @pytest.mark.asyncio

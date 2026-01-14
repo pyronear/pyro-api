@@ -85,4 +85,4 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert len(response.json()) == 1
     response = user_client.fetch_sequences_detections(response.json()[0]["id"])
     assert response.status_code == 200, response.__dict__
-    assert len(response.json()) == 3
+    assert len(response.json()) == 4
