@@ -95,6 +95,7 @@ def main(args):
         "azimuth": 45,
     }
     pose_id = api_request("post", f"{args.endpoint}/poses/", agent_auth, payload)["id"]
+    pose_azimuth = payload["azimuth"]
 
     # Take a picture
     file_bytes = requests.get("https://pyronear.org/img/logo.png", timeout=5).content
@@ -149,7 +150,7 @@ def main(args):
     assert sequence["camera_id"] == cam_id
     assert sequence["started_at"] == response.json()["created_at"]
     assert sequence["last_seen_at"] > sequence["started_at"]
-    assert sequence["camera_azimuth"] == response.json()["azimuth"]
+    assert sequence["camera_azimuth"] == pose_azimuth
     # Fetch the latest sequence
     assert len(api_request("get", f"{args.endpoint}/sequences/unlabeled/latest", agent_auth)) == 1
     # Fetch from date
