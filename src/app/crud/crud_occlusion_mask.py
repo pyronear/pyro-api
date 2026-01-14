@@ -21,4 +21,4 @@ class OcclusionMaskCRUD(BaseCRUD[OcclusionMask, OcclusionMaskCreate, OcclusionMa
 
     async def get_by_pose(self, pose_id: int) -> List[OcclusionMask]:
         results = await self.session.exec(select(OcclusionMask).where(OcclusionMask.pose_id == pose_id))
-        return results.all()
+        return list(results.all())

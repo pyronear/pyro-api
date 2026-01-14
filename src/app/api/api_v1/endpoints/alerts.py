@@ -37,7 +37,7 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
         select(AlertSequence.alert_id, Sequence)
         .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
         .where(AlertSequence.alert_id.in_(alert_ids))  # type: ignore[attr-defined]
-        .order_by(AlertSequence.alert_id, desc(cast(Any, Sequence.last_seen_at)))
+        .order_by(cast(Any, AlertSequence.alert_id), desc(cast(Any, Sequence.last_seen_at)))
     )
     res = await session.exec(seq_stmt)
     for alert_id, sequence in res.all():
