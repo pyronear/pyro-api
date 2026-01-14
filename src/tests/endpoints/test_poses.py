@@ -231,6 +231,37 @@ async def test_update_pose(
 
 
 @pytest.mark.parametrize(
+    ("cam_idx", "status_code", "expected_count"),
+    [
+        (0, 200, 2),
+        (1, 200, 1),
+    ],
+)
+@pytest.mark.asyncio
+async def test_list_current_poses_camera(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    cam_idx: int,
+    status_code: int,
+    expected_count: int,
+):
+    auth = pytest.get_token(
+        pytest.camera_table[cam_idx]["id"],
+        ["camera"],
+        pytest.camera_table[cam_idx]["organization_id"],
+    )
+
+    response = await async_client.get("/poses", headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if response.status_code == 200:
+        json_resp = response.json()
+        assert isinstance(json_resp, list)
+        assert len(json_resp) == expected_count
+        assert {pose["camera_id"] for pose in json_resp} == {pytest.camera_table[cam_idx]["id"]}
+
+
+@pytest.mark.parametrize(
     ("cam_idx", "pose_id", "payload", "status_code", "status_detail"),
     [
         (0, 1, {"azimuth": 111.1}, 200, None),

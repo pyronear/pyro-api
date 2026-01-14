@@ -23,6 +23,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -463,7 +464,7 @@ async def create_detection(
                         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
                         url = bucket.get_public_url(det.bucket_key)
 
-                        slack_payload = det.model_dump()
+                        slack_payload = jsonable_encoder(det)
                         slack_payload["pose_azimuth"] = pose.azimuth
                         slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
                         background_tasks.add_task(
