@@ -25,6 +25,33 @@ def test_client_constructor(token, host, timeout, expected_error):
             Client(token, host, timeout=timeout)
 
 
+def test_get_current_poses_camera(cam_token, cam_pose_id):
+    cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
+    response = cam_client.get_current_poses()
+    assert response.status_code == 200, response.__dict__
+    poses = response.json()
+    assert isinstance(poses, list)
+    assert any(pose["id"] == cam_pose_id for pose in poses)
+
+
+def test_get_current_poses_admin(cam_id, cam_pose_id):
+    admin_client = Client(pytest.admin_token, "http://localhost:5050", timeout=10)
+    response = admin_client.get_current_poses(camera_id=cam_id)
+    assert response.status_code == 200, response.__dict__
+    payload = response.json()
+    assert isinstance(payload.get("poses"), list)
+    assert any(pose["id"] == cam_pose_id for pose in payload["poses"])
+
+
+def test_update_pose_camera(cam_token, cam_pose_id):
+    cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
+    with pytest.raises(ValueError, match="Either azimuth or patrol_id must be provided"):
+        cam_client.update_pose(cam_pose_id)
+    response = cam_client.update_pose(cam_pose_id, azimuth=123.4)
+    assert response.status_code == 200, response.__dict__
+    assert response.json()["azimuth"] == 123.4
+
+
 @pytest.fixture(scope="session")
 def test_cam_workflow(cam_token, cam_pose_id, mock_img):
     cam_client = Client(cam_token, "http://localhost:5050", timeout=10)

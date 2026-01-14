@@ -22,6 +22,7 @@ class ClientRoute(str, Enum):
     CAMERAS_HEARTBEAT = "cameras/heartbeat"
     CAMERAS_IMAGE = "cameras/image"
     CAMERAS_FETCH = "cameras/"
+    CAMERAS_BY_ID = "cameras/{camera_id}"
     # POSES
     POSES_CREATE = "poses/"
     POSES_BY_ID = "poses/{pose_id}"
@@ -180,13 +181,20 @@ class Client:
             timeout=self.timeout,
         )
 
-    def get_current_poses(self) -> Response:
-        """Fetch poses for the authenticated camera."""
-        params: Dict[str, int] | None = None
+    def get_current_poses(self, camera_id: int | None = None) -> Response:
+        """Fetch poses for the authenticated camera.
+
+        For admin/agent tokens, provide camera_id to retrieve poses via the camera endpoint.
+        """
+        if camera_id is not None:
+            return requests.get(
+                urljoin(self._route_prefix, ClientRoute.CAMERAS_BY_ID.format(camera_id=camera_id)),
+                headers=self.headers,
+                timeout=self.timeout,
+            )
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.POSES_CREATE),
             headers=self.headers,
-            params=params,
             timeout=self.timeout,
         )
 
@@ -200,6 +208,8 @@ class Client:
 
         >>> api_client.update_pose(pose_id=1, azimuth=90.0)
         """
+        if azimuth is None and patrol_id is None:
+            raise ValueError("Either azimuth or patrol_id must be provided")
         payload: Dict[str, float | int] = {}
         if azimuth is not None:
             payload["azimuth"] = azimuth

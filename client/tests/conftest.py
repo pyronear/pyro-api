@@ -50,7 +50,7 @@ def cam_setup():
     cam_token = requests.post(urljoin(API_URL, f"cameras/{cam_id}/token"), headers=admin_headers, timeout=5).json()[
         "access_token"
     ]
-    return {"token": cam_token, "pose_id": pose_id}
+    return {"token": cam_token, "pose_id": pose_id, "camera_id": cam_id}
 
 
 @pytest.fixture(scope="session")
@@ -61,6 +61,11 @@ def cam_token(cam_setup):
 @pytest.fixture(scope="session")
 def cam_pose_id(cam_setup):
     return itemgetter("pose_id")(cam_setup)
+
+
+@pytest.fixture(scope="session")
+def cam_id(cam_setup):
+    return itemgetter("camera_id")(cam_setup)
 
 
 @pytest.fixture(scope="session")
