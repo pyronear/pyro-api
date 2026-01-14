@@ -8,9 +8,9 @@ from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
+from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert, _get_last_bbox_for_sequence
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Pose, Sequence
 from app.services.cones import resolve_cone
 
@@ -185,6 +185,81 @@ async def test_create_detection_requires_threshold_for_sequence(
 
 
 @pytest.mark.asyncio
+async def test_get_last_bbox_for_sequence_returns_latest(detection_session: AsyncSession):
+    detections = DetectionCRUD(detection_session)
+    now = datetime.utcnow()
+    camera_id = pytest.camera_table[0]["id"]
+
+    pose = Pose(camera_id=camera_id, azimuth=50.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    sequence = Sequence(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        camera_azimuth=50.0,
+        sequence_azimuth=50.0,
+        cone_angle=10.0,
+        started_at=now - timedelta(seconds=10),
+        last_seen_at=now,
+    )
+    detection_session.add(sequence)
+    await detection_session.commit()
+    await detection_session.refresh(sequence)
+
+    det1 = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-1",
+        bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
+        created_at=now - timedelta(seconds=5),
+    )
+    det2 = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-2",
+        bboxes="[(0.3,0.3,0.4,0.4,0.9)]",
+        created_at=now,
+    )
+    detection_session.add(det1)
+    detection_session.add(det2)
+    await detection_session.commit()
+
+    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
+    assert last_bbox == (0.3, 0.3, 0.4, 0.4, 0.9)
+
+
+@pytest.mark.asyncio
+async def test_get_last_bbox_for_sequence_returns_none_without_detections(detection_session: AsyncSession):
+    detections = DetectionCRUD(detection_session)
+    now = datetime.utcnow()
+    camera_id = pytest.camera_table[0]["id"]
+    pose = Pose(camera_id=camera_id, azimuth=60.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    sequence = Sequence(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        camera_azimuth=60.0,
+        sequence_azimuth=60.0,
+        cone_angle=10.0,
+        started_at=now - timedelta(seconds=10),
+        last_seen_at=now,
+    )
+    detection_session.add(sequence)
+    await detection_session.commit()
+    await detection_session.refresh(sequence)
+
+    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
+    assert last_bbox is None
+
+
+@pytest.mark.asyncio
 async def test_detection_counts_split_sequences_and_alerts(
     async_client: AsyncClient,
     detection_session: AsyncSession,
@@ -259,6 +334,49 @@ async def test_detection_counts_split_sequences_and_alerts(
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
     assert await count(AlertSequence) == base_map + 2
+
+
+@pytest.mark.asyncio
+async def test_create_detection_reuses_sequence_on_overlap(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+    monkeypatch,
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose_id = pytest.pose_table[0]["id"]
+
+    async def count_sequences() -> int:
+        res = await detection_session.exec(select(Sequence))
+        return len(res.all())
+
+    base_seq = await count_sequences()
+
+    resp1 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": "[(0.10,0.10,0.20,0.20,0.9)]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp1.status_code == 201, resp1.text
+    seq_id_1 = resp1.json()["sequence_id"]
+    assert isinstance(seq_id_1, int)
+    assert await count_sequences() == base_seq + 1
+
+    resp2 = await async_client.post(
+        "/detections",
+        data={"pose_id": pose_id, "bboxes": "[(0.15,0.15,0.25,0.25,0.9)]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp2.status_code == 201, resp2.text
+    assert resp2.json()["sequence_id"] == seq_id_1
+    assert await count_sequences() == base_seq + 1
 
 
 @pytest.mark.parametrize(
