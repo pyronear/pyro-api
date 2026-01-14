@@ -1,4 +1,5 @@
 import os
+from operator import itemgetter
 from urllib.parse import urljoin
 
 import pytest
@@ -54,12 +55,12 @@ def cam_setup():
 
 @pytest.fixture(scope="session")
 def cam_token(cam_setup):
-    return cam_setup["token"]
+    return itemgetter("token")(cam_setup)
 
 
 @pytest.fixture(scope="session")
 def cam_pose_id(cam_setup):
-    return cam_setup["pose_id"]
+    return itemgetter("pose_id")(cam_setup)
 
 
 @pytest.fixture(scope="session")
