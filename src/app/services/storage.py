@@ -5,7 +5,7 @@
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from mimetypes import guess_extension
 from typing import Any
 
@@ -47,7 +47,14 @@ class S3Bucket:
         return self._s3.head_object(Bucket=self.name, Key=bucket_key)
 
     def check_file_existence(self, bucket_key: str) -> bool:
-        """Check whether a file exists on the bucket."""
+        """Check whether a file exists on the bucket.
+
+        Args:
+            bucket_key: The key of the file to check.
+
+        Returns:
+            True if the file exists, False otherwise.
+        """
         try:
             # Use boto3 head_object method using the Qarnot private connection attribute
             head_object = self.get_file_metadata(bucket_key)
@@ -57,18 +64,38 @@ class S3Bucket:
             return False
 
     def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
-        """Upload a file to bucket and return whether the upload succeeded."""
+        """Upload a file to bucket and return whether the upload succeeded.
+
+        Args:
+            bucket_key: The key of the file to upload.
+            file_binary: The binary data of the file to upload.
+
+        Returns:
+            True if the upload succeeded, False otherwise.
+        """
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
         self._s3.upload_fileobj(file_binary, self.name, bucket_key)
         return True
 
     def delete_file(self, bucket_key: str) -> None:
-        """Remove bucket file and return whether the deletion succeeded."""
+        """Remove bucket file and return whether the deletion succeeded.
+
+        Args:
+            bucket_key: The key of the file to delete.
+        """
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.name, Key=bucket_key)
 
     def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
-        """Generate a temporary public URL for a bucket file."""
+        """Generate a temporary public URL for a bucket file.
+
+        Args:
+            bucket_key: The key of the file to generate a public URL for.
+            url_expiration: The expiration time of the public URL in seconds.
+
+        Returns:
+            The public URL for the file.
+        """
         if not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
@@ -120,7 +147,14 @@ class S3Service:
         self.proxy_url = proxy_url
 
     def create_bucket(self, bucket_name: str) -> bool:
-        """Create a new bucket in S3 storage."""
+        """Create a new bucket in S3 storage.
+
+        Args:
+            bucket_name: The name of the bucket to create.
+
+        Returns:
+            True if the bucket was created, False otherwise.
+        """
         try:
             # https://stackoverflow.com/questions/51912072/invalidlocationconstraint-error-while-creating-s3-bucket-when-the-used-command-i
             # https://github.com/localstack/localstack/issues/8000
@@ -130,25 +164,39 @@ class S3Service:
                 else {"CreateBucketConfiguration": {"LocationConstraint": self._s3.meta.region_name}}
             )
             self._s3.create_bucket(Bucket=bucket_name, **config_)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        return True
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage."""
+        """Get an existing bucket in S3 storage.
+
+        Args:
+            bucket_name: The name of the bucket to get.
+
+        Returns:
+            The bucket object.
+        """
         return S3Bucket(self._s3, bucket_name, self.proxy_url)
 
     async def delete_bucket(self, bucket_name: str) -> bool:
-        """Delete an existing bucket in S3 storage."""
+        """Delete an existing bucket in S3 storage.
+
+        Args:
+            bucket_name: The name of the bucket to delete.
+
+        Returns:
+            True if the bucket was deleted, False otherwise.
+        """
         bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
         try:
             await bucket.delete_items()
             self._s3.delete_bucket(Bucket=bucket_name)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        return True
 
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
@@ -156,7 +204,16 @@ class S3Service:
 
 
 async def upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
-    """Upload a file to S3 storage and return the public URL."""
+    """Upload a file to S3 storage and return the public URL.
+
+    Args:
+        file: The file to upload.
+        organization_id: The ID of the organization.
+        camera_id: The ID of the camera.
+
+    Returns:
+        The public URL of the uploaded file.
+    """
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
     await file.seek(0)
@@ -166,7 +223,9 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int) ->
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash
-    bucket_key = f"{camera_id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    bucket_key = (
+        f"{camera_id}-{datetime.now(UTC).replace(tzinfo=None).strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    )
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(organization_id)

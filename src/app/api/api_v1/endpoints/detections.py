@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, cast
 
 import pandas as pd
@@ -25,16 +25,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
     dispatch_webhook,
-    get_alert_crud,
-    get_camera_crud,
-    get_detection_crud,
     get_jwt,
-    get_organization_crud,
-    get_sequence_crud,
-    get_webhook_crud,
 )
 from app.core.config import settings
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
+from app.db import get_session
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
@@ -59,10 +54,10 @@ router = APIRouter()
 
 async def _get_camera_by_id(
     camera: Camera,
-    cameras: CameraCRUD,
+    session: AsyncSession,
     sequence_camera_id: int,
 ) -> dict[int, Camera]:
-    org_cameras = await cameras.fetch_all(filters=("organization_id", camera.organization_id))
+    org_cameras = await CameraCRUD(session=session).fetch_all(filters=("organization_id", camera.organization_id))
     camera_by_id = {cam.id: cam for cam in org_cameras}
     if sequence_camera_id not in camera_by_id:
         camera_by_id[sequence_camera_id] = camera
@@ -70,16 +65,16 @@ async def _get_camera_by_id(
 
 
 async def _get_recent_sequences(
-    sequences: SequenceCRUD,
+    session: AsyncSession,
     camera_ids: list[int],
     sequence_: Sequence,
 ) -> list[Sequence]:
-    recent_sequences = await sequences.fetch_all(
+    recent_sequences = await SequenceCRUD(session=session).fetch_all(
         in_pair=("camera_id", camera_ids),
         inequality_pair=(
             "last_seen_at",
             ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
     )
     if all(seq.id != sequence_.id for seq in recent_sequences):
@@ -152,13 +147,13 @@ def _collect_existing_alert_ids(group: tuple[int, ...], mapping: dict[int, set[i
 
 
 async def _maybe_update_alert(
-    alerts: AlertCRUD,
+    session: AsyncSession,
     target_alert_id: int,
     location: tuple[float, float],
     start_at: datetime,
     last_seen_at: datetime,
 ) -> None:
-    current_alert = cast(Alert, await alerts.get(target_alert_id, strict=True))
+    current_alert = cast(Alert, await AlertCRUD(session=session).get(target_alert_id, strict=True))
     new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
     new_last_seen = max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
     if (
@@ -167,7 +162,7 @@ async def _maybe_update_alert(
         or (current_alert.started_at is None or new_start_at < current_alert.started_at)
         or (current_alert.last_seen_at is None or new_last_seen > current_alert.last_seen_at)
     ):
-        await alerts.update(
+        await AlertCRUD(session=session).update(
             target_alert_id,
             AlertUpdate(lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen),
         )
@@ -179,14 +174,14 @@ async def _get_or_create_alert_id(
     organization_id: int,
     start_at: datetime,
     last_seen_at: datetime,
-    alerts: AlertCRUD,
+    session: AsyncSession,
 ) -> int:
     if existing_alert_ids:
         target_alert_id = min(existing_alert_ids)
         if isinstance(location, tuple):
-            await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
+            await _maybe_update_alert(session, target_alert_id, location, start_at, last_seen_at)
         return target_alert_id
-    alert = await alerts.create(
+    alert = await AlertCRUD(session=session).create(
         AlertCreate(
             organization_id=organization_id,
             lat=location[0] if isinstance(location, tuple) else None,
@@ -216,15 +211,13 @@ def _build_links_for_group(
 async def _attach_sequence_to_alert(
     sequence_: Sequence,
     camera: Camera,
-    cameras: CameraCRUD,
-    sequences: SequenceCRUD,
-    alerts: AlertCRUD,
+    session: AsyncSession,
 ) -> None:
     """Assign the given sequence to an alert based on cone/time overlap."""
-    camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
+    camera_by_id = await _get_camera_by_id(camera, session, sequence_.camera_id)
 
     # Fetch recent sequences for the organization based on recency of last_seen_at
-    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_)
+    recent_sequences = await _get_recent_sequences(session, list(camera_by_id.keys()), sequence_)
 
     # Build DataFrame for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
@@ -237,7 +230,6 @@ async def _attach_sequence_to_alert(
     seq_ids = list(seq_by_id.keys())
 
     # Existing alert links
-    session = sequences.session
     mapping = await _fetch_alert_mapping(session, seq_ids)
 
     to_link: list[AlertSequence] = []
@@ -252,7 +244,7 @@ async def _attach_sequence_to_alert(
             camera.organization_id,
             start_at,
             last_seen_at,
-            alerts,
+            session,
         )
         to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
 
@@ -275,12 +267,7 @@ async def create_detection(
     ],
     azimuth: Annotated[float, Form(ge=0, lt=360, description="angle between north and direction in degrees")],
     file: Annotated[UploadFile, File(..., alias="file")],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
-    webhooks: Annotated[WebhookCRUD, Depends(get_webhook_crud)],
-    organizations: Annotated[OrganizationCRUD, Depends(get_organization_crud)],
-    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[Role.CAMERA])],
     pose_id: Annotated[int | None, Form(gt=0, description="pose id of the detection")] = None,
 ) -> Detection:
@@ -295,19 +282,19 @@ async def create_detection(
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    det = await detections.create(
+    det = await DetectionCRUD(session=session).create(
         DetectionCreate(
             camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes
         )
     )
     # Sequence handling
     # Check if there is a sequence that was seen recently
-    sequence = await sequences.fetch_all(
+    sequence = await SequenceCRUD(session=session).fetch_all(
         filters=[("camera_id", token_payload.sub), ("camera_azimuth", det.azimuth)],
         inequality_pair=(
             "last_seen_at",
             ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
         order_by="last_seen_at",
         order_desc=True,
@@ -316,16 +303,16 @@ async def create_detection(
 
     if len(sequence) == 1:
         # Add detection to existing sequence
-        await sequences.update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
-        await detections.update(det.id, DetectionSequence(sequence_id=sequence[0].id))
+        await SequenceCRUD(session=session).update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
+        await DetectionCRUD(session=session).update(det.id, DetectionSequence(sequence_id=sequence[0].id))
     else:
         # Check if we've reached the threshold of detections per interval
-        dets_ = await detections.fetch_all(
+        dets_ = await DetectionCRUD(session=session).fetch_all(
             filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
             inequality_pair=(
                 "created_at",
                 ">",
-                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
             ),
             order_by="created_at",
             order_desc=False,
@@ -333,10 +320,10 @@ async def create_detection(
         )
 
         if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-            camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
+            camera = cast(Camera, await CameraCRUD(session=session).get(det.camera_id, strict=True))
             cone_azimuth, cone_angle = resolve_cone(det.azimuth, dets_[0].bboxes, camera.angle_of_view)
             # Create new sequence
-            sequence_ = await sequences.create(
+            sequence_ = await SequenceCRUD(session=session).create(
                 Sequence(
                     camera_id=token_payload.sub,
                     pose_id=pose_id,
@@ -348,28 +335,34 @@ async def create_detection(
                 )
             )
             # Update the detection with the sequence ID
-            det = await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
+            det = await DetectionCRUD(session=session).update(det.id, DetectionSequence(sequence_id=sequence_.id))
             for det_ in dets_:
-                await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
+                await DetectionCRUD(session=session).update(det_.id, DetectionSequence(sequence_id=sequence_.id))
 
-            await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+            await _attach_sequence_to_alert(sequence_, camera, session)
 
             # Webhooks
-            whs = await webhooks.fetch_all()
+            whs = await WebhookCRUD(session=session).fetch_all()
             if any(whs):
-                for webhook in await webhooks.fetch_all():
+                for webhook in await WebhookCRUD(session=session).fetch_all():
                     background_tasks.add_task(dispatch_webhook, webhook.url, det)
 
             org = None
             # Telegram notifications
             if telegram_client.is_enabled:
-                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                org = cast(
+                    Organization,
+                    await OrganizationCRUD(session=session).get(token_payload.organization_id, strict=True),
+                )
                 if org.telegram_id:
                     background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
 
             if slack_client.is_enabled:
                 if org is None:
-                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                    org = cast(
+                        Organization,
+                        await OrganizationCRUD(session=session).get(token_payload.organization_id, strict=True),
+                    )
                 if org.slack_hook:
                     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
                     url = bucket.get_public_url(det.bucket_key)
@@ -384,17 +377,16 @@ async def create_detection(
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
     detection_id: Annotated[int, Path(gt=0)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
-    detection = cast(Detection, await detections.get(detection_id, strict=True))
+    detection = cast(Detection, await DetectionCRUD(session=session).get(detection_id, strict=True))
 
     if UserRole.ADMIN in token_payload.scopes:
         return detection
 
-    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return DetectionRead(**detection.model_dump())
@@ -403,21 +395,20 @@ async def get_detection(
 @router.get("/{detection_id}/url", status_code=200)
 async def get_detection_url(
     detection_id: Annotated[int, Path(gt=0)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> DetectionUrl:
     """Resolve the temporary media image URL."""
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     # Check in DB
-    detection = cast(Detection, await detections.get(detection_id, strict=True))
+    detection = cast(Detection, await DetectionCRUD(session=session).get(detection_id, strict=True))
 
     if UserRole.ADMIN in token_payload.scopes:
-        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+        camera = cast(Camera, await CameraCRUD(session=session).get(detection.camera_id, strict=True))
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
         return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
 
-    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(detection.camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     # Check in bucket
@@ -427,33 +418,33 @@ async def get_detection_url(
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
 async def fetch_detections(
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> list[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
-        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all()]
+        return [DetectionRead(**elt.model_dump()) for elt in await DetectionCRUD(session=session).fetch_all()]
 
-    cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
+    cameras_list = await CameraCRUD(session=session).fetch_all(
+        filters=("organization_id", token_payload.organization_id)
+    )
     camera_ids = [camera.id for camera in cameras_list]
 
     return [
         DetectionRead(**elt.model_dump())
-        for elt in await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
+        for elt in await DetectionCRUD(session=session).fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
     ]
 
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
     detection_id: Annotated[int, Path(gt=0)],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
-    detection = cast(Detection, await detections.get(detection_id, strict=True))
-    camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
+    detection = cast(Detection, await DetectionCRUD(session=session).get(detection_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     bucket.delete_file(detection.bucket_key)
-    await detections.delete(detection_id)
+    await DetectionCRUD(session=session).delete(detection_id)

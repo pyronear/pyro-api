@@ -7,9 +7,8 @@ import asyncio
 import logging
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
-from sqlmodel import SQLModel, create_engine, select
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
@@ -20,12 +19,21 @@ from app.services.storage import s3_service
 __all__ = ["get_session", "init_db"]
 
 logger = logging.getLogger("uvicorn.error")
-engine = AsyncEngine(create_engine(settings.POSTGRES_URL, echo=False))
+
+engine = create_async_engine(
+    str(settings.POSTGRES_URL),
+    echo=False,
+    pool_size=10,
+    max_overflow=20,
+    # cf. https://github.com/MagicStack/asyncpg/issues/309#issuecomment-1987144710
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    pool_timeout=30,  # Don't wait forever for connections
+)
 
 
 async def get_session() -> AsyncSession:  # type: ignore[misc]
-    async_session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
+    async with AsyncSession(engine) as session:
         yield session
 
 

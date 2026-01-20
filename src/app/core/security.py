@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
@@ -17,9 +17,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(content: dict[str, Any], expires_minutes: int | None = None) -> str:
-    """Encode content dict using security algorithm, setting expiration."""
+    """Encode content dict using security algorithm, setting expiration.
+
+    Args:
+        content: The content to encode.
+        expires_minutes: The expiration time in minutes.
+
+    Returns:
+        The encoded token.
+    """
     expire_delta = timedelta(minutes=expires_minutes or settings.JWT_EXPIRE_MINUTES)
-    expire = datetime.utcnow() + expire_delta
+    expire = datetime.now(UTC).replace(tzinfo=None) + expire_delta
     return jwt.encode({**content, "exp": expire}, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 

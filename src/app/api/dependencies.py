@@ -15,9 +15,7 @@ from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
-from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
-from app.crud.crud_pose import PoseCRUD
+from app.crud import UserCRUD
 from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
@@ -25,7 +23,7 @@ from app.schemas.login import TokenPayload
 JWTTemplate = TypeVar("JWTTemplate")
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["get_user_crud"]
+__all__ = ["decode_token", "dispatch_webhook", "get_current_user", "get_jwt", "process_token"]
 
 # Scope definition
 oauth2_scheme = OAuth2PasswordBearer(
@@ -36,42 +34,6 @@ oauth2_scheme = OAuth2PasswordBearer(
         UserRole.USER: "Read access on available information.",
     },
 )
-
-
-def get_user_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> UserCRUD:
-    return UserCRUD(session=session)
-
-
-def get_camera_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> CameraCRUD:
-    return CameraCRUD(session=session)
-
-
-def get_pose_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> PoseCRUD:
-    return PoseCRUD(session=session)
-
-
-def get_occlusion_mask_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> OcclusionMaskCRUD:
-    return OcclusionMaskCRUD(session=session)
-
-
-def get_detection_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> DetectionCRUD:
-    return DetectionCRUD(session=session)
-
-
-def get_organization_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> OrganizationCRUD:
-    return OrganizationCRUD(session=session)
-
-
-def get_webhook_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> WebhookCRUD:
-    return WebhookCRUD(session=session)
-
-
-def get_sequence_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> SequenceCRUD:
-    return SequenceCRUD(session=session)
-
-
-def get_alert_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> AlertCRUD:
-    return AlertCRUD(session=session)
 
 
 def decode_token(token: str, authenticate_value: str | None = None) -> dict[str, str]:
@@ -107,7 +69,7 @@ def process_token(token: str, jwt_template: type[JWTTemplate], authenticate_valu
 
 def get_jwt(
     security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
+    token: Annotated[str, Depends(oauth2_scheme)],
 ) -> TokenPayload:
     authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else "Bearer"
     jwt_payload = process_token(token, TokenPayload)
@@ -122,12 +84,21 @@ def get_jwt(
 
 async def get_current_user(
     security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
-    users: UserCRUD = Depends(get_user_crud),
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
-    """Dependency to use as fastapi.security.Security with scopes."""
+    """Dependency to use as fastapi.security.Security with scopes.
+
+    Args:
+        security_scopes: The security scopes to check.
+        token: The token to decode.
+        session: The database session.
+
+    Returns:
+        The user object.
+    """
     token_payload = get_jwt(security_scopes, token)
-    return cast(User, await users.get(token_payload.sub, strict=True))
+    return cast(User, await UserCRUD(session=session).get(token_payload.sub, strict=True))
 
 
 async def dispatch_webhook(url: str, payload: BaseModel) -> None:

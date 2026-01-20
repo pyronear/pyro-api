@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, cast
 
 import pandas as pd
@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
+from app.api.dependencies import get_jwt
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
@@ -27,15 +27,13 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 
-async def verify_org_rights(
-    organization_id: int, camera_id: int, cameras: CameraCRUD = Depends(get_camera_crud)
-) -> None:
-    camera = cast(Camera, await cameras.get(camera_id, strict=True))
+async def verify_org_rights(organization_id: int, camera_id: int, session: AsyncSession) -> None:
+    camera = cast(Camera, await CameraCRUD(session=session).get(camera_id, strict=True))
     if organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
-async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
+async def _refresh_alert_state(alert_id: int, session: AsyncSession) -> None:
     remaining_stmt: Any = (
         select(Sequence, Camera)
         .join(AlertSequence, cast(Any, AlertSequence.sequence_id) == Sequence.id)
@@ -45,7 +43,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
     remaining_res = await session.exec(remaining_stmt)
     rows = remaining_res.all()
     if not rows:
-        await alerts.delete(alert_id)
+        await AlertCRUD(session=session).delete(alert_id)
         return
 
     seqs = [row[0] for row in rows]
@@ -70,7 +68,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
         df = compute_overlap(pd.DataFrame.from_records(records))
         loc = next((loc for locs in df["event_smoke_locations"].tolist() for loc in locs if loc is not None), None)
 
-    await alerts.update(
+    await AlertCRUD(session=session).update(
         alert_id,
         AlertUpdate(
             started_at=new_start,
@@ -84,15 +82,14 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
 async def get_sequence(
     sequence_id: Annotated[int, Path(gt=0)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> Sequence:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
-    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+    sequence = cast(Sequence, await SequenceCRUD(session=session).get(sequence_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
-        await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
+        await verify_org_rights(token_payload.organization_id, sequence.camera_id, session)
 
     return SequenceRead(**sequence.model_dump())
 
@@ -101,9 +98,7 @@ async def get_sequence(
     "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
 )
 async def fetch_sequence_detections(
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
-    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
     sequence_id: Annotated[int, Path(gt=0)],
     limit: Annotated[int, Query(description="Maximum number of detections to fetch", ge=1, le=100)] = 10,
@@ -112,8 +107,8 @@ async def fetch_sequence_detections(
     ] = True,
 ) -> list[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
-    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
-    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    sequence = cast(Sequence, await SequenceCRUD(session=session).get(sequence_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(sequence.camera_id, strict=True))
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
@@ -124,7 +119,7 @@ async def fetch_sequence_detections(
             **DetectionRead(**elt.model_dump()).model_dump(),
             url=bucket.get_public_url(elt.bucket_key),
         )
-        for elt in await detections.fetch_all(
+        for elt in await DetectionCRUD(session=session).fetch_all(
             filters=("sequence_id", sequence_id),
             order_by="created_at",
             order_desc=desc,
@@ -148,7 +143,7 @@ async def fetch_latest_unlabeled_sequences(
     fetched_sequences = (
         await session.exec(
             select(Sequence)
-            .where(Sequence.started_at > datetime.utcnow() - timedelta(hours=24))
+            .where(Sequence.started_at > datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24))
             .where(Sequence.camera_id.in_(camera_ids.all()))
             .where(Sequence.is_wildfire.is_(None))
             .order_by(Sequence.started_at.desc())
@@ -186,9 +181,6 @@ async def fetch_sequences_from_date(
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
 async def delete_sequence(
     sequence_id: Annotated[int, Path(gt=0)],
-    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
-    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
@@ -198,35 +190,32 @@ async def delete_sequence(
     # Unset the sequence_id in the detections
     det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
     for det_id in det_ids.all():
-        await detections.update(det_id, DetectionSequence(sequence_id=None))
+        await DetectionCRUD(session=session).update(det_id, DetectionSequence(sequence_id=None))
     # Drop alert links for this sequence to avoid FK issues
     delete_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
     await session.exec(delete_stmt)
     await session.commit()
     # Delete the sequence
-    await sequences.delete(sequence_id)
+    await SequenceCRUD(session=session).delete(sequence_id)
     # Refresh affected alerts
     for aid in alert_ids:
-        await _refresh_alert_state(aid, session, alerts)
+        await _refresh_alert_state(aid, session)
 
 
 @router.patch("/{sequence_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the sequence")
 async def label_sequence(
     payload: SequenceLabel,
     sequence_id: Annotated[int, Path(gt=0)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT])],
 ) -> Sequence:
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
-    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+    sequence = cast(Sequence, await SequenceCRUD(session=session).get(sequence_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
-        await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
+        await verify_org_rights(token_payload.organization_id, sequence.camera_id, session)
 
-    updated = await sequences.update(sequence_id, payload)
+    updated = await SequenceCRUD(session=session).update(sequence_id, payload)
 
     # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
     if payload.is_wildfire is not None and payload.is_wildfire != AnnotationType.WILDFIRE_SMOKE:
@@ -239,10 +228,10 @@ async def label_sequence(
             await session.exec(delete_links)
             await session.commit()
             for aid in alert_ids:
-                await _refresh_alert_state(aid, session, alerts)
+                await _refresh_alert_state(aid, session)
         # Create a fresh alert for this sequence alone
-        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-        new_alert = await alerts.create(
+        camera = cast(Camera, await CameraCRUD(session=session).get(sequence.camera_id, strict=True))
+        new_alert = await AlertCRUD(session=session).create(
             AlertCreate(
                 organization_id=camera.organization_id,
                 started_at=sequence.started_at,

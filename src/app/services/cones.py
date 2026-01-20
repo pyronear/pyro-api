@@ -8,7 +8,16 @@ from operator import itemgetter
 
 
 def resolve_cone(azimuth: float, bboxes_str: str, aov: float) -> tuple[float, float]:
-    """Compute the cone azimuth and opening angle using the most confident bbox."""
+    """Compute the cone azimuth and opening angle using the most confident bbox.
+
+    Args:
+        azimuth: The azimuth of the camera.
+        bboxes_str: The string representation of the bboxes.
+        aov: The angle of view of the camera.
+
+    Returns:
+        A tuple of the cone azimuth and opening angle.
+    """
     bboxes = literal_eval(bboxes_str)
     xmin, _, xmax, _, _ = max(bboxes, key=itemgetter(2))
     cone_azimuth = round(azimuth + aov * ((xmin + xmax) / 2 - 0.5), 1)

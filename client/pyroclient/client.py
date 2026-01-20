@@ -42,17 +42,17 @@ class ClientRoute(StrEnum):
 
 
 def _to_str(coord: float) -> str:
-    """Format string conditionally."""
     return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
 
 
 def _dump_bbox_to_json(
     bboxes: list[tuple[float, float, float, float, float]],
 ) -> str:
-    """Performs a custom JSON dump for list of coordinates.
+    """Dump list of coordinates to JSON string.
 
     Args:
         bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+
     Returns:
         the JSON string dump with 3 decimal precision
     """
@@ -164,6 +164,9 @@ class Client:
         """Create a pose for a camera.
 
         >>> api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)
+
+        Returns:
+            HTTP response
         """
         payload = {
             "camera_id": camera_id,
@@ -188,6 +191,9 @@ class Client:
         """Update a pose.
 
         >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
+
+        Returns:
+            HTTP response
         """
         payload = {}
         if azimuth is not None:
@@ -206,6 +212,9 @@ class Client:
         """Delete a pose.
 
         >>> api_client.delete_pose(pose_id=1)
+
+        Returns:
+            HTTP response
         """
         return requests.delete(
             urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),
@@ -217,6 +226,9 @@ class Client:
         """List occlusion masks for a pose (given its pose_id).
 
         >>> api_client.list_pose_masks(pose_id=1)
+
+        Returns:
+            HTTP response
         """
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.POSES_MASKS_BY_ID.format(pose_id=pose_id)),
@@ -234,6 +246,9 @@ class Client:
         """Create a create occlusion_mask for a pose.
 
         >>> api_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")
+
+        Returns:
+            HTTP response
         """
         payload = {
             "pose_id": pose_id,
@@ -255,6 +270,9 @@ class Client:
         """Update an occlusion mask.
 
         >>> api_client.patch_occlusion_mask(mask_id=1, mask="(0.1,0.2,0.9,0.3)")
+
+        Returns:
+            HTTP response
         """
         payload = {"mask": mask}
 
@@ -272,6 +290,9 @@ class Client:
         """Get mask from occlusion mask.
 
         >>> api_client.get_occlusion_mask(mask_id=1")
+
+        Returns:
+            HTTP response
         """
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_BY_ID.format(mask_id=mask_id)),
@@ -283,6 +304,9 @@ class Client:
         """Delete an occlusion mask.
 
         >>> api_client.delete_occlusion_mask(mask_id=1)
+
+        Returns:
+            HTTP response
         """
         return requests.delete(
             urljoin(self._route_prefix, ClientRoute.OCCLUSION_MASKS_BY_ID.format(mask_id=mask_id)),

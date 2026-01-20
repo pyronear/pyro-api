@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
@@ -12,7 +12,7 @@ from sqlalchemy import asc, desc
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_alert_crud, get_jwt
+from app.api.dependencies import get_jwt
 from app.crud import AlertCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, Sequence, UserRole
@@ -56,11 +56,10 @@ def _serialize_alert(alert: Alert, sequences: list[Sequence]) -> AlertReadWithSe
 async def get_alert(
     alert_id: Annotated[int, Path(..., gt=0)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AlertReadWithSequences:
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
-    alert = cast(Alert, await alerts.get(alert_id, strict=True))
+    alert = cast(Alert, await AlertCRUD(session=session).get(alert_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
@@ -79,12 +78,11 @@ async def fetch_alert_sequences(
     order_desc: Annotated[
         bool, Query(True, description="Whether to order the sequences by last_seen_at in descending order")
     ],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> list[Sequence]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
-    alert = cast(Alert, await alerts.get(alert_id, strict=True))
+    alert = cast(Alert, await AlertCRUD(session=session).get(alert_id, strict=True))
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
@@ -113,7 +111,7 @@ async def fetch_latest_unlabeled_alerts(
     alerts_stmt = (
         alerts_stmt
         .where(Alert.organization_id == token_payload.organization_id)
-        .where(Sequence.last_seen_at > datetime.utcnow() - timedelta(hours=24))
+        .where(Sequence.last_seen_at > datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))
         .order_by(Alert.started_at.desc())
         .limit(15)
@@ -153,14 +151,13 @@ async def fetch_alerts_from_date(
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")
 async def delete_alert(
     alert_id: Annotated[int, Path(..., gt=0)],
-    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="alert-deletion", properties={"alert_id": alert_id})
 
     # Ensure alert exists and org is valid
-    alert = cast(Alert, await alerts.get(alert_id, strict=True))
+    alert = cast(Alert, await AlertCRUD(session=session).get(alert_id, strict=True))
     verify_org_rights(token_payload.organization_id, alert)
 
     # Delete associations
@@ -168,4 +165,4 @@ async def delete_alert(
     await session.exec(delete_stmt)
     await session.commit()
     # Delete alert
-    await alerts.delete(alert_id)
+    await AlertCRUD(session=session).delete(alert_id)

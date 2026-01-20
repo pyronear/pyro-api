@@ -6,16 +6,15 @@ import re
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
-    get_camera_crud,
     get_jwt,
-    get_occlusion_mask_crud,
-    get_pose_crud,
 )
 from app.crud import CameraCRUD
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
+from app.db import get_session
 from app.models import Camera, OcclusionMask, Pose, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.occlusion_masks import (
@@ -47,9 +46,7 @@ def validate_mask(mask: str) -> None:
 )
 async def create_mask(
     payload: Annotated[OcclusionMaskCreate, Body()],
-    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[
         TokenPayload,
         Security(
@@ -61,8 +58,8 @@ async def create_mask(
     # Validate mask format
     validate_mask(payload.mask)
 
-    pose = cast(Pose, await poses.get(payload.pose_id, strict=True))
-    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+    pose = cast(Pose, await PoseCRUD(session=session).get(payload.pose_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(pose.camera_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -73,7 +70,7 @@ async def create_mask(
         properties={"pose_id": payload.pose_id},
     )
 
-    db_obj = await masks.create(payload)
+    db_obj = await OcclusionMaskCRUD(session=session).create(payload)
     return OcclusionMaskRead(**db_obj.model_dump())
 
 
@@ -84,9 +81,7 @@ async def create_mask(
 )
 async def get_mask(
     mask_id: Annotated[int, Path(gt=0)],
-    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
-    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[
         TokenPayload,
         Security(
@@ -95,9 +90,9 @@ async def get_mask(
         ),
     ],
 ) -> OcclusionMaskRead:
-    mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
-    pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
-    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+    mask = cast(OcclusionMask, await OcclusionMaskCRUD(session=session).get(mask_id, strict=True))
+    pose = cast(Pose, await PoseCRUD(session=session).get(mask.pose_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(pose.camera_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -119,9 +114,7 @@ async def get_mask(
 async def update_mask(
     mask_id: Annotated[int, Path(gt=0)],
     payload: Annotated[OcclusionMaskUpdate, Body()],
-    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
-    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[
         TokenPayload,
         Security(
@@ -133,9 +126,9 @@ async def update_mask(
     # Validate mask format
     validate_mask(payload.mask)
 
-    mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
-    pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
-    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+    mask = cast(OcclusionMask, await OcclusionMaskCRUD(session=session).get(mask_id, strict=True))
+    pose = cast(Pose, await PoseCRUD(session=session).get(mask.pose_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(pose.camera_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -146,7 +139,7 @@ async def update_mask(
         properties={"mask_id": mask_id},
     )
 
-    db_obj = await masks.update(mask_id, payload)
+    db_obj = await OcclusionMaskCRUD(session=session).update(mask_id, payload)
     return OcclusionMaskRead(**db_obj.model_dump())
 
 
@@ -157,9 +150,7 @@ async def update_mask(
 )
 async def delete_mask(
     mask_id: Annotated[int, Path(gt=0)],
-    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
-    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
-    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[
         TokenPayload,
         Security(
@@ -168,9 +159,9 @@ async def delete_mask(
         ),
     ],
 ) -> None:
-    mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
-    pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
-    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+    mask = cast(OcclusionMask, await OcclusionMaskCRUD(session=session).get(mask_id, strict=True))
+    pose = cast(Pose, await PoseCRUD(session=session).get(mask.pose_id, strict=True))
+    camera = cast(Camera, await CameraCRUD(session=session).get(pose.camera_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -181,4 +172,4 @@ async def delete_mask(
         properties={"mask_id": mask_id},
     )
 
-    await masks.delete(mask_id)
+    await OcclusionMaskCRUD(session=session).delete(mask_id)

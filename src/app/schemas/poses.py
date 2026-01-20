@@ -4,6 +4,8 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 
 __all__ = [
@@ -14,17 +16,19 @@ __all__ = [
 
 
 class PoseBase(BaseModel):
-    azimuth: float = Field(..., ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
-    patrol_id: int | None = Field(None, gt=0, description="External patrol identifier")
+    azimuth: Annotated[float, Field(ge=0, lt=360, description="Azimuth of the centre of the position in degrees")]
+    patrol_id: Annotated[int | None, Field(gt=0, description="External patrol identifier")] = None
 
 
 class PoseCreate(PoseBase):
-    camera_id: int = Field(..., gt=0, description="ID of the camera")
+    camera_id: Annotated[int, Field(gt=0, description="ID of the camera")]
 
 
 class PoseUpdate(BaseModel):
-    azimuth: float | None = Field(None, ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
-    patrol_id: int | None = Field(None, gt=0, description="External patrol identifier")
+    azimuth: Annotated[
+        float | None, Field(ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
+    ] = None
+    patrol_id: Annotated[int | None, Field(gt=0, description="External patrol identifier")] = None
 
 
 class PoseRead(PoseBase):
