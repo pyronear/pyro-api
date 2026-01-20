@@ -1,7 +1,7 @@
 name: pyronear
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     expose:
       - 5432
     environment:
