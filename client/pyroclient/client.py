@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from enum import Enum
+from enum import StrEnum
 from urllib.parse import urljoin
 
 import requests
@@ -14,7 +14,7 @@ from .exceptions import HTTPRequestError
 __all__ = ["Client"]
 
 
-class ClientRoute(str, Enum):
+class ClientRoute(StrEnum):
     # LOGIN
     LOGIN_VALIDATE = "login/validate"
     # CAMERAS
@@ -42,14 +42,14 @@ class ClientRoute(str, Enum):
 
 
 def _to_str(coord: float) -> str:
-    """Format string conditionally"""
+    """Format string conditionally."""
     return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
 
 
 def _dump_bbox_to_json(
     bboxes: list[tuple[float, float, float, float, float]],
 ) -> str:
-    """Performs a custom JSON dump for list of coordinates
+    """Performs a custom JSON dump for list of coordinates.
 
     Args:
         bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
@@ -68,7 +68,7 @@ def _dump_bbox_to_json(
 
 
 class Client:
-    """Isometric Python client for Pyronear wildfire detection API
+    """Isometric Python client for Pyronear wildfire detection API.
 
     Args:
         token: your personal API token
@@ -107,7 +107,7 @@ class Client:
 
     # CAMERAS
     def fetch_cameras(self) -> Response:
-        """List the cameras accessible to the authenticated user
+        """List the cameras accessible to the authenticated user.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -123,7 +123,7 @@ class Client:
         )
 
     def heartbeat(self) -> Response:
-        """Update the last ping of the camera
+        """Update the last ping of the camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
@@ -137,7 +137,7 @@ class Client:
         )
 
     def update_last_image(self, media: bytes) -> Response:
-        """Update the last image of the camera
+        """Update the last image of the camera.
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
@@ -161,7 +161,7 @@ class Client:
         azimuth: float,
         patrol_id: int | None = None,
     ) -> Response:
-        """Create a pose for a camera
+        """Create a pose for a camera.
 
         >>> api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)
         """
@@ -185,7 +185,7 @@ class Client:
         azimuth: float | None = None,
         patrol_id: int | None = None,
     ) -> Response:
-        """Update a pose
+        """Update a pose.
 
         >>> api_client.patch_pose(pose_id=1, azimuth=90.0)
         """
@@ -203,7 +203,7 @@ class Client:
         )
 
     def delete_pose(self, pose_id: int) -> Response:
-        """Delete a pose
+        """Delete a pose.
 
         >>> api_client.delete_pose(pose_id=1)
         """
@@ -214,7 +214,7 @@ class Client:
         )
 
     def list_pose_masks(self, pose_id: int) -> Response:
-        """List occlusion masks for a pose (given its pose_id)
+        """List occlusion masks for a pose (given its pose_id).
 
         >>> api_client.list_pose_masks(pose_id=1)
         """
@@ -231,7 +231,7 @@ class Client:
         pose_id: int,
         mask: str,
     ) -> Response:
-        """Create a create occlusion_mask for a pose
+        """Create a create occlusion_mask for a pose.
 
         >>> api_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")
         """
@@ -252,7 +252,7 @@ class Client:
         mask_id: int,
         mask: str,
     ) -> Response:
-        """Update an occlusion mask
+        """Update an occlusion mask.
 
         >>> api_client.patch_occlusion_mask(mask_id=1, mask="(0.1,0.2,0.9,0.3)")
         """
@@ -269,7 +269,7 @@ class Client:
         self,
         mask_id: int,
     ) -> Response:
-        """Get mask from occlusion mask
+        """Get mask from occlusion mask.
 
         >>> api_client.get_occlusion_mask(mask_id=1")
         """
@@ -280,7 +280,7 @@ class Client:
         )
 
     def delete_occlusion_mask(self, mask_id: int) -> Response:
-        """Delete an occlusion mask
+        """Delete an occlusion mask.
 
         >>> api_client.delete_occlusion_mask(mask_id=1)
         """
@@ -332,7 +332,7 @@ class Client:
         )
 
     def get_detection_url(self, detection_id: int) -> Response:
-        """Retrieve the URL of the media linked to a detection
+        """Retrieve the URL of the media linked to a detection.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -351,7 +351,7 @@ class Client:
         )
 
     def fetch_detections(self) -> Response:
-        """List the detections accessible to the authenticated user
+        """List the detections accessible to the authenticated user.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -367,7 +367,7 @@ class Client:
         )
 
     def label_sequence(self, sequence_id: int, is_wildfire: str) -> Response:
-        """Update the label of a sequence made by a camera
+        """Update the label of a sequence made by a camera.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -388,7 +388,7 @@ class Client:
         )
 
     def fetch_sequences_from_date(self, from_date: str, limit: int = 15, offset: int = 0) -> Response:
-        """List the sequences accessible to the authenticated user for a specific date
+        """List the sequences accessible to the authenticated user for a specific date.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -411,7 +411,7 @@ class Client:
         )
 
     def fetch_latest_sequences(self) -> Response:
-        """List the latest sequences accessible to the authenticated user
+        """List the latest sequences accessible to the authenticated user.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -427,7 +427,7 @@ class Client:
         )
 
     def fetch_sequences_detections(self, sequence_id: int, limit: int = 10, desc: bool = True) -> Response:
-        """List the detections of a sequence
+        """List the detections of a sequence.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -451,7 +451,7 @@ class Client:
     # ORGANIZATIONS
 
     def fetch_organizations(self) -> Response:
-        """List the organizations accessible to the authenticated user
+        """List the organizations accessible to the authenticated user.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")

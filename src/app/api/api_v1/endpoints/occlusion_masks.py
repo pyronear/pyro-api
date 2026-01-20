@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 import re
-from typing import cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
 
@@ -46,14 +46,14 @@ def validate_mask(mask: str) -> None:
     summary="Create an occlusion mask",
 )
 async def create_mask(
-    payload: OcclusionMaskCreate = Body(...),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
-    token_payload: TokenPayload = Security(
+    payload: Annotated[OcclusionMaskCreate, Body()],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    token_payload: Annotated[TokenPayload, Security(
         get_jwt,
         scopes=[UserRole.ADMIN, UserRole.AGENT],
-    ),
+    )],
 ) -> OcclusionMaskRead:
     # Validate mask format
     validate_mask(payload.mask)
@@ -80,14 +80,14 @@ async def create_mask(
     summary="Get info about an occlusion mask",
 )
 async def get_mask(
-    mask_id: int = Path(..., gt=0),
-    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
+    mask_id: Annotated[int, Path(gt=0)],
+    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(
         get_jwt,
         scopes=[UserRole.ADMIN, UserRole.AGENT],
-    ),
+    )],
 ) -> OcclusionMaskRead:
     mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
@@ -111,15 +111,15 @@ async def get_mask(
     summary="Update an occlusion mask",
 )
 async def update_mask(
-    mask_id: int = Path(..., gt=0),
-    payload: OcclusionMaskUpdate = Body(...),
-    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
+    mask_id: Annotated[int, Path(gt=0)],
+    payload: Annotated[OcclusionMaskUpdate, Body()],
+    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(
         get_jwt,
         scopes=[UserRole.ADMIN, UserRole.AGENT],
-    ),
+    )],
 ) -> OcclusionMaskRead:
     # Validate mask format
     validate_mask(payload.mask)
@@ -147,14 +147,14 @@ async def update_mask(
     summary="Delete an occlusion mask",
 )
 async def delete_mask(
-    mask_id: int = Path(..., gt=0),
-    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
+    mask_id: Annotated[int, Path(gt=0)],
+    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(
         get_jwt,
         scopes=[UserRole.ADMIN, UserRole.AGENT],
-    ),
+    )],
 ) -> None:
     mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))

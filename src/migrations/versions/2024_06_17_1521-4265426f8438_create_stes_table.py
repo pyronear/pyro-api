@@ -1,4 +1,4 @@
-"""create stes table
+"""create stes table.
 
 Revision ID: 4265426f8438
 Revises: f84a0ed81bdc

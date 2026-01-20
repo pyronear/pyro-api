@@ -1,4 +1,4 @@
-"""modify is_wilfire column
+"""modify is_wilfire column.
 
 Revision ID: 307a1d6d490d
 Revises: 2853acd1fc32

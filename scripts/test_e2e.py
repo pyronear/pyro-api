@@ -36,7 +36,7 @@ def api_request(method_type: str, route: str, headers=dict[str, str], payload: d
 
 def main(args):
     superuser_login = "superadmin_login"
-    superuser_pwd = "superadmin_pwd"  # noqa S105
+    superuser_pwd = "superadmin_pwd"  # noqa: S105
 
     start_ts = time.time()
     # Retrieve superuser token
@@ -50,7 +50,7 @@ def main(args):
     org_id = api_request("post", f"{args.endpoint}/organizations/", superuser_auth, {"name": org_name})["id"]
 
     agent_login = "my_user"
-    agent_pwd = "my_pwd"  # noqa S105
+    agent_pwd = "my_pwd"  # noqa: S105
 
     # create a user
     payload = {"organization_id": org_id, "login": agent_login, "password": agent_pwd, "role": "agent"}
@@ -65,7 +65,7 @@ def main(args):
     # Check that redirect is working
     api_request("get", f"{args.endpoint}/users", superuser_auth)
     # Modify access
-    new_pwd = "my_new_pwd"  # noqa S105
+    new_pwd = "my_new_pwd"  # noqa: S105
     api_request("patch", f"{args.endpoint}/users/{user_id}/", superuser_auth, {"password": new_pwd})
 
     # Create a camera

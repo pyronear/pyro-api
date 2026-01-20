@@ -5,7 +5,7 @@
 
 
 from datetime import date, datetime, timedelta
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
@@ -83,10 +83,10 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
 async def get_sequence(
-    sequence_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    sequence_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> Sequence:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
@@ -101,9 +101,9 @@ async def get_sequence(
     "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
 )
 async def fetch_sequence_detections(
-    sequence_id: int = Path(..., gt=0),
-    limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
-    desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
+    sequence_id: Annotated[int, Path(gt=0)],
+    limit: Annotated[int, Query(description="Maximum number of detections to fetch", ge=1, le=100)] = 10,
+    desc: Annotated[bool, Query(description="Whether to order the detections by created_at in descending order")] = True,
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
@@ -137,8 +137,8 @@ async def fetch_sequence_detections(
     summary="Fetch all the unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_sequences(
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> list[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
@@ -158,9 +158,9 @@ async def fetch_latest_unlabeled_sequences(
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
 async def fetch_sequences_from_date(
-    from_date: date = Query(),
-    limit: int | None = Query(15, description="Maximum number of sequences to fetch"),
-    offset: int | None = Query(0, description="Number of sequences to skip before starting to fetch"),
+    from_date: Annotated[date, Query()],
+    limit: Annotated[int | None, Query(description="Maximum number of sequences to fetch")] = 15,
+    offset: Annotated[int | None, Query(description="Number of sequences to skip before starting to fetch")] = 0,
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> list[SequenceRead]:
@@ -183,12 +183,12 @@ async def fetch_sequences_from_date(
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
 async def delete_sequence(
-    sequence_id: int = Path(..., gt=0),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    sequence_id: Annotated[int, Path(gt=0)],
+    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="sequence-deletion", properties={"sequence_id": sequence_id})
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
@@ -211,12 +211,12 @@ async def delete_sequence(
 @router.patch("/{sequence_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the sequence")
 async def label_sequence(
     payload: SequenceLabel,
-    sequence_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    sequence_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT])],
 ) -> Sequence:
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))

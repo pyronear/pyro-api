@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
 
@@ -13,20 +13,20 @@ from app.core.config import settings
 __all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     ADMIN = "admin"
     AGENT = "agent"
     USER = "user"
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     ADMIN = "admin"
     AGENT = "agent"
     CAMERA = "camera"
     USER = "user"
 
 
-class AnnotationType(str, Enum):
+class AnnotationType(StrEnum):
     WILDFIRE_SMOKE = "wildfire_smoke"
     OTHER_SMOKE = "other_smoke"
     OTHER = "other"

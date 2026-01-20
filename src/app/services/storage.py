@@ -23,7 +23,7 @@ logger = logging.getLogger("uvicorn.warning")
 
 
 class S3Bucket:
-    """S3 bucket manager
+    """S3 bucket manager.
 
     Args:
         s3_client: the client of the S3 service
@@ -47,7 +47,7 @@ class S3Bucket:
         return self._s3.head_object(Bucket=self.name, Key=bucket_key)
 
     def check_file_existence(self, bucket_key: str) -> bool:
-        """Check whether a file exists on the bucket"""
+        """Check whether a file exists on the bucket."""
         try:
             # Use boto3 head_object method using the Qarnot private connection attribute
             head_object = self.get_file_metadata(bucket_key)
@@ -57,18 +57,18 @@ class S3Bucket:
             return False
 
     def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
-        """Upload a file to bucket and return whether the upload succeeded"""
+        """Upload a file to bucket and return whether the upload succeeded."""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
         self._s3.upload_fileobj(file_binary, self.name, bucket_key)
         return True
 
     def delete_file(self, bucket_key: str) -> None:
-        """Remove bucket file and return whether the deletion succeeded"""
+        """Remove bucket file and return whether the deletion succeeded."""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.name, Key=bucket_key)
 
     def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
-        """Generate a temporary public URL for a bucket file"""
+        """Generate a temporary public URL for a bucket file."""
         if not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
@@ -83,7 +83,7 @@ class S3Bucket:
         return presigned_url
 
     async def delete_items(self) -> None:
-        """Delete all items in the bucket"""
+        """Delete all items in the bucket."""
         paginator = self._s3.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=self.name):
             if "Contents" in page:
@@ -92,7 +92,7 @@ class S3Bucket:
 
 
 class S3Service:
-    """S3 storage service manager
+    """S3 storage service manager.
 
     Args:
         region: S3 region
@@ -120,7 +120,7 @@ class S3Service:
         self.proxy_url = proxy_url
 
     def create_bucket(self, bucket_name: str) -> bool:
-        """Create a new bucket in S3 storage"""
+        """Create a new bucket in S3 storage."""
         try:
             # https://stackoverflow.com/questions/51912072/invalidlocationconstraint-error-while-creating-s3-bucket-when-the-used-command-i
             # https://github.com/localstack/localstack/issues/8000
@@ -136,11 +136,11 @@ class S3Service:
             return False
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage"""
+        """Get an existing bucket in S3 storage."""
         return S3Bucket(self._s3, bucket_name, self.proxy_url)
 
     async def delete_bucket(self, bucket_name: str) -> bool:
-        """Delete an existing bucket in S3 storage"""
+        """Delete an existing bucket in S3 storage."""
         bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
         try:
             await bucket.delete_items()
@@ -156,12 +156,12 @@ class S3Service:
 
 
 async def upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
-    """Upload a file to S3 storage and return the public URL"""
+    """Upload a file to S3 storage and return the public URL."""
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
     await file.seek(0)
     # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa: S324
     await file.seek(0)
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""

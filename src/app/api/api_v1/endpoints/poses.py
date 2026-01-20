@@ -2,7 +2,7 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
-from typing import cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
 
@@ -21,10 +21,10 @@ router = APIRouter()
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new pose for a camera")
 async def create_pose(
-    payload: PoseCreate = Body(...),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    payload: Annotated[PoseCreate, Body()],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT])],
 ) -> PoseRead:
     telemetry_client.capture(
         token_payload.sub,
@@ -43,10 +43,10 @@ async def create_pose(
 
 @router.get("/{pose_id}", status_code=status.HTTP_200_OK, summary="Fetch information of a specific pose")
 async def get_pose(
-    pose_id: int = Path(..., gt=0),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    pose_id: Annotated[int, Path(gt=0)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> PoseRead:
     telemetry_client.capture(token_payload.sub, event="poses-get", properties={"pose_id": pose_id})
 
@@ -61,11 +61,11 @@ async def get_pose(
 
 @router.patch("/{pose_id}", status_code=status.HTTP_200_OK, summary="Update a pose")
 async def update_pose(
-    pose_id: int = Path(..., gt=0),
-    payload: PoseUpdate = Body(...),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.AGENT, UserRole.ADMIN]),
+    pose_id: Annotated[int, Path(gt=0)],
+    payload: Annotated[PoseUpdate, Body()],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.AGENT, UserRole.ADMIN])],
 ) -> PoseRead:
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
@@ -79,9 +79,9 @@ async def update_pose(
 
 @router.delete("/{pose_id}", status_code=status.HTTP_200_OK, summary="Delete a pose")
 async def delete_pose(
-    pose_id: int = Path(..., gt=0),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    pose_id: Annotated[int, Path(gt=0)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="poses-deletion", properties={"pose_id": pose_id})
     await poses.delete(pose_id)
@@ -93,13 +93,13 @@ async def delete_pose(
     summary="List occlusion masks for a pose",
 )
 async def list_pose_masks(
-    pose_id: int = Path(..., gt=0),
-    masks: OcclusionMaskCRUD = Depends(get_occlusion_mask_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
+    pose_id: Annotated[int, Path(gt=0)],
+    masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(
         get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA]
-    ),
+    )],
 ) -> list[OcclusionMaskRead]:
     telemetry_client.capture(token_payload.sub, event="occlusion_masks-list", properties={"pose_id": pose_id})
     pose = cast(Pose, await poses.get(pose_id, strict=True))

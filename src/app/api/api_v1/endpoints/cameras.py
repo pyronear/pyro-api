@@ -5,7 +5,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
@@ -34,8 +34,8 @@ router = APIRouter()
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new camera")
 async def register_camera(
     payload: CameraCreate,
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT])],
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-create", properties={"device_login": payload.name})
     if token_payload.organization_id != payload.organization_id and UserRole.ADMIN not in token_payload.scopes:
@@ -45,10 +45,10 @@ async def register_camera(
 
 @router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
 async def get_camera(
-    camera_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    camera_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> CameraRead:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
@@ -73,9 +73,9 @@ async def get_camera(
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
 async def fetch_cameras(
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    poses: PoseCRUD = Depends(get_pose_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> list[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
     if UserRole.ADMIN in token_payload.scopes:
@@ -118,8 +118,8 @@ async def fetch_cameras(
 
 @router.patch("/heartbeat", status_code=status.HTTP_200_OK, summary="Update last ping of a camera")
 async def heartbeat(
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[Role.CAMERA])],
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
     return await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
@@ -127,9 +127,9 @@ async def heartbeat(
 
 @router.patch("/image", status_code=status.HTTP_200_OK, summary="Update last image of a camera")
 async def update_image(
-    file: UploadFile = File(..., alias="file"),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
+    file: Annotated[UploadFile, File(alias="file")],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[Role.CAMERA])],
 ) -> Camera:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
     cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
@@ -143,24 +143,24 @@ async def update_image(
 
 @router.post("/{camera_id}/token", status_code=status.HTTP_200_OK, summary="Request an access token for the camera")
 async def create_camera_token(
-    camera_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    camera_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> Token:
     telemetry_client.capture(token_payload.sub, event="cameras-token", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     # create access token using user user_id/user_scopes
     token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": camera.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
-    return Token(access_token=token, token_type="bearer")  # noqa S106
+    return Token(access_token=token, token_type="bearer")  # noqa: S106
 
 
 @router.patch("/{camera_id}/location", status_code=status.HTTP_200_OK, summary="Update the location of a camera")
 async def update_camera_location(
     payload: CameraEdit,
-    camera_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    camera_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-update-location", properties={"camera_id": camera_id})
     return await cameras.update(camera_id, payload)
@@ -169,9 +169,9 @@ async def update_camera_location(
 @router.patch("/{camera_id}/name", status_code=status.HTTP_200_OK, summary="Update the name of a camera")
 async def update_camera_name(
     payload: CameraName,
-    camera_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    camera_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> Camera:
     telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
     return await cameras.update(camera_id, payload)
@@ -179,9 +179,9 @@ async def update_camera_name(
 
 @router.delete("/{camera_id}", status_code=status.HTTP_200_OK, summary="Delete a camera")
 async def delete_camera(
-    camera_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    camera_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
     await cameras.delete(camera_id)

@@ -1,7 +1,7 @@
 """Add Slack Hook
 Revision ID: 2853acd1fc32
 Revises: 4265426f8438
-Create Date: 2025-06-25 17:20:14.959429
+Create Date: 2025-06-25 17:20:14.959429.
 """
 
 from collections.abc import Sequence

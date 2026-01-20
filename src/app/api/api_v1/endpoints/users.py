@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import cast
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
@@ -48,17 +48,17 @@ async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: int |
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new user")
 async def create_user(
     payload: UserCreate,
-    users: UserCRUD = Depends(get_user_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> User:
     return await _create_user(payload, users, token_payload.sub)
 
 
 @router.get("/{user_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific user")
 async def get_user(
-    user_id: int = Path(..., gt=0),
-    users: UserCRUD = Depends(get_user_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    user_id: Annotated[int, Path(gt=0)],
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> User:
     telemetry_client.capture(token_payload.sub, event="user-get", properties={"user_id": user_id})
     return cast(User, await users.get(user_id, strict=True))
@@ -66,8 +66,8 @@ async def get_user(
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the users")
 async def fetch_users(
-    users: UserCRUD = Depends(get_user_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> list[User]:
     telemetry_client.capture(token_payload.sub, event="user-fetch")
     return [elt for elt in await users.fetch_all()]
@@ -76,9 +76,9 @@ async def fetch_users(
 @router.patch("/{user_id}", status_code=status.HTTP_200_OK, summary="Updates a user's password")
 async def update_user_password(
     payload: Cred,
-    user_id: int = Path(..., gt=0),
-    users: UserCRUD = Depends(get_user_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    user_id: Annotated[int, Path(gt=0)],
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> User:
     telemetry_client.capture(token_payload.sub, event="user-pwd", properties={"user_id": user_id})
     pwd = hash_password(payload.password)
@@ -87,9 +87,9 @@ async def update_user_password(
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK, summary="Delete a user")
 async def delete_user(
-    user_id: int = Path(..., gt=0),
-    users: UserCRUD = Depends(get_user_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    user_id: Annotated[int, Path(gt=0)],
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="user-deletion", properties={"user_id": user_id})
     await users.delete(user_id)

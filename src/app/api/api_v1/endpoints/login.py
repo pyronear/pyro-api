@@ -3,6 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -19,8 +21,8 @@ router = APIRouter(redirect_slashes=True)
 
 @router.post("/creds", status_code=status.HTTP_200_OK, summary="Request an access token using credentials")
 async def login_with_creds(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    users: UserCRUD = Depends(get_user_crud),
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    users: Annotated[UserCRUD, Depends(get_user_crud)],
 ) -> Token:
     """This API follows the OAuth 2.0 specification.
 
@@ -37,11 +39,11 @@ async def login_with_creds(
     token_data = {"sub": str(user.id), "scopes": user.role.split(), "organization_id": user.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
 
-    return Token(access_token=token, token_type="bearer")  # noqa S106
+    return Token(access_token=token, token_type="bearer")  # noqa: S106
 
 
 @router.get("/validate", status_code=status.HTTP_200_OK, summary="Check token validity")
 def check_token_validity(
-    payload: TokenPayload = Security(get_jwt, scopes=[Role.USER, Role.CAMERA, Role.AGENT, Role.ADMIN]),
+    payload: Annotated[TokenPayload, Security(get_jwt, scopes=[Role.USER, Role.CAMERA, Role.AGENT, Role.ADMIN])],
 ) -> TokenPayload:
     return payload

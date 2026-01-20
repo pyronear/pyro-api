@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import pandas as pd
 from fastapi import (
@@ -266,15 +266,9 @@ async def _attach_sequence_to_alert(
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     background_tasks: BackgroundTasks,
-    bboxes: str = Form(
-        ...,
-        description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
-        pattern=BOXES_PATTERN,
-        min_length=2,
-        max_length=settings.MAX_BBOX_STR_LENGTH,
-    ),
-    azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
-    pose_id: int | None = Form(None, gt=0, description="pose id of the detection"),
+    bboxes: Annotated[str, Form(description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf", pattern=BOXES_PATTERN, min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH)],
+    azimuth: Annotated[float, Form(ge=0, lt=360, description="angle between north and direction in degrees")],
+    pose_id: Annotated[int | None, Form(gt=0, description="pose id of the detection")] = None,
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -383,10 +377,10 @@ async def create_detection(
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")
 async def get_detection(
-    detection_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    detection_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> Detection:
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
@@ -402,12 +396,12 @@ async def get_detection(
 
 @router.get("/{detection_id}/url", status_code=200)
 async def get_detection_url(
-    detection_id: int = Path(..., gt=0),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    detection_id: Annotated[int, Path(gt=0)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> DetectionUrl:
-    """Resolve the temporary media image URL"""
+    """Resolve the temporary media image URL."""
     telemetry_client.capture(token_payload.sub, event="detections-url", properties={"detection_id": detection_id})
     # Check in DB
     detection = cast(Detection, await detections.get(detection_id, strict=True))
@@ -427,9 +421,9 @@ async def get_detection_url(
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
 async def fetch_detections(
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
 ) -> list[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
@@ -446,10 +440,10 @@ async def fetch_detections(
 
 @router.delete("/{detection_id}", status_code=status.HTTP_200_OK, summary="Delete a detection")
 async def delete_detection(
-    detection_id: int = Path(..., gt=0),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    detection_id: Annotated[int, Path(gt=0)],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))

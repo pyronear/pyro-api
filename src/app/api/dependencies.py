@@ -127,7 +127,7 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     users: UserCRUD = Depends(get_user_crud),
 ) -> User:
-    """Dependency to use as fastapi.security.Security with scopes"""
+    """Dependency to use as fastapi.security.Security with scopes."""
     token_payload = get_jwt(security_scopes, token)
     return cast(User, await users.get(token_payload.sub, strict=True))
 
@@ -139,4 +139,4 @@ async def dispatch_webhook(url: str, payload: BaseModel) -> None:
             response.raise_for_status()
             logger.info(f"Successfully dispatched to {url}")
         except HTTPStatusError as e:
-            logger.error(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
+            logger.exception(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
