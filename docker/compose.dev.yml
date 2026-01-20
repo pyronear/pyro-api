@@ -24,9 +24,13 @@ services:
       - EDGE_PORT=4566
       - SERVICES=s3
     volumes:
-      - ./scripts/localstack:/etc/localstack/init/ready.d
+      - ./docker/localstack:/etc/localstack/init/ready.d
     healthcheck:
-      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
+      test:
+        [
+          "CMD-SHELL",
+          "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10

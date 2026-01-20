@@ -1,0 +1,90 @@
+name: pyronear
+
+services:
+  migrate:
+    image: pyronear/alert-api:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - RESEND_VERIFY_API_KEY=false
+    command: ["sh", "-c", "alembic upgrade head"]
+
+  backend:
+    image: pyronear/alert-api:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+        mode: "non-blocking"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - 5050
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      - BACKEND_HOST=${TRAEFIK_BACKEND_HOST}
+      - DEBUG=false
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.backend.loadbalancer.server.port=5050
+
+      # HTTP Router - Apply the redirection middleware
+      - traefik.http.routers.backend-http.rule=Host(`${TRAEFIK_BACKEND_HOST}`)
+      - traefik.http.routers.backend-http.entrypoints=web
+      - traefik.http.routers.backend-http.middlewares=https-redirect
+
+      # HTTPS Router
+      - traefik.http.routers.backend-https.rule=Host(`${TRAEFIK_BACKEND_HOST}`)
+      - traefik.http.routers.backend-https.entrypoints=websecure
+      - traefik.http.routers.backend-https.tls=true
+      - traefik.http.routers.backend-https.tls.certresolver=le
+
+  traefik:
+    image: traefik:v2.11.22
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+        mode: "non-blocking"
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # http(s) traffic
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "$PWD/acme.json:/acme.json"
+    labels:
+      # Define the redirection middleware
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+    command:
+      # Enable the Traefik log, for configurations and errors
+      - "--log.level=WARN"
+      # Enable Docker in Traefik, so that it reads labels from Docker services
+      - "--providers.docker=true"
+      # Do not expose all Docker services, only the ones explicitly exposed
+      - "--providers.docker.exposedbydefault=false"
+      # Healthcheck
+      - "--ping=true"
+      # HTTPS
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      # Certificate
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/acme.json"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "traefik healthcheck --ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
