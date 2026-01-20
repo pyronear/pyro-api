@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -72,10 +72,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_create_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -124,12 +124,12 @@ async def test_get_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     cam_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
-    expected_poses: Union[list, None],
+    status_detail: str | None,
+    expected_idx: int | None,
+    expected_poses: list | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -169,11 +169,11 @@ async def test_fetch_cameras(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_response: Union[List[Dict[str, Any]], None],
-    expected_poses: Union[list, None],
+    status_detail: str | None,
+    expected_response: list[dict[str, Any]] | None,
+    expected_poses: list | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -223,10 +223,10 @@ async def test_fetch_cameras(
 async def test_delete_camera(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     cam_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -259,10 +259,10 @@ async def test_delete_camera(
 async def test_create_camera_token(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     cam_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -295,9 +295,9 @@ async def test_create_camera_token(
 async def test_heartbeat(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    cam_idx: Union[int, None],
+    cam_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(cam_idx, int):
@@ -333,9 +333,9 @@ async def test_update_image(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     mock_img: bytes,
-    cam_idx: Union[int, None],
+    cam_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(cam_idx, int):
@@ -467,11 +467,11 @@ async def test_update_image(
 async def test_update_camera_location(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     cam_id: int,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -577,11 +577,11 @@ async def test_update_camera_location(
 async def test_update_camera_name(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     cam_id: int,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):

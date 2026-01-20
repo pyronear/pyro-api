@@ -5,7 +5,6 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Union
 
 from sqlmodel import Field, SQLModel
 
@@ -54,8 +53,8 @@ class Camera(SQLModel, table=True):
     lat: float = Field(..., gt=-90, lt=90)
     lon: float = Field(..., gt=-180, lt=180)
     is_trustable: bool = True
-    last_active_at: Union[datetime, None] = None
-    last_image: Union[str, None] = None
+    last_active_at: datetime | None = None
+    last_image: str | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
@@ -79,8 +78,8 @@ class Detection(SQLModel, table=True):
     __tablename__ = "detections"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
-    sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
+    pose_id: int | None = Field(None, foreign_key="poses.id", nullable=True)
+    sequence_id: int | None = Field(None, foreign_key="sequences.id", nullable=True)
     azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
@@ -91,11 +90,11 @@ class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
-    pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
+    pose_id: int | None = Field(None, foreign_key="poses.id", nullable=True)
     camera_azimuth: float = Field(..., ge=0, lt=360)
-    is_wildfire: Union[AnnotationType, None] = None
-    sequence_azimuth: Union[float, None] = Field(None, nullable=True)
-    cone_angle: Union[float, None] = Field(None, nullable=True)
+    is_wildfire: AnnotationType | None = None
+    sequence_azimuth: float | None = Field(None, nullable=True)
+    cone_angle: float | None = Field(None, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 
@@ -104,8 +103,8 @@ class Alert(SQLModel, table=True):
     __tablename__ = "alerts"
     id: int = Field(None, primary_key=True)
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
-    lat: Union[float, None] = Field(default=None, gt=-90, lt=90, nullable=True)
-    lon: Union[float, None] = Field(default=None, gt=-180, lt=180, nullable=True)
+    lat: float | None = Field(default=None, gt=-90, lt=90, nullable=True)
+    lon: float | None = Field(default=None, gt=-180, lt=180, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
 
@@ -120,8 +119,8 @@ class Organization(SQLModel, table=True):
     __tablename__ = "organizations"
     id: int = Field(None, primary_key=True)
     name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
-    telegram_id: Union[str, None] = Field(None, nullable=True)
-    slack_hook: Union[str, None] = Field(None, nullable=True)
+    telegram_id: str | None = Field(None, nullable=True)
+    slack_hook: str | None = Field(None, nullable=True)
 
 
 class Webhook(SQLModel, table=True):

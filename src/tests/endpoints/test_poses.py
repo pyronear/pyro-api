@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -50,10 +50,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_create_pose(
     async_client: AsyncClient,
     camera_session: AsyncSession,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -105,11 +105,11 @@ async def test_get_pose(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     pose_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_pose: Union[dict, None],
+    status_detail: str | None,
+    expected_pose: dict | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -160,12 +160,12 @@ async def test_update_pose(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     pose_id: int,
     payload: dict,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_updated: Union[dict, None],
+    status_detail: str | None,
+    expected_updated: dict | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -202,10 +202,10 @@ async def test_delete_pose(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     pose_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -238,11 +238,11 @@ async def test_delete_pose(
 async def test_list_pose_occlusion_masks(
     async_client: AsyncClient,
     occlusion_mask_session: AsyncSession,
-    user_idx: Union[int, None],
-    cam_idx: Union[int, None],
+    user_idx: int | None,
+    cam_idx: int | None,
     pose_id: int,
     status_code: int,
-    expected_count: Union[int, None],
+    expected_count: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):

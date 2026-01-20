@@ -5,7 +5,7 @@
 
 
 from datetime import date, datetime, timedelta
-from typing import Any, List, Union, cast
+from typing import Any, cast
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
@@ -53,7 +53,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
     new_start = min(seq.started_at for seq in seqs)
     new_last = max(seq.last_seen_at for seq in seqs)
 
-    loc: Union[tuple[float, float], None] = None
+    loc: tuple[float, float] | None = None
     if len(rows) >= 2:
         records = []
         for seq, cam in zip(seqs, cams, strict=False):
@@ -108,7 +108,7 @@ async def fetch_sequence_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[DetectionWithUrl]:
+) -> list[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
@@ -139,7 +139,7 @@ async def fetch_sequence_detections(
 async def fetch_latest_unlabeled_sequences(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[SequenceRead]:
+) -> list[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
 
@@ -159,11 +159,11 @@ async def fetch_latest_unlabeled_sequences(
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
 async def fetch_sequences_from_date(
     from_date: date = Query(),
-    limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
-    offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
+    limit: int | None = Query(15, description="Maximum number of sequences to fetch"),
+    offset: int | None = Query(0, description="Number of sequences to skip before starting to fetch"),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[SequenceRead]:
+) -> list[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
     # Limit to cameras in the same organization
     camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))

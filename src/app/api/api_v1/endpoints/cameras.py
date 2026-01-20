@@ -5,7 +5,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import List, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
@@ -76,7 +76,7 @@ async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[CameraRead]:
+) -> list[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
     if UserRole.ADMIN in token_payload.scopes:
         cams = [elt for elt in await cameras.fetch_all(order_by="id")]

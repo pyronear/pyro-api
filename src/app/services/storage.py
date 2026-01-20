@@ -7,7 +7,7 @@ import hashlib
 import logging
 from datetime import datetime
 from mimetypes import guess_extension
-from typing import Any, Dict, Union
+from typing import Any
 
 import boto3
 import magic
@@ -31,7 +31,7 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # noqa: ANN001
+    def __init__(self, s3_client, bucket_name: str, proxy_url: str | None = None) -> None:  # noqa: ANN001
         self._s3 = s3_client
         try:
             self._s3.head_bucket(Bucket=bucket_name)
@@ -42,7 +42,7 @@ class S3Bucket:
         self.name = bucket_name
         self.proxy_url = proxy_url
 
-    def get_file_metadata(self, bucket_key: str) -> Dict[str, Any]:
+    def get_file_metadata(self, bucket_key: str) -> dict[str, Any]:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.head_object
         return self._s3.head_object(Bucket=self.name, Key=bucket_key)
 
@@ -103,7 +103,7 @@ class S3Service:
     """
 
     def __init__(
-        self, region: str, endpoint_url: str, access_key: str, secret_key: str, proxy_url: Union[str, None] = None
+        self, region: str, endpoint_url: str, access_key: str, secret_key: str, proxy_url: str | None = None
     ) -> None:
         session_ = boto3.Session(access_key, secret_key, region_name=region)
         self._s3 = session_.client("s3", endpoint_url=endpoint_url)

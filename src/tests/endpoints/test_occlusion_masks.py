@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -22,10 +22,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_create_occlusion_mask(
     async_client: AsyncClient,
     pose_session: AsyncSession,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -66,10 +66,10 @@ async def test_create_occlusion_mask(
 async def test_get_occlusion_mask(
     async_client: AsyncClient,
     occlusion_mask_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     mask_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -111,11 +111,11 @@ async def test_get_occlusion_mask(
 async def test_update_occlusion_mask(
     async_client: AsyncClient,
     occlusion_mask_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     mask_id: int,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -154,10 +154,10 @@ async def test_update_occlusion_mask(
 async def test_delete_occlusion_mask(
     async_client: AsyncClient,
     occlusion_mask_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     mask_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):

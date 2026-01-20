@@ -10,7 +10,6 @@ import itertools
 import logging
 from collections import defaultdict
 from math import atan2, cos, radians, sin, sqrt
-from typing import Dict, List, Optional, Tuple
 
 import networkx as nx  # type: ignore
 import numpy as np
@@ -26,8 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """
-    Compute the great circle distance between two points on the Earth surface using the Haversine formula.
+    """Compute the great circle distance between two points on the Earth surface using the Haversine formula.
 
     Parameters
     ----------
@@ -53,9 +51,8 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return r_earth * c
 
 
-def get_centroid_latlon(geom: BaseGeometry) -> Tuple[float, float]:
-    """
-    Compute the geographic coordinates of the centroid of a given geometry.
+def get_centroid_latlon(geom: BaseGeometry) -> tuple[float, float]:
+    """Compute the geographic coordinates of the centroid of a given geometry.
 
     Parameters
     ----------
@@ -82,8 +79,7 @@ def _build_cone_polygon(
     r_min_km: float,
     resolution: int = 36,
 ) -> Polygon:
-    """
-    Build a cone sector polygon on the sphere then return it in geographic coordinates.
+    """Build a cone sector polygon on the sphere then return it in geographic coordinates.
 
     Parameters
     ----------
@@ -125,8 +121,7 @@ def _build_cone_polygon(
 
 
 def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
-    """
-    Project a polygon from EPSG:4326 to EPSG:3857.
+    """Project a polygon from EPSG:4326 to EPSG:3857.
 
     Parameters
     ----------
@@ -143,8 +138,7 @@ def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
 
 
 def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
-    """
-    Build and project a detection cone to Web Mercator.
+    """Build and project a detection cone to Web Mercator.
 
     Parameters
     ----------
@@ -173,12 +167,11 @@ def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
 
 def _compute_localized_groups_from_cliques(
     df: pd.DataFrame,
-    cliques: List[Tuple[int, ...]],
-    projected_cones: Dict[int, Polygon],
+    cliques: list[tuple[int, ...]],
+    projected_cones: dict[int, Polygon],
     max_dist_km: float,
-) -> List[Tuple[int, ...]]:
-    """
-    From maximal cliques, split each clique into localized groups.
+) -> list[tuple[int, ...]]:
+    """From maximal cliques, split each clique into localized groups.
 
     Rules
     -----
@@ -207,13 +200,13 @@ def _compute_localized_groups_from_cliques(
     all_ids = set(df["id"].astype(int).tolist())
     work = base + [(sid,) for sid in sorted(all_ids - ids_in_cliques)]
 
-    def split_one_group(group: Tuple[int, ...]) -> List[Tuple[int, ...]]:
+    def split_one_group(group: tuple[int, ...]) -> list[tuple[int, ...]]:
         group = tuple(sorted(group))
         if len(group) <= 1:
             return [group]
 
         # Collect pairwise intersection barycenters
-        pair_barys: List[Tuple[float, float]] = []
+        pair_barys: list[tuple[float, float]] = []
         for i, j in itertools.combinations(group, 2):
             gi = projected_cones.get(i)
             gj = projected_cones.get(j)
@@ -243,7 +236,7 @@ def _compute_localized_groups_from_cliques(
         return [tuple(sorted(p)) for p in itertools.combinations(group, 2)]
 
     # Build candidate groups from all cliques
-    candidates: List[Tuple[int, ...]] = []
+    candidates: list[tuple[int, ...]] = []
     for clique in sorted(set(work)):
         candidates.extend(split_one_group(clique))
 
@@ -251,7 +244,7 @@ def _compute_localized_groups_from_cliques(
     candidates = sorted({tuple(sorted(g)) for g in candidates})
 
     # Drop strict subsets of any other group
-    keep: List[Tuple[int, ...]] = []
+    keep: list[tuple[int, ...]] = []
     as_sets = [set(g) for g in candidates]
     for i, gi in enumerate(as_sets):
         if any(i != j and gi.issubset(as_sets[j]) for j in range(len(as_sets))):
@@ -274,8 +267,8 @@ def _filter_valid_sequences(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["is_wildfire"].isin([None, "wildfire_smoke"])]
 
 
-def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float) -> Dict[int, Polygon]:
-    projected_cones: Dict[int, Polygon] = {}
+def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float) -> dict[int, Polygon]:
+    projected_cones: dict[int, Polygon] = {}
     for _, row in df_valid.iterrows():
         sid = int(row["id"])
         try:
@@ -285,12 +278,12 @@ def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float)
     return projected_cones
 
 
-def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, Polygon]) -> List[Tuple[int, int]]:
+def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: dict[int, Polygon]) -> list[tuple[int, int]]:
     ids = df_valid["id"].astype(int).tolist()
-    rows_by_id: Dict[int, Dict[str, pd.Timestamp]] = df_valid.set_index("id")[["started_at", "last_seen_at"]].to_dict(
+    rows_by_id: dict[int, dict[str, pd.Timestamp]] = df_valid.set_index("id")[["started_at", "last_seen_at"]].to_dict(
         "index"
     )
-    overlapping_pairs: List[Tuple[int, int]] = []
+    overlapping_pairs: list[tuple[int, int]] = []
     for i, id1 in enumerate(ids):
         row1 = rows_by_id[id1]
         for id2 in ids[i + 1 :]:
@@ -304,19 +297,19 @@ def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, P
     return overlapping_pairs
 
 
-def _build_overlap_cliques(overlapping_pairs: List[Tuple[int, int]]) -> List[Tuple[int, ...]]:
+def _build_overlap_cliques(overlapping_pairs: list[tuple[int, int]]) -> list[tuple[int, ...]]:
     graph = nx.Graph()
     graph.add_edges_from(overlapping_pairs)
     return [tuple(sorted(c)) for c in nx.find_cliques(graph) if len(c) >= 2]
 
 
 def _group_smoke_location(
-    seq_tuple: Tuple[int, ...],
-    projected_cones: Dict[int, Polygon],
-) -> Optional[Tuple[float, float]]:
+    seq_tuple: tuple[int, ...],
+    projected_cones: dict[int, Polygon],
+) -> tuple[float, float] | None:
     if len(seq_tuple) < 2:
         return None
-    pts: List[Tuple[float, float]] = []
+    pts: list[tuple[float, float]] = []
     for i, j in itertools.combinations(seq_tuple, 2):
         gi = projected_cones.get(i)
         gj = projected_cones.get(j)
@@ -328,7 +321,7 @@ def _group_smoke_location(
         pts.append(get_centroid_latlon(inter))
     if not pts:
         # No intersections: use centroid of available cones as best-effort location
-        polys: List[BaseGeometry] = [p for p in (projected_cones.get(sid) for sid in seq_tuple) if p is not None]
+        polys: list[BaseGeometry] = [p for p in (projected_cones.get(sid) for sid in seq_tuple) if p is not None]
         if not polys:
             return None
         try:
@@ -345,11 +338,11 @@ def _group_smoke_location(
 
 def _attach_groups_to_df(
     df: pd.DataFrame,
-    localized_groups: List[Tuple[int, ...]],
-    group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]],
+    localized_groups: list[tuple[int, ...]],
+    group_to_smoke: dict[tuple[int, ...], tuple[float, float] | None],
 ) -> None:
-    seq_to_groups: Dict[int, List[Tuple[int, ...]]] = defaultdict(list)
-    seq_to_smokes: Dict[int, List[Optional[Tuple[float, float]]]] = defaultdict(list)
+    seq_to_groups: dict[int, list[tuple[int, ...]]] = defaultdict(list)
+    seq_to_smokes: dict[int, list[tuple[float, float] | None]] = defaultdict(list)
     for g in localized_groups:
         smo = group_to_smoke[g]
         for sid in g:
@@ -365,8 +358,7 @@ def compute_overlap(
     r_min_km: float = 0.5,
     max_dist_km: float = 2.0,
 ) -> pd.DataFrame:
-    """
-    Build localized event groups and attach them to the input DataFrame.
+    """Build localized event groups and attach them to the input DataFrame.
 
     This function sets two columns on the returned DataFrame:
       event_groups: list of tuples of sequence ids
@@ -408,7 +400,7 @@ def compute_overlap(
     localized_groups = _compute_localized_groups_from_cliques(df, cliques, projected_cones, max_dist_km)
 
     # Per group localization, median of pair barycenters for robustness
-    group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {
+    group_to_smoke: dict[tuple[int, ...], tuple[float, float] | None] = {
         g: _group_smoke_location(g, projected_cones) for g in localized_groups
     }
 

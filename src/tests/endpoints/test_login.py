@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -18,9 +18,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_login_with_creds(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     response = await async_client.post("/login/creds", data=payload)
     assert response.status_code == status_code

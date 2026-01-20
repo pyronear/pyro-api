@@ -6,7 +6,6 @@
 import os
 import secrets
 import socket
-from typing import Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -64,26 +63,26 @@ class Settings(BaseSettings):
     SEQUENCE_MIN_INTERVAL_SECONDS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_SECONDS") or 5 * 60)
 
     # Notifications
-    TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
+    TELEGRAM_TOKEN: str | None = os.environ.get("TELEGRAM_TOKEN")
 
     # Error monitoring
-    SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")
+    SENTRY_DSN: str | None = os.environ.get("SENTRY_DSN")
     SERVER_NAME: str = os.environ.get("SERVER_NAME", socket.gethostname())
 
     @field_validator("SENTRY_DSN")
     @classmethod
-    def sentry_dsn_can_be_blank(cls, v: str) -> Union[str, None]:
+    def sentry_dsn_can_be_blank(cls, v: str) -> str | None:
         if not isinstance(v, str) or len(v) == 0:
             return None
         return v
 
     # Product analytics
     POSTHOG_HOST: str = os.getenv("POSTHOG_HOST", "https://eu.posthog.com")
-    POSTHOG_KEY: Union[str, None] = os.environ.get("POSTHOG_KEY")
+    POSTHOG_KEY: str | None = os.environ.get("POSTHOG_KEY")
 
     @field_validator("POSTHOG_KEY")
     @classmethod
-    def posthog_key_can_be_blank(cls, v: str) -> Union[str, None]:
+    def posthog_key_can_be_blank(cls, v: str) -> str | None:
         if not isinstance(v, str) or len(v) == 0:
             return None
         return v

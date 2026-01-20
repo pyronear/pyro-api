@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Union
 
 from posthog import Posthog
 
@@ -16,7 +15,7 @@ __all__ = ["telemetry_client"]
 
 
 class TelemetryClient:
-    def __init__(self, api_key: Union[str, None] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self.is_enabled = isinstance(api_key, str)
         if isinstance(api_key, str):
             self.ph_client = Posthog(project_api_key=api_key, host="https://eu.posthog.com")

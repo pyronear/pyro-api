@@ -6,7 +6,7 @@
 import argparse
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -22,7 +22,7 @@ def get_token(api_url: str, login: str, pwd: str) -> str:
     return response.json()["access_token"]
 
 
-def api_request(method_type: str, route: str, headers=Dict[str, str], payload: Optional[Dict[str, Any]] = None):
+def api_request(method_type: str, route: str, headers=dict[str, str], payload: dict[str, Any] | None = None):
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)

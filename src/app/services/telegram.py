@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
-from typing import Union
 
 import requests
 
@@ -18,7 +17,7 @@ __all__ = ["telegram_client"]
 class TelegramClient:
     BASE_URL = "https://api.telegram.org/bot{token}"
 
-    def __init__(self, token: Union[str, None] = None) -> None:
+    def __init__(self, token: str | None = None) -> None:
         self.is_enabled = isinstance(token, str)
         if isinstance(token, str):
             self.token = token

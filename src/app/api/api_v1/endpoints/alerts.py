@@ -5,7 +5,7 @@
 
 
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Union, cast
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlalchemy import asc, desc
@@ -29,14 +29,14 @@ def verify_org_rights(organization_id: int, alert: Alert) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
-async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[int]) -> Dict[int, List[Sequence]]:
-    mapping: Dict[int, List[Sequence]] = {}
+async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: list[int]) -> dict[int, list[Sequence]]:
+    mapping: dict[int, list[Sequence]] = {}
     if not alert_ids:
         return mapping
-    seq_stmt: Any = (
+    seq_stmt = (
         select(AlertSequence.alert_id, Sequence)
         .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-        .where(AlertSequence.alert_id.in_(alert_ids))  # type: ignore[attr-defined]
+        .where(AlertSequence.alert_id.in_(alert_ids))
         .order_by(AlertSequence.alert_id, desc(cast(Any, Sequence.last_seen_at)))
     )
     res = await session.exec(seq_stmt)
@@ -45,7 +45,7 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
     return mapping
 
 
-def _serialize_alert(alert: Alert, sequences: List[Sequence]) -> AlertReadWithSequences:
+def _serialize_alert(alert: Alert, sequences: list[Sequence]) -> AlertReadWithSequences:
     return AlertReadWithSequences(
         **alert.model_dump(),
         sequences=[SequenceRead(**seq.model_dump()) for seq in sequences],
@@ -54,10 +54,10 @@ def _serialize_alert(alert: Alert, sequences: List[Sequence]) -> AlertReadWithSe
 
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
 async def get_alert(
-    alert_id: int = Path(..., gt=0),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    alert_id: Annotated[int, Path(..., gt=0)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AlertReadWithSequences:
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
@@ -74,21 +74,21 @@ async def get_alert(
     "/{alert_id}/sequences", status_code=status.HTTP_200_OK, summary="Fetch the sequences associated to an alert"
 )
 async def fetch_alert_sequences(
-    alert_id: int = Path(..., gt=0),
-    limit: int = Query(10, description="Maximum number of sequences to fetch", ge=1, le=100),
-    order_desc: bool = Query(True, description="Whether to order the sequences by last_seen_at in descending order"),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Sequence]:
+    alert_id: Annotated[int, Path(..., gt=0)],
+    limit: Annotated[int, Query(10, description="Maximum number of sequences to fetch", ge=1, le=100)],
+    order_desc: Annotated[bool, Query(True, description="Whether to order the sequences by last_seen_at in descending order")],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+) -> list[Sequence]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
-    order_clause: Any = desc(cast(Any, Sequence.last_seen_at)) if order_desc else asc(cast(Any, Sequence.last_seen_at))
+    order_clause = desc(Sequence.last_seen_at) if order_desc else asc(Sequence.last_seen_at)
 
-    seq_stmt: Any = select(Sequence).join(AlertSequence, cast(Any, AlertSequence.sequence_id == Sequence.id))
+    seq_stmt = select(Sequence).join(AlertSequence, AlertSequence.sequence_id == Sequence.id)
     seq_stmt = seq_stmt.where(AlertSequence.alert_id == alert_id).order_by(order_clause).limit(limit)
 
     res = await session.exec(seq_stmt)
@@ -101,18 +101,19 @@ async def fetch_alert_sequences(
     summary="Fetch all the alerts with unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_alerts(
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[AlertReadWithSequences]:
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+) -> list[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
-    alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
-    alerts_stmt = alerts_stmt.join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+    alerts_stmt = select(Alert).join(AlertSequence, AlertSequence.alert_id == Alert.id)
+    alerts_stmt = alerts_stmt.join(Sequence, Sequence.id == AlertSequence.sequence_id)
     alerts_stmt = (
-        alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
+        alerts_stmt
+        .where(Alert.organization_id == token_payload.organization_id)
         .where(Sequence.last_seen_at > datetime.utcnow() - timedelta(hours=24))
-        .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
-        .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
+        .where(Sequence.is_wildfire.is_(None))
+        .order_by(Alert.started_at.desc())
         .limit(15)
     )
     alerts_res = await session.exec(alerts_stmt)
@@ -124,19 +125,19 @@ async def fetch_latest_unlabeled_alerts(
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
 async def fetch_alerts_from_date(
-    from_date: date = Query(),
-    limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
-    offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[AlertReadWithSequences]:
+    from_date: Annotated[date, Query()],
+    limit: Annotated[int | None, Query(15, description="Maximum number of alerts to fetch")],
+    offset: Annotated[int | None, Query(0, description="Number of alerts to skip before starting to fetch")],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+) -> list[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
     alerts_stmt: Any = (
         select(Alert)
         .where(Alert.organization_id == token_payload.organization_id)
         .where(func.date(Alert.started_at) == from_date)
-        .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
+        .order_by(Alert.started_at.desc())
         .limit(limit)
         .offset(offset)
     )
@@ -149,10 +150,10 @@ async def fetch_alerts_from_date(
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")
 async def delete_alert(
-    alert_id: int = Path(..., gt=0),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+    alert_id: Annotated[int, Path(..., gt=0)],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="alert-deletion", properties={"alert_id": alert_id})
 

@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
 import jwt
 from passlib.context import CryptContext
@@ -16,7 +16,7 @@ __all__ = ["create_access_token", "hash_password", "verify_password"]
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def create_access_token(content: Dict[str, Any], expires_minutes: Optional[int] = None) -> str:
+def create_access_token(content: dict[str, Any], expires_minutes: int | None = None) -> str:
     """Encode content dict using security algorithm, setting expiration."""
     expire_delta = timedelta(minutes=expires_minutes or settings.JWT_EXPIRE_MINUTES)
     expire = datetime.utcnow() + expire_delta

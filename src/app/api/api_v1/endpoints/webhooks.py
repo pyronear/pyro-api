@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import List, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, Path, Security, status
 
@@ -41,7 +41,7 @@ async def get_webhook(
 async def fetch_webhooks(
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> List[Webhook]:
+) -> list[Webhook]:
     telemetry_client.capture(token_payload.sub, event="webhooks-fetch")
     return [elt for elt in await webhooks.fetch_all()]
 

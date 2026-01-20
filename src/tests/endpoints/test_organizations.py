@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -37,10 +37,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 @pytest.mark.asyncio
 async def test_create_organization(
     async_client: AsyncClient,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -71,11 +71,11 @@ async def test_create_organization(
 async def test_get_organization(
     async_client: AsyncClient,
     organization_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     organization_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
@@ -107,10 +107,10 @@ async def test_get_organization(
 async def test_fetch_organizations(
     async_client: AsyncClient,
     organization_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_response: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_response: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -142,10 +142,10 @@ async def test_fetch_organizations(
 async def test_delete_organization(
     async_client: AsyncClient,
     organization_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     organization_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
@@ -202,11 +202,11 @@ async def test_delete_organization(
 async def test_update_slack_hook(
     async_client: AsyncClient,
     organization_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     organization_id: int,
     payload: str,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None

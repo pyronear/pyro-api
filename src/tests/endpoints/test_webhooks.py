@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -44,10 +44,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_create_webhook(
     async_client: AsyncClient,
     webhook_session: AsyncSession,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -78,11 +78,11 @@ async def test_create_webhook(
 async def test_get_webhook(
     async_client: AsyncClient,
     webhook_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     webhook_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
@@ -114,10 +114,10 @@ async def test_get_webhook(
 async def test_fetch_webhooks(
     async_client: AsyncClient,
     webhook_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_response: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_response: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -149,10 +149,10 @@ async def test_fetch_webhooks(
 async def test_delete_webhook(
     async_client: AsyncClient,
     webhook_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     webhook_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None

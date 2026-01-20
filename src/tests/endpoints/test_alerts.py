@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime, timedelta
-from typing import Any, List, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 import pytest  # type: ignore
@@ -19,7 +19,7 @@ from app.services.overlap import compute_overlap
 
 async def _create_alert_with_sequences(
     session: AsyncSession, org_id: int, camera_id: int, lat: float, lon: float
-) -> Tuple[Alert, List[int]]:
+) -> tuple[Alert, list[int]]:
     now = datetime.utcnow()
     seq_payloads = [
         {
@@ -47,7 +47,7 @@ async def _create_alert_with_sequences(
             "cone_angle": 3.0,
         },
     ]
-    sequences: List[Sequence] = []
+    sequences: list[Sequence] = []
     for idx, payload in enumerate(seq_payloads):
         seq = Sequence(
             **payload,
@@ -181,7 +181,7 @@ async def test_triangulation_creates_single_alert(
             "bboxes": "[(0.408,0.462,0.463,0.496,0.498)]",
         },
     ]
-    cameras: List[Camera] = []
+    cameras: list[Camera] = []
     for spec in camera_specs:
         camera = Camera(
             organization_id=organization.id,

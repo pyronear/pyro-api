@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import Dict, Type, TypeVar, Union, cast
+from typing import TypeVar, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
@@ -74,7 +74,7 @@ def get_alert_crud(session: AsyncSession = Depends(get_session)) -> AlertCRUD:
     return AlertCRUD(session=session)
 
 
-def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:
+def decode_token(token: str, authenticate_value: str | None = None) -> dict[str, str]:
     try:
         payload = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except (ExpiredSignatureError, InvalidSignatureError):
@@ -93,7 +93,7 @@ def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dic
 
 
 def process_token(
-    token: str, jwt_template: Type[JWTTemplate], authenticate_value: Union[str, None] = None
+    token: str, jwt_template: type[JWTTemplate], authenticate_value: str | None = None
 ) -> JWTTemplate:
     payload = decode_token(token)
     # Verify the JWT template

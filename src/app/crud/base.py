@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, TypeVar, cast
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ __all__ = ["BaseCRUD"]
 
 
 class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    def __init__(self, session: AsyncSession, model: Type[ModelType]) -> None:
+    def __init__(self, session: AsyncSession, model: type[ModelType]) -> None:
         self.session = session
         self.model = model
 
@@ -38,8 +38,8 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         return entry
 
-    async def get(self, entry_id: int, strict: bool = False) -> Union[ModelType, None]:
-        entry: Union[ModelType, None] = await self.session.get(self.model, entry_id)
+    async def get(self, entry_id: int, strict: bool = False) -> ModelType | None:
+        entry: ModelType | None = await self.session.get(self.model, entry_id)
         if strict and entry is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -47,7 +47,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
         return entry
 
-    async def get_by(self, field_name: str, val: Union[str, int], strict: bool = False) -> Union[ModelType, None]:
+    async def get_by(self, field_name: str, val: str | int, strict: bool = False) -> ModelType | None:
         statement: Any = select(self.model).where(getattr(self.model, field_name) == val)
         results = await self.session.exec(statement=statement)
         entry = results.one_or_none()
@@ -60,14 +60,14 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def fetch_all(
         self,
-        filters: Union[Tuple[str, Any], List[Tuple[str, Any]], None] = None,
-        in_pair: Union[Tuple[str, List], None] = None,
-        inequality_pair: Optional[Tuple[str, str, Any]] = None,
-        order_by: Optional[str] = None,
+        filters: tuple[str, Any] | list[tuple[str, Any]] | None = None,
+        in_pair: tuple[str, list] | None = None,
+        inequality_pair: tuple[str, str, Any] | None = None,
+        order_by: str | None = None,
         order_desc: bool = False,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[ModelType]:
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[ModelType]:
         statement: Any = select(self.model)
         if isinstance(filters, tuple):
             statement = statement.where(getattr(self.model, filters[0]) == filters[1])
@@ -125,7 +125,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
         await self.session.commit()
 
-    async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
+    async def get_in(self, list_: list[Any], field_name: str) -> list[ModelType]:
         statement: Any = select(self.model).where(getattr(self.model, field_name).in_(list_))
         results = await self.session.exec(statement)
         return list(results.all())

@@ -1,8 +1,8 @@
 import asyncio
 import io
 import os
+from collections.abc import AsyncGenerator, Generator
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Generator
 
 import pytest
 import pytest_asyncio
@@ -406,7 +406,7 @@ async def detection_session(pose_session: AsyncSession, sequence_session: AsyncS
         pass
 
 
-def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
+def get_token(access_id: int, scopes: str, organizationid: int) -> dict[str, str]:
     token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
     token = create_access_token(token_data)
     return {"Authorization": f"Bearer {token}"}

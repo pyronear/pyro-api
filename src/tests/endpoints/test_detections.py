@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest  # type: ignore
 from httpx import AsyncClient
@@ -58,12 +58,12 @@ async def test_create_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     mock_img: bytes,
-    user_idx: Union[int, None],
-    cam_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    cam_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
-    repeat: Union[int, None],
+    status_detail: str | None,
+    repeat: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -134,11 +134,11 @@ async def test_create_detection(
 async def test_get_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     detection_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -168,10 +168,10 @@ async def test_get_detection(
 async def test_fetch_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_result: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_result: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -204,10 +204,10 @@ async def test_get_detection_url(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     mock_img: bytes,
-    user_idx: Union[int, None],
-    detection_id: Union[int, None],
+    user_idx: int | None,
+    detection_id: int | None,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -242,10 +242,10 @@ async def test_get_detection_url(
 async def test_delete_detection(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     detection_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):

@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from typing import List, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
@@ -57,7 +57,7 @@ async def get_organization(
 async def fetch_organizations(
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> List[Organization]:
+) -> list[Organization]:
     telemetry_client.capture(token_payload.sub, event="organizations-fetch")
     return [elt for elt in await organizations.fetch_all()]
 

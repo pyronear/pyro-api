@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import List, Union, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Security, status
 
@@ -18,7 +18,7 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 
-async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union[int, None] = None) -> User:
+async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: int | None = None) -> User:
     # Check for unicity
     if (await users.get_by_login(payload.login, strict=False)) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Login already taken")
@@ -68,7 +68,7 @@ async def get_user(
 async def fetch_users(
     users: UserCRUD = Depends(get_user_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> List[User]:
+) -> list[User]:
     telemetry_client.capture(token_payload.sub, event="user-fetch")
     return [elt for elt in await users.fetch_all()]
 

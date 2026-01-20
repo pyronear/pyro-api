@@ -2,7 +2,7 @@
 
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
-from typing import List, cast
+from typing import cast
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
 
@@ -100,7 +100,7 @@ async def list_pose_masks(
     token_payload: TokenPayload = Security(
         get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA]
     ),
-) -> List[OcclusionMaskRead]:
+) -> list[OcclusionMaskRead]:
     telemetry_client.capture(token_payload.sub, event="occlusion_masks-list", properties={"pose_id": pose_id})
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))

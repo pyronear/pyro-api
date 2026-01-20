@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -44,10 +44,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 async def test_create_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    user_idx: Union[int, None],
-    payload: Dict[str, Any],
+    user_idx: int | None,
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -85,11 +85,11 @@ async def test_create_user(
 async def test_get_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     user_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -119,9 +119,9 @@ async def test_get_user(
 async def test_fetch_users(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -153,10 +153,10 @@ async def test_fetch_users(
 async def test_delete_user(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     user_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -189,12 +189,12 @@ async def test_delete_user(
 async def test_update_user_password(
     async_client: AsyncClient,
     user_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     user_id: int,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):

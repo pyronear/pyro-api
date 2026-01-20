@@ -3,13 +3,12 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Union
 
 __all__ = ["HTTPRequestError"]
 
 
 class HTTPRequestError(Exception):
-    def __init__(self, status_code: int, response_message: Union[str, None] = None) -> None:
+    def __init__(self, status_code: int, response_message: str | None = None) -> None:
         self.status_code = status_code
         self.response_message = response_message
 

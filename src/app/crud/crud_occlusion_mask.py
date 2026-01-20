@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from typing import List
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -19,6 +18,6 @@ class OcclusionMaskCRUD(BaseCRUD[OcclusionMask, OcclusionMaskCreate, OcclusionMa
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, OcclusionMask)
 
-    async def get_by_pose(self, pose_id: int) -> List[OcclusionMask]:
+    async def get_by_pose(self, pose_id: int) -> list[OcclusionMask]:
         results = await self.session.exec(select(OcclusionMask).where(OcclusionMask.pose_id == pose_id))
         return results.all()

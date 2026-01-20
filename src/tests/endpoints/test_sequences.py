@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Union
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest  # type: ignore
@@ -31,11 +31,11 @@ from app.schemas.sequences import SequenceLabel
 async def test_fetch_sequence_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     sequence_id: int,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_result: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_result: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -71,10 +71,10 @@ async def test_fetch_sequence_detections(
 async def test_delete_sequence(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     sequence_id: int,
     status_code: int,
-    status_detail: Union[str, None],
+    status_detail: str | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -121,12 +121,12 @@ async def test_delete_sequence(
 async def test_label_sequence(
     async_client: AsyncClient,
     sequence_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     sequence_id: int,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     status_code: int,
-    status_detail: Union[str, None],
-    expected_idx: Union[int, None],
+    status_detail: str | None,
+    expected_idx: int | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -165,11 +165,11 @@ async def test_label_sequence(
 async def test_fetch_sequences_from_date(
     async_client: AsyncClient,
     detection_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     from_date: str,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_result: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_result: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -203,10 +203,10 @@ async def test_fetch_sequences_from_date(
 async def test_latest_sequences(
     async_client: AsyncClient,
     sequence_session: AsyncSession,
-    user_idx: Union[int, None],
+    user_idx: int | None,
     status_code: int,
-    status_detail: Union[str, None],
-    expected_result: Union[List[Dict[str, Any]], None],
+    status_detail: str | None,
+    expected_result: list[dict[str, Any]] | None,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -456,7 +456,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_refresh_alert_state: AsyncMock,
 ):
     """Verify that labeling a sequence as non-wildfire smoke removes it from an existing alert,
-    refreshes that alert, and creates a new alert for the sequence."""
+    refreshes that alert, and creates a new alert for the sequence.
+    """
     # 1. Mocks Setup
     mock_sequence = Sequence(
         id=1,

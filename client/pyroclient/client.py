@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -48,7 +47,7 @@ def _to_str(coord: float) -> str:
 
 
 def _dump_bbox_to_json(
-    bboxes: List[Tuple[float, float, float, float, float]],
+    bboxes: list[tuple[float, float, float, float, float]],
 ) -> str:
     """Performs a custom JSON dump for list of coordinates
 
@@ -103,7 +102,7 @@ class Client:
         self.timeout = timeout
 
     @property
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
@@ -270,7 +269,7 @@ class Client:
         self,
         mask_id: int,
     ) -> Response:
-        """get mask from occlusion mask
+        """Get mask from occlusion mask
 
         >>> api_client.get_occlusion_mask(mask_id=1")
         """
@@ -297,8 +296,8 @@ class Client:
         self,
         media: bytes,
         azimuth: float,
-        bboxes: List[Tuple[float, float, float, float, float]],
-        pose_id: Optional[int] = None,
+        bboxes: list[tuple[float, float, float, float, float]],
+        pose_id: int | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -403,7 +402,7 @@ class Client:
         Returns:
             HTTP response
         """
-        params: Dict[str, str | int] = {"from_date": from_date, "limit": limit, "offset": offset}
+        params: dict[str, str | int] = {"from_date": from_date, "limit": limit, "offset": offset}
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_FROMDATE),
             headers=self.headers,

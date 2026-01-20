@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,11 +13,11 @@ __all__ = ["AlertBase", "AlertCreate", "AlertRead", "AlertReadWithSequences", "A
 
 
 class AlertBase(BaseModel):
-    organization_id: Optional[int] = Field(None, gt=0)
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    started_at: Optional[datetime] = None
-    last_seen_at: Optional[datetime] = None
+    organization_id: int | None = Field(None, gt=0)
+    lat: float | None = None
+    lon: float | None = None
+    started_at: datetime | None = None
+    last_seen_at: datetime | None = None
 
 
 class AlertCreate(AlertBase):
@@ -36,4 +35,4 @@ class AlertRead(AlertCreate):
 
 
 class AlertReadWithSequences(AlertRead):
-    sequences: List[SequenceRead] = Field(default_factory=list)
+    sequences: list[SequenceRead] = Field(default_factory=list)

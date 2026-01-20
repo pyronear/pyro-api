@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import re
-from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -37,7 +36,7 @@ COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
 class DetectionCreate(Azimuth):
     camera_id: int = Field(..., gt=0)
-    pose_id: Optional[int] = Field(None, gt=0)
+    pose_id: int | None = Field(None, gt=0)
     bucket_key: str
     bboxes: str = Field(
         ...,
@@ -61,4 +60,4 @@ class DetectionWithUrl(Detection):
 
 
 class DetectionSequence(BaseModel):
-    sequence_id: Union[int, None] = Field(..., gt=0)
+    sequence_id: int | None = Field(..., gt=0)

@@ -6,16 +6,16 @@ Create Date: 2025-08-20 16:47:05.346210
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "307a1d6d490d"
-down_revision: Union[str, None] = "2853acd1fc32"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "2853acd1fc32"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Define the new ENUM type
 annotation_type_enum = sa.Enum(

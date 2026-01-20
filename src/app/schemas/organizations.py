@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import Union
 
 from pydantic import BaseModel, Field
 
@@ -31,10 +30,10 @@ class OrganizationUpdate(BaseModel):
 
 
 class TelegramChannelId(BaseModel):
-    telegram_id: Union[str, None] = Field(None, pattern=r"^@[a-zA-Z0-9_-]+$")
+    telegram_id: str | None = Field(None, pattern=r"^@[a-zA-Z0-9_-]+$")
 
 
 class SlackHook(BaseModel):
-    slack_hook: Union[str] = Field(
+    slack_hook: str = Field(
         ..., pattern=r"^https://hooks\.slack\.com/services/[A-Z0-9]+/[A-Z0-9]+/[a-zA-Z0-9]+$"
     )

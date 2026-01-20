@@ -5,7 +5,7 @@
 
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 from fastapi import (
@@ -61,7 +61,7 @@ async def _get_camera_by_id(
     camera: Camera,
     cameras: CameraCRUD,
     sequence_camera_id: int,
-) -> Dict[int, Camera]:
+) -> dict[int, Camera]:
     org_cameras = await cameras.fetch_all(filters=("organization_id", camera.organization_id))
     camera_by_id = {cam.id: cam for cam in org_cameras}
     if sequence_camera_id not in camera_by_id:
@@ -71,9 +71,9 @@ async def _get_camera_by_id(
 
 async def _get_recent_sequences(
     sequences: SequenceCRUD,
-    camera_ids: List[int],
+    camera_ids: list[int],
     sequence_: Sequence,
-) -> List[Sequence]:
+) -> list[Sequence]:
     recent_sequences = await sequences.fetch_all(
         in_pair=("camera_id", camera_ids),
         inequality_pair=(
@@ -88,10 +88,10 @@ async def _get_recent_sequences(
 
 
 def _build_overlap_records(
-    recent_sequences: List[Sequence],
-    camera_by_id: Dict[int, Camera],
-) -> List[Dict[str, Any]]:
-    records: List[Dict[str, Any]] = []
+    recent_sequences: list[Sequence],
+    camera_by_id: dict[int, Camera],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
@@ -110,9 +110,9 @@ def _build_overlap_records(
 
 
 def _resolve_groups_and_locations(
-    records: List[Dict[str, Any]],
+    records: list[dict[str, Any]],
     sequence_id: int,
-) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
+) -> tuple[list[tuple[int, ...]], dict[tuple[int, ...], tuple[float, float] | None]] | None:
     if not records:
         return None
     df = compute_overlap(pd.DataFrame.from_records(records))
@@ -121,14 +121,14 @@ def _resolve_groups_and_locations(
         return None
     groups = [tuple(g) for g in row.iloc[0]["event_groups"]]
     locations = row.iloc[0].get("event_smoke_locations", [])
-    group_locations: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {}
+    group_locations: dict[tuple[int, ...], tuple[float, float] | None] = {}
     for idx, group in enumerate(groups):
         group_locations[group] = locations[idx] if idx < len(locations) else None
     return groups, group_locations
 
 
-async def _fetch_alert_mapping(session: AsyncSession, seq_ids: List[int]) -> Dict[int, Set[int]]:
-    mapping: Dict[int, Set[int]] = {}
+async def _fetch_alert_mapping(session: AsyncSession, seq_ids: list[int]) -> dict[int, set[int]]:
+    mapping: dict[int, set[int]] = {}
     if not seq_ids:
         return mapping
     stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
@@ -141,22 +141,22 @@ async def _fetch_alert_mapping(session: AsyncSession, seq_ids: List[int]) -> Dic
 
 
 def _group_time_bounds(
-    group: Tuple[int, ...],
-    seq_by_id: Dict[int, Sequence],
-) -> Tuple[datetime, datetime]:
+    group: tuple[int, ...],
+    seq_by_id: dict[int, Sequence],
+) -> tuple[datetime, datetime]:
     start_at = min(seq_by_id[int(sid)].started_at for sid in group if int(sid) in seq_by_id)
     last_seen_at = max(seq_by_id[int(sid)].last_seen_at for sid in group if int(sid) in seq_by_id)
     return start_at, last_seen_at
 
 
-def _collect_existing_alert_ids(group: Tuple[int, ...], mapping: Dict[int, Set[int]]) -> Set[int]:
+def _collect_existing_alert_ids(group: tuple[int, ...], mapping: dict[int, set[int]]) -> set[int]:
     return {aid for sid in group for aid in mapping.get(int(sid), set())}
 
 
 async def _maybe_update_alert(
     alerts: AlertCRUD,
     target_alert_id: int,
-    location: Tuple[float, float],
+    location: tuple[float, float],
     start_at: datetime,
     last_seen_at: datetime,
 ) -> None:
@@ -176,8 +176,8 @@ async def _maybe_update_alert(
 
 
 async def _get_or_create_alert_id(
-    existing_alert_ids: Set[int],
-    location: Optional[Tuple[float, float]],
+    existing_alert_ids: set[int],
+    location: tuple[float, float] | None,
     organization_id: int,
     start_at: datetime,
     last_seen_at: datetime,
@@ -201,11 +201,11 @@ async def _get_or_create_alert_id(
 
 
 def _build_links_for_group(
-    group: Tuple[int, ...],
+    group: tuple[int, ...],
     target_alert_id: int,
-    mapping: Dict[int, Set[int]],
-) -> List[AlertSequence]:
-    links: List[AlertSequence] = []
+    mapping: dict[int, set[int]],
+) -> list[AlertSequence]:
+    links: list[AlertSequence] = []
     for sid in group:
         sid_int = int(sid)
         if target_alert_id in mapping.get(sid_int, set()):
@@ -242,7 +242,7 @@ async def _attach_sequence_to_alert(
     session = sequences.session
     mapping = await _fetch_alert_mapping(session, seq_ids)
 
-    to_link: List[AlertSequence] = []
+    to_link: list[AlertSequence] = []
 
     for g in groups:
         location = group_locations.get(g)
@@ -274,7 +274,7 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
-    pose_id: Optional[int] = Form(None, gt=0, description="pose id of the detection"),
+    pose_id: int | None = Form(None, gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -430,7 +430,7 @@ async def fetch_detections(
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[DetectionRead]:
+) -> list[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
         return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all()]
