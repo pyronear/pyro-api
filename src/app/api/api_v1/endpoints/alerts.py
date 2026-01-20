@@ -73,13 +73,13 @@ async def get_alert(
     "/{alert_id}/sequences", status_code=status.HTTP_200_OK, summary="Fetch the sequences associated to an alert"
 )
 async def fetch_alert_sequences(
-    alert_id: Annotated[int, Path(..., gt=0)],
-    limit: Annotated[int, Query(10, description="Maximum number of sequences to fetch", ge=1, le=100)],
-    order_desc: Annotated[
-        bool, Query(True, description="Whether to order the sequences by last_seen_at in descending order")
-    ],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+    alert_id: Annotated[int, Path(gt=0)],
+    limit: Annotated[int, Query(description="Maximum number of sequences to fetch", ge=1, le=100)] = 10,
+    order_desc: Annotated[
+        bool, Query(description="Whether to order the sequences by last_seen_at in descending order")
+    ] = True,
 ) -> list[Sequence]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await AlertCRUD(session=session).get(alert_id, strict=True))
@@ -125,11 +125,11 @@ async def fetch_latest_unlabeled_alerts(
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
 async def fetch_alerts_from_date(
-    from_date: Annotated[date, Query()],
-    limit: Annotated[int | None, Query(15, description="Maximum number of alerts to fetch")],
-    offset: Annotated[int | None, Query(0, description="Number of alerts to skip before starting to fetch")],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
+    from_date: Annotated[date, Query()],
+    limit: Annotated[int | None, Query(description="Maximum number of alerts to fetch")] = 15,
+    offset: Annotated[int | None, Query(description="Number of alerts to skip before starting to fetch")] = 0,
 ) -> list[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
@@ -150,7 +150,7 @@ async def fetch_alerts_from_date(
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")
 async def delete_alert(
-    alert_id: Annotated[int, Path(..., gt=0)],
+    alert_id: Annotated[int, Path(gt=0)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> None:
