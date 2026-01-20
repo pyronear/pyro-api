@@ -4,9 +4,9 @@ import os
 from collections.abc import AsyncGenerator, Generator
 from datetime import datetime
 
+import httpx
 import pytest
 import pytest_asyncio
-import requests
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 from sqlalchemy.orm import sessionmaker
@@ -266,7 +266,7 @@ def mock_hash_password(password):
 @pytest.fixture(scope="session")
 def mock_img():
     # Get Pyronear logo
-    return requests.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
+    return httpx.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
 
 
 @pytest_asyncio.fixture(scope="function")

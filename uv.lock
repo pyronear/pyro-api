@@ -864,7 +864,6 @@ test = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-pretty" },
-    { name = "requests" },
 ]
 
 [package.metadata]
@@ -912,7 +911,6 @@ test = [
     { name = "pytest-asyncio", specifier = "==0.21.2" },
     { name = "pytest-cov", specifier = ">=4.0.0,<5.0.0" },
     { name = "pytest-pretty", specifier = ">=1.0.0,<2.0.0" },
-    { name = "requests", specifier = ">=2.32.0,<3.0.0" },
 ]
 
 [[package]]
