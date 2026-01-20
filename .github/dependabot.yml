@@ -7,24 +7,65 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    labels:
+      - "dependencies"
+      - "github_actions"
+      - "type: misc"
+    commit-message:
+      prefix: "ci(github)"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "pip"
+      day: "monday"
+      time: "08:00"
+    groups:
+      actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "uv"
+    target-branch: "main" # cf. https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-1988140219
     directory: "/"
+    labels:
+      - "dependencies"
+      - "python"
+      - "type: misc"
+    commit-message:
+      prefix: "build(deps-dev)"
     schedule:
       interval: "daily"
+      time: "08:00"
     allow:
       - dependency-name: "ruff"
-      - dependency-name: "mypy"
-      - dependency-name: "pre-commit"
+      - dependency-name: "ty"
+      - dependency-name: "prek"
       - dependency-name: "fastapi"
       - dependency-name: "sqlmodel"
       - dependency-name: "uvicorn"
       - dependency-name: "pytest"
+      - dependency-name: "PyJWT"
+      - dependency-name: "bcrypt"
+      - dependency-name: "cryptography"
+    groups:
+      quality:
+        patterns:
+          - "ruff"
+          - "ty"
+          - "prek"
+      core:
+        patterns:
+          - "fastapi"
+          - "sqlmodel"
+          - "uvicorn"
+      security:
+        patterns:
+          - "PyJWT"
+          - "bcrypt"
+          - "cryptography"
+      test:
+        patterns:
+          - "pytest"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
     allow:
       - dependency-name: "ghcr.io/astral-sh/uv"
-      - dependency-name: "localstack/localstack"
