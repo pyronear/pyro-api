@@ -44,7 +44,7 @@ venv: ${PYPROJECT}
 	make sync-deps
 
 install-client:
-	pip install -e client/.
+	uv pip install -e client/.
 
 ########################################################
 # Code checks

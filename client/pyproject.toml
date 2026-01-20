@@ -1,9 +1,10 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "pyroclient"
+version = "0.2.0.dev0"
 description = "Python Client for Pyronear wildfire alert API"
 authors = [
     {name = "Pyronear", email = "contact@pyronear.org"}
@@ -13,6 +14,7 @@ requires-python = ">=3.10,<4"
 license = {file = "LICENSE"}
 keywords = ["backend", "wildfire", "alert", "client", "api"]
 classifiers = [
+    # https://pypi.org/classifiers/
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
@@ -20,26 +22,25 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dynamic = ["version"]
 dependencies = [
     "requests>=2.31.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest==8.3.4",
+    "pytest==8.3.5",
     "pytest-cov>=4.0.0,<5.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
     "types-requests>=2.0.0",
-]
-quality = [
-    "mypy==1.10.0",
 ]
 docs = [
     "sphinx>=3.0.0,!=3.5.0",
@@ -56,28 +57,16 @@ documentation = "https://pyronear.org/pyro-api"
 repository = "https://github.com/pyronear/pyro-api/client"
 tracker = "https://github.com/pyronear/pyro-api/issues"
 
-[tool.setuptools]
-zip-safe = true
+[tool.uv.build-backend]
+module-name = "pyroclient"
+module-root = ""
 
-[tool.setuptools.packages.find]
-exclude = ["docs*", "tests*"]
-
-[tool.mypy]
-python_version = "3.11"
-files = "pyroclient/"
-show_error_codes = true
-pretty = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_implicit_optional = true
-check_untyped_defs = true
-implicit_reexport = false
-
-[[tool.mypy.overrides]]
-module = [
-    "requests.*",
-]
-ignore_missing_imports = true
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
 
 [tool.pytest.ini_options]
-testpaths = ["pyroclient/"]
+testpaths = ["tests/"]
+addopts = "--cov=pyroclient"
