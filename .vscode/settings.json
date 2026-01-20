@@ -1,0 +1,20 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll": "explicit",
+        "source.unusedImports": "explicit",
+    },
+    "editor.quickSuggestions": {"strings": "on"},
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": false,
+        "editor.codeActionsOnSave": {"source.organizeImports": "explicit", "source.fixAll": "explicit"},
+        "editor.inlayHints.enabled": "offUnlessPressed",
+    },
+    "ruff.configuration": "${workspaceFolder}/pyproject.toml",
+    "ruff.fixAll": true,
+    "ruff.organizeImports": true,
+    "python.languageServer": "None",
+    "ty.interpreter": ["${workspaceFolder}/.venv/bin/python"],
+    "ty.path": ["${workspaceFolder}/.venv/bin/ty"],
+}
