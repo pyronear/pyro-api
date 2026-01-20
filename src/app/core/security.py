@@ -7,13 +7,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
-from passlib.context import CryptContext
+from bcrypt import checkpw, gensalt, hashpw
 
 from app.core.config import settings
 
 __all__ = ["create_access_token", "hash_password", "verify_password"]
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(content: dict[str, Any], expires_minutes: int | None = None) -> str:
@@ -32,8 +30,14 @@ def create_access_token(content: dict[str, Any], expires_minutes: int | None = N
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return checkpw(
+        bytes(plain_password, encoding="utf-8"),
+        bytes(hashed_password, encoding="utf-8"),
+    )
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return hashpw(
+        bytes(password, encoding="utf-8"),
+        gensalt(),
+    ).decode("utf-8")

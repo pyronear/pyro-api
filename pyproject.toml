@@ -21,7 +21,6 @@ dependencies = [
     "alembic-postgresql-enum>=1.8.0,<2.0.0",
     # Security
     "PyJWT[crypto]==2.10.1",
-    "passlib[bcrypt]==1.7.4",
     "bcrypt==5.0.0",
     # Services
     "boto3>=1.26.0,<2.0.0",
