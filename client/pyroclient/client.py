@@ -103,6 +103,11 @@ class Client:
 
     @property
     def headers(self) -> dict[str, str]:
+        """Return the auth headers for the client.
+
+        Returns:
+            dict[str, str]: the auth headers
+        """
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
