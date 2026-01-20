@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
@@ -33,7 +33,7 @@ def _make_sequence(
 
 
 def test_compute_overlap_groups_and_locations() -> None:
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     seqs = [
         _make_sequence(1, 48.3792, 2.8208, 276.5, 3.0, now - timedelta(seconds=9), now - timedelta(seconds=1)),
         _make_sequence(2, 48.2605, 2.7064, 8.3, 0.8, now - timedelta(seconds=8), now - timedelta(seconds=2)),

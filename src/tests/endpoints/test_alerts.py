@@ -3,11 +3,11 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import pandas as pd
-import pytest  # type: ignore
+import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -20,7 +20,7 @@ from app.services.overlap import compute_overlap
 async def _create_alert_with_sequences(
     session: AsyncSession, org_id: int, camera_id: int, lat: float, lon: float
 ) -> tuple[Alert, list[int]]:
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     seq_payloads = [
         {
             "camera_id": camera_id,

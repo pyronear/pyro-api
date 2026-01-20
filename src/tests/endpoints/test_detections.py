@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-import pytest  # type: ignore
+import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
