@@ -77,7 +77,7 @@ services:
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "curl http://localhost:5050/status"]
+      test: ["CMD-SHELL", "curl http://localhost:5050/health"]
       interval: 10s
       timeout: 3s
       retries: 3
