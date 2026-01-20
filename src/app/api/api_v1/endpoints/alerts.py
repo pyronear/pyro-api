@@ -76,7 +76,9 @@ async def get_alert(
 async def fetch_alert_sequences(
     alert_id: Annotated[int, Path(..., gt=0)],
     limit: Annotated[int, Query(10, description="Maximum number of sequences to fetch", ge=1, le=100)],
-    order_desc: Annotated[bool, Query(True, description="Whether to order the sequences by last_seen_at in descending order")],
+    order_desc: Annotated[
+        bool, Query(True, description="Whether to order the sequences by last_seen_at in descending order")
+    ],
     alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
     session: Annotated[AsyncSession, Depends(get_session)],
     token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],

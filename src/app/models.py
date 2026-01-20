@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
@@ -11,6 +11,10 @@ from sqlmodel import Field, SQLModel
 from app.core.config import settings
 
 __all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class UserRole(StrEnum):
@@ -40,7 +44,7 @@ class User(SQLModel, table=True):
     # Allow sign-up/in via login + password
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)
     hashed_password: str = Field(..., min_length=5, max_length=70, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
 
 
 class Camera(SQLModel, table=True):
@@ -55,7 +59,7 @@ class Camera(SQLModel, table=True):
     is_trustable: bool = True
     last_active_at: datetime | None = None
     last_image: str | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
 
 
 class Pose(SQLModel, table=True):
@@ -71,7 +75,7 @@ class OcclusionMask(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
     mask: str = Field(..., min_length=2, max_length=255, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
 
 
 class Detection(SQLModel, table=True):
@@ -83,7 +87,7 @@ class Detection(SQLModel, table=True):
     azimuth: float = Field(..., ge=0, lt=360)
     bucket_key: str
     bboxes: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=_utcnow, nullable=False)
 
 
 class Sequence(SQLModel, table=True):

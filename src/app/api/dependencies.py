@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import TypeVar, cast
+from typing import Annotated, TypeVar, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
@@ -38,39 +38,39 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-def get_user_crud(session: AsyncSession = Depends(get_session)) -> UserCRUD:
+def get_user_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> UserCRUD:
     return UserCRUD(session=session)
 
 
-def get_camera_crud(session: AsyncSession = Depends(get_session)) -> CameraCRUD:
+def get_camera_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> CameraCRUD:
     return CameraCRUD(session=session)
 
 
-def get_pose_crud(session: AsyncSession = Depends(get_session)) -> PoseCRUD:
+def get_pose_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> PoseCRUD:
     return PoseCRUD(session=session)
 
 
-def get_occlusion_mask_crud(session: AsyncSession = Depends(get_session)) -> OcclusionMaskCRUD:
+def get_occlusion_mask_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> OcclusionMaskCRUD:
     return OcclusionMaskCRUD(session=session)
 
 
-def get_detection_crud(session: AsyncSession = Depends(get_session)) -> DetectionCRUD:
+def get_detection_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> DetectionCRUD:
     return DetectionCRUD(session=session)
 
 
-def get_organization_crud(session: AsyncSession = Depends(get_session)) -> OrganizationCRUD:
+def get_organization_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> OrganizationCRUD:
     return OrganizationCRUD(session=session)
 
 
-def get_webhook_crud(session: AsyncSession = Depends(get_session)) -> WebhookCRUD:
+def get_webhook_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> WebhookCRUD:
     return WebhookCRUD(session=session)
 
 
-def get_sequence_crud(session: AsyncSession = Depends(get_session)) -> SequenceCRUD:
+def get_sequence_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> SequenceCRUD:
     return SequenceCRUD(session=session)
 
 
-def get_alert_crud(session: AsyncSession = Depends(get_session)) -> AlertCRUD:
+def get_alert_crud(session: Annotated[AsyncSession, Depends(get_session)]) -> AlertCRUD:
     return AlertCRUD(session=session)
 
 
@@ -92,9 +92,7 @@ def decode_token(token: str, authenticate_value: str | None = None) -> dict[str,
     return payload
 
 
-def process_token(
-    token: str, jwt_template: type[JWTTemplate], authenticate_value: str | None = None
-) -> JWTTemplate:
+def process_token(token: str, jwt_template: type[JWTTemplate], authenticate_value: str | None = None) -> JWTTemplate:
     payload = decode_token(token)
     # Verify the JWT template
     try:

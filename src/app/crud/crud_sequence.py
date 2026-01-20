@@ -4,8 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from typing import Union
-
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
@@ -15,6 +13,6 @@ from app.schemas.sequences import SequenceLabel, SequenceUpdate
 __all__ = ["SequenceCRUD"]
 
 
-class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLabel]]):
+class SequenceCRUD(BaseCRUD[Sequence, Sequence, SequenceUpdate | SequenceLabel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Sequence)

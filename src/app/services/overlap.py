@@ -11,7 +11,7 @@ import logging
 from collections import defaultdict
 from math import atan2, cos, radians, sin, sqrt
 
-import networkx as nx  # type: ignore
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pyproj

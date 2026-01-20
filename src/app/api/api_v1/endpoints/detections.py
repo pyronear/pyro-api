@@ -131,9 +131,7 @@ async def _fetch_alert_mapping(session: AsyncSession, seq_ids: list[int]) -> dic
     mapping: dict[int, set[int]] = {}
     if not seq_ids:
         return mapping
-    stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
-        AlertSequence.sequence_id.in_(seq_ids)  # type: ignore[attr-defined]
-    )
+    stmt: Any = select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.sequence_id.in_(seq_ids))
     res = await session.exec(stmt)
     for aid, sid in res:
         mapping.setdefault(int(sid), set()).add(int(aid))
@@ -266,17 +264,25 @@ async def _attach_sequence_to_alert(
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     background_tasks: BackgroundTasks,
-    bboxes: Annotated[str, Form(description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf", pattern=BOXES_PATTERN, min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH)],
+    bboxes: Annotated[
+        str,
+        Form(
+            description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
+            pattern=BOXES_PATTERN,
+            min_length=2,
+            max_length=settings.MAX_BBOX_STR_LENGTH,
+        ),
+    ],
     azimuth: Annotated[float, Form(ge=0, lt=360, description="angle between north and direction in degrees")],
+    file: Annotated[UploadFile, File(..., alias="file")],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    webhooks: Annotated[WebhookCRUD, Depends(get_webhook_crud)],
+    organizations: Annotated[OrganizationCRUD, Depends(get_organization_crud)],
+    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    alerts: Annotated[AlertCRUD, Depends(get_alert_crud)],
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[Role.CAMERA])],
     pose_id: Annotated[int | None, Form(gt=0, description="pose id of the detection")] = None,
-    file: UploadFile = File(..., alias="file"),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    webhooks: WebhookCRUD = Depends(get_webhook_crud),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
 

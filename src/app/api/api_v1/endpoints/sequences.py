@@ -101,13 +101,15 @@ async def get_sequence(
     "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
 )
 async def fetch_sequence_detections(
+    cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
+    detections: Annotated[DetectionCRUD, Depends(get_detection_crud)],
+    sequences: Annotated[SequenceCRUD, Depends(get_sequence_crud)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
     sequence_id: Annotated[int, Path(gt=0)],
     limit: Annotated[int, Query(description="Maximum number of detections to fetch", ge=1, le=100)] = 10,
-    desc: Annotated[bool, Query(description="Whether to order the detections by created_at in descending order")] = True,
-    cameras: CameraCRUD = Depends(get_camera_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
-    sequences: SequenceCRUD = Depends(get_sequence_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    desc: Annotated[
+        bool, Query(description="Whether to order the detections by created_at in descending order")
+    ] = True,
 ) -> list[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
@@ -147,9 +149,9 @@ async def fetch_latest_unlabeled_sequences(
         await session.exec(
             select(Sequence)
             .where(Sequence.started_at > datetime.utcnow() - timedelta(hours=24))
-            .where(Sequence.camera_id.in_(camera_ids.all()))  # type: ignore[attr-defined]
-            .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
-            .order_by(Sequence.started_at.desc())  # type: ignore[attr-defined]
+            .where(Sequence.camera_id.in_(camera_ids.all()))
+            .where(Sequence.is_wildfire.is_(None))
+            .order_by(Sequence.started_at.desc())
             .limit(15)
         )
     ).all()
@@ -158,11 +160,11 @@ async def fetch_latest_unlabeled_sequences(
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
 async def fetch_sequences_from_date(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    token_payload: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER])],
     from_date: Annotated[date, Query()],
     limit: Annotated[int | None, Query(description="Maximum number of sequences to fetch")] = 15,
     offset: Annotated[int | None, Query(description="Number of sequences to skip before starting to fetch")] = 0,
-    session: AsyncSession = Depends(get_session),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> list[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
     # Limit to cameras in the same organization
@@ -172,8 +174,8 @@ async def fetch_sequences_from_date(
         await session.exec(
             select(Sequence)
             .where(func.date(Sequence.started_at) == from_date)
-            .where(Sequence.camera_id.in_(camera_ids.all()))  # type: ignore[attr-defined]
-            .order_by(Sequence.started_at.desc())  # type: ignore[attr-defined]
+            .where(Sequence.camera_id.in_(camera_ids.all()))
+            .order_by(Sequence.started_at.desc())
             .limit(limit)
             .offset(offset)
         )

@@ -97,9 +97,9 @@ async def list_pose_masks(
     masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
     poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
     cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    token_payload: Annotated[TokenPayload, Security(
-        get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA]
-    )],
+    token_payload: Annotated[
+        TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER, Role.CAMERA])
+    ],
 ) -> list[OcclusionMaskRead]:
     telemetry_client.capture(token_payload.sub, event="occlusion_masks-list", properties={"pose_id": pose_id})
     pose = cast(Pose, await poses.get(pose_id, strict=True))

@@ -50,10 +50,13 @@ async def create_mask(
     poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
     cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
     masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
-    token_payload: Annotated[TokenPayload, Security(
-        get_jwt,
-        scopes=[UserRole.ADMIN, UserRole.AGENT],
-    )],
+    token_payload: Annotated[
+        TokenPayload,
+        Security(
+            get_jwt,
+            scopes=[UserRole.ADMIN, UserRole.AGENT],
+        ),
+    ],
 ) -> OcclusionMaskRead:
     # Validate mask format
     validate_mask(payload.mask)
@@ -84,10 +87,13 @@ async def get_mask(
     masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
     poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
     cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    token_payload: Annotated[TokenPayload, Security(
-        get_jwt,
-        scopes=[UserRole.ADMIN, UserRole.AGENT],
-    )],
+    token_payload: Annotated[
+        TokenPayload,
+        Security(
+            get_jwt,
+            scopes=[UserRole.ADMIN, UserRole.AGENT],
+        ),
+    ],
 ) -> OcclusionMaskRead:
     mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
@@ -116,10 +122,13 @@ async def update_mask(
     masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
     poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
     cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    token_payload: Annotated[TokenPayload, Security(
-        get_jwt,
-        scopes=[UserRole.ADMIN, UserRole.AGENT],
-    )],
+    token_payload: Annotated[
+        TokenPayload,
+        Security(
+            get_jwt,
+            scopes=[UserRole.ADMIN, UserRole.AGENT],
+        ),
+    ],
 ) -> OcclusionMaskRead:
     # Validate mask format
     validate_mask(payload.mask)
@@ -151,10 +160,13 @@ async def delete_mask(
     masks: Annotated[OcclusionMaskCRUD, Depends(get_occlusion_mask_crud)],
     poses: Annotated[PoseCRUD, Depends(get_pose_crud)],
     cameras: Annotated[CameraCRUD, Depends(get_camera_crud)],
-    token_payload: Annotated[TokenPayload, Security(
-        get_jwt,
-        scopes=[UserRole.ADMIN, UserRole.AGENT],
-    )],
+    token_payload: Annotated[
+        TokenPayload,
+        Security(
+            get_jwt,
+            scopes=[UserRole.ADMIN, UserRole.AGENT],
+        ),
+    ],
 ) -> None:
     mask = cast(OcclusionMask, await masks.get(mask_id, strict=True))
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
