@@ -2,30 +2,66 @@ default_language_version:
     python: python3.11
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: 'v6.0.0'
     hooks:
-      - id: check-yaml
-        exclude: .conda
-      - id: check-toml
       - id: check-added-large-files
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
       - id: check-ast
+      - id: check-case-conflict
       - id: check-json
+        exclude: '.vscode/*|docker/grafana/provisioning/dashboards/*'
       - id: check-merge-conflict
-      - id: no-commit-to-branch
-        args: ['--branch', 'main']
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-xml
+      - id: check-yaml
       - id: debug-statements
         language_version: python3
+      - id: destroyed-symlinks
+      - id: end-of-file-fixer
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+      - id: pretty-format-json
+        exclude: '.vscode/*|docker/grafana/provisioning/dashboards/*'
+      - id: trailing-whitespace
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: 'v4.0.0'
+    rev: 'v4.3.0'
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.11.9'
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
     hooks:
-      - id: ruff
-        args:
-          - --fix
+      - id: validate-pyproject
+        args: ["./pyproject.toml"]
+  - repo: local
+    hooks:
+      - id: deps-check
+        name: check deps version sync
+        entry: make deps-check
+        pass_filenames: false
+        language: system
+      - id: uv-lock
+        name: uv-lock
+        entry: make lock
+        files: ^(uv\.lock|pyproject\.toml|uv\.toml)$
+        language: system
+        stages: [pre-push]
+      - id: ruff-lint
+        name: ruff-lint
+        entry: make ruff-lint-fix
+        pass_filenames: false
+        require_serial: true
+        language: system
       - id: ruff-format
+        name: ruff-format
+        entry: make ruff-format-fix
+        pass_filenames: false
+        require_serial: true
+        language: system
+      - id: typing-check
+        name: check typing
+        entry: make typing-check
+        pass_filenames: false
+        require_serial: true
+        language: system
+        stages: [pre-push]

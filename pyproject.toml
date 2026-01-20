@@ -1,63 +1,72 @@
-[build-system]
-requires = ["poetry>=1.0"]
-build-backend = "poetry.masonry.api"
-
-[tool.poetry]
+[project]
 name = "pyro-api"
 version = "0.1.2.dev0"
 description = "Backend for wildfire prevention, detection and monitoring"
-authors = ["Pyronear <contact@pyronear.org>"]
-license = "Apache-2.0"
+requires-python = ">=3.11,<3.12"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Pyronear", email = "contact@pyronear.org" }]
+readme = "README.md"
+keywords = ["docker", "fastapi", "postgres", "redis"]
+dependencies = [
+    "fastapi>=0.109.1,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "pydantic-settings>=2.0.0,<3.0.0",
+    "uvicorn>=0.11.1,<1.0.0",
+    "python-multipart>=0.0.7,<1.0.0",
+    "python-magic>=0.4.17,<1.0.0",
+    # DB
+    "sqlmodel>=0.0.24,<1.0.0",
+    "asyncpg>=0.25.0,<1.0.0",
+    "alembic>=1.8.1,<2.0.0",
+    # Security
+    "PyJWT>=2.8.0,<3.0.0",
+    "passlib[bcrypt]>=1.7.4,<2.0.0",
+    "bcrypt>=3.1.7,<4.0.0",
+    # Services
+    "boto3>=1.26.0,<2.0.0",
+    "httpx>=0.24.0,<1.0.0",
+    "requests>=2.32.0,<3.0.0",
+    # Computation
+    "geopy>=2.4.0,<3.0.0",
+    "networkx>=3.2.0,<4.0.0",
+    "numpy>=1.26.0,<2.0.0",
+    "pandas>=2.2.0,<3.0.0",
+    "pyproj>=3.6.0,<4.0.0",
+    "shapely>=2.0.0,<3.0.0",
+    # Production monitoring
+    "sentry-sdk[fastapi]>=2.8.0,<3.0.0",
+    "posthog>=3.0.0,<4.0.0",
+    "prometheus-fastapi-instrumentator>=6.1.0,<7.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-fastapi = ">=0.109.1,<1.0.0"
-sqlmodel = "^0.0.24"
-pydantic = ">=2.0.0,<3.0.0"
-pydantic-settings = ">=2.0.0,<3.0.0"
-requests = "^2.32.0"
-PyJWT = "^2.8.0"
-passlib = { version = "^1.7.4", extras = ["bcrypt"] }
-bcrypt = "3.1.7"
-uvicorn = ">=0.11.1,<1.0.0"
-asyncpg = ">=0.25.0,<1.0.0"
-alembic = "^1.8.1"
-sentry-sdk = { version = "^2.8.0", extras = ["fastapi"] }
-posthog = "^3.0.0"
-prometheus-fastapi-instrumentator = "^6.1.0"
-python-multipart = "==0.0.7"
-python-magic = "^0.4.17"
-boto3 = "^1.26.0"
-httpx = "^0.24.0"
-geopy = "^2.4.0"
-networkx = "^3.2.0"
-numpy = "^1.26.0"
-pandas = "^2.2.0"
-pyproj = "^3.6.0"
-shapely = "^2.0.0"
+[dependency-groups]
+quality = [
+    "ruff==0.14.13",
+    "ty==0.0.12",
+    "prek==0.2.30",
+    "types-requests>=2.0.0",
+    "types-python-dateutil>=2.8.0",
+    "sqlalchemy-stubs>=0.4",
+    "types-passlib>=1.7.0",
+]
+test = [
+    "pytest==8.3.5",
+    "pytest-asyncio==0.21.2",
+    "pytest-cov>=4.0.0,<5.0.0",
+    "pytest-pretty>=1.0.0,<2.0.0",
+    "httpx>=0.23.0",
+    "aiosqlite>=0.16.0,<1.0.0",
+]
 
-[tool.poetry.group.quality]
-optional = true
+[project.urls]
+homepage = "https://pyronear.org"
+repository = "https://github.com/pyronear/pyro-api"
+documentation = "https://docs.pyronear.org"
+issues = "https://github.com/pyronear/pyro-api/issues"
+releasenotes = "https://github.com/pyronear/pyro-api/releases"
+logo = "https://pyronear.org/static/images/logo.svg"
 
-[tool.poetry.group.quality.dependencies]
-ruff = "==0.13.1"
-mypy = "==1.10.0"
-types-requests = ">=2.0.0"
-types-python-dateutil = "^2.8.0"
-sqlalchemy-stubs = "^0.4"
-types-passlib = ">=1.7.0"
-pre-commit = "^4.2.0"
 
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.test.dependencies]
-pytest = "==8.3.5"
-pytest-asyncio = "==0.21.2"
-pytest-cov = "^4.0.0"
-pytest-pretty = "^1.0.0"
-httpx = ">=0.23.0"
-aiosqlite = ">=0.16.0,<1.0.0"
 
 [tool.coverage.run]
 source = ["src/app", "client/pyroclient"]
@@ -69,13 +78,8 @@ preview = true
 
 [tool.ruff.lint]
 select = [
-    "F",  # pyflakes
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "I",  # isort
-    "N",  # pep8-naming
-    # "D101", "D103",  # pydocstyle missing docstring in public function/class
-    "D201","D202","D207","D208","D214","D215","D300","D301","D417", "D419",  # pydocstyle
+    "ERA",  # eradicate
+    "FAST",  # FastAPI
     "YTT",  # flake8-2020
     "ANN",  # flake8-annotations
     "ASYNC",  # flake8-async
@@ -84,8 +88,9 @@ select = [
     "B",  # flake8-bugbear
     "A",  # flake8-builtins
     "COM",  # flake8-commas
-    "CPY",  # flake8-copyright
     "C4",  # flake8-comprehensions
+    "CPY",  # flake8-copyright
+    "DTZ",  # flake8-datetimez
     "T10",  # flake8-debugger
     "ISC",  # flake8-implicit-str-concat
     "ICN",  # flake8-import-conventions
@@ -95,22 +100,31 @@ select = [
     "PYI",  # flake8-pyi
     "PT",  # flake8-pytest-style
     "Q",  # flake8-quotes
-    "RSE",  # flake8-raise
     "RET",  # flake8-return
+    "SLF",  # flake8-self
     "SIM",  # flake8-simplify
     "ARG",  # flake8-unused-arguments
     "PTH",  # flake8-use-pathlib
-    "PERF",  # perflint
+    "FLY",  # flynt
+    "I",  # isort
     "NPY",  # numpy
-    "FAST",  # fastapi
+    "N",  # pep8-naming
+    "PERF",  # perflint
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "DOC",  # pydoclint
+    "D",  # pydocstyle
+    "F",  # pyflakes
+    "PGH",  # pygrep-hooks
+    "PL",  # pylint
+    "UP",  # pyupgrade
     "FURB",  # refurb
     "RUF",  # ruff specific
+    "TRY",  # tryceratops
 ]
 ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
+    "E501",  # line too long, handled by formatting
     "B904",  # raise from
-    "C901",  # too complex
     "F403",  # star imports
     "E731",  # lambda assignment
     "C416",  # list comprehension to list()
@@ -118,7 +132,13 @@ ignore = [
     "ANN003",  # missing type annotations on **kwargs
     "COM812",  # trailing comma missing
     "ISC001",  # implicit string concatenation (handled by format)
-    "FAST002",  # fastapi annotated
+    "PLR",  # Pylint refactor
+    "TRY003",  # Avoid specifying long messages outside the exception class
+    "D203",  # incorrect-blank-line-before-class
+    "D213",  # multi-line-summary-second-line
+    "D413",  # Missing blank line after last section
+    "DOC502",  # Raised exception is not explicitly raised (not working with custom exceptions)
+    "DOC501",  # Raised exception missing from docstring
 ]
 exclude = [".git"]
 
@@ -147,42 +167,14 @@ known-third-party = ["fastapi"]
 quote-style = "double"
 indent-style = "space"
 
-[tool.mypy]
-python_version = "3.11"
-mypy_path = "src/"
-files = "src/app"
-show_error_codes = true
-pretty = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_implicit_optional = true
-check_untyped_defs = true
-implicit_reexport = false
-explicit_package_bases = true
-plugins = ["pydantic.mypy"]
-[[tool.mypy.overrides]]
-module = [
-    "pandas",
-    "pandas.*",
-    "numpy",
-    "pyproj",
-    "shapely.*",
-    "geopy.*",
-    "passlib",
-    "passlib.*",
-    "requests",
-    "requests.*",
-]
-ignore_missing_imports = true
+[tool.ty.environment]
+python-version = "3.11"
+python-platform = "linux"
+root = ["src", "client"]
 
-[[tool.mypy.overrides]]
-module = [
-    "magic",
-    "boto3",
-    "botocore.*",
-    "databases",
-    "posthog",
-    "prometheus_fastapi_instrumentator",
-    "pydantic_settings",
-]
-ignore_missing_imports = true
+[tool.ty.rules]
+unresolved-import = "warn"
+invalid-return-type = "warn"
+
+[tool.ty.src]
+include = ["src/app", "client/pyroclient"]
