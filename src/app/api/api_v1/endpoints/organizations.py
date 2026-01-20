@@ -92,7 +92,7 @@ async def update_telegram_id(
         token_payload.sub, event="organizations-update-telegram-id", properties={"organization_id": organization_id}
     )
     # Check if the telegram channel ID is valid
-    if payload.telegram_id and not telegram_client.has_channel_access(payload.telegram_id):
+    if payload.telegram_id and not await telegram_client.has_channel_access(payload.telegram_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Telegram channel")
     return await OrganizationCRUD(session=session).update(organization_id, payload)
 
@@ -107,7 +107,7 @@ async def update_slack_hook(
     _: Annotated[TokenPayload, Security(get_jwt, scopes=[UserRole.ADMIN])],
 ) -> Organization:
     # Check if the Slack hook is valid
-    check = slack_client.has_channel_access(payload.slack_hook)
+    check = await slack_client.has_channel_access(payload.slack_hook)
 
     if payload.slack_hook and not check:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Slack channel")

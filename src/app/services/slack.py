@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import requests
+import httpx
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -20,21 +20,22 @@ class SlackClient:
         self.is_enabled = True
         # Do we want a config in settings ?
 
-    def has_channel_access(self, slack_hook: str) -> bool:
+    async def has_channel_access(self, slack_hook: str) -> bool:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
 
         """Envoie un message à Slack via un webhook."""
-        response = requests.post(
-            slack_hook,
-            json={"text": "Initialisation du Slack Hook in the Pyronear API"},
-            headers={"Content-Type": "application/json"},
-            timeout=3,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                slack_hook,
+                json={"text": "Initialisation du Slack Hook in the Pyronear API"},
+                headers={"Content-Type": "application/json"},
+                timeout=3,
+            )
 
         return response.status_code == 200
 
-    def notify(self, slack_hook: str, message_detection: str, url: str, camera_name: str) -> requests.Response:
+    async def notify(self, slack_hook: str, message_detection: str, url: str, camera_name: str) -> httpx.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
 
@@ -96,12 +97,13 @@ class SlackClient:
             }
 
         """Envoie un message à Slack via un webhook."""
-        response = requests.post(
-            slack_hook,
-            json=message,
-            headers={"Content-Type": "application/json"},
-            timeout=3,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                slack_hook,
+                json=message,
+                headers={"Content-Type": "application/json"},
+                timeout=3,
+            )
 
         if response.status_code != 200:
             logger.error(f"Failed to send message to Slack: {response.text}")

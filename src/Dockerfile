@@ -15,7 +15,7 @@ ENV UV_PROJECT_ENVIRONMENT="/opt/venv"
 RUN apk add --no-cache \
     gcc \
     python3-dev \
-    libmagic1 \
+    libmagic \
     musl-dev \
     linux-headers
 
@@ -42,7 +42,7 @@ ENV PYTHON_PATH="/opt/venv/lib/python3.11/site-packages"
 LABEL maintainer="Pyronear <support@pyronear.org>"
 
 # Install only curl for healthcheck
-RUN apk add --no-cache curl libmagic1
+RUN apk add --no-cache curl libmagic
 
 # Copy installed dependencies from builder
 COPY --from=builder /opt/venv /opt/venv

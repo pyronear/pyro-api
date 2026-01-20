@@ -5,7 +5,7 @@
 
 import logging
 
-import requests
+import httpx
 
 from app.core.config import settings
 
@@ -22,7 +22,7 @@ class TelegramClient:
         if isinstance(token, str):
             self.token = token
             # Validate token
-            response = requests.get(
+            response = httpx.get(
                 f"{self.BASE_URL.format(token=self.token)}/getMe",
                 timeout=1,
             )
@@ -30,24 +30,26 @@ class TelegramClient:
                 raise ValueError(f"Invalid Telegram Bot token: {response.text}")
             logger.info("Telegram notifications enabled")
 
-    def has_channel_access(self, channel_id: str) -> bool:
+    async def has_channel_access(self, channel_id: str) -> bool:
         if not self.is_enabled:
             raise AssertionError("Telegram notifications are not enabled")
-        response = requests.get(
-            f"{self.BASE_URL.format(token=self.token)}/getChat",
-            json={"chat_id": channel_id},
-            timeout=1,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.BASE_URL.format(token=self.token)}/getChat",
+                params={"chat_id": channel_id},
+                timeout=1,
+            )
         return response.status_code == 200
 
-    def notify(self, channel_id: str, message: str) -> requests.Response:
+    async def notify(self, channel_id: str, message: str) -> httpx.Response:
         if not self.is_enabled:
             raise AssertionError("Telegram notifications are not enabled")
-        response = requests.post(
-            f"{self.BASE_URL.format(token=self.token)}/sendMessage",
-            json={"chat_id": channel_id, "text": message},
-            timeout=2,
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.BASE_URL.format(token=self.token)}/sendMessage",
+                json={"chat_id": channel_id, "text": message},
+                timeout=2,
+            )
         if response.status_code != 200:
             logger.error(f"Failed to send message to Telegram: {response.text}")
 
