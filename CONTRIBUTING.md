@@ -24,7 +24,7 @@ The back-end core feature is to interact with the metadata tables. For the servi
 
 - Webhook: stores the webhook URLs.
 
-_The UML is versioned at [`scripts/dbdiagram.txt`](https://github.com/pyronear/pyro-api/blob/main/scripts/dbdiagram.txt) and the UML diagram is available on [DBDiagram](https://dbdiagram.io/d/Pyronear-Alert-Schema-671e1b9897a66db9a3673d76)._
+_The UML is versioned at [`scripts/dbdiagram.txt`](https://github.com/pyronear/pyro-api/blob/main/scripts/dbdiagram.txt) and the UML diagram is available on [DBDiagram](https://dbdiagram.io/d/pyronear-alert-api-db-diagram-6931c25bd6676488baa1d700)._
 
 ### What is the full detection workflow through the API
 

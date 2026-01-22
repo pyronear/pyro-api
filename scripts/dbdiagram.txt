@@ -67,7 +67,9 @@ Table "sequences" as S {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
   "pose_id" int [ref: > P.id]
-  "azimuth" float [not null]
+  "camera_azimuth" float [not null]
+  "sequence_azimuth" float
+  "cone_angle" float
   "is_wildfire" annotationtype
   "started_at" timestamp [not null]
   "last_seen_at" timestamp [not null]
@@ -80,11 +82,11 @@ Table "sequences" as S {
 Table "detections" as D {
   "id" int [not null]
   "camera_id" int [ref: > C.id, not null]
-  "pose_id" int [ref: > P.id]
+  "pose_id" int [ref: > P.id, not null]
   "sequence_id" int [ref: > S.id]
-  "azimuth" float [not null]
   "bucket_key" varchar [not null]
-  "bboxes" varchar [not null]
+  "bbox" varchar [not null]
+  "others_bboxes" varchar
   "created_at" timestamp [not null]
 
   Indexes {
@@ -98,5 +100,38 @@ Table "webhooks" as W {
 
   Indexes {
     (id) [pk]
+  }
+}
+
+Table "occlusion_masks" as OM {
+  "id" int [not null]
+  "pose_id" int [ref: > P.id, not null]
+  "mask" varchar [not null]
+  "created_at" timestamp [not null]
+
+  Indexes {
+    (id) [pk]
+  }
+}
+
+Table "alerts" as A {
+  "id" int [not null]
+  "organization_id" int [ref: > O.id, not null]
+  "lat" float
+  "lon" float
+  "started_at" timestamp [not null]
+  "last_seen_at" timestamp [not null]
+
+  Indexes {
+    (id) [pk]
+  }
+}
+
+Table "alerts_sequences" as AS {
+  "alert_id" int [ref: > A.id, not null]
+  "sequence_id" int [ref: > S.id, not null]
+
+  Indexes {
+    (alert_id, sequence_id) [pk]
   }
 }
