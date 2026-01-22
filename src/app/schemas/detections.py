@@ -29,7 +29,7 @@ class DetectionCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
     pose_id: int = Field(..., gt=0)
     bucket_key: str
-    bboxes: str = Field(
+    bbox: str = Field(
         ...,
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,

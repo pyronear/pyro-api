@@ -111,10 +111,10 @@ async def test_create_detection(
         if isinstance(payload.get("bboxes"), str):
             boxes = literal_eval(payload["bboxes"])
             if len(boxes) <= 1:
-                assert data["bboxes"] == payload["bboxes"]
+                assert data["bbox"] == payload["bboxes"]
                 assert data.get("others_bboxes") is None
             else:
-                det_boxes = literal_eval(data["bboxes"])
+                det_boxes = literal_eval(data["bbox"])
                 assert len(det_boxes) == 1
                 assert det_boxes[0] in boxes
                 assert data.get("others_bboxes") is not None
@@ -163,7 +163,7 @@ async def test_create_detection(
         assert {det.bucket_key for det in dets} == {bucket_key}
         box_counter = Counter(boxes)
         for det in dets:
-            det_boxes = literal_eval(det.bboxes)
+            det_boxes = literal_eval(det.bbox)
             assert len(det_boxes) == 1
             det_box = det_boxes[0]
             assert det_box in box_counter
@@ -251,7 +251,7 @@ async def test_get_last_bbox_for_sequence_returns_latest(detection_session: Asyn
         pose_id=pose.id,
         sequence_id=sequence.id,
         bucket_key="bbox-1",
-        bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
+        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
         created_at=now - timedelta(seconds=5),
     )
     det2 = Detection(
@@ -259,7 +259,7 @@ async def test_get_last_bbox_for_sequence_returns_latest(detection_session: Asyn
         pose_id=pose.id,
         sequence_id=sequence.id,
         bucket_key="bbox-2",
-        bboxes="[(0.3,0.3,0.4,0.4,0.9)]",
+        bbox="[(0.3,0.3,0.4,0.4,0.9)]",
         created_at=now,
     )
     detection_session.add(det1)
@@ -325,7 +325,7 @@ async def test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox(detectio
         pose_id=pose.id,
         sequence_id=sequence.id,
         bucket_key="bbox-invalid",
-        bboxes="[]",
+        bbox="[]",
         created_at=now,
     )
     detection_session.add(det)
@@ -722,7 +722,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         pose_id=pose_id,
         sequence_id=None,
         bucket_key="invalid",
-        bboxes="[]",
+        bbox="[]",
     )
     detection_session.add(invalid_det)
     await detection_session.commit()

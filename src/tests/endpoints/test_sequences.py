@@ -154,7 +154,8 @@ async def test_label_sequence(
         (0, "", 422, None, None),
         (0, "old-date", 422, None, None),
         (0, "2018-19-20", 422, None, None),  # impossible date
-        (0, "2018-06-06T00:00:00", 200, None, []),  # datetime != date, weird, but works
+        # datetime != date, weird, but works
+        (0, "2018-06-06T00:00:00", 200, None, []),
         (0, "2018-06-06", 200, None, []),
         (0, "2023-11-07", 200, None, pytest.sequence_table[:1]),
         (1, "2023-11-07", 200, None, pytest.sequence_table[:1]),
@@ -339,7 +340,7 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
         pose_id=pose.id,
         sequence_id=None,
         bucket_key="tmp",
-        bboxes="[(0.1,0.1,0.2,0.2,0.9)]",
+        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
         created_at=now,
     )
     detection_session.add(seq)

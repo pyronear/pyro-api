@@ -104,7 +104,7 @@ async def _get_last_bbox_for_sequence(
     )
     if not dets:
         return None
-    bbox_strs = _extract_bbox_strings(dets[0].bboxes)
+    bbox_strs = _extract_bbox_strings(dets[0].bbox)
     if not bbox_strs:
         return None
     return _parse_bbox(bbox_strs[0])
@@ -368,7 +368,7 @@ async def create_detection(
                 camera_id=token_payload.sub,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
-                bboxes=single_bboxes,
+                bbox=single_bboxes,
                 others_bboxes=others_bboxes,
             )
         )
@@ -416,7 +416,7 @@ async def create_detection(
             )
             overlapping_dets: List[Detection] = []
             for cand in dets_:
-                cand_bbox_strs = _extract_bbox_strings(cand.bboxes)
+                cand_bbox_strs = _extract_bbox_strings(cand.bbox)
                 if not cand_bbox_strs:
                     continue
                 cand_bbox = _parse_bbox(cand_bbox_strs[0])
@@ -425,7 +425,7 @@ async def create_detection(
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
                 first_det = min(overlapping_dets, key=lambda item: item.created_at)
-                cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bboxes, camera.angle_of_view)
+                cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
                 sequence_ = await sequences.create(
                     Sequence(
                         camera_id=token_payload.sub,
