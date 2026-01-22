@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     MAX_BBOX_STR_LENGTH: int = (
         2 + MAX_BOXES_PER_DETECTION * (2 + 5 * (2 + DECIMALS_PER_COORD) + 4 * 2) + (MAX_BOXES_PER_DETECTION - 1) * 2
     )
+    # Single bbox (for Detection.bbox field): max 1 box
+    MAX_BBOX_STR_LENGTH_SINGLE: int = 2 + 1 * (2 + 5 * (2 + DECIMALS_PER_COORD) + 4 * 2) + (1 - 1) * 2
+    # Other bboxes (for Detection.others_bboxes): max MAX_BOXES_PER_DETECTION boxes minus 1
+    MAX_BBOX_STR_LENGTH_OTHERS: int = (
+        2
+        + (MAX_BOXES_PER_DETECTION - 1) * (2 + 5 * (2 + DECIMALS_PER_COORD) + 4 * 2)
+        + ((MAX_BOXES_PER_DETECTION - 1) - 1) * 2
+    )
 
     # Storage
     S3_ACCESS_KEY: str = os.environ["S3_ACCESS_KEY"]

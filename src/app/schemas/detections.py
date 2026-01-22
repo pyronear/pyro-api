@@ -32,11 +32,11 @@ class DetectionCreate(BaseModel):
     bbox: str = Field(
         ...,
         min_length=2,
-        max_length=settings.MAX_BBOX_STR_LENGTH,
+        max_length=settings.MAX_BBOX_STR_LENGTH_SINGLE,
         description="string representation of list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
         json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9, 0.5)]"]},
     )
-    others_bboxes: Optional[str] = Field(None)
+    others_bboxes: Optional[str] = Field(None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS)
 
 
 class DetectionUrl(BaseModel):
