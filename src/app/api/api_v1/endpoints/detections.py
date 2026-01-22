@@ -4,6 +4,9 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import json
+import re
+from ast import literal_eval
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
@@ -20,6 +23,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -30,14 +34,16 @@ from app.api.dependencies import (
     get_detection_crud,
     get_jwt,
     get_organization_crud,
+    get_pose_crud,
     get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
+    BOX_PATTERN,
     BOXES_PATTERN,
     COMPILED_BOXES_PATTERN,
     DetectionCreate,
@@ -55,6 +61,53 @@ from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+
+
+def _extract_bbox_strings(bboxes: str) -> List[str]:
+    return [match.group(0) for match in re.finditer(BOX_PATTERN, bboxes)]
+
+
+def _bbox_list_to_str(bboxes: List[str]) -> str:
+    return f"[{','.join(bboxes)}]"
+
+
+def _parse_bbox(bbox_str: str) -> Tuple[float, float, float, float, float]:
+    try:
+        bbox = literal_eval(bbox_str)
+    except (SyntaxError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.") from exc
+    if not isinstance(bbox, tuple) or len(bbox) != 5:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
+    return cast(Tuple[float, float, float, float, float], bbox)
+
+
+def _bboxes_overlap(
+    left: Tuple[float, float, float, float, float],
+    right: Tuple[float, float, float, float, float],
+) -> bool:
+    lx_min, ly_min, lx_max, ly_max, _ = left
+    rx_min, ry_min, rx_max, ry_max, _ = right
+    inter_w = min(lx_max, rx_max) - max(lx_min, rx_min)
+    inter_h = min(ly_max, ry_max) - max(ly_min, ry_min)
+    return inter_w > 0 and inter_h > 0
+
+
+async def _get_last_bbox_for_sequence(
+    detections: DetectionCRUD,
+    sequence_id: int,
+) -> Optional[Tuple[float, float, float, float, float]]:
+    dets = await detections.fetch_all(
+        filters=("sequence_id", sequence_id),
+        order_by="created_at",
+        order_desc=True,
+        limit=1,
+    )
+    if not dets:
+        return None
+    bbox_strs = _extract_bbox_strings(dets[0].bbox)
+    if not bbox_strs:
+        return None
+    return _parse_bbox(bbox_strs[0])
 
 
 async def _get_camera_by_id(
@@ -273,8 +326,7 @@ async def create_detection(
         min_length=2,
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
-    azimuth: float = Form(..., ge=0, lt=360, description="angle between north and direction in degrees"),
-    pose_id: Optional[int] = Form(None, gt=0, description="pose id of the detection"),
+    pose_id: int = Form(..., gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -282,6 +334,7 @@ async def create_detection(
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> Detection:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
@@ -295,90 +348,133 @@ async def create_detection(
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    det = await detections.create(
-        DetectionCreate(
-            camera_id=token_payload.sub, pose_id=pose_id, bucket_key=bucket_key, azimuth=azimuth, bboxes=bboxes
-        )
-    )
-    # Sequence handling
-    # Check if there is a sequence that was seen recently
-    sequence = await sequences.fetch_all(
-        filters=[("camera_id", token_payload.sub), ("camera_azimuth", det.azimuth)],
-        inequality_pair=(
-            "last_seen_at",
-            ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
-        ),
-        order_by="last_seen_at",
-        order_desc=True,
-        limit=1,
-    )
+    pose = cast(Pose, await poses.get(pose_id, strict=True))
+    if pose.camera_id != token_payload.sub:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
-    if len(sequence) == 1:
-        # Add detection to existing sequence
-        await sequences.update(sequence[0].id, SequenceUpdate(last_seen_at=det.created_at))
-        await detections.update(det.id, DetectionSequence(sequence_id=sequence[0].id))
-    else:
-        # Check if we've reached the threshold of detections per interval
-        dets_ = await detections.fetch_all(
-            filters=[("camera_id", token_payload.sub), ("azimuth", det.azimuth)],
-            inequality_pair=(
-                "created_at",
-                ">",
-                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
-            ),
-            order_by="created_at",
-            order_desc=False,
-            limit=settings.SEQUENCE_MIN_INTERVAL_DETS,
-        )
+    bbox_strings = _extract_bbox_strings(bboxes)
+    if not bbox_strings:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
 
-        if len(dets_) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-            camera = cast(Camera, await cameras.get(det.camera_id, strict=True))
-            cone_azimuth, cone_angle = resolve_cone(det.azimuth, dets_[0].bboxes, camera.angle_of_view)
-            # Create new sequence
-            sequence_ = await sequences.create(
-                Sequence(
-                    camera_id=token_payload.sub,
-                    pose_id=pose_id,
-                    camera_azimuth=det.azimuth,
-                    sequence_azimuth=cone_azimuth,
-                    cone_angle=cone_angle,
-                    started_at=dets_[0].created_at,
-                    last_seen_at=det.created_at,
-                )
+    created: List[Detection] = []
+    camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+
+    for idx, bbox_str in enumerate(bbox_strings):
+        single_bboxes = _bbox_list_to_str([bbox_str])
+        other_bbox_strings = bbox_strings[:idx] + bbox_strings[idx + 1 :]
+        others_bboxes = _bbox_list_to_str(other_bbox_strings) if other_bbox_strings else None
+        det = await detections.create(
+            DetectionCreate(
+                camera_id=token_payload.sub,
+                pose_id=pose_id,
+                bucket_key=bucket_key,
+                bbox=single_bboxes,
+                others_bboxes=others_bboxes,
             )
-            # Update the detection with the sequence ID
-            det = await detections.update(det.id, DetectionSequence(sequence_id=sequence_.id))
-            for det_ in dets_:
-                await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
+        )
 
-            await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+        det_bbox = _parse_bbox(bbox_str)
+        # Sequence handling
+        # Check if there is a sequence that was seen recently
+        candidate_sequences = await sequences.fetch_all(
+            filters=[("camera_id", token_payload.sub), ("pose_id", pose_id)],
+            inequality_pair=(
+                "last_seen_at",
+                ">",
+                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            ),
+            order_by="last_seen_at",
+            order_desc=True,
+        )
+        matched_sequence: Optional[Sequence] = None
+        for seq in candidate_sequences:
+            if seq.id is None:
+                continue
+            last_bbox = await _get_last_bbox_for_sequence(detections, seq.id)
+            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox):
+                matched_sequence = seq
+                break
 
-            # Webhooks
-            whs = await webhooks.fetch_all()
-            if any(whs):
-                for webhook in await webhooks.fetch_all():
-                    background_tasks.add_task(dispatch_webhook, webhook.url, det)
+        if matched_sequence is not None:
+            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
+            det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
+        else:
+            det_filters: List[tuple[str, Any]] = [
+                ("camera_id", token_payload.sub),
+                ("pose_id", pose_id),
+                ("sequence_id", None),
+            ]
+            dets_ = await detections.fetch_all(
+                filters=det_filters,
+                inequality_pair=(
+                    "created_at",
+                    ">",
+                    datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                ),
+                order_by="created_at",
+                order_desc=False,
+            )
+            overlapping_dets: List[Detection] = []
+            for cand in dets_:
+                cand_bbox_strs = _extract_bbox_strings(cand.bbox)
+                if not cand_bbox_strs:
+                    continue
+                cand_bbox = _parse_bbox(cand_bbox_strs[0])
+                if _bboxes_overlap(cand_bbox, det_bbox):
+                    overlapping_dets.append(cand)
 
-            org = None
-            # Telegram notifications
-            if telegram_client.is_enabled:
-                org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                if org.telegram_id:
-                    background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
-
-            if slack_client.is_enabled:
-                if org is None:
-                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                if org.slack_hook:
-                    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-                    url = bucket.get_public_url(det.bucket_key)
-
-                    background_tasks.add_task(
-                        slack_client.notify, org.slack_hook, det.model_dump_json(), url, camera.name
+            if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
+                first_det = min(overlapping_dets, key=lambda item: item.created_at)
+                cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
+                sequence_ = await sequences.create(
+                    Sequence(
+                        camera_id=token_payload.sub,
+                        pose_id=pose_id,
+                        camera_azimuth=pose.azimuth,
+                        sequence_azimuth=cone_azimuth,
+                        cone_angle=cone_angle,
+                        started_at=first_det.created_at,
+                        last_seen_at=det.created_at,
                     )
+                )
+                for det_ in overlapping_dets:
+                    updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
+                    if det_.id == det.id:
+                        det = updated
 
-    return DetectionRead(**det.model_dump())
+                await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+
+                # Webhooks
+                whs = await webhooks.fetch_all()
+                if any(whs):
+                    for webhook in await webhooks.fetch_all():
+                        background_tasks.add_task(dispatch_webhook, webhook.url, det)
+
+                org = None
+                # Telegram notifications
+                if telegram_client.is_enabled:
+                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                    if org.telegram_id:
+                        background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
+
+                if slack_client.is_enabled:
+                    if org is None:
+                        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+                    if org.slack_hook:
+                        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
+                        url = bucket.get_public_url(det.bucket_key)
+
+                        slack_payload = jsonable_encoder(det)
+                        slack_payload["pose_azimuth"] = pose.azimuth
+                        slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+                        background_tasks.add_task(
+                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), url, camera.name
+                        )
+
+        created.append(det)
+
+    first_det = cast(Detection, await detections.get(created[0].id, strict=True))
+    return DetectionRead(**first_det.model_dump())
 
 
 @router.get("/{detection_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific detection")

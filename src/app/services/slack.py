@@ -43,7 +43,15 @@ class SlackClient:
         except json.JSONDecodeError as e:
             raise ValueError("Invalid JSON format for message_detection") from e
 
-        azimuth = detection_data.get("azimuth", "Inconnu")
+        azimuth = detection_data.get("azimuth")
+        if azimuth is None:
+            azimuth = detection_data.get("pose_azimuth")
+        if azimuth is None:
+            azimuth = detection_data.get("sequence_azimuth")
+        if azimuth is None:
+            azimuth = detection_data.get("camera_azimuth")
+        if azimuth is None:
+            azimuth = "Inconnu"
         created_at_str = detection_data.get("created_at", "Inconnu")
         utc_dt = datetime.fromisoformat(created_at_str)
         utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))

@@ -24,7 +24,7 @@ async def create_pose(
     payload: PoseCreate = Body(...),
     poses: PoseCRUD = Depends(get_pose_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, Role.CAMERA]),
 ) -> PoseRead:
     telemetry_client.capture(
         token_payload.sub,
@@ -34,11 +34,24 @@ async def create_pose(
 
     camera = cast(Camera, await cameras.get(payload.camera_id, strict=True))
 
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if Role.CAMERA in token_payload.scopes:
+        if payload.camera_id != token_payload.sub:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     db_pose = await poses.create(payload)
     return PoseRead(**db_pose.model_dump())
+
+
+@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch poses for the authenticated camera")
+async def list_current_poses(
+    poses: PoseCRUD = Depends(get_pose_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
+) -> List[PoseRead]:
+    telemetry_client.capture(f"camera|{token_payload.sub}", event="poses-list")
+    rows = await poses.fetch_all(filters=("camera_id", token_payload.sub), order_by="id")
+    return [PoseRead(**row.model_dump()) for row in rows]
 
 
 @router.get("/{pose_id}", status_code=status.HTTP_200_OK, summary="Fetch information of a specific pose")
@@ -65,12 +78,15 @@ async def update_pose(
     payload: PoseUpdate = Body(...),
     poses: PoseCRUD = Depends(get_pose_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.AGENT, UserRole.ADMIN]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.AGENT, UserRole.ADMIN, Role.CAMERA]),
 ) -> PoseRead:
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if Role.CAMERA in token_payload.scopes:
+        if pose.camera_id != token_payload.sub:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     db_pose = await poses.update(pose_id, payload)

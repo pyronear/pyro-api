@@ -11,21 +11,11 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import AnnotationType, Detection
 
-__all__ = ["Azimuth", "DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
+__all__ = ["DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
 
 
 class DetectionLabel(BaseModel):
     is_wildfire: AnnotationType
-
-
-class Azimuth(BaseModel):
-    azimuth: float = Field(
-        ...,
-        ge=0,
-        lt=360,
-        description="angle between north and direction in degrees",
-        json_schema_extra={"examples": [110]},
-    )
 
 
 # Regex for a float between 0 and 1, with a maximum of 3 decimals
@@ -35,17 +25,18 @@ BOXES_PATTERN = rf"^\[{BOX_PATTERN}(,{BOX_PATTERN})*\]$"
 COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
 
-class DetectionCreate(Azimuth):
+class DetectionCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
-    pose_id: Optional[int] = Field(None, gt=0)
+    pose_id: int = Field(..., gt=0)
     bucket_key: str
-    bboxes: str = Field(
+    bbox: str = Field(
         ...,
         min_length=2,
-        max_length=settings.MAX_BBOX_STR_LENGTH,
+        max_length=settings.MAX_BBOX_STR_LENGTH_SINGLE,
         description="string representation of list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf",
         json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9, 0.5)]"]},
     )
+    others_bboxes: Optional[str] = Field(None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS)
 
 
 class DetectionUrl(BaseModel):
