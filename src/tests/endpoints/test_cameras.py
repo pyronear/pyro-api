@@ -113,8 +113,8 @@ async def test_create_camera(
             None,
             0,
             [
-                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
-                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
+                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "image": None, "image_url": None},
+                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "image": None, "image_url": None},
             ],
         ),
     ],
