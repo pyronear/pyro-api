@@ -466,3 +466,45 @@ async def test_update_pose_image(
         json_resp = response.json()
         assert isinstance(json_resp["image"], str)
         assert json_resp["image"] != ""  # Should have a bucket key
+
+
+@pytest.mark.asyncio
+async def test_get_pose_after_image_upload(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that getting a pose after uploading an image returns a valid image_url"""
+    # Get admin token
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],  # Admin user
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # First, upload an image to the pose
+    upload_response = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("test_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert upload_response.status_code == 200
+    assert upload_response.json()["image"] is not None
+
+    # Then, retrieve the pose and verify image_url is generated
+    get_response = await async_client.get(f"/poses/{pose_id}", headers=auth)
+    assert get_response.status_code == 200
+
+    json_resp = get_response.json()
+    assert "image" in json_resp
+    assert "image_url" in json_resp
+    # Verify image_url is a valid string (presigned S3 URL)
+    assert isinstance(json_resp["image"], str)
+    assert isinstance(json_resp["image_url"], str)
+    assert json_resp["image_url"] is not None
+    assert len(json_resp["image_url"]) > 0
+    # Verify the URL contains expected S3 components
+    assert "http" in json_resp["image_url"]  # Should be a valid URL
