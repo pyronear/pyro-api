@@ -26,6 +26,7 @@ class ClientRoute(str, Enum):
     # POSES
     POSES_CREATE = "poses/"
     POSES_BY_ID = "poses/{pose_id}"
+    POSES_IMAGE = "poses/{pose_id}/image"
     POSES_MASKS_BY_ID = "poses/{pose_id}/occlusion_masks"
     # OCCLUSION MASKS
     OCCLUSION_MASKS_CREATE = "occlusion_masks"
@@ -225,6 +226,28 @@ class Client:
 
     # Backward compatibility alias
     patch_pose = update_pose
+
+    def update_pose_image(self, pose_id: int, media: bytes) -> Response:
+        """Update the image of a pose
+
+        >>> from pyroclient import Client
+        >>> api_client = Client("MY_TOKEN")
+        >>> with open("path/to/my/file.ext", "rb") as f: data = f.read()
+        >>> response = api_client.update_pose_image(pose_id=1, media=data)
+
+        Args:
+            pose_id: ID of the pose
+            media: byte data of the image
+
+        Returns:
+            HTTP response containing the updated pose info
+        """
+        return requests.patch(
+            urljoin(self._route_prefix, ClientRoute.POSES_IMAGE.format(pose_id=pose_id)),
+            headers=self.headers,
+            files={"file": ("image.png", media, "image/png")},
+            timeout=self.timeout,
+        )
 
     def delete_pose(self, pose_id: int) -> Response:
         """Delete a pose
