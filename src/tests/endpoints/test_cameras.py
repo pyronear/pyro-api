@@ -691,3 +691,77 @@ async def test_fetch_cameras_with_pose_image(
     assert pose_with_image["image_url"] is not None
     assert isinstance(pose_with_image["image_url"], str)
     assert "http" in pose_with_image["image_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_camera_with_last_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that get camera returns last_image_url when camera has last_image set"""
+    # Authenticate as camera 1 and upload an image
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image",
+        files={"file": ("camera_image.png", mock_img, "image/png")},
+        headers=cam_auth,
+    )
+    assert upload_response.status_code == 200
+
+    # Now fetch camera 1 as a user and verify last_image_url is set
+    user_auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/cameras/1", headers=user_auth)
+    assert response.status_code == 200
+
+    camera = response.json()
+    assert camera["last_image_url"] is not None
+    assert isinstance(camera["last_image_url"], str)
+    assert "http" in camera["last_image_url"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_cameras_with_last_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that fetch cameras returns last_image_url when camera has last_image set"""
+    # Authenticate as camera 1 and upload an image
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image",
+        files={"file": ("camera_image.png", mock_img, "image/png")},
+        headers=cam_auth,
+    )
+    assert upload_response.status_code == 200
+
+    # Fetch all cameras as admin and verify last_image_url
+    user_auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/cameras", headers=user_auth)
+    assert response.status_code == 200
+
+    cameras = response.json()
+    camera_1 = next((c for c in cameras if c["id"] == 1), None)
+    assert camera_1 is not None
+    assert camera_1["last_image_url"] is not None
+    assert isinstance(camera_1["last_image_url"], str)
+    assert "http" in camera_1["last_image_url"]
