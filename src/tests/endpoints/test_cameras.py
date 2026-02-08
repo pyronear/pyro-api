@@ -628,12 +628,65 @@ async def test_get_camera_with_pose_image(
     camera = response.json()
     assert "poses" in camera
     poses = camera["poses"]
+    assert len(poses) > 0
 
-    # Find pose 1 in the poses list
+    # Check all poses have image and image_url fields
+    for pose in poses:
+        assert "image" in pose
+        assert "image_url" in pose
+
+    # Find pose 1 which has an image
     pose_with_image = next((p for p in poses if p["id"] == 1), None)
     assert pose_with_image is not None
+    assert pose_with_image["image"] is not None
+    assert pose_with_image["image_url"] is not None
+    assert isinstance(pose_with_image["image_url"], str)
+    assert "http" in pose_with_image["image_url"]
 
-    # Verify image_url is generated for the pose with an image
+    # Verify poses without images have None for image_url
+    poses_without_image = [p for p in poses if p["image"] is None]
+    if poses_without_image:
+        for pose in poses_without_image:
+            assert pose["image_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_cameras_with_pose_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that fetch cameras returns poses with image_url"""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    # Upload image to pose 1
+    upload_response = await async_client.patch(
+        "/poses/1/image",
+        files={"file": ("pose_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert upload_response.status_code == 200
+
+    # Fetch all cameras
+    response = await async_client.get("/cameras", headers=auth)
+    assert response.status_code == 200
+
+    cameras = response.json()
+    assert len(cameras) > 0
+
+    # Find camera 1 and verify its poses have image_url
+    camera_1 = next((c for c in cameras if c["id"] == 1), None)
+    assert camera_1 is not None
+    assert "poses" in camera_1
+
+    # Find pose 1 which should have image_url
+    pose_with_image = next((p for p in camera_1["poses"] if p["id"] == 1), None)
+    assert pose_with_image is not None
     assert pose_with_image["image"] is not None
     assert pose_with_image["image_url"] is not None
     assert isinstance(pose_with_image["image_url"], str)
