@@ -597,3 +597,44 @@ async def test_update_camera_name(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert all(response.json()[k] == v for k, v in payload.items())
+
+
+@pytest.mark.asyncio
+async def test_get_camera_with_pose_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that camera response includes image_url for poses with images"""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    # Upload image to pose 1 (belongs to camera 1)
+    upload_response = await async_client.patch(
+        "/poses/1/image",
+        files={"file": ("pose_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert upload_response.status_code == 200
+
+    # Get the camera and check nested pose has image_url
+    response = await async_client.get("/cameras/1", headers=auth)
+    assert response.status_code == 200
+
+    camera = response.json()
+    assert "poses" in camera
+    poses = camera["poses"]
+
+    # Find pose 1 in the poses list
+    pose_with_image = next((p for p in poses if p["id"] == 1), None)
+    assert pose_with_image is not None
+
+    # Verify image_url is generated for the pose with an image
+    assert pose_with_image["image"] is not None
+    assert pose_with_image["image_url"] is not None
+    assert isinstance(pose_with_image["image_url"], str)
+    assert "http" in pose_with_image["image_url"]

@@ -506,3 +506,38 @@ async def test_patch_response_does_not_include_image_url(
 
     # This is the key assertion: image_url should NOT be in PATCH response
     assert "image_url" not in json_resp  # ← Documents API behavior!
+
+
+@pytest.mark.asyncio
+async def test_update_pose_image_twice(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test uploading image twice to cover old image deletion path"""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # First upload
+    response1 = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("image1.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response1.status_code == 200
+    assert response1.json()["image"] is not None
+
+    # Second upload - this covers the deletion of old image (line 121 in poses.py)
+    response2 = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("image2.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response2.status_code == 200
+    assert response2.json()["image"] is not None
