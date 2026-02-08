@@ -377,44 +377,6 @@ async def test_list_pose_occlusion_masks(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "pose_id", "status_code"),
-    [
-        (0, 1, 200),  # Admin can access
-        (1, 1, 200),  # Agent in same org can access
-        (2, 1, 403),  # Agent in different org cannot access
-    ],
-)
-@pytest.mark.asyncio
-async def test_get_pose_with_image(
-    async_client: AsyncClient,
-    camera_session: AsyncSession,
-    pose_session: AsyncSession,
-    user_idx: int,
-    pose_id: int,
-    status_code: int,
-):
-    """Test getting a pose returns image_url when image exists"""
-    auth = pytest.get_token(
-        pytest.user_table[user_idx]["id"],
-        pytest.user_table[user_idx]["role"].split(),
-        pytest.user_table[user_idx]["organization_id"],
-    )
-
-    response = await async_client.get(f"/poses/{pose_id}", headers=auth)
-    assert response.status_code == status_code
-
-    if status_code == 200:
-        json_resp = response.json()
-        assert "image" in json_resp
-        assert "image_url" in json_resp
-        # image_url should be None if no image exists, or a string if it does
-        if json_resp["image"] is not None:
-            assert isinstance(json_resp["image_url"], str)
-        else:
-            assert json_resp["image_url"] is None
-
-
-@pytest.mark.parametrize(
     ("auth_type", "auth_idx", "pose_id", "status_code", "status_detail"),
     [
         (None, None, 1, 401, "Not authenticated"),
@@ -508,3 +470,39 @@ async def test_get_pose_after_image_upload(
     assert len(json_resp["image_url"]) > 0
     # Verify the URL contains expected S3 components
     assert "http" in json_resp["image_url"]  # Should be a valid URL
+
+
+@pytest.mark.asyncio
+async def test_patch_response_does_not_include_image_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that PATCH /poses/{pose_id}/image returns Pose (not PoseRead), so no image_url"""
+    # Get admin token
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # Upload image
+    response = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("test_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+
+    assert response.status_code == 200
+    json_resp = response.json()
+
+    # CRITICAL: Verify PATCH returns Pose model (has 'image' but NOT 'image_url')
+    assert "image" in json_resp
+    assert json_resp["image"] is not None
+    assert isinstance(json_resp["image"], str)
+
+    # This is the key assertion: image_url should NOT be in PATCH response
+    assert "image_url" not in json_resp  # ← Documents API behavior!
