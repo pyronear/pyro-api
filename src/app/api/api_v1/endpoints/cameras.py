@@ -59,16 +59,18 @@ async def get_camera(
         filters=("camera_id", camera_id),
         order_by="id",
     )
-    if camera.last_image is None:
-        return CameraRead(
-            **camera.model_dump(), last_image_url=None, poses=[PoseRead(**p.model_dump()) for p in cam_poses]
-        )
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    return CameraRead(
-        **camera.model_dump(),
-        last_image_url=bucket.get_public_url(camera.last_image),
-        poses=[PoseRead(**p.model_dump()) for p in cam_poses],
-    )
+
+    # Generate image_url for each pose
+    pose_reads = []
+    for p in cam_poses:
+        if p.image is None:
+            pose_reads.append(PoseRead(**p.model_dump(), image_url=None))
+        else:
+            pose_reads.append(PoseRead(**p.model_dump(), image_url=bucket.get_public_url(p.image)))
+
+    last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
@@ -106,7 +108,14 @@ async def fetch_cameras(
 
     async def get_poses(cam: Camera) -> list[PoseRead]:
         p = await poses.fetch_all(filters=("camera_id", cam.id))
-        return [PoseRead(**elt.model_dump()) for elt in p]
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
+        pose_reads = []
+        for pose in p:
+            if pose.image is None:
+                pose_reads.append(PoseRead(**pose.model_dump(), image_url=None))
+            else:
+                pose_reads.append(PoseRead(**pose.model_dump(), image_url=bucket.get_public_url(pose.image)))
+        return pose_reads
 
     poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
 
