@@ -113,8 +113,8 @@ async def test_create_camera(
             None,
             0,
             [
-                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "image": None, "image_url": None},
-                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "image": None, "image_url": None},
+                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
+                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
             ],
         ),
     ],
@@ -597,100 +597,6 @@ async def test_update_camera_name(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert all(response.json()[k] == v for k, v in payload.items())
-
-
-@pytest.mark.asyncio
-async def test_get_camera_with_pose_image(
-    async_client: AsyncClient,
-    camera_session: AsyncSession,
-    pose_session: AsyncSession,
-    mock_img: bytes,
-):
-    """Test that camera response includes image_url for poses with images"""
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
-
-    # Upload image to pose 1 (belongs to camera 1)
-    upload_response = await async_client.patch(
-        "/poses/1/image",
-        files={"file": ("pose_image.png", mock_img, "image/png")},
-        headers=auth,
-    )
-    assert upload_response.status_code == 200
-
-    # Get the camera and check nested pose has image_url
-    response = await async_client.get("/cameras/1", headers=auth)
-    assert response.status_code == 200
-
-    camera = response.json()
-    assert "poses" in camera
-    poses = camera["poses"]
-    assert len(poses) > 0
-
-    # Check all poses have image and image_url fields
-    for pose in poses:
-        assert "image" in pose
-        assert "image_url" in pose
-
-    # Find pose 1 which has an image
-    pose_with_image = next((p for p in poses if p["id"] == 1), None)
-    assert pose_with_image is not None
-    assert pose_with_image["image"] is not None
-    assert pose_with_image["image_url"] is not None
-    assert isinstance(pose_with_image["image_url"], str)
-    assert "http" in pose_with_image["image_url"]
-
-    # Verify poses without images have None for image_url
-    poses_without_image = [p for p in poses if p["image"] is None]
-    if poses_without_image:
-        for pose in poses_without_image:
-            assert pose["image_url"] is None
-
-
-@pytest.mark.asyncio
-async def test_fetch_cameras_with_pose_image(
-    async_client: AsyncClient,
-    camera_session: AsyncSession,
-    pose_session: AsyncSession,
-    mock_img: bytes,
-):
-    """Test that fetch cameras returns poses with image_url"""
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
-
-    # Upload image to pose 1
-    upload_response = await async_client.patch(
-        "/poses/1/image",
-        files={"file": ("pose_image.png", mock_img, "image/png")},
-        headers=auth,
-    )
-    assert upload_response.status_code == 200
-
-    # Fetch all cameras
-    response = await async_client.get("/cameras", headers=auth)
-    assert response.status_code == 200
-
-    cameras = response.json()
-    assert len(cameras) > 0
-
-    # Find camera 1 and verify its poses have image_url
-    camera_1 = next((c for c in cameras if c["id"] == 1), None)
-    assert camera_1 is not None
-    assert "poses" in camera_1
-
-    # Find pose 1 which should have image_url
-    pose_with_image = next((p for p in camera_1["poses"] if p["id"] == 1), None)
-    assert pose_with_image is not None
-    assert pose_with_image["image"] is not None
-    assert pose_with_image["image_url"] is not None
-    assert isinstance(pose_with_image["image_url"], str)
-    assert "http" in pose_with_image["image_url"]
 
 
 @pytest.mark.asyncio

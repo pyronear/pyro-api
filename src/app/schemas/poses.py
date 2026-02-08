@@ -11,6 +11,7 @@ __all__ = [
     "PoseCreate",
     "PoseImage",
     "PoseRead",
+    "PoseReadWithoutImgInfo",
     "PoseUpdate",
 ]
 
@@ -31,6 +32,11 @@ class PoseUpdate(BaseModel):
 
 class PoseImage(BaseModel):
     image: str
+
+
+class PoseReadWithoutImgInfo(PoseBase):
+    id: int
+    camera_id: int
 
 
 class PoseRead(PoseBase):
