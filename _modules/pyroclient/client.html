@@ -230,6 +230,7 @@
     <span class="c1"># POSES</span>
     <span class="n">POSES_CREATE</span> <span class="o">=</span> <span class="s2">&quot;poses/&quot;</span>
     <span class="n">POSES_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">&quot;</span>
+    <span class="n">POSES_IMAGE</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">/image&quot;</span>
     <span class="n">POSES_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">/occlusion_masks&quot;</span>
     <span class="c1"># OCCLUSION MASKS</span>
     <span class="n">OCCLUSION_MASKS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;occlusion_masks&quot;</span>
@@ -429,6 +430,28 @@
 
     <span class="c1"># Backward compatibility alias</span>
     <span class="n">patch_pose</span> <span class="o">=</span> <span class="n">update_pose</span>
+
+<div class="viewcode-block" id="Client.update_pose_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_pose_image">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_pose_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the image of a pose</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.update_pose_image(pose_id=1, media=data)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pose_id: ID of the pose</span>
+<span class="sd">            media: byte data of the image</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response containing the updated pose info</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_IMAGE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;image.png&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/png&quot;</span><span class="p">)},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.delete_pose"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.delete_pose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a pose</span>
