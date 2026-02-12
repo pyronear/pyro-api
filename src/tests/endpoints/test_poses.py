@@ -133,14 +133,14 @@ async def test_create_pose_camera_scope(
             1,
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
+            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "image": None, "image_url": None},
         ),
         (
             1,
             2,
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "image": None, "image_url": None},
         ),
     ],
 )
@@ -187,7 +187,7 @@ async def test_get_pose(
             {"azimuth": 123.4, "patrol_id": 123},
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": 123},
+            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": 123, "image": None, "image_url": None},
         ),
         (
             1,
@@ -195,7 +195,7 @@ async def test_get_pose(
             {"patrol_id": 456},
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456, "image": None, "image_url": None},
         ),
     ],
 )
@@ -374,3 +374,170 @@ async def test_list_pose_occlusion_masks(
     if status_code == 200:
         assert isinstance(response.json(), list)
         assert len(response.json()) == expected_count
+
+
+@pytest.mark.parametrize(
+    ("auth_type", "auth_idx", "pose_id", "status_code", "status_detail"),
+    [
+        (None, None, 1, 401, "Not authenticated"),
+        ("camera", 0, 1, 200, None),  # Camera updating its own pose
+        ("camera", 0, 3, 403, "Access forbidden."),  # Camera updating another camera's pose
+        ("user", 0, 1, 200, None),  # Admin can update
+        ("user", 1, 1, 200, None),  # Agent in same org can update
+        ("user", 2, 1, 403, "Incompatible token scope."),  # Agent in different org cannot update
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_pose_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+    auth_type: Union[str, None],
+    auth_idx: Union[int, None],
+    pose_id: int,
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    """Test updating a pose image"""
+    auth = None
+    if auth_type == "camera":
+        auth = pytest.get_token(
+            pytest.camera_table[auth_idx]["id"],
+            ["camera"],
+            pytest.camera_table[auth_idx]["organization_id"],
+        )
+    elif auth_type == "user":
+        auth = pytest.get_token(
+            pytest.user_table[auth_idx]["id"],
+            pytest.user_table[auth_idx]["role"].split(),
+            pytest.user_table[auth_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("test_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+
+    if response.status_code // 100 == 2:
+        json_resp = response.json()
+        assert isinstance(json_resp["image"], str)
+        assert json_resp["image"] != ""  # Should have a bucket key
+
+
+@pytest.mark.asyncio
+async def test_get_pose_after_image_upload(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that getting a pose after uploading an image returns a valid image_url"""
+    # Get admin token
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],  # Admin user
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # First, upload an image to the pose
+    upload_response = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("test_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert upload_response.status_code == 200
+    assert upload_response.json()["image"] is not None
+
+    # Then, retrieve the pose and verify image_url is generated
+    get_response = await async_client.get(f"/poses/{pose_id}", headers=auth)
+    assert get_response.status_code == 200
+
+    json_resp = get_response.json()
+    assert "image" in json_resp
+    assert "image_url" in json_resp
+    # Verify image_url is a valid string (presigned S3 URL)
+    assert isinstance(json_resp["image"], str)
+    assert isinstance(json_resp["image_url"], str)
+    assert json_resp["image_url"] is not None
+    assert len(json_resp["image_url"]) > 0
+    # Verify the URL contains expected S3 components
+    assert "http" in json_resp["image_url"]  # Should be a valid URL
+
+
+@pytest.mark.asyncio
+async def test_patch_response_does_not_include_image_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test that PATCH /poses/{pose_id}/image returns Pose (not PoseRead), so no image_url"""
+    # Get admin token
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # Upload image
+    response = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("test_image.png", mock_img, "image/png")},
+        headers=auth,
+    )
+
+    assert response.status_code == 200
+    json_resp = response.json()
+
+    # CRITICAL: Verify PATCH returns Pose model (has 'image' but NOT 'image_url')
+    assert "image" in json_resp
+    assert json_resp["image"] is not None
+    assert isinstance(json_resp["image"], str)
+
+    # This is the key assertion: image_url should NOT be in PATCH response
+    assert "image_url" not in json_resp  # ← Documents API behavior!
+
+
+@pytest.mark.asyncio
+async def test_update_pose_image_twice(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Test uploading image twice to cover old image deletion path"""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    pose_id = 1
+
+    # First upload
+    response1 = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("image1.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response1.status_code == 200
+    assert response1.json()["image"] is not None
+
+    # Second upload - this covers the deletion of old image (line 121 in poses.py)
+    response2 = await async_client.patch(
+        f"/poses/{pose_id}/image",
+        files={"file": ("image2.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response2.status_code == 200
+    assert response2.json()["image"] is not None

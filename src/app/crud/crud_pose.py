@@ -7,11 +7,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import Pose
-from app.schemas.poses import PoseCreate, PoseUpdate
+from app.schemas.poses import PoseCreate, PoseImage, PoseUpdate
 
 __all__ = ["PoseCRUD"]
 
 
-class PoseCRUD(BaseCRUD[Pose, PoseCreate, PoseUpdate]):
+class PoseCRUD(BaseCRUD[Pose, PoseCreate, PoseUpdate | PoseImage]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Pose)

@@ -52,6 +52,14 @@ def test_update_pose_camera(cam_token, cam_pose_id):
     assert response.json()["azimuth"] == 123.4
 
 
+def test_update_pose_image_camera(cam_token, cam_pose_id, mock_img):
+    cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
+    response = cam_client.update_pose_image(cam_pose_id, mock_img)
+    assert response.status_code == 200, response.__dict__
+    assert isinstance(response.json()["image"], str)
+    assert response.json()["image"] != ""
+
+
 @pytest.fixture(scope="session")
 def test_cam_workflow(cam_token, cam_pose_id, mock_img):
     cam_client = Client(cam_token, "http://localhost:5050", timeout=10)

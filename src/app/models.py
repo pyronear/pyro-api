@@ -65,6 +65,7 @@ class Pose(SQLModel, table=True):
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     azimuth: float = Field(..., ge=0, lt=360)
     patrol_id: int | None = Field(default=None, max_length=100)
+    image: Union[str, None] = None
 
 
 class OcclusionMask(SQLModel, table=True):

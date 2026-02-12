@@ -57,6 +57,7 @@ Table "poses" as P {
   "camera_id" int [ref: > C.id, not null]
   "azimuth" float [not null]
   "patrol_id" int
+  "image" varchar
 
   Indexes {
     (id) [pk]

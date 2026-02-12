@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 from typing import List, cast
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Security, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Path, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_jwt, get_occlusion_mask_crud, get_pose_crud
 from app.crud import CameraCRUD
@@ -13,7 +13,8 @@ from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Pose, Role, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.occlusion_masks import OcclusionMaskRead
-from app.schemas.poses import PoseCreate, PoseRead, PoseUpdate
+from app.schemas.poses import PoseCreate, PoseImage, PoseRead, PoseUpdate
+from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -69,7 +70,11 @@ async def get_pose(
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
-    return PoseRead(**pose.model_dump())
+    if pose.image is None:
+        return PoseRead(**pose.model_dump(), image_url=None)
+
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    return PoseRead(**pose.model_dump(), image_url=bucket.get_public_url(pose.image))
 
 
 @router.patch("/{pose_id}", status_code=status.HTTP_200_OK, summary="Update a pose")
@@ -91,6 +96,37 @@ async def update_pose(
 
     db_pose = await poses.update(pose_id, payload)
     return PoseRead(**db_pose.model_dump())
+
+
+@router.patch("/{pose_id}/image", status_code=status.HTTP_200_OK, summary="Update image of a pose")
+async def update_pose_image(
+    pose_id: int = Path(..., gt=0),
+    file: UploadFile = File(..., alias="file"),
+    poses: PoseCRUD = Depends(get_pose_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, Role.CAMERA]),
+) -> Pose:
+    # telemetry_client.capture(token_payload.sub, event="poses-update-image", properties={"pose_id": pose_id})
+
+    pose = cast(Pose, await poses.get(pose_id, strict=True))
+    camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
+
+    # Authorization checks
+    if Role.CAMERA in token_payload.scopes:
+        if pose.camera_id != token_payload.sub:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+    # Upload the file using the camera_id (poses belong to cameras)
+    bucket_key = await upload_file(file, camera.organization_id, pose.camera_id)
+
+    # If the upload succeeds, delete the previous image
+    if isinstance(pose.image, str):
+        s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id)).delete_file(pose.image)
+
+    # Update the DB entry
+    return await poses.update(pose_id, PoseImage(image=bucket_key))
 
 
 @router.delete("/{pose_id}", status_code=status.HTTP_200_OK, summary="Delete a pose")

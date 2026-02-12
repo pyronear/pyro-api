@@ -9,7 +9,9 @@ from pydantic import BaseModel, Field
 
 __all__ = [
     "PoseCreate",
+    "PoseImage",
     "PoseRead",
+    "PoseReadWithoutImgInfo",
     "PoseUpdate",
 ]
 
@@ -28,6 +30,17 @@ class PoseUpdate(BaseModel):
     patrol_id: Optional[int] = Field(None, gt=0, description="External patrol identifier")
 
 
+class PoseImage(BaseModel):
+    image: str
+
+
+class PoseReadWithoutImgInfo(PoseBase):
+    id: int
+    camera_id: int
+
+
 class PoseRead(PoseBase):
     id: int
     camera_id: int
+    image: str | None
+    image_url: str | None = Field(None, description="URL of the image of the pose")

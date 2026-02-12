@@ -24,7 +24,7 @@ from app.schemas.cameras import (
     LastImage,
 )
 from app.schemas.login import Token, TokenPayload
-from app.schemas.poses import PoseRead
+from app.schemas.poses import PoseReadWithoutImgInfo
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
@@ -59,16 +59,11 @@ async def get_camera(
         filters=("camera_id", camera_id),
         order_by="id",
     )
-    if camera.last_image is None:
-        return CameraRead(
-            **camera.model_dump(), last_image_url=None, poses=[PoseRead(**p.model_dump()) for p in cam_poses]
-        )
+    pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
+
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    return CameraRead(
-        **camera.model_dump(),
-        last_image_url=bucket.get_public_url(camera.last_image),
-        poses=[PoseRead(**p.model_dump()) for p in cam_poses],
-    )
+    last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
@@ -104,9 +99,9 @@ async def fetch_cameras(
 
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
 
-    async def get_poses(cam: Camera) -> list[PoseRead]:
+    async def get_poses(cam: Camera) -> list[PoseReadWithoutImgInfo]:
         p = await poses.fetch_all(filters=("camera_id", cam.id))
-        return [PoseRead(**elt.model_dump()) for elt in p]
+        return [PoseReadWithoutImgInfo(**pose.model_dump()) for pose in p]
 
     poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
 
