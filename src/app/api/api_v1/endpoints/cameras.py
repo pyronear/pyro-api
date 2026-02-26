@@ -17,6 +17,7 @@ from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
 from app.schemas.cameras import (
     CameraCreate,
+    CameraDeviceConfig,
     CameraEdit,
     CameraName,
     CameraRead,
@@ -180,3 +181,18 @@ async def delete_camera(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
     await cameras.delete(camera_id)
+
+
+@router.patch(
+    "/{camera_id}/device_config", status_code=status.HTTP_200_OK, summary="Update camera device connection config"
+)
+async def update_camera_device_config(
+    payload: CameraDeviceConfig,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> Camera:
+    telemetry_client.capture(
+        token_payload.sub, event="cameras-update-device-config", properties={"camera_id": camera_id}
+    )
+    return await cameras.update(camera_id, payload)
