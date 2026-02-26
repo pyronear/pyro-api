@@ -58,6 +58,15 @@ class CameraName(BaseModel):
     name: str = Field(..., min_length=5, max_length=100, description="name of the camera")
 
 
+class CameraDeviceConfig(BaseModel):
+    """Internal-only: set the device connection details for a camera. Never returned in public responses."""
+
+    camera_ip: str | None = Field(default=None, description="IP of the camera within the device's local network")
+    device_ip: str | None = Field(
+        default=None, description="IP of the device box (VPN-reachable) running the camera API"
+    )
+
+
 class CameraRead(CameraCreate):
     id: int
     last_active_at: datetime | None
