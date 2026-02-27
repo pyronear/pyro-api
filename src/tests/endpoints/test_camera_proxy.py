@@ -248,3 +248,42 @@ async def test_device_ip_not_leaked_in_camera_response(
     data = response.json()
     assert "device_ip" not in data
     assert "camera_ip" not in data
+
+
+# ── Happy-path coverage for all remaining proxy endpoints ────────────────────
+
+
+@pytest.mark.parametrize(
+    ("path", "method", "client_fn"),
+    [
+        (f"/cameras/{CONFIGURED_CAM_ID}/cameras_list", "get", "list_cameras"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get", "get_camera_infos"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get", "list_presets"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get", "get_focus_status"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get", "get_patrol_status"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get", "get_stream_status"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/is_running", "get", "is_stream_running"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/move", "post", "move"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop", "post", "stop"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/preset", "post", "set_preset"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/zoom/5", "post", "zoom"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/manual?position=500", "post", "manual_focus"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/autofocus", "post", "set_autofocus"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/optimize", "post", "run_focus_finder"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/start", "post", "start_patrol"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/stop", "post", "stop_patrol"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/start", "post", "start_stream"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/stop", "post", "stop_stream"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_proxy_happy_path(
+    async_client: AsyncClient,
+    configured_camera_session: AsyncSession,
+    path: str,
+    method: str,
+    client_fn: str,
+):
+    with patch(f"app.services.camera_client.{client_fn}", new=AsyncMock(return_value={"ok": True})):
+        response = await getattr(async_client, method)(path, headers=_auth(0))
+    assert response.status_code == 200
