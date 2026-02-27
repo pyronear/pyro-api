@@ -46,9 +46,9 @@ def _auth(user_idx: int) -> dict:
 # ── Auth / Organisation isolation ─────────────────────────────────────────────
 #
 # Users in conftest:
-#   [0] admin  – org 1
-#   [1] agent  – org 1
-#   [2] user   – org 2
+#   [0] admin  - org 1
+#   [1] agent  - org 1
+#   [2] user   - org 2
 #
 # Cameras in conftest (no device_ip / camera_ip):
 #   id=1  org 1  (cam-1)

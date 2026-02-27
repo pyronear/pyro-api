@@ -23,26 +23,22 @@ router = APIRouter()
 async def _require_read(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
-        get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 
 
 async def _require_write(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
-    token_payload: TokenPayload = Security(
-        get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 
 
@@ -82,18 +78,12 @@ async def proxy_camera_infos(camera: Camera = Depends(_require_read)) -> Any:
 
 @router.get("/{camera_id}/capture", status_code=status.HTTP_200_OK, summary="Capture a JPEG snapshot from the camera")
 async def proxy_capture(
-    pos_id: int | None = Query(
-        default=None, description="Move to this preset pose before capturing"),
-    anonymize: bool = Query(
-        default=True, description="Overlay anonymization masks on the image"),
-    max_age_ms: int | None = Query(
-        default=None, description="Only use detection boxes newer than this many ms"),
-    strict: bool = Query(
-        default=False, description="Return 503 if no recent boxes are available for anonymization"),
-    width: int | None = Query(
-        default=None, description="Resize output to this width (px), preserving aspect ratio"),
-    quality: int = Query(default=95, ge=1, le=100,
-                         description="JPEG quality (1–100)"),
+    pos_id: int | None = Query(default=None, description="Move to this preset pose before capturing"),
+    anonymize: bool = Query(default=True, description="Overlay anonymization masks on the image"),
+    max_age_ms: int | None = Query(default=None, description="Only use detection boxes newer than this many ms"),
+    strict: bool = Query(default=False, description="Return 503 if no recent boxes are available for anonymization"),
+    width: int | None = Query(default=None, description="Resize output to this width (px), preserving aspect ratio"),
+    quality: int = Query(default=95, ge=1, le=100, description="JPEG quality (1-100)"),
     camera: Camera = Depends(_require_read),
 ) -> Response:
     device_ip, camera_ip = _device_config(camera)
@@ -112,10 +102,8 @@ async def proxy_capture(
 
 @router.get("/{camera_id}/latest_image", status_code=status.HTTP_200_OK, summary="Get the last stored image for a pose")
 async def proxy_latest_image(
-    pose: int = Query(...,
-                      description="Pose index whose cached image to retrieve"),
-    quality: int = Query(default=95, ge=1, le=100,
-                         description="JPEG quality (1–100)"),
+    pose: int = Query(..., description="Pose index whose cached image to retrieve"),
+    quality: int = Query(default=95, ge=1, le=100, description="JPEG quality (1-100)"),
     camera: Camera = Depends(_require_read),
 ) -> Response:
     device_ip, camera_ip = _device_config(camera)
@@ -130,13 +118,10 @@ async def proxy_latest_image(
 
 @router.post("/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera")
 async def proxy_move(
-    direction: str | None = Query(
-        default=None, description="Direction: Left, Right, Up, Down"),
+    direction: str | None = Query(default=None, description="Direction: Left, Right, Up, Down"),
     speed: int = Query(default=10, description="Movement speed"),
-    pose_id: int | None = Query(
-        default=None, description="Move to this preset pose index"),
-    degrees: float | None = Query(
-        default=None, description="Rotate by this many degrees (requires direction)"),
+    pose_id: int | None = Query(default=None, description="Move to this preset pose index"),
+    degrees: float | None = Query(default=None, description="Rotate by this many degrees (requires direction)"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
@@ -170,7 +155,7 @@ async def proxy_set_preset(
 
 @router.post("/{camera_id}/control/zoom/{level}", status_code=status.HTTP_200_OK, summary="Zoom the camera")
 async def proxy_zoom(
-    level: int = Path(..., ge=0, le=64, description="Zoom level (0–64)"),
+    level: int = Path(..., ge=0, le=64, description="Zoom level (0-64)"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
@@ -182,7 +167,7 @@ async def proxy_zoom(
 
 @router.post("/{camera_id}/focus/manual", status_code=status.HTTP_200_OK, summary="Set manual focus position")
 async def proxy_manual_focus(
-    position: int = Query(..., description="Focus motor position (0–1000)"),
+    position: int = Query(..., description="Focus motor position (0-1000)"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
@@ -191,8 +176,7 @@ async def proxy_manual_focus(
 
 @router.post("/{camera_id}/focus/autofocus", status_code=status.HTTP_200_OK, summary="Toggle autofocus")
 async def proxy_set_autofocus(
-    disable: bool = Query(
-        default=True, description="True to disable autofocus (enable manual), False to re-enable it"),
+    disable: bool = Query(default=True, description="True to disable autofocus (enable manual), False to re-enable it"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
@@ -207,8 +191,7 @@ async def proxy_focus_status(camera: Camera = Depends(_require_read)) -> Any:
 
 @router.post("/{camera_id}/focus/optimize", status_code=status.HTTP_200_OK, summary="Run focus optimization")
 async def proxy_focus_finder(
-    save_images: bool = Query(
-        default=False, description="Save intermediate frames captured during focus search"),
+    save_images: bool = Query(default=False, description="Save intermediate frames captured during focus search"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
