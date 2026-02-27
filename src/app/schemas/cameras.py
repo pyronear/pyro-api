@@ -67,10 +67,21 @@ class CameraDeviceConfig(BaseModel):
     )
 
 
-class CameraRead(CameraCreate):
+class CameraOut(CameraCreate):
+    """
+    Returned by mutation endpoints
+    """
+
     id: int
     last_active_at: datetime | None
     last_image: str | None
+    created_at: datetime
+
+
+class CameraRead(CameraOut):
+    """
+    Returned by read endpoints
+    """
+
     last_image_url: str | None = Field(None, description="URL of the last image of the camera")
     poses: list[PoseReadWithoutImgInfo] = Field(default_factory=list)
-    created_at: datetime
