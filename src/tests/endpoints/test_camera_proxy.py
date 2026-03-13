@@ -178,7 +178,10 @@ async def test_proxy_unconfigured_post(async_client: AsyncClient, camera_session
 
 @pytest.mark.asyncio
 async def test_proxy_device_timeout(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch(f"{_PROXY_MODULE}._run_sync", side_effect=HTTPException(status_code=504, detail="Camera device is not responding.")):
+    with patch(
+        f"{_PROXY_MODULE}._run_sync",
+        side_effect=HTTPException(status_code=504, detail="Camera device is not responding."),
+    ):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/health", headers=_auth(0))
     assert response.status_code == 504
     assert "not responding" in response.json()["detail"]
@@ -186,7 +189,10 @@ async def test_proxy_device_timeout(async_client: AsyncClient, configured_camera
 
 @pytest.mark.asyncio
 async def test_proxy_device_unreachable(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch(f"{_PROXY_MODULE}._run_sync", side_effect=HTTPException(status_code=502, detail="Failed to reach camera device.")):
+    with patch(
+        f"{_PROXY_MODULE}._run_sync",
+        side_effect=HTTPException(status_code=502, detail="Failed to reach camera device."),
+    ):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/health", headers=_auth(0))
     assert response.status_code == 502
     assert "reach camera device" in response.json()["detail"]
