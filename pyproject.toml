@@ -63,6 +63,10 @@ aiosqlite = ">=0.16.0,<1.0.0"
 [tool.coverage.run]
 source = ["src/app", "client/pyroclient"]
 
+[tool.bandit]
+exclude_dirs = ["src/tests", "client/tests"]
+skips = ["B101"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"
