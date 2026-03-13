@@ -186,5 +186,6 @@ module = [
     "posthog",
     "prometheus_fastapi_instrumentator",
     "pydantic_settings",
+    "pyro_camera_api_client",
 ]
 ignore_missing_imports = true
