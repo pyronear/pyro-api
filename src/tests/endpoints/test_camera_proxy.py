@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from httpx import AsyncClient
+from PIL import Image
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Camera
@@ -24,6 +25,8 @@ CONFIGURED_CAM = {
 
 # Fake JPEG bytes (minimal valid header is enough for content-type tests)
 FAKE_JPEG = b"\xff\xd8\xff" + b"\x00" * 64
+
+_PROXY_MODULE = "app.api.api_v1.endpoints.camera_proxy"
 
 
 @pytest_asyncio.fixture()
@@ -175,10 +178,7 @@ async def test_proxy_unconfigured_post(async_client: AsyncClient, camera_session
 
 @pytest.mark.asyncio
 async def test_proxy_device_timeout(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch(
-        "app.services.camera_client.get_health",
-        side_effect=HTTPException(status_code=504, detail="Camera device is not responding."),
-    ):
+    with patch(f"{_PROXY_MODULE}._run_sync", side_effect=HTTPException(status_code=504, detail="Camera device is not responding.")):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/health", headers=_auth(0))
     assert response.status_code == 504
     assert "not responding" in response.json()["detail"]
@@ -186,10 +186,7 @@ async def test_proxy_device_timeout(async_client: AsyncClient, configured_camera
 
 @pytest.mark.asyncio
 async def test_proxy_device_unreachable(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch(
-        "app.services.camera_client.get_health",
-        side_effect=HTTPException(status_code=502, detail="Failed to reach camera device."),
-    ):
+    with patch(f"{_PROXY_MODULE}._run_sync", side_effect=HTTPException(status_code=502, detail="Failed to reach camera device.")):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/health", headers=_auth(0))
     assert response.status_code == 502
     assert "reach camera device" in response.json()["detail"]
@@ -198,10 +195,7 @@ async def test_proxy_device_unreachable(async_client: AsyncClient, configured_ca
 @pytest.mark.asyncio
 async def test_proxy_device_error_forwarded(async_client: AsyncClient, configured_camera_session: AsyncSession):
     """A 404 from the device (unknown camera_ip) is forwarded as-is."""
-    with patch(
-        "app.services.camera_client.get_health",
-        side_effect=HTTPException(status_code=404, detail="Unknown camera"),
-    ):
+    with patch(f"{_PROXY_MODULE}._run_sync", side_effect=HTTPException(status_code=404, detail="Unknown camera")):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/health", headers=_auth(0))
     assert response.status_code == 404
 
@@ -211,7 +205,7 @@ async def test_proxy_device_error_forwarded(async_client: AsyncClient, configure
 
 @pytest.mark.asyncio
 async def test_proxy_capture_returns_jpeg(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch("app.services.camera_client.capture", new=AsyncMock(return_value=FAKE_JPEG)):
+    with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value=FAKE_JPEG)):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/capture", headers=_auth(0))
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/jpeg"
@@ -220,17 +214,19 @@ async def test_proxy_capture_returns_jpeg(async_client: AsyncClient, configured_
 
 @pytest.mark.asyncio
 async def test_proxy_latest_image_returns_jpeg(async_client: AsyncClient, configured_camera_session: AsyncSession):
-    with patch("app.services.camera_client.get_latest_image", new=AsyncMock(return_value=FAKE_JPEG)):
+    """The endpoint re-encodes the PIL Image returned by the client into JPEG bytes."""
+    img = Image.new("RGB", (4, 4), color=(255, 0, 0))
+    with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value=img)):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/latest_image?pose=0", headers=_auth(0))
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/jpeg"
-    assert response.content == FAKE_JPEG
+    assert response.content[:2] == b"\xff\xd8"  # JPEG magic bytes
 
 
 @pytest.mark.asyncio
 async def test_proxy_latest_image_no_content(async_client: AsyncClient, configured_camera_session: AsyncSession):
     """When the device has no cached image for the requested pose it returns 204."""
-    with patch("app.services.camera_client.get_latest_image", new=AsyncMock(return_value=None)):
+    with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value=None)):
         response = await async_client.get(f"/cameras/{CONFIGURED_CAM_ID}/latest_image?pose=0", headers=_auth(0))
     assert response.status_code == 204
 
@@ -254,26 +250,27 @@ async def test_device_ip_not_leaked_in_camera_response(
 
 
 @pytest.mark.parametrize(
-    ("path", "method", "client_fn"),
+    ("path", "method"),
     [
-        (f"/cameras/{CONFIGURED_CAM_ID}/cameras_list", "get", "list_cameras"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get", "get_camera_infos"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get", "list_presets"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get", "get_focus_status"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get", "get_patrol_status"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get", "get_stream_status"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/is_running", "get", "is_stream_running"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/move", "post", "move"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop", "post", "stop"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/preset", "post", "set_preset"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/zoom/5", "post", "zoom"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/manual?position=500", "post", "manual_focus"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/autofocus", "post", "set_autofocus"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/optimize", "post", "run_focus_finder"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/start", "post", "start_patrol"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/stop", "post", "stop_patrol"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/start", "post", "start_stream"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/stop", "post", "stop_stream"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/health", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/cameras_list", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/is_running", "get"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/move", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/preset", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/zoom/5", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/manual?position=500", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/autofocus", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/optimize", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/start", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/stop", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/start", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/stop", "post"),
     ],
 )
 @pytest.mark.asyncio
@@ -282,8 +279,7 @@ async def test_proxy_happy_path(
     configured_camera_session: AsyncSession,
     path: str,
     method: str,
-    client_fn: str,
 ):
-    with patch(f"app.services.camera_client.{client_fn}", new=AsyncMock(return_value={"ok": True})):
+    with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value={"ok": True})):
         response = await getattr(async_client, method)(path, headers=_auth(0))
     assert response.status_code == 200

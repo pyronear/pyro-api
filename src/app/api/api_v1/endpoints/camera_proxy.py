@@ -4,17 +4,50 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import asyncio
+import io
+from collections.abc import Callable
+from functools import partial
 from typing import Any, cast
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
+from pyro_camera_api_client import PyroCameraAPIClient
 
 from app.api.dependencies import get_camera_crud, get_jwt
 from app.crud import CameraCRUD
 from app.models import Camera, UserRole
 from app.schemas.login import TokenPayload
-from app.services import camera_client
 
 router = APIRouter()
+
+DEVICE_PORT = 8081
+TIMEOUT = 10.0
+
+
+def _make_client(device_ip: str) -> PyroCameraAPIClient:
+    return PyroCameraAPIClient(base_url=f"http://{device_ip}:{DEVICE_PORT}", timeout=TIMEOUT)
+
+
+async def _run_sync(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    loop = asyncio.get_running_loop()
+    try:
+        return await loop.run_in_executor(None, partial(fn, *args, **kwargs))
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Camera device is not responding.",
+        )
+    except requests.exceptions.HTTPError as exc:
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=exc.response.text,
+        )
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to reach camera device.",
+        )
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -58,7 +91,7 @@ def _device_config(camera: Camera) -> tuple[str, str]:
 @router.get("/{camera_id}/health", status_code=status.HTTP_200_OK, summary="Camera device health check")
 async def proxy_health(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, _ = _device_config(camera)
-    return await camera_client.get_health(device_ip)
+    return await _run_sync(_make_client(device_ip).health)
 
 
 # ── Device cameras ────────────────────────────────────────────────────────────
@@ -67,13 +100,13 @@ async def proxy_health(camera: Camera = Depends(_require_read)) -> Any:
 @router.get("/{camera_id}/cameras_list", status_code=status.HTTP_200_OK, summary="List all cameras on the device")
 async def proxy_cameras_list(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, _ = _device_config(camera)
-    return await camera_client.list_cameras(device_ip)
+    return await _run_sync(_make_client(device_ip).list_cameras)
 
 
 @router.get("/{camera_id}/camera_infos", status_code=status.HTTP_200_OK, summary="Get all camera infos from the device")
 async def proxy_camera_infos(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, _ = _device_config(camera)
-    return await camera_client.get_camera_infos(device_ip)
+    return await _run_sync(_make_client(device_ip).get_camera_infos)
 
 
 @router.get("/{camera_id}/capture", status_code=status.HTTP_200_OK, summary="Capture a JPEG snapshot from the camera")
@@ -87,8 +120,8 @@ async def proxy_capture(
     camera: Camera = Depends(_require_read),
 ) -> Response:
     device_ip, camera_ip = _device_config(camera)
-    data = await camera_client.capture(
-        device_ip,
+    data = await _run_sync(
+        _make_client(device_ip).capture_jpeg,
         camera_ip,
         pos_id=pos_id,
         anonymize=anonymize,
@@ -107,10 +140,12 @@ async def proxy_latest_image(
     camera: Camera = Depends(_require_read),
 ) -> Response:
     device_ip, camera_ip = _device_config(camera)
-    data = await camera_client.get_latest_image(device_ip, camera_ip, pose, quality)
-    if data is None:
+    image = await _run_sync(_make_client(device_ip).get_latest_image, camera_ip, pose, quality)
+    if image is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return Response(content=data, media_type="image/jpeg")
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG")
+    return Response(content=buf.getvalue(), media_type="image/jpeg")
 
 
 # ── Control ───────────────────────────────────────────────────────────────────
@@ -125,21 +160,26 @@ async def proxy_move(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.move(
-        device_ip, camera_ip, direction=direction, speed=speed, pose_id=pose_id, degrees=degrees
+    return await _run_sync(
+        _make_client(device_ip).move_camera,
+        camera_ip,
+        direction=direction,
+        speed=speed,
+        pose_id=pose_id,
+        degrees=degrees,
     )
 
 
 @router.post("/{camera_id}/control/stop", status_code=status.HTTP_200_OK, summary="Stop camera movement")
 async def proxy_stop(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.stop(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).stop_camera, camera_ip)
 
 
 @router.get("/{camera_id}/control/presets", status_code=status.HTTP_200_OK, summary="List available presets")
 async def proxy_list_presets(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.list_presets(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).list_presets, camera_ip)
 
 
 @router.post("/{camera_id}/control/preset", status_code=status.HTTP_200_OK, summary="Set a preset position")
@@ -150,7 +190,7 @@ async def proxy_set_preset(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.set_preset(device_ip, camera_ip, idx=idx)
+    return await _run_sync(_make_client(device_ip).set_preset, camera_ip, idx=idx)
 
 
 @router.post("/{camera_id}/control/zoom/{level}", status_code=status.HTTP_200_OK, summary="Zoom the camera")
@@ -159,7 +199,7 @@ async def proxy_zoom(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.zoom(device_ip, camera_ip, level)
+    return await _run_sync(_make_client(device_ip).zoom, camera_ip, level)
 
 
 # ── Focus ─────────────────────────────────────────────────────────────────────
@@ -171,7 +211,7 @@ async def proxy_manual_focus(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.manual_focus(device_ip, camera_ip, position)
+    return await _run_sync(_make_client(device_ip).set_manual_focus, camera_ip, position)
 
 
 @router.post("/{camera_id}/focus/autofocus", status_code=status.HTTP_200_OK, summary="Toggle autofocus")
@@ -180,13 +220,13 @@ async def proxy_set_autofocus(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.set_autofocus(device_ip, camera_ip, disable)
+    return await _run_sync(_make_client(device_ip).set_autofocus, camera_ip, disable)
 
 
 @router.get("/{camera_id}/focus/status", status_code=status.HTTP_200_OK, summary="Get focus status")
 async def proxy_focus_status(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.get_focus_status(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).get_focus_status, camera_ip)
 
 
 @router.post("/{camera_id}/focus/optimize", status_code=status.HTTP_200_OK, summary="Run focus optimization")
@@ -195,7 +235,7 @@ async def proxy_focus_finder(
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.run_focus_finder(device_ip, camera_ip, save_images)
+    return await _run_sync(_make_client(device_ip).run_focus_optimization, camera_ip, save_images=save_images)
 
 
 # ── Patrol ────────────────────────────────────────────────────────────────────
@@ -204,19 +244,19 @@ async def proxy_focus_finder(
 @router.post("/{camera_id}/patrol/start", status_code=status.HTTP_200_OK, summary="Start patrol")
 async def proxy_start_patrol(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.start_patrol(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).start_patrol, camera_ip)
 
 
 @router.post("/{camera_id}/patrol/stop", status_code=status.HTTP_200_OK, summary="Stop patrol")
 async def proxy_stop_patrol(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.stop_patrol(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).stop_patrol, camera_ip)
 
 
 @router.get("/{camera_id}/patrol/status", status_code=status.HTTP_200_OK, summary="Get patrol status")
 async def proxy_patrol_status(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.get_patrol_status(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).get_patrol_status, camera_ip)
 
 
 # ── Stream ────────────────────────────────────────────────────────────────────
@@ -225,22 +265,22 @@ async def proxy_patrol_status(camera: Camera = Depends(_require_read)) -> Any:
 @router.post("/{camera_id}/stream/start", status_code=status.HTTP_200_OK, summary="Start video stream")
 async def proxy_start_stream(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.start_stream(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).start_stream, camera_ip)
 
 
 @router.post("/{camera_id}/stream/stop", status_code=status.HTTP_200_OK, summary="Stop video stream")
 async def proxy_stop_stream(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, _ = _device_config(camera)
-    return await camera_client.stop_stream(device_ip)
+    return await _run_sync(_make_client(device_ip).stop_stream)
 
 
 @router.get("/{camera_id}/stream/status", status_code=status.HTTP_200_OK, summary="Get stream status")
 async def proxy_stream_status(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, _ = _device_config(camera)
-    return await camera_client.get_stream_status(device_ip)
+    return await _run_sync(_make_client(device_ip).get_stream_status)
 
 
 @router.get("/{camera_id}/stream/is_running", status_code=status.HTTP_200_OK, summary="Check if stream is running")
 async def proxy_is_stream_running(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, camera_ip = _device_config(camera)
-    return await camera_client.is_stream_running(device_ip, camera_ip)
+    return await _run_sync(_make_client(device_ip).is_stream_running, camera_ip)
