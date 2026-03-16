@@ -30,7 +30,7 @@ jobs:
         run: test -e client/docs/build/index.html || exit
 
       - name: Install SSH Client 🔑
-        uses: webfactory/ssh-agent@v0.9.1
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_DEPLOY_KEY }}
 
