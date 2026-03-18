@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Union
+from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -671,3 +673,76 @@ async def test_fetch_cameras_with_last_image(
     assert camera_1["last_image_url"] is not None
     assert isinstance(camera_1["last_image_url"], str)
     assert "http" in camera_1["last_image_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_camera_s3_unavailable_returns_null_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """When S3 raises HTTPException for last_image, get_camera still returns 200 with null last_image_url."""
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image",
+        files={"file": ("camera_image.png", mock_img, "image/png")},
+        headers=cam_auth,
+    )
+    assert upload_response.status_code == 200
+
+    user_auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    with patch(
+        "app.services.storage.S3Bucket.get_public_url",
+        side_effect=HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found."),
+    ):
+        response = await async_client.get("/cameras/1", headers=user_auth)
+
+    assert response.status_code == 200
+    assert response.json()["last_image_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_cameras_s3_unavailable_returns_null_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """When S3 raises HTTPException for last_image, fetch_cameras still returns 200 with null last_image_url."""
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image",
+        files={"file": ("camera_image.png", mock_img, "image/png")},
+        headers=cam_auth,
+    )
+    assert upload_response.status_code == 200
+
+    user_auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    with patch(
+        "app.services.storage.S3Bucket.get_public_url",
+        side_effect=HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found."),
+    ):
+        response = await async_client.get("/cameras", headers=user_auth)
+
+    assert response.status_code == 200
+    for cam in response.json():
+        assert cam["last_image_url"] is None
