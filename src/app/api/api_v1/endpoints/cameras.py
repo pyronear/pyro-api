@@ -62,7 +62,10 @@ async def get_camera(
     pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
 
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    try:
+        last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    except HTTPException:
+        last_image_url = None
     return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
@@ -79,7 +82,10 @@ async def fetch_cameras(
         async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
                 bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
-                return bucket.get_public_url(cam.last_image)
+                try:
+                    return bucket.get_public_url(cam.last_image)
+                except HTTPException:
+                    return None
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
@@ -94,7 +100,10 @@ async def fetch_cameras(
 
         async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
-                return bucket.get_public_url(cam.last_image)
+                try:
+                    return bucket.get_public_url(cam.last_image)
+                except HTTPException:
+                    return None
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
