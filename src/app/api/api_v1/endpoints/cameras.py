@@ -43,7 +43,12 @@ async def register_camera(
     return await cameras.create(payload)
 
 
-@router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
+@router.get(
+    "/{camera_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch the information of a specific camera",
+    description="Returns camera details including a presigned S3 URL for the last captured image. `last_image_url` is null if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+)
 async def get_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
@@ -69,7 +74,12 @@ async def get_camera(
     return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch all the cameras",
+    description="Returns all cameras accessible to the current user. `last_image_url` is null for a given camera if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+)
 async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),

@@ -62,6 +62,9 @@ class CameraRead(CameraCreate):
     id: int
     last_active_at: datetime | None
     last_image: str | None
-    last_image_url: str | None = Field(None, description="URL of the last image of the camera")
+    last_image_url: str | None = Field(
+        None,
+        description="Presigned URL of the last image of the camera. Returns null if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+    )
     poses: list[PoseReadWithoutImgInfo] = Field(default_factory=list)
     created_at: datetime
