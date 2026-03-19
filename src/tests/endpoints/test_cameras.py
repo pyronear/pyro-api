@@ -681,6 +681,7 @@ async def test_get_camera_s3_unavailable_returns_null_url(
     camera_session: AsyncSession,
     pose_session: AsyncSession,
     mock_img: bytes,
+    monkeypatch,
 ):
     cam_auth = pytest.get_token(
         pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"]
@@ -689,10 +690,8 @@ async def test_get_camera_s3_unavailable_returns_null_url(
         "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
     )
     assert upload_response.status_code == 200
-    bucket_key = upload_response.json()["last_image"]
 
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
-    bucket.delete_file(bucket_key)
+    monkeypatch.setattr("app.services.storage.S3Bucket.check_file_existence", lambda self, key: False)
 
     user_auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
