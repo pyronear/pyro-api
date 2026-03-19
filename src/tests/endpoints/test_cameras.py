@@ -721,8 +721,9 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
     bucket.delete_file(bucket_key)
 
+    # Use a non-admin user (agent, org 1) to hit the get_url_for_cam_single_bucket path
     user_auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
     )
     response = await async_client.get("/cameras", headers=user_auth)
     assert response.status_code == 200
