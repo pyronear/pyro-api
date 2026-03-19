@@ -2,10 +2,9 @@ from typing import Any, Dict, List, Union
 
 import pytest
 from httpx import AsyncClient
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Camera
+from app.services.storage import s3_service
 
 
 @pytest.mark.parametrize(
@@ -681,19 +680,23 @@ async def test_get_camera_s3_unavailable_returns_null_url(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
+    mock_img: bytes,
 ):
-    """When S3 raises HTTPException for last_image, get_camera still returns 200 with null last_image_url."""
-    result = await camera_session.exec(select(Camera).where(Camera.id == 1))
-    cam = result.one()
-    cam.last_image = "org-1/cam-1/fake-image.jpg"
-    await camera_session.commit()
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"]
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
+    )
+    assert upload_response.status_code == 200
+    bucket_key = upload_response.json()["last_image"]
+
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    bucket.delete_file(bucket_key)
 
     user_auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
     )
-
     response = await async_client.get("/cameras/1", headers=user_auth)
     assert response.status_code == 200
     assert response.json()["last_image_url"] is None
@@ -704,20 +707,25 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
+    mock_img: bytes,
 ):
-    """When S3 raises HTTPException for last_image, fetch_cameras still returns 200 with null last_image_url."""
-    result = await camera_session.exec(select(Camera))
-    for cam in result.all():
-        cam.last_image = f"org-{cam.organization_id}/cam-{cam.id}/fake-image.jpg"
-    await camera_session.commit()
+    cam_auth = pytest.get_token(
+        pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"]
+    )
+    upload_response = await async_client.patch(
+        "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
+    )
+    assert upload_response.status_code == 200
+    bucket_key = upload_response.json()["last_image"]
+
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    bucket.delete_file(bucket_key)
 
     user_auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
     )
-
     response = await async_client.get("/cameras", headers=user_auth)
     assert response.status_code == 200
-    for cam in response.json():
-        assert cam["last_image_url"] is None
+    cameras = response.json()
+    camera_1 = next(c for c in cameras if c["id"] == 1)
+    assert camera_1["last_image_url"] is None
