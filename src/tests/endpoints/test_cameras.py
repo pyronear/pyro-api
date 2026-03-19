@@ -1,8 +1,6 @@
 from typing import Any, Dict, List, Union
-from unittest.mock import patch
 
 import pytest
-from fastapi import HTTPException, status
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -696,12 +694,7 @@ async def test_get_camera_s3_unavailable_returns_null_url(
         pytest.user_table[0]["organization_id"],
     )
 
-    with patch(
-        "app.services.storage.S3Bucket.get_public_url",
-        side_effect=HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found."),
-    ):
-        response = await async_client.get("/cameras/1", headers=user_auth)
-
+    response = await async_client.get("/cameras/1", headers=user_auth)
     assert response.status_code == 200
     assert response.json()["last_image_url"] is None
 
@@ -724,12 +717,7 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
         pytest.user_table[0]["organization_id"],
     )
 
-    with patch(
-        "app.services.storage.S3Bucket.get_public_url",
-        side_effect=HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found."),
-    ):
-        response = await async_client.get("/cameras", headers=user_auth)
-
+    response = await async_client.get("/cameras", headers=user_auth)
     assert response.status_code == 200
     for cam in response.json():
         assert cam["last_image_url"] is None
