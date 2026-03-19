@@ -681,21 +681,27 @@ async def test_get_camera_s3_unavailable_returns_null_url(
     camera_session: AsyncSession,
     pose_session: AsyncSession,
     mock_img: bytes,
-    monkeypatch,
 ):
-    cam_auth = pytest.get_token(
-        pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"]
-    )
+    cam_auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
     upload_response = await async_client.patch(
         "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
     )
     assert upload_response.status_code == 200
-
-    monkeypatch.setattr("app.services.storage.S3Bucket.check_file_existence", lambda self, key: False)
+    bucket_key = upload_response.json()["last_image"]
 
     user_auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
     )
+
+    # Verify the URL is accessible before deletion
+    response = await async_client.get("/cameras/1", headers=user_auth)
+    assert response.status_code == 200
+    assert response.json()["last_image_url"] is not None
+
+    # Delete the file from S3 then verify the endpoint handles it gracefully
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    bucket.delete_file(bucket_key)
+
     response = await async_client.get("/cameras/1", headers=user_auth)
     assert response.status_code == 200
     assert response.json()["last_image_url"] is None
@@ -708,9 +714,7 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     pose_session: AsyncSession,
     mock_img: bytes,
 ):
-    cam_auth = pytest.get_token(
-        pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"]
-    )
+    cam_auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
     upload_response = await async_client.patch(
         "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
     )
