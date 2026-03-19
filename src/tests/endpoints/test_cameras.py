@@ -4,7 +4,10 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.models import Camera
 
 
 @pytest.mark.parametrize(
@@ -680,20 +683,12 @@ async def test_get_camera_s3_unavailable_returns_null_url(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    mock_img: bytes,
 ):
     """When S3 raises HTTPException for last_image, get_camera still returns 200 with null last_image_url."""
-    cam_auth = pytest.get_token(
-        pytest.camera_table[0]["id"],
-        ["camera"],
-        pytest.camera_table[0]["organization_id"],
-    )
-    upload_response = await async_client.patch(
-        "/cameras/image",
-        files={"file": ("camera_image.png", mock_img, "image/png")},
-        headers=cam_auth,
-    )
-    assert upload_response.status_code == 200
+    result = await camera_session.exec(select(Camera).where(Camera.id == 1))
+    cam = result.one()
+    cam.last_image = "org-1/cam-1/fake-image.jpg"
+    await camera_session.commit()
 
     user_auth = pytest.get_token(
         pytest.user_table[0]["id"],
@@ -716,20 +711,12 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     async_client: AsyncClient,
     camera_session: AsyncSession,
     pose_session: AsyncSession,
-    mock_img: bytes,
 ):
     """When S3 raises HTTPException for last_image, fetch_cameras still returns 200 with null last_image_url."""
-    cam_auth = pytest.get_token(
-        pytest.camera_table[0]["id"],
-        ["camera"],
-        pytest.camera_table[0]["organization_id"],
-    )
-    upload_response = await async_client.patch(
-        "/cameras/image",
-        files={"file": ("camera_image.png", mock_img, "image/png")},
-        headers=cam_auth,
-    )
-    assert upload_response.status_code == 200
+    result = await camera_session.exec(select(Camera))
+    for cam in result.all():
+        cam.last_image = f"org-{cam.organization_id}/cam-{cam.id}/fake-image.jpg"
+    await camera_session.commit()
 
     user_auth = pytest.get_token(
         pytest.user_table[0]["id"],
