@@ -59,6 +59,9 @@ pytest-pretty = "^1.0.0"
 httpx = ">=0.23.0"
 aiosqlite = ">=0.16.0,<1.0.0"
 
+[tool.bandit.assert_used]
+skips = ["*/test_*.py", "*_test.py"]
+
 [tool.coverage.run]
 source = ["src/app", "client/pyroclient"]
 
