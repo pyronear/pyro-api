@@ -95,7 +95,7 @@ async def test_create_camera(
         assert {
             k: v
             for k, v in response.json().items()
-            if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image"}
+            if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image", "poses"}
         } == payload
 
 
@@ -317,8 +317,8 @@ async def test_heartbeat(
         assert isinstance(response.json()["last_active_at"], str)
         if pytest.camera_table[cam_idx]["last_active_at"] is not None:
             assert response.json()["last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
-        assert {k: v for k, v in response.json().items() if k != "last_active_at"} == {
-            k: v for k, v in pytest.camera_table[cam_idx].items() if k != "last_active_at"
+        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "poses"}} == {
+            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "poses"}
         }
 
 
@@ -360,8 +360,8 @@ async def test_update_image(
         assert isinstance(response.json()["last_image"], str)
         if pytest.camera_table[cam_idx]["last_image"] is not None:
             assert response.json()["last_image"] != pytest.camera_table[cam_idx]["last_image"]
-        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "last_image"}} == {
-            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "last_image"}
+        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "last_image", "poses"}} == {
+            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "last_image", "poses"}
         }
 
 
