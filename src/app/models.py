@@ -57,6 +57,9 @@ class Camera(SQLModel, table=True):
     last_active_at: Union[datetime, None] = None
     last_image: Union[str, None] = None
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    # Device connection — never exposed in public API responses
+    camera_ip: Union[str, None] = Field(default=None, nullable=True)
+    device_ip: Union[str, None] = Field(default=None, nullable=True)
 
 
 class Pose(SQLModel, table=True):

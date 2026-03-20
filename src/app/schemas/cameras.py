@@ -58,10 +58,30 @@ class CameraName(BaseModel):
     name: str = Field(..., min_length=5, max_length=100, description="name of the camera")
 
 
-class CameraRead(CameraCreate):
+class CameraDeviceConfig(BaseModel):
+    """Internal-only: set the device connection details for a camera. Never returned in public responses."""
+
+    camera_ip: str | None = Field(default=None, description="IP of the camera within the device's local network")
+    device_ip: str | None = Field(
+        default=None, description="IP of the device box (VPN-reachable) running the camera API"
+    )
+
+
+class CameraOut(CameraCreate):
+    """
+    Returned by mutation endpoints
+    """
+
     id: int
     last_active_at: datetime | None
     last_image: str | None
+    created_at: datetime
+
+
+class CameraRead(CameraOut):
+    """
+    Returned by read endpoints
+    """
+
     last_image_url: str | None = Field(None, description="URL of the last image of the camera")
     poses: list[PoseReadWithoutImgInfo] = Field(default_factory=list)
-    created_at: datetime
