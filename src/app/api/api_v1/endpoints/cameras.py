@@ -17,8 +17,10 @@ from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
 from app.schemas.cameras import (
     CameraCreate,
+    CameraDeviceConfig,
     CameraEdit,
     CameraName,
+    CameraOut,
     CameraRead,
     LastActive,
     LastImage,
@@ -36,11 +38,12 @@ async def register_camera(
     payload: CameraCreate,
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
-) -> Camera:
+) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-create", properties={"device_login": payload.name})
     if token_payload.organization_id != payload.organization_id and UserRole.ADMIN not in token_payload.scopes:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    return await cameras.create(payload)
+    camera = await cameras.create(payload)
+    return CameraOut(**camera.model_dump())
 
 
 @router.get(
@@ -134,9 +137,10 @@ async def fetch_cameras(
 async def heartbeat(
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
-) -> Camera:
+) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
-    return await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
+    camera = await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
+    return CameraOut(**camera.model_dump())
 
 
 @router.patch("/image", status_code=status.HTTP_200_OK, summary="Update last image of a camera")
@@ -144,7 +148,7 @@ async def update_image(
     file: UploadFile = File(..., alias="file"),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
-) -> Camera:
+) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
     cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
@@ -152,7 +156,8 @@ async def update_image(
     if isinstance(cam.last_image, str):
         s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
-    return await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=datetime.utcnow()))
+    camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=datetime.utcnow()))
+    return CameraOut(**camera.model_dump())
 
 
 @router.post("/{camera_id}/token", status_code=status.HTTP_200_OK, summary="Request an access token for the camera")
@@ -175,9 +180,10 @@ async def update_camera_location(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> Camera:
+) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-update-location", properties={"camera_id": camera_id})
-    return await cameras.update(camera_id, payload)
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
 
 
 @router.patch("/{camera_id}/name", status_code=status.HTTP_200_OK, summary="Update the name of a camera")
@@ -186,9 +192,10 @@ async def update_camera_name(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> Camera:
+) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
-    return await cameras.update(camera_id, payload)
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
 
 
 @router.delete("/{camera_id}", status_code=status.HTTP_200_OK, summary="Delete a camera")
@@ -199,3 +206,19 @@ async def delete_camera(
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
     await cameras.delete(camera_id)
+
+
+@router.patch(
+    "/{camera_id}/device_config", status_code=status.HTTP_200_OK, summary="Update camera device connection config"
+)
+async def update_camera_device_config(
+    payload: CameraDeviceConfig,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> CameraOut:
+    telemetry_client.capture(
+        token_payload.sub, event="cameras-update-device-config", properties={"camera_id": camera_id}
+    )
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
