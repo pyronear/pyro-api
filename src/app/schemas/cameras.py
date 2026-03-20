@@ -75,13 +75,8 @@ class CameraOut(CameraCreate):
     id: int
     last_active_at: datetime | None
     last_image: str | None
-<<<<<<< fix/camera-list-resilient-s3-image-url
-    last_image_url: str | None = Field(
-        None,
-        description="Presigned URL of the last image of the camera. Returns null if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
-    )
-=======
     created_at: datetime
+    poses: list[PoseReadWithoutImgInfo] = Field(default_factory=list)
 
 
 class CameraRead(CameraOut):
@@ -89,6 +84,7 @@ class CameraRead(CameraOut):
     Returned by read endpoints
     """
 
-    last_image_url: str | None = Field(None, description="URL of the last image of the camera")
->>>>>>> main
-    poses: list[PoseReadWithoutImgInfo] = Field(default_factory=list)
+    last_image_url: str | None = Field(
+        None,
+        description="Presigned URL of the last image of the camera. Returns null if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+    )
