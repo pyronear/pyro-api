@@ -4,6 +4,8 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.services.storage import s3_service
+
 
 @pytest.mark.parametrize(
     ("user_idx", "payload", "status_code", "status_detail"),
@@ -93,7 +95,7 @@ async def test_create_camera(
         assert {
             k: v
             for k, v in response.json().items()
-            if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image"}
+            if k not in {"id", "created_at", "last_active_at", "is_trustable", "last_image", "poses"}
         } == payload
 
 
@@ -315,8 +317,8 @@ async def test_heartbeat(
         assert isinstance(response.json()["last_active_at"], str)
         if pytest.camera_table[cam_idx]["last_active_at"] is not None:
             assert response.json()["last_active_at"] > pytest.camera_table[cam_idx]["last_active_at"]
-        assert {k: v for k, v in response.json().items() if k != "last_active_at"} == {
-            k: v for k, v in pytest.camera_table[cam_idx].items() if k != "last_active_at"
+        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "poses"}} == {
+            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "poses"}
         }
 
 
@@ -358,8 +360,8 @@ async def test_update_image(
         assert isinstance(response.json()["last_image"], str)
         if pytest.camera_table[cam_idx]["last_image"] is not None:
             assert response.json()["last_image"] != pytest.camera_table[cam_idx]["last_image"]
-        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "last_image"}} == {
-            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "last_image"}
+        assert {k: v for k, v in response.json().items() if k not in {"last_active_at", "last_image", "poses"}} == {
+            k: v for k, v in pytest.camera_table[cam_idx].items() if k not in {"last_active_at", "last_image", "poses"}
         }
 
 
@@ -671,3 +673,63 @@ async def test_fetch_cameras_with_last_image(
     assert camera_1["last_image_url"] is not None
     assert isinstance(camera_1["last_image_url"], str)
     assert "http" in camera_1["last_image_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_camera_s3_unavailable_returns_null_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    cam_auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
+    upload_response = await async_client.patch(
+        "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
+    )
+    assert upload_response.status_code == 200
+    bucket_key = upload_response.json()["last_image"]
+
+    user_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+
+    # Verify the URL is accessible before deletion
+    response = await async_client.get("/cameras/1", headers=user_auth)
+    assert response.status_code == 200
+    assert response.json()["last_image_url"] is not None
+
+    # Delete the file from S3 then verify the endpoint handles it gracefully
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    bucket.delete_file(bucket_key)
+
+    response = await async_client.get("/cameras/1", headers=user_auth)
+    assert response.status_code == 200
+    assert response.json()["last_image_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_cameras_s3_unavailable_returns_null_url(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    cam_auth = pytest.get_token(pytest.camera_table[0]["id"], ["camera"], pytest.camera_table[0]["organization_id"])
+    upload_response = await async_client.patch(
+        "/cameras/image", files={"file": ("img.png", mock_img, "image/png")}, headers=cam_auth
+    )
+    assert upload_response.status_code == 200
+    bucket_key = upload_response.json()["last_image"]
+
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    bucket.delete_file(bucket_key)
+
+    # Use a non-admin user (agent, org 1) to hit the get_url_for_cam_single_bucket path
+    user_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    response = await async_client.get("/cameras", headers=user_auth)
+    assert response.status_code == 200
+    cameras = response.json()
+    camera_1 = next(c for c in cameras if c["id"] == 1)
+    assert camera_1["last_image_url"] is None

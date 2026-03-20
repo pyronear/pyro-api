@@ -46,7 +46,12 @@ async def register_camera(
     return CameraOut(**camera.model_dump())
 
 
-@router.get("/{camera_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific camera")
+@router.get(
+    "/{camera_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch the information of a specific camera",
+    description="Returns camera details including a presigned S3 URL for the last captured image. `last_image_url` is null if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+)
 async def get_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
@@ -65,11 +70,19 @@ async def get_camera(
     pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
 
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    try:
+        last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
+    except HTTPException:
+        last_image_url = None
     return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the cameras")
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch all the cameras",
+    description="Returns all cameras accessible to the current user. `last_image_url` is null for a given camera if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
+)
 async def fetch_cameras(
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
@@ -82,7 +95,10 @@ async def fetch_cameras(
         async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
                 bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
-                return bucket.get_public_url(cam.last_image)
+                try:
+                    return bucket.get_public_url(cam.last_image)
+                except HTTPException:
+                    return None
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
@@ -97,7 +113,10 @@ async def fetch_cameras(
 
         async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
-                return bucket.get_public_url(cam.last_image)
+                try:
+                    return bucket.get_public_url(cam.last_image)
+                except HTTPException:
+                    return None
             return None
 
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
