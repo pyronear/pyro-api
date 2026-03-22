@@ -59,7 +59,7 @@ class SlackClient:
 
         if url is not None:
             message = {
-                "text": "Un feu a été detecté !",
+                "text": "A fire has been detected",
                 "blocks": [
                     {
                         "type": "section",
@@ -73,12 +73,12 @@ class SlackClient:
                             + "\n Azimuth de detection : "
                             + str(azimuth)
                             + "°"
-                            + "\n https://platform.pyronear.org/"
+                            + "\n <https://platform.pyronear.org/|Visualiser le détail de l'alerte sur la plateforme Pyronear>\n"
                             + "\n "
-                            + url,
+                            + f"<{url}|Télécharger l'image>",
                         },
                     },
-                    {"type": "image", "image_url": url, "alt_text": "Haunted hotel image"},
+                    {"type": "image", "image_url": url, "alt_text": "alert image"},
                 ],
             }
         else:
@@ -97,7 +97,7 @@ class SlackClient:
                             + "\n Azimuth de detection : "
                             + str(azimuth)
                             + "°"
-                            + "\n https://platform.pyronear.org/",
+                            + "\n <https://platform.pyronear.org/|Visualiser le détail de l'alerte sur la plateforme>\n",
                         },
                     },
                 ],
@@ -110,7 +110,6 @@ class SlackClient:
             headers={"Content-Type": "application/json"},
             timeout=3,
         )
-
         if response.status_code != 200:
             logger.error(f"Failed to send message to Slack: {response.text}")
 
