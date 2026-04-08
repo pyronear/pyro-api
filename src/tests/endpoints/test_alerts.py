@@ -13,14 +13,18 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.models import Alert, AlertSequence, AnnotationType, Camera, Organization, Pose, Sequence
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
 
 
 async def _create_alert_with_sequences(
     session: AsyncSession, org_id: int, camera_id: int, lat: float, lon: float
-) -> Tuple[Alert, List[int]]:
+) -> Tuple[Alert, List[int], List[int]]:
     now = datetime.utcnow()
+    pose = (
+        await session.exec(select(Pose).where(Pose.camera_id == camera_id).order_by(Pose.id))  # type: ignore[attr-defined]
+    ).first()
+    assert pose is not None
     seq_payloads = [
         {
             "camera_id": camera_id,
@@ -47,6 +51,7 @@ async def _create_alert_with_sequences(
             "cone_angle": 3.0,
         },
     ]
+    detections_count_by_sequence = [2, 1, 0]
     sequences: List[Sequence] = []
     for idx, payload in enumerate(seq_payloads):
         seq = Sequence(
@@ -59,6 +64,20 @@ async def _create_alert_with_sequences(
     await session.commit()
     for seq in sequences:
         await session.refresh(seq)
+    for sequence, detections_count in zip(sequences, detections_count_by_sequence, strict=False):
+        for det_idx in range(detections_count):
+            session.add(
+                Detection(
+                    camera_id=sequence.camera_id,
+                    pose_id=pose.id,
+                    sequence_id=sequence.id,
+                    bucket_key=f"alert-seq-{sequence.id}-{det_idx}.jpg",
+                    bbox="[(.1,.1,.7,.8,.9)]",
+                    others_bboxes=None,
+                    created_at=now - timedelta(seconds=det_idx),
+                )
+            )
+    await session.commit()
 
     alert = Alert(
         organization_id=org_id,
@@ -74,14 +93,15 @@ async def _create_alert_with_sequences(
     for seq in sequences:
         session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
     await session.commit()
-    return alert, [seq.id for seq in sequences]
+    return alert, [seq.id for seq in sequences], detections_count_by_sequence
 
 
 @pytest.mark.asyncio
 async def test_get_alert_and_sequences(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
@@ -96,19 +116,23 @@ async def test_get_alert_and_sequences(async_client: AsyncClient, detection_sess
     assert payload["started_at"] == alert.started_at.isoformat()
     assert payload["last_seen_at"] == alert.last_seen_at.isoformat()
     assert {seq["id"] for seq in payload["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in payload["sequences"]} == expected_counts
 
     resp = await async_client.get(f"/alerts/{alert.id}/sequences?limit=5&desc=true", headers=auth)
     assert resp.status_code == 200, resp.text
     returned = resp.json()
     last_seen_times = [item["last_seen_at"] for item in returned]
     assert last_seen_times == sorted(last_seen_times, reverse=True)
+    assert {sequence["id"]: sequence["detections_count"] for sequence in returned} == expected_counts
+    assert any(sequence["detections_count"] == 0 for sequence in returned)
 
 
 @pytest.mark.asyncio
 async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
@@ -123,13 +147,16 @@ async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_sess
     assert returned["started_at"] == alert.started_at.isoformat()
     assert returned["last_seen_at"] == alert.last_seen_at.isoformat()
     assert {seq["id"] for seq in returned["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in returned["sequences"]} == expected_counts
+    assert any(seq["detections_count"] == 0 for seq in returned["sequences"])
 
 
 @pytest.mark.asyncio
 async def test_alerts_from_date(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
     date_str = alert.started_at.date().isoformat()
 
     auth = pytest.get_token(
@@ -145,6 +172,8 @@ async def test_alerts_from_date(async_client: AsyncClient, detection_session: As
     assert started_times == sorted(started_times, reverse=True)
     alert_payload = next(item for item in returned if item["id"] == alert.id)
     assert {seq["id"] for seq in alert_payload["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in alert_payload["sequences"]} == expected_counts
+    assert any(seq["detections_count"] == 0 for seq in alert_payload["sequences"])
 
 
 @pytest.mark.asyncio
