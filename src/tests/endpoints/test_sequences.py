@@ -15,6 +15,30 @@ from app.schemas.sequences import SequenceLabel
 
 
 @pytest.mark.parametrize(
+    ("sequence_id", "expected_idx", "expected_detections_count"),
+    [
+        (1, 0, 3),
+        (2, 1, 1),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_sequence(async_client: AsyncClient, detection_session: AsyncSession, sequence_id: int, expected_idx: int, expected_detections_count: int):
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(f"/sequences/{sequence_id}", headers=auth)
+
+    assert response.status_code == 200, print(response.__dict__)
+    assert response.json() == {
+        **pytest.sequence_table[expected_idx],
+        "detections_count": expected_detections_count,
+    }
+
+
+@pytest.mark.parametrize(
     ("user_idx", "sequence_id", "status_code", "status_detail", "expected_result"),
     [
         (None, 1, 401, "Not authenticated", None),
@@ -157,9 +181,9 @@ async def test_label_sequence(
         # datetime != date, weird, but works
         (0, "2018-06-06T00:00:00", 200, None, []),
         (0, "2018-06-06", 200, None, []),
-        (0, "2023-11-07", 200, None, pytest.sequence_table[:1]),
-        (1, "2023-11-07", 200, None, pytest.sequence_table[:1]),
-        (2, "2023-11-07", 200, None, pytest.sequence_table[1:2]),
+        (0, "2023-11-07", 200, None, [{**pytest.sequence_table[0], "detections_count": 3}]),
+        (1, "2023-11-07", 200, None, [{**pytest.sequence_table[0], "detections_count": 3}]),
+        (2, "2023-11-07", 200, None, [{**pytest.sequence_table[1], "detections_count": 1}]),
     ],
 )
 @pytest.mark.asyncio
@@ -189,6 +213,7 @@ async def test_fetch_sequences_from_date(
         assert response.json() == expected_result
         assert all(isinstance(elt["sequence_azimuth"], float) for elt in response.json())
         assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
+        assert all(isinstance(elt["detections_count"], int) for elt in response.json())
 
 
 @pytest.mark.parametrize(
@@ -226,6 +251,63 @@ async def test_latest_sequences(
         assert response.json() == expected_result
         assert all(isinstance(elt["sequence_azimuth"], float) for elt in response.json())
         assert all(isinstance(elt["cone_angle"], float) for elt in response.json())
+
+
+@pytest.mark.asyncio
+async def test_latest_sequences_include_detections_count(async_client: AsyncClient, detection_session: AsyncSession):
+    now = datetime.utcnow()
+    sequence_with_detections = Sequence(
+        camera_id=pytest.camera_table[0]["id"],
+        pose_id=pytest.pose_table[0]["id"],
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=15),
+        last_seen_at=now - timedelta(minutes=5),
+    )
+    sequence_without_detections = Sequence(
+        camera_id=pytest.camera_table[0]["id"],
+        pose_id=pytest.pose_table[0]["id"],
+        camera_azimuth=182.0,
+        sequence_azimuth=176.0,
+        cone_angle=6.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=10),
+        last_seen_at=now - timedelta(minutes=2),
+    )
+    detection_session.add(sequence_with_detections)
+    detection_session.add(sequence_without_detections)
+    await detection_session.commit()
+    await detection_session.refresh(sequence_with_detections)
+    await detection_session.refresh(sequence_without_detections)
+
+    for idx in range(2):
+        detection_session.add(
+            Detection(
+                camera_id=sequence_with_detections.camera_id,
+                pose_id=pytest.pose_table[0]["id"],
+                sequence_id=sequence_with_detections.id,
+                bucket_key=f"sequence-latest-{sequence_with_detections.id}-{idx}.jpg",
+                bbox="[(.1,.1,.7,.8,.9)]",
+                others_bboxes=None,
+                created_at=now - timedelta(minutes=4 - idx),
+            )
+        )
+    await detection_session.commit()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
+
+    assert response.status_code == 200, print(response.__dict__)
+    returned = response.json()
+    counts_by_sequence_id = {item["id"]: item["detections_count"] for item in returned}
+    assert counts_by_sequence_id[sequence_with_detections.id] == 2
+    assert counts_by_sequence_id[sequence_without_detections.id] == 0
 
 
 @pytest.mark.asyncio
