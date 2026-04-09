@@ -22,7 +22,13 @@ from app.schemas.sequences import SequenceLabel
     ],
 )
 @pytest.mark.asyncio
-async def test_get_sequence(async_client: AsyncClient, detection_session: AsyncSession, sequence_id: int, expected_idx: int, expected_detections_count: int):
+async def test_get_sequence(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    sequence_id: int,
+    expected_idx: int,
+    expected_detections_count: int,
+):
     auth = pytest.get_token(
         pytest.user_table[0]["id"],
         pytest.user_table[0]["role"].split(),

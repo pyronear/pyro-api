@@ -529,7 +529,7 @@ async def fetch_detections(
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
-        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all()]
+        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]
