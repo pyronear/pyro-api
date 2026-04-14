@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib.parse import urljoin
 
 import requests
@@ -163,14 +163,16 @@ class Client:
         camera_id: int,
         azimuth: float,
         patrol_id: int | None = None,
+        active: bool = True,
     ) -> Response:
         """Create a pose for a camera
 
         >>> api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "camera_id": camera_id,
             "azimuth": azimuth,
+            "active": active,
         }
         if patrol_id is not None:
             payload["patrol_id"] = patrol_id
@@ -204,18 +206,21 @@ class Client:
         pose_id: int,
         azimuth: float | None = None,
         patrol_id: int | None = None,
+        active: bool | None = None,
     ) -> Response:
         """Update a pose
 
         >>> api_client.update_pose(pose_id=1, azimuth=90.0)
         """
-        if azimuth is None and patrol_id is None:
-            raise ValueError("Either azimuth or patrol_id must be provided")
-        payload: Dict[str, float | int] = {}
+        if azimuth is None and patrol_id is None and active is None:
+            raise ValueError("At least one of azimuth, patrol_id, or active must be provided")
+        payload: Dict[str, Any] = {}
         if azimuth is not None:
             payload["azimuth"] = azimuth
         if patrol_id is not None:
             payload["patrol_id"] = patrol_id
+        if active is not None:
+            payload["active"] = active
 
         return requests.patch(
             urljoin(self._route_prefix, ClientRoute.POSES_BY_ID.format(pose_id=pose_id)),

@@ -100,18 +100,21 @@ POSE_TABLE = [
         "camera_id": 1,
         "azimuth": 45.0,
         "patrol_id": 1,
+        "active": True,
     },
     {
         "id": 2,
         "camera_id": 1,
         "azimuth": 90.0,
         "patrol_id": 1,
+        "active": True,
     },
     {
         "id": 3,
         "camera_id": 2,
         "azimuth": 180.0,
         "patrol_id": 1,
+        "active": True,
     },
 ]
 

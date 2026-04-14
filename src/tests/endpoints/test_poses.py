@@ -133,14 +133,14 @@ async def test_create_pose_camera_scope(
             1,
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "image": None, "image_url": None},
+            {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "active": True, "image": None, "image_url": None},
         ),
         (
             1,
             2,
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "image": None, "image_url": None},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "active": True, "image": None, "image_url": None},
         ),
     ],
 )
@@ -187,7 +187,7 @@ async def test_get_pose(
             {"azimuth": 123.4, "patrol_id": 123},
             200,
             None,
-            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": 123, "image": None, "image_url": None},
+            {"id": 1, "camera_id": 1, "azimuth": 123.4, "patrol_id": 123, "active": True, "image": None, "image_url": None},
         ),
         (
             1,
@@ -195,7 +195,7 @@ async def test_get_pose(
             {"patrol_id": 456},
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456, "image": None, "image_url": None},
+            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456, "active": True, "image": None, "image_url": None},
         ),
     ],
 )

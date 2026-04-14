@@ -19,6 +19,7 @@ __all__ = [
 class PoseBase(BaseModel):
     azimuth: float = Field(..., ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
     patrol_id: Optional[int] = Field(None, ge=0, description="External patrol identifier")
+    active: bool = Field(True, description="Whether the pose is currently active")
 
 
 class PoseCreate(PoseBase):
@@ -28,6 +29,7 @@ class PoseCreate(PoseBase):
 class PoseUpdate(BaseModel):
     azimuth: Optional[float] = Field(None, ge=0, lt=360, description="Azimuth of the centre of the position in degrees")
     patrol_id: Optional[int] = Field(None, ge=0, description="External patrol identifier")
+    active: Optional[bool] = Field(None, description="Whether the pose is currently active")
 
 
 class PoseImage(BaseModel):

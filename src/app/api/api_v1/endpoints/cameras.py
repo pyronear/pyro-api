@@ -64,7 +64,7 @@ async def get_camera(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     cam_poses = await poses.fetch_all(
-        filters=("camera_id", camera_id),
+        filters=[("camera_id", camera_id), ("active", True)],
         order_by="id",
     )
     pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
@@ -122,7 +122,7 @@ async def fetch_cameras(
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
 
     async def get_poses(cam: Camera) -> list[PoseReadWithoutImgInfo]:
-        p = await poses.fetch_all(filters=("camera_id", cam.id))
+        p = await poses.fetch_all(filters=[("camera_id", cam.id), ("active", True)])
         return [PoseReadWithoutImgInfo(**pose.model_dump()) for pose in p]
 
     poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
