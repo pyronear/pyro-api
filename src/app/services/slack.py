@@ -34,7 +34,14 @@ class SlackClient:
 
         return response.status_code == 200
 
-    def notify(self, slack_hook: str, message_detection: str, url: str, camera_name: str) -> requests.Response:
+    def notify(
+        self,
+        slack_hook: str,
+        message_detection: str,
+        url: str,
+        camera_name: str,
+        alert_id: int | None = None,
+    ) -> requests.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
 
@@ -57,48 +64,39 @@ class SlackClient:
         utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))
         paris_dt = utc_dt.astimezone(ZoneInfo("Europe/Paris"))
 
+        if alert_id is not None:
+            platform_url = f"https://platform.pyronear.org/alert/{alert_id}"
+        else:
+            platform_url = "https://platform.pyronear.org/"
+
+        text_body = (
+            f":date: {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+            f"\n Nom du site concerné : {camera_name}"
+            f"\n Azimuth de détection : {azimuth}°"
+            f"\n {platform_url}"
+        )
+
         if url is not None:
+            text_body += f"\n <{url}|Voir l'image>"
             message = {
-                "text": "Un feu a été detecté !",
+                "text": "Un feu a été détecté !",
                 "blocks": [
                     {
                         "type": "section",
                         "block_id": "section567",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": ":date: "
-                            + paris_dt.strftime("%Y-%m-%d %H:%M:%S")
-                            + "\n Nom du site concerné : "
-                            + camera_name
-                            + "\n Azimuth de detection : "
-                            + str(azimuth)
-                            + "°"
-                            + "\n https://platform.pyronear.org/"
-                            + "\n "
-                            + url,
-                        },
+                        "text": {"type": "mrkdwn", "text": text_body},
                     },
-                    {"type": "image", "image_url": url, "alt_text": "Haunted hotel image"},
+                    {"type": "image", "image_url": url, "alt_text": "Image de détection"},
                 ],
             }
         else:
             message = {
-                "text": "Un feu a été detecté !",
+                "text": "Un feu a été détecté !",
                 "blocks": [
                     {
                         "type": "section",
                         "block_id": "section567",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": ":date: "
-                            + paris_dt.strftime("%Y-%m-%d %H:%M:%S")
-                            + "\n Nom du site concerné : "
-                            + camera_name
-                            + "\n Azimuth de detection : "
-                            + str(azimuth)
-                            + "°"
-                            + "\n https://platform.pyronear.org/",
-                        },
+                        "text": {"type": "mrkdwn", "text": text_body},
                     },
                 ],
             }
