@@ -53,7 +53,7 @@ pre-commit = "^4.2.0"
 optional = true
 
 [tool.poetry.group.test.dependencies]
-pytest = "==8.3.5"
+pytest = "==9.0.3"
 pytest-asyncio = "==0.21.2"
 pytest-cov = "^4.0.0"
 pytest-pretty = "^1.0.0"
