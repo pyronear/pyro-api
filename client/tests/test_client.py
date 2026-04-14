@@ -43,6 +43,26 @@ def test_get_current_poses_admin(cam_id, cam_pose_id):
     assert any(pose["id"] == cam_pose_id for pose in payload["poses"])
 
 
+def test_create_pose_with_patrol_id(cam_id):
+    admin_client = Client(pytest.admin_token, "http://localhost:5050", timeout=10)
+    response = admin_client.create_pose(camera_id=cam_id, azimuth=42.0, patrol_id=7)
+    assert response.status_code == 201, response.__dict__
+    pose = response.json()
+    assert pose["azimuth"] == 42.0
+    assert pose["patrol_id"] == 7
+    assert pose["active"] is True
+
+
+def test_create_pose_without_patrol_id(cam_id):
+    admin_client = Client(pytest.admin_token, "http://localhost:5050", timeout=10)
+    response = admin_client.create_pose(camera_id=cam_id, azimuth=55.0)
+    assert response.status_code == 201, response.__dict__
+    pose = response.json()
+    assert pose["azimuth"] == 55.0
+    assert pose["patrol_id"] is None
+    assert pose["active"] is True
+
+
 def test_update_pose_camera(cam_token, cam_pose_id):
     cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
     with pytest.raises(ValueError, match="At least one of azimuth, patrol_id, or active must be provided"):
