@@ -45,7 +45,7 @@ def test_get_current_poses_admin(cam_id, cam_pose_id):
 
 def test_update_pose_camera(cam_token, cam_pose_id):
     cam_client = Client(cam_token, "http://localhost:5050", timeout=10)
-    with pytest.raises(ValueError, match="Either azimuth or patrol_id must be provided"):
+    with pytest.raises(ValueError, match="At least one of azimuth, patrol_id, or active must be provided"):
         cam_client.update_pose(cam_pose_id)
     response = cam_client.update_pose(cam_pose_id, azimuth=123.4)
     assert response.status_code == 200, response.__dict__
