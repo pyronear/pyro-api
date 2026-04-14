@@ -109,12 +109,7 @@ async def fetch_cameras(
         org_filters: list[tuple[str, Any]] = [("organization_id", token_payload.organization_id)]
         if not include_non_trustable:
             org_filters.append(("is_trustable", True))
-        cams = [
-            elt
-            for elt in await cameras.fetch_all(
-                order_by="id", filters=org_filters
-            )
-        ]
+        cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=org_filters)]
 
         async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
