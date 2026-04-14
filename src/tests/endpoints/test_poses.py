@@ -219,7 +219,15 @@ async def test_get_pose(
             {"patrol_id": 456},
             200,
             None,
-            {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 456, "active": True, "image": None, "image_url": None},
+            {
+                "id": 2,
+                "camera_id": 1,
+                "azimuth": 90.0,
+                "patrol_id": 456,
+                "active": True,
+                "image": None,
+                "image_url": None,
+            },
         ),
     ],
 )
