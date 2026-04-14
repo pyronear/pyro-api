@@ -19,8 +19,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("poses", sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("true")))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if "poses" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("poses")]
+        if "active" not in columns:
+            op.add_column("poses", sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("true")))
 
 
 def downgrade() -> None:
-    op.drop_column("poses", "active")
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if "poses" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("poses")]
+        if "active" in columns:
+            op.drop_column("poses", "active")
