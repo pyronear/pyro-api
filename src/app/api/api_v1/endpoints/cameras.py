@@ -22,6 +22,7 @@ from app.schemas.cameras import (
     CameraName,
     CameraOut,
     CameraRead,
+    CameraTrustable,
     LastActive,
     LastImage,
 )
@@ -194,6 +195,22 @@ async def update_camera_name(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
+
+
+@router.patch("/{camera_id}/trustable", status_code=status.HTTP_200_OK, summary="Update the trustable status of a camera")
+async def update_camera_trustable(
+    payload: CameraTrustable,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> CameraOut:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="cameras-update-trustable",
+        properties={"camera_id": camera_id, "is_trustable": payload.is_trustable},
+    )
     camera = await cameras.update(camera_id, payload)
     return CameraOut(**camera.model_dump())
 
