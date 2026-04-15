@@ -199,7 +199,9 @@ async def update_camera_name(
     return CameraOut(**camera.model_dump())
 
 
-@router.patch("/{camera_id}/trustable", status_code=status.HTTP_200_OK, summary="Update the trustable status of a camera")
+@router.patch(
+    "/{camera_id}/trustable", status_code=status.HTTP_200_OK, summary="Update the trustable status of a camera"
+)
 async def update_camera_trustable(
     payload: CameraTrustable,
     camera_id: int = Path(..., gt=0),
