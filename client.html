@@ -293,7 +293,7 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.fetch_cameras">
 <span class="sig-name descname"><span class="pre">fetch_cameras</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.fetch_cameras"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.fetch_cameras" title="Permalink to this definition">#</a></dt>
-<dd><p>List the cameras accessible to the authenticated user</p>
+<dd><p>List the cameras accessible to the authenticated user. By default, only trustable cameras are returned.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">fetch_cameras</span><span class="p">()</span>

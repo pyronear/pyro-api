@@ -314,7 +314,7 @@
 
     <span class="c1"># CAMERAS</span>
 <div class="viewcode-block" id="Client.fetch_cameras"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_cameras">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_cameras</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user. By default, only trustable cameras are returned.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
