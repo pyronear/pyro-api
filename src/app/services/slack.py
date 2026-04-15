@@ -38,7 +38,6 @@ class SlackClient:
         self,
         slack_hook: str,
         message_detection: str,
-        url: str,
         camera_name: str,
         alert_id: int | None = None,
     ) -> requests.Response:

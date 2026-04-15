@@ -466,14 +466,11 @@ async def create_detection(
                     if org is None:
                         org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.slack_hook:
-                        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-                        url = bucket.get_public_url(det.bucket_key)
-
                         slack_payload = jsonable_encoder(det)
                         slack_payload["pose_azimuth"] = pose.azimuth
                         slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
                         background_tasks.add_task(
-                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), url, camera.name, alert_id
+                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
                         )
 
         created.append(det)
