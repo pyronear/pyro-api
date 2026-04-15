@@ -58,6 +58,10 @@ class CameraName(BaseModel):
     name: str = Field(..., min_length=5, max_length=100, description="name of the camera")
 
 
+class CameraTrustable(BaseModel):
+    is_trustable: bool = Field(..., description="whether the detection from this camera can be trusted")
+
+
 class CameraDeviceConfig(BaseModel):
     """Internal-only: set the device connection details for a camera. Never returned in public responses."""
 
