@@ -158,12 +158,13 @@ async def test_get_camera(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses"),
+    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses", "include_non_trustable"),
     [
-        (None, 401, "Not authenticated", None, None),
-        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
-        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
-        (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]]),
+        (None, 401, "Not authenticated", None, None, False),
+        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]], False),
+        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]], False),
+        (2, 200, None, None, None, False),
+        (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]], True),
     ],
 )
 @pytest.mark.asyncio
@@ -176,6 +177,7 @@ async def test_fetch_cameras(
     status_detail: Union[str, None],
     expected_response: Union[List[Dict[str, Any]], None],
     expected_poses: Union[list, None],
+    include_non_trustable: bool,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -185,12 +187,19 @@ async def test_fetch_cameras(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/cameras", headers=auth)
+    params = {}
+    if include_non_trustable:
+        params["include_non_trustable"] = True
+    response = await async_client.get("/cameras", headers=auth, params=params)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         json_response = response.json()
+
+        if expected_response is None:
+            assert json_response == []
+            return
 
         for cam in json_response:
             assert "poses" in cam

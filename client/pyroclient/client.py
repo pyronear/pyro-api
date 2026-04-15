@@ -110,7 +110,7 @@ class Client:
 
     # CAMERAS
     def fetch_cameras(self) -> Response:
-        """List the cameras accessible to the authenticated user
+        """List the cameras accessible to the authenticated user. By default, only trustable cameras are returned.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
