@@ -73,33 +73,19 @@ class SlackClient:
             f":date: {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             f"\n Nom du site concerné : {camera_name}"
             f"\n Azimuth de détection : {azimuth}°"
-            f"\n {platform_url}"
+            f"\n <{platform_url}|Visualiser l'alerte en détail sur la plateforme Pyronear>"
         )
 
-        if url is not None:
-            text_body += f"\n <{url}|Voir l'image>"
-            message = {
-                "text": "Un feu a été détecté !",
-                "blocks": [
-                    {
-                        "type": "section",
-                        "block_id": "section567",
-                        "text": {"type": "mrkdwn", "text": text_body},
-                    },
-                    {"type": "image", "image_url": url, "alt_text": "Image de détection"},
-                ],
-            }
-        else:
-            message = {
-                "text": "Un feu a été détecté !",
-                "blocks": [
-                    {
-                        "type": "section",
-                        "block_id": "section567",
-                        "text": {"type": "mrkdwn", "text": text_body},
-                    },
-                ],
-            }
+        message = {
+            "text": "Un feu a été détecté !",
+            "blocks": [
+                {
+                    "type": "section",
+                    "block_id": "section567",
+                    "text": {"type": "mrkdwn", "text": text_body},
+                },
+            ],
+        }
 
         """Envoie un message à Slack via un webhook."""
         response = requests.post(
@@ -110,7 +96,7 @@ class SlackClient:
         )
 
         if response.status_code != 200:
-            logger.error(f"Failed to send message to Slack: {response.text}")
+            logger.error(f"Failed to send message to Slack: {response.text} | payload={json.dumps(message)}")
 
         return response
 
