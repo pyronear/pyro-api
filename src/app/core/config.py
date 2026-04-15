@@ -73,7 +73,7 @@ class Settings(BaseSettings):
 
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
-    PLATFORM_URL: str = os.environ.get("PLATFORM_URL")
+    PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
 
     # Error monitoring
     SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")
