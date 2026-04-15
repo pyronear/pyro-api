@@ -66,10 +66,7 @@ class SlackClient:
         paris_dt = utc_dt.astimezone(ZoneInfo("Europe/Paris"))
 
         base_url = settings.PLATFORM_URL.rstrip("/")
-        if alert_id is not None:
-            platform_url = f"{base_url}/alert/{alert_id}"
-        else:
-            platform_url = f"{base_url}/"
+        platform_url = f"{base_url}/alert/{alert_id}" if alert_id is not None else f"{base_url}/"
 
         text_body = (
             f":date: {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
