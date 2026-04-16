@@ -51,11 +51,9 @@ class SlackClient:
         except json.JSONDecodeError as e:
             raise ValueError("Invalid JSON format for message_detection") from e
 
-        azimuth = detection_data.get("azimuth")
+        azimuth = detection_data.get("sequence_azimuth")
         if azimuth is None:
             azimuth = detection_data.get("pose_azimuth")
-        if azimuth is None:
-            azimuth = detection_data.get("sequence_azimuth")
         if azimuth is None:
             azimuth = detection_data.get("camera_azimuth")
         if azimuth is None:
