@@ -229,7 +229,10 @@ async def proxy_move_for_duration(
 async def proxy_move_by_degrees(
     direction: str = Query(..., description="Direction: Left, Right, Up, Down"),
     degrees: float = Query(..., gt=0, description="Approximate rotation in degrees"),
-    speed: int = Query(default=10, description="Movement speed"),
+    speed: int | None = Query(
+        default=None,
+        description="Movement speed; omit to let the server auto-pick the best calibrated level (preferred)",
+    ),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
