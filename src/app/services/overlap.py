@@ -298,8 +298,10 @@ def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, P
         for id2 in ids[i + 1 :]:
             row2 = rows_by_id[id2]
             # Same pose shares the same apex; any cone intersection is degenerate, not a real triangulation.
-            if has_pose and row1["pose_id"] == row2["pose_id"]:
-                continue
+            if has_pose:
+                pose1, pose2 = row1["pose_id"], row2["pose_id"]
+                if pd.notna(pose1) and pd.notna(pose2) and pose1 == pose2:
+                    continue
             # Require overlapping time windows
             if row1["started_at"] > row2["last_seen_at"] or row2["started_at"] > row1["last_seen_at"]:
                 continue
