@@ -357,6 +357,8 @@ async def create_detection(
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     if pose.camera_id != token_payload.sub:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    if not pose.active:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
 
     bbox_strings = _extract_bbox_strings(bboxes)
     if not bbox_strings:

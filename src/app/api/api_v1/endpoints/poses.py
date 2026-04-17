@@ -51,7 +51,7 @@ async def list_current_poses(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> List[PoseRead]:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="poses-list")
-    rows = await poses.fetch_all(filters=("camera_id", token_payload.sub), order_by="id")
+    rows = await poses.fetch_all(filters=[("camera_id", token_payload.sub), ("active", True)], order_by="id")
     return [PoseRead(**row.model_dump()) for row in rows]
 
 
