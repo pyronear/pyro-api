@@ -290,7 +290,7 @@ def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, P
     cols = ["started_at", "last_seen_at"]
     has_pose = "pose_id" in df_valid.columns
     if has_pose:
-        cols = cols + ["pose_id"]
+        cols = [*cols, "pose_id"]
     rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):
