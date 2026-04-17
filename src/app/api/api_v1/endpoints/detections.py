@@ -151,6 +151,7 @@ def _build_overlap_records(
             continue
         records.append({
             "id": int(seq.id),
+            "pose_id": seq.pose_id,
             "lat": float(cam.lat),
             "lon": float(cam.lon),
             "sequence_azimuth": float(seq.sequence_azimuth),

@@ -19,9 +19,11 @@ def _make_sequence(
     started_at: datetime,
     last_seen_at: datetime,
     is_wildfire=None,
+    pose_id: int | None = None,
 ):
     return {
         "id": id_,
+        "pose_id": pose_id if pose_id is not None else id_,
         "lat": lat,
         "lon": lon,
         "sequence_azimuth": sequence_azimuth,
@@ -51,3 +53,23 @@ def test_compute_overlap_groups_and_locations() -> None:
     # Non-overlapping singleton keeps its own group and no location
     assert row4["event_groups"] == [(4,)]
     assert row4["event_smoke_locations"] == [None]
+
+
+def test_compute_overlap_skips_same_pose_pair() -> None:
+    now = datetime.utcnow()
+    # Two sequences from the exact same pose with time and angular overlap
+    # share the same apex, so they must not be triangulated together.
+    seqs = [
+        _make_sequence(
+            10, 48.3792, 2.8208, 180.0, 10.0, now - timedelta(seconds=9), now - timedelta(seconds=1), pose_id=42
+        ),
+        _make_sequence(
+            11, 48.3792, 2.8208, 185.0, 10.0, now - timedelta(seconds=8), now - timedelta(seconds=2), pose_id=42
+        ),
+    ]
+    df = compute_overlap(pd.DataFrame.from_records(seqs))
+
+    row10 = df[df["id"] == 10].iloc[0]
+    row11 = df[df["id"] == 11].iloc[0]
+    assert row10["event_groups"] == [(10,)]
+    assert row11["event_groups"] == [(11,)]

@@ -59,6 +59,7 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
         for seq, cam in zip(seqs, cams, strict=False):
             records.append({
                 "id": seq.id,
+                "pose_id": seq.pose_id,
                 "lat": cam.lat,
                 "lon": cam.lon,
                 "sequence_azimuth": seq.sequence_azimuth,

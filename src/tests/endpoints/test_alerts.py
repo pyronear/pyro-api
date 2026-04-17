@@ -244,6 +244,7 @@ async def test_triangulation_creates_single_alert(
     records = [
         {
             "id": seq.id,
+            "pose_id": seq.pose_id,
             "lat": camera_by_id[seq.camera_id].lat,
             "lon": camera_by_id[seq.camera_id].lon,
             "sequence_azimuth": seq.sequence_azimuth,
