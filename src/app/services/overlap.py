@@ -10,7 +10,7 @@ import itertools
 import logging
 from collections import defaultdict
 from math import atan2, cos, radians, sin, sqrt
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx  # type: ignore
 import numpy as np
@@ -287,14 +287,19 @@ def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float)
 
 def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, Polygon]) -> List[Tuple[int, int]]:
     ids = df_valid["id"].astype(int).tolist()
-    rows_by_id: Dict[int, Dict[str, pd.Timestamp]] = df_valid.set_index("id")[["started_at", "last_seen_at"]].to_dict(
-        "index"
-    )
+    cols = ["started_at", "last_seen_at"]
+    has_pose = "pose_id" in df_valid.columns
+    if has_pose:
+        cols = cols + ["pose_id"]
+    rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):
         row1 = rows_by_id[id1]
         for id2 in ids[i + 1 :]:
             row2 = rows_by_id[id2]
+            # Same pose shares the same apex; any cone intersection is degenerate, not a real triangulation.
+            if has_pose and row1["pose_id"] == row2["pose_id"]:
+                continue
             # Require overlapping time windows
             if row1["started_at"] > row2["last_seen_at"] or row2["started_at"] > row1["last_seen_at"]:
                 continue
