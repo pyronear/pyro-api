@@ -23,3 +23,16 @@ Now apply all the revisions
 ```shell
 docker compose exec backend alembic upgrade head
 ```
+
+## One-time reset (migrating past the 2026-04 baseline)
+
+In April 2026 the migration history was collapsed into a single `initial` baseline (`9700bbccb2f1`). Any database that was previously migrated under the old history still carries a stale `alembic_version` row pointing to a deleted revision, which will make `alembic upgrade head` fail.
+
+Before starting the backend against such a database, run **once**:
+
+```shell
+psql "$POSTGRES_URL" -c "DELETE FROM alembic_version;"
+alembic stamp head
+```
+
+This only updates the version marker — no DDL runs. Fresh databases do not need this step; they will be created by `alembic upgrade head` on first boot.
