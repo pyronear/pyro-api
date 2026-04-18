@@ -142,4 +142,6 @@ def downgrade() -> None:
     op.drop_table('alerts')
     op.drop_table('webhooks')
     op.drop_table('organizations')
+    sa.Enum(name='annotationtype').drop(op.get_bind(), checkfirst=False)
+    sa.Enum(name='userrole').drop(op.get_bind(), checkfirst=False)
     # ### end Alembic commands ###
