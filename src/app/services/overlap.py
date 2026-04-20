@@ -9,6 +9,7 @@ from __future__ import annotations
 import itertools
 import logging
 from collections import defaultdict
+from datetime import timedelta
 from math import atan2, cos, radians, sin, sqrt
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -21,6 +22,8 @@ from pyproj import Transformer
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform as shapely_transform
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -285,13 +288,24 @@ def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float)
     return projected_cones
 
 
-def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, Polygon]) -> List[Tuple[int, int]]:
+def _find_overlapping_pairs(
+    df_valid: pd.DataFrame,
+    projected_cones: Dict[int, Polygon],
+    time_relaxation_seconds: Optional[float] = None,
+) -> List[Tuple[int, int]]:
+    if time_relaxation_seconds is None:
+        time_relaxation_seconds = settings.SEQUENCE_RELAXATION_SECONDS
     ids = df_valid["id"].astype(int).tolist()
     cols = ["started_at", "last_seen_at"]
     has_pose = "pose_id" in df_valid.columns
     if has_pose:
         cols = [*cols, "pose_id"]
     rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
+    # `_attach_sequence_to_alert` runs once at sequence creation, when the new sequence's
+    # window is a single instant and prior sequences' windows haven't been bumped yet.
+    # Treat any pair within `time_relaxation_seconds` of each other as concurrent so we
+    # don't drop them before the spatial test.
+    slack = timedelta(seconds=time_relaxation_seconds)
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):
         row1 = rows_by_id[id1]
@@ -302,8 +316,7 @@ def _find_overlapping_pairs(df_valid: pd.DataFrame, projected_cones: Dict[int, P
                 pose1, pose2 = row1["pose_id"], row2["pose_id"]
                 if pd.notna(pose1) and pd.notna(pose2) and pose1 == pose2:
                     continue
-            # Require overlapping time windows
-            if row1["started_at"] > row2["last_seen_at"] or row2["started_at"] > row1["last_seen_at"]:
+            if row1["started_at"] - row2["last_seen_at"] > slack or row2["started_at"] - row1["last_seen_at"] > slack:
                 continue
             # Spatial overlap test
             if projected_cones[id1].intersects(projected_cones[id2]):
@@ -371,6 +384,7 @@ def compute_overlap(
     r_km: float = 35.0,
     r_min_km: float = 0.5,
     max_dist_km: float = 2.0,
+    time_relaxation_seconds: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Build localized event groups and attach them to the input DataFrame.
@@ -390,6 +404,11 @@ def compute_overlap(
         Inner radius of the camera detection cone in kilometers.
     max_dist_km : float
         Maximum allowed distance between pair intersection barycenters to keep a group.
+    time_relaxation_seconds : float, optional
+        Tolerance applied to the time-window overlap check between two sequences. Pairs
+        whose windows are within this slack of each other are still considered concurrent.
+        Defaults to ``settings.SEQUENCE_RELAXATION_SECONDS`` so triangulation uses the
+        same window as the candidate-sequence fetch.
 
     Returns
     -------
@@ -408,7 +427,7 @@ def compute_overlap(
     projected_cones = _build_projected_cones(df_valid, r_km, r_min_km)
 
     # Phase 1, build overlap graph gated by time overlap
-    overlapping_pairs = _find_overlapping_pairs(df_valid, projected_cones)
+    overlapping_pairs = _find_overlapping_pairs(df_valid, projected_cones, time_relaxation_seconds)
     cliques = _build_overlap_cliques(overlapping_pairs)
 
     # Phase 2, localized groups from cliques

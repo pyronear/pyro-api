@@ -55,6 +55,26 @@ def test_compute_overlap_groups_and_locations() -> None:
     assert row4["event_smoke_locations"] == [None]
 
 
+def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
+    # Two cones from different poses whose first-detection windows are 30 s apart:
+    # at sequence-creation time, last_seen_at == started_at, so the strict time
+    # gate would drop the pair before the spatial test runs. With relaxation
+    # they must be re-considered as concurrent.
+    now = datetime.utcnow()
+    seqs = [
+        _make_sequence(20, 48.3792, 2.8208, 276.5, 3.0, now - timedelta(seconds=30), now - timedelta(seconds=30)),
+        _make_sequence(21, 48.4267, 2.7109, 163.4, 1.0, now, now),
+    ]
+    df_strict = compute_overlap(pd.DataFrame.from_records(seqs), time_relaxation_seconds=0)
+    assert df_strict[df_strict["id"] == 20].iloc[0]["event_groups"] == [(20,)]
+    assert df_strict[df_strict["id"] == 21].iloc[0]["event_groups"] == [(21,)]
+
+    # Default relaxation (settings.SEQUENCE_RELAXATION_SECONDS) recovers the pair.
+    df_relaxed = compute_overlap(pd.DataFrame.from_records(seqs))
+    assert df_relaxed[df_relaxed["id"] == 20].iloc[0]["event_groups"] == [(20, 21)]
+    assert df_relaxed[df_relaxed["id"] == 21].iloc[0]["event_groups"] == [(20, 21)]
+
+
 def test_compute_overlap_skips_same_pose_pair() -> None:
     now = datetime.utcnow()
     # Two sequences from the exact same pose with time and angular overlap
