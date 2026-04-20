@@ -305,7 +305,7 @@ def _find_overlapping_pairs(
     # window is a single instant and prior sequences' windows haven't been bumped yet.
     # Treat any pair within `time_relaxation_seconds` of each other as concurrent so we
     # don't drop them before the spatial test.
-    slack = timedelta(seconds=time_relaxation_seconds)
+    tolerance = timedelta(seconds=time_relaxation_seconds)
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):
         row1 = rows_by_id[id1]
@@ -316,7 +316,10 @@ def _find_overlapping_pairs(
                 pose1, pose2 = row1["pose_id"], row2["pose_id"]
                 if pd.notna(pose1) and pd.notna(pose2) and pose1 == pose2:
                     continue
-            if row1["started_at"] - row2["last_seen_at"] > slack or row2["started_at"] - row1["last_seen_at"] > slack:
+            if (
+                row1["started_at"] - row2["last_seen_at"] > tolerance
+                or row2["started_at"] - row1["last_seen_at"] > tolerance
+            ):
                 continue
             # Spatial overlap test
             if projected_cones[id1].intersects(projected_cones[id2]):
