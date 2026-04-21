@@ -1237,3 +1237,123 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     mappings_res = await detection_session.exec(select(AlertSequence))
     mappings = mappings_res.all()
     assert {(m.alert_id, m.sequence_id) for m in mappings} == {(alert.id, seq1.id), (alert.id, seq2.id)}
+
+
+@pytest.mark.asyncio
+async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_session: AsyncSession):
+    """
+    Regression guard for the bridging bug.
+
+    Geometry (from the dev-API replay):
+      - cam7 (48.260, 2.706) NNW + cam5 (48.379, 2.821) W  → triangulate at ~(48.39, 2.66)  [smoke A]
+      - cam7 NNW + cam2 (48.478, 2.424) ENE                → triangulate at ~(48.51, 2.59)  [smoke B]
+
+    If cam7's sequence is already linked to the smoke-A alert, adding a cam2 sequence whose
+    only clique with an existing sequence is `{cam7-seq, cam2-seq}` must NOT drag the new
+    sequence into the smoke-A alert — its clique barycenter sits >14 km away from A.
+    """
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = datetime.utcnow()
+
+    cam2 = Camera(
+        organization_id=1,
+        name="videlles-02",
+        angle_of_view=54.2,
+        elevation=110.0,
+        lat=48.4783,
+        lon=2.4242,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    cam5 = Camera(
+        organization_id=1,
+        name="moret-01",
+        angle_of_view=54.2,
+        elevation=110.0,
+        lat=48.3792,
+        lon=2.8208,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    cam7 = Camera(
+        organization_id=1,
+        name="nemours-01",
+        angle_of_view=54.2,
+        elevation=110.0,
+        lat=48.2605,
+        lon=2.7064,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    detection_session.add_all([cam2, cam5, cam7])
+    await detection_session.commit()
+    await detection_session.refresh(cam2)
+    await detection_session.refresh(cam5)
+    await detection_session.refresh(cam7)
+
+    # Smoke A: cam7 NNW + cam5 W
+    seq_cam7 = Sequence(
+        camera_id=cam7.id,
+        pose_id=1,
+        camera_azimuth=0.0,
+        sequence_azimuth=-17.5,
+        cone_angle=1.4,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=20),
+    )
+    seq_cam5 = Sequence(
+        camera_id=cam5.id,
+        pose_id=2,
+        camera_azimuth=280.0,
+        sequence_azimuth=276.5,
+        cone_angle=3.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=25),
+        last_seen_at=now - timedelta(seconds=15),
+    )
+    detection_session.add_all([seq_cam7, seq_cam5])
+    await detection_session.commit()
+    await detection_session.refresh(seq_cam7)
+    await detection_session.refresh(seq_cam5)
+
+    # Step 1 — attach cam5 sequence triangulates with cam7, creates smoke-A alert.
+    smoke_a_alert_id = await _attach_sequence_to_alert(seq_cam5, cam5, cam_crud, seq_crud, alert_crud)
+    assert smoke_a_alert_id is not None
+    smoke_a = await alert_crud.get(smoke_a_alert_id, strict=True)
+    assert smoke_a.lat is not None
+    assert smoke_a.lon is not None
+
+    # Step 2 — new cam2 sequence whose cone crosses cam7's far from smoke A.
+    seq_cam2 = Sequence(
+        camera_id=cam2.id,
+        pose_id=3,
+        camera_azimuth=60.0,
+        sequence_azimuth=75.2,
+        cone_angle=1.4,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=5),
+        last_seen_at=now,
+    )
+    detection_session.add(seq_cam2)
+    await detection_session.commit()
+    await detection_session.refresh(seq_cam2)
+
+    target_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
+
+    # The cam2 sequence must land on a NEW alert, not the smoke-A one.
+    assert target_id is not None
+    assert target_id != smoke_a_alert_id
+
+    # And it must not have been retroactively linked to smoke A.
+    mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
+    seqs_in_a = {m.sequence_id for m in mappings_res.all()}
+    assert seq_cam2.id not in seqs_in_a
