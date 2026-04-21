@@ -512,8 +512,11 @@ async def test_filter_candidate_keeps_alert_within_threshold(detection_session: 
     alert_crud = AlertCRUD(detection_session)
     now = datetime.utcnow()
     nearby = Alert(
-        organization_id=1, lat=SMOKE_LOCATION[0] + 0.005, lon=SMOKE_LOCATION[1] + 0.005,
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=SMOKE_LOCATION[0] + 0.005,
+        lon=SMOKE_LOCATION[1] + 0.005,
+        started_at=now,
+        last_seen_at=now,
     )
     detection_session.add(nearby)
     await detection_session.commit()
@@ -528,8 +531,11 @@ async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: 
     alert_crud = AlertCRUD(detection_session)
     now = datetime.utcnow()
     far = Alert(
-        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=DISTANT_LOCATION[0],
+        lon=DISTANT_LOCATION[1],
+        started_at=now,
+        last_seen_at=now,
     )
     detection_session.add(far)
     await detection_session.commit()
@@ -557,8 +563,11 @@ async def test_filter_candidate_returns_unchanged_when_location_missing(detectio
     alert_crud = AlertCRUD(detection_session)
     now = datetime.utcnow()
     a = Alert(
-        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=DISTANT_LOCATION[0],
+        lon=DISTANT_LOCATION[1],
+        started_at=now,
+        last_seen_at=now,
     )
     detection_session.add(a)
     await detection_session.commit()
@@ -573,8 +582,11 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
     alert_crud = AlertCRUD(detection_session)
     now = datetime.utcnow()
     distant = Alert(
-        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=DISTANT_LOCATION[0],
+        lon=DISTANT_LOCATION[1],
+        started_at=now,
+        last_seen_at=now,
     )
     detection_session.add(distant)
     await detection_session.commit()
@@ -598,12 +610,18 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
     alert_crud = AlertCRUD(detection_session)
     now = datetime.utcnow()
     distant = Alert(
-        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=DISTANT_LOCATION[0],
+        lon=DISTANT_LOCATION[1],
+        started_at=now,
+        last_seen_at=now,
     )
     nearby = Alert(
-        organization_id=1, lat=SMOKE_LOCATION[0] + 0.003, lon=SMOKE_LOCATION[1] + 0.003,
-        started_at=now, last_seen_at=now,
+        organization_id=1,
+        lat=SMOKE_LOCATION[0] + 0.003,
+        lon=SMOKE_LOCATION[1] + 0.003,
+        started_at=now,
+        last_seen_at=now,
     )
     detection_session.add(distant)
     detection_session.add(nearby)
