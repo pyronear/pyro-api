@@ -17,6 +17,7 @@ from app.api.api_v1.endpoints.detections import (
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
+    _filter_candidate_alert_ids,
     _get_camera_by_id,
     _get_last_bbox_for_sequence,
     _get_or_create_alert_id,
@@ -497,6 +498,129 @@ def test_build_links_for_group_skips_existing_alert():
     links = _build_links_for_group(group, 10, mapping)
     assert {link.sequence_id for link in links} == {2}
     assert mapping[2] == {10}
+
+
+# Real-world geometry from a dev-API alert (org 2 / 2026-04-21):
+# - smoke triangulated by seq 5 (cam 7 NNW) + seq 20 (cam 5 W) lands at ~(48.39, 2.66)
+# - seq 1 + seq 2 cone-axes cross ~14 km north at ~(48.55, 2.85)
+SMOKE_LOCATION = (48.3913, 2.6582)
+DISTANT_LOCATION = (48.5529, 2.8536)
+
+
+@pytest.mark.asyncio
+async def test_filter_candidate_keeps_alert_within_threshold(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    nearby = Alert(
+        organization_id=1, lat=SMOKE_LOCATION[0] + 0.005, lon=SMOKE_LOCATION[1] + 0.005,
+        started_at=now, last_seen_at=now,
+    )
+    detection_session.add(nearby)
+    await detection_session.commit()
+    await detection_session.refresh(nearby)
+
+    kept = await _filter_candidate_alert_ids({nearby.id}, SMOKE_LOCATION, alert_crud)
+    assert kept == {nearby.id}
+
+
+@pytest.mark.asyncio
+async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    far = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
+        started_at=now, last_seen_at=now,
+    )
+    detection_session.add(far)
+    await detection_session.commit()
+    await detection_session.refresh(far)
+
+    kept = await _filter_candidate_alert_ids({far.id}, SMOKE_LOCATION, alert_crud)
+    assert kept == set()
+
+
+@pytest.mark.asyncio
+async def test_filter_candidate_keeps_alert_with_no_location(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    anchorless = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
+    detection_session.add(anchorless)
+    await detection_session.commit()
+    await detection_session.refresh(anchorless)
+
+    kept = await _filter_candidate_alert_ids({anchorless.id}, SMOKE_LOCATION, alert_crud)
+    assert kept == {anchorless.id}
+
+
+@pytest.mark.asyncio
+async def test_filter_candidate_returns_unchanged_when_location_missing(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    a = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
+        started_at=now, last_seen_at=now,
+    )
+    detection_session.add(a)
+    await detection_session.commit()
+    await detection_session.refresh(a)
+
+    kept = await _filter_candidate_alert_ids({a.id}, None, alert_crud)
+    assert kept == {a.id}
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    distant = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
+        started_at=now, last_seen_at=now,
+    )
+    detection_session.add(distant)
+    await detection_session.commit()
+    await detection_session.refresh(distant)
+
+    target_id = await _get_or_create_alert_id(
+        {distant.id},
+        SMOKE_LOCATION,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    assert target_id != distant.id
+    new_alert = await alert_crud.get(target_id, strict=True)
+    assert (new_alert.lat, new_alert.lon) == SMOKE_LOCATION
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = datetime.utcnow()
+    distant = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1],
+        started_at=now, last_seen_at=now,
+    )
+    nearby = Alert(
+        organization_id=1, lat=SMOKE_LOCATION[0] + 0.003, lon=SMOKE_LOCATION[1] + 0.003,
+        started_at=now, last_seen_at=now,
+    )
+    detection_session.add(distant)
+    detection_session.add(nearby)
+    await detection_session.commit()
+    await detection_session.refresh(distant)
+    await detection_session.refresh(nearby)
+
+    # Even though `distant` may have a smaller id, it must be filtered out by the distance gate.
+    target_id = await _get_or_create_alert_id(
+        {distant.id, nearby.id},
+        SMOKE_LOCATION,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    assert target_id == nearby.id
 
 
 @pytest.mark.asyncio
