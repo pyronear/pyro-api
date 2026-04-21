@@ -294,7 +294,7 @@ def _find_overlapping_pairs(
     time_relaxation_seconds: Optional[float] = None,
 ) -> List[Tuple[int, int]]:
     if time_relaxation_seconds is None:
-        time_relaxation_seconds = settings.SEQUENCE_RELAXATION_SECONDS
+        time_relaxation_seconds = settings.TRIANGULATION_RELAXATION_SECONDS
     ids = df_valid["id"].astype(int).tolist()
     cols = ["started_at", "last_seen_at"]
     has_pose = "pose_id" in df_valid.columns
@@ -410,8 +410,7 @@ def compute_overlap(
     time_relaxation_seconds : float, optional
         Tolerance applied to the time-window overlap check between two sequences. Pairs
         whose windows are within this slack of each other are still considered concurrent.
-        Defaults to ``settings.SEQUENCE_RELAXATION_SECONDS`` so triangulation uses the
-        same window as the candidate-sequence fetch.
+        Defaults to ``settings.TRIANGULATION_RELAXATION_SECONDS``.
 
     Returns
     -------

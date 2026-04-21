@@ -69,7 +69,7 @@ def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
     assert df_strict[df_strict["id"] == 20].iloc[0]["event_groups"] == [(20,)]
     assert df_strict[df_strict["id"] == 21].iloc[0]["event_groups"] == [(21,)]
 
-    # Default relaxation (settings.SEQUENCE_RELAXATION_SECONDS) recovers the pair.
+    # Default relaxation (settings.TRIANGULATION_RELAXATION_SECONDS) recovers the pair.
     df_relaxed = compute_overlap(pd.DataFrame.from_records(seqs))
     assert df_relaxed[df_relaxed["id"] == 20].iloc[0]["event_groups"] == [(20, 21)]
     assert df_relaxed[df_relaxed["id"] == 21].iloc[0]["event_groups"] == [(20, 21)]
