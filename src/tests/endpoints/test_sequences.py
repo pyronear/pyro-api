@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,6 +9,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.sequences import label_sequence
+from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
@@ -233,7 +234,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
     # Create a sequence linked to a camera and an alert
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
-    now = datetime.utcnow()
+    now = utcnow()
     seq1 = Sequence(
         camera_id=camera.id,
         pose_id=None,
@@ -320,7 +321,7 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
 async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncClient, detection_session: AsyncSession):
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
-    now = datetime.utcnow()
+    now = utcnow()
     pose = Pose(camera_id=camera.id, azimuth=45.0)
     detection_session.add(pose)
     await detection_session.commit()
@@ -391,7 +392,7 @@ async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncC
 async def test_delete_sequence_refreshes_alert(async_client: AsyncClient, detection_session: AsyncSession):
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
-    now = datetime.utcnow()
+    now = utcnow()
     seq1 = Sequence(
         camera_id=camera.id,
         pose_id=None,
@@ -466,8 +467,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
         id=1,
         camera_id=1,
         is_wildfire=None,
-        started_at=datetime.utcnow(),
-        last_seen_at=datetime.utcnow(),
+        started_at=utcnow(),
+        last_seen_at=utcnow(),
     )
     mock_camera = Camera(id=1, organization_id=1)
 

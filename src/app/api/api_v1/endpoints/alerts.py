@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any, Dict, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
@@ -13,6 +13,7 @@ from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import get_alert_crud, get_jwt
+from app.core.time import utcnow
 from app.crud import AlertCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, Sequence, UserRole
@@ -109,8 +110,9 @@ async def fetch_latest_unlabeled_alerts(
     alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
     alerts_stmt = alerts_stmt.join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
     alerts_stmt = (
-        alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
-        .where(Sequence.last_seen_at > datetime.utcnow() - timedelta(hours=24))
+        alerts_stmt
+        .where(Alert.organization_id == token_payload.organization_id)
+        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
         .limit(15)

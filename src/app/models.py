@@ -10,6 +10,7 @@ from typing import Union
 from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
+from app.core.time import utcnow
 
 __all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
 
@@ -41,7 +42,7 @@ class User(SQLModel, table=True):
     # Allow sign-up/in via login + password
     login: str = Field(..., index=True, unique=True, min_length=2, max_length=50, nullable=False)
     hashed_password: str = Field(..., min_length=5, max_length=70, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
 
 class Camera(SQLModel, table=True):
@@ -56,7 +57,7 @@ class Camera(SQLModel, table=True):
     is_trustable: bool = True
     last_active_at: Union[datetime, None] = None
     last_image: Union[str, None] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
     # Device connection — never exposed in public API responses
     camera_ip: Union[str, None] = Field(default=None, nullable=True)
     device_ip: Union[str, None] = Field(default=None, nullable=True)
@@ -76,7 +77,7 @@ class OcclusionMask(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
     mask: str = Field(..., min_length=2, max_length=255, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
 
 class Detection(SQLModel, table=True):
@@ -88,7 +89,7 @@ class Detection(SQLModel, table=True):
     bucket_key: str
     bbox: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH_SINGLE, nullable=False)
     others_bboxes: Union[str, None] = Field(default=None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
 
 class Sequence(SQLModel, table=True):

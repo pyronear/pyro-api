@@ -5,6 +5,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.security import create_access_token, hash_password, verify_password
+from app.core.time import utcnow
 
 
 def test_hash_password():
@@ -34,7 +35,7 @@ def test_verify_password():
 )
 def test_create_access_token(content, expires_minutes, expected_delta):
     payload = create_access_token(content, expires_minutes)
-    after = datetime.utcnow()
+    after = utcnow()
     assert isinstance(payload, str)
     decoded_data = jwt.decode(payload, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     # Verify data integrity

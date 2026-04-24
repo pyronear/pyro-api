@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, List, Tuple, cast
 
 import pandas as pd
@@ -13,6 +13,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
 
@@ -20,7 +21,7 @@ from app.services.overlap import compute_overlap
 async def _create_alert_with_sequences(
     session: AsyncSession, org_id: int, camera_id: int, lat: float, lon: float
 ) -> Tuple[Alert, List[int]]:
-    now = datetime.utcnow()
+    now = utcnow()
     seq_payloads = [
         {
             "camera_id": camera_id,

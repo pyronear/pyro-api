@@ -39,6 +39,7 @@ from app.api.dependencies import (
     get_webhook_crud,
 )
 from app.core.config import settings
+from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
@@ -132,7 +133,7 @@ async def _get_recent_sequences(
         inequality_pair=(
             "last_seen_at",
             ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
     )
     if all(seq.id != sequence_.id for seq in recent_sequences):
@@ -387,7 +388,7 @@ async def create_detection(
             inequality_pair=(
                 "last_seen_at",
                 ">",
-                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+                utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
             ),
             order_by="last_seen_at",
             order_desc=True,
@@ -415,7 +416,7 @@ async def create_detection(
                 inequality_pair=(
                     "created_at",
                     ">",
-                    datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                    utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
                 ),
                 order_by="created_at",
                 order_desc=False,
