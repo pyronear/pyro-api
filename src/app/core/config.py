@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     SEQUENCE_RELAXATION_SECONDS: int = int(os.environ.get("SEQUENCE_RELAXATION_SECONDS") or 120 * 60)
     SEQUENCE_MIN_INTERVAL_DETS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_DETS") or 3)
     SEQUENCE_MIN_INTERVAL_SECONDS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_SECONDS") or 5 * 60)
+    TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
+    ALERT_MERGE_MAX_DISTANCE_KM: float = float(os.environ.get("ALERT_MERGE_MAX_DISTANCE_KM") or 2.0)
 
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
