@@ -110,8 +110,7 @@ async def fetch_latest_unlabeled_alerts(
     alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
     alerts_stmt = alerts_stmt.join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
     alerts_stmt = (
-        alerts_stmt
-        .where(Alert.organization_id == token_payload.organization_id)
+        alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
         .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
