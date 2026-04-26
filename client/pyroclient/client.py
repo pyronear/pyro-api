@@ -153,7 +153,7 @@ class Client:
         return requests.patch(
             urljoin(self._route_prefix, ClientRoute.CAMERAS_IMAGE),
             headers=self.headers,
-            files={"file": ("logo.png", media, "image/png")},
+            files={"file": ("logo.jpg", media, "image/jpeg")},
             timeout=self.timeout,
         )
 
@@ -245,7 +245,7 @@ class Client:
         return requests.patch(
             urljoin(self._route_prefix, ClientRoute.POSES_IMAGE.format(pose_id=pose_id)),
             headers=self.headers,
-            files={"file": ("image.png", media, "image/png")},
+            files={"file": ("image.jpg", media, "image/jpeg")},
             timeout=self.timeout,
         )
 
@@ -344,6 +344,7 @@ class Client:
         media: bytes,
         bboxes: List[Tuple[float, float, float, float, float]],
         pose_id: int,
+        crop: bytes | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -356,6 +357,7 @@ class Client:
             media: byte data of the picture
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
             pose_id: pose_id of the detection
+            crop: optional byte data of a cropped picture associated with the detection
 
         Returns:
             HTTP response
@@ -366,12 +368,15 @@ class Client:
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
+        files: Dict[str, Tuple[str, bytes, str]] = {"file": ("frame.jpg", media, "image/jpeg")}
+        if crop is not None:
+            files["crop"] = ("crop.jpg", crop, "image/jpeg")
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
             data=data,
             timeout=self.timeout,
-            files={"file": ("logo.png", media, "image/png")},
+            files=files,
         )
 
     def get_detection_url(self, detection_id: int) -> Response:
