@@ -51,6 +51,7 @@ class DetectionRead(Detection):
 
 class DetectionWithUrl(Detection):
     url: str = Field(..., description="temporary URL to access the media content")
+    crop_url: Optional[str] = Field(None, description="temporary URL to access the cropped media content, if any")
 
 
 class DetectionSequence(BaseModel):
