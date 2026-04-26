@@ -372,11 +372,7 @@ async def create_detection(
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
         )
 
-    # Upload media
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    crop_bucket_key: Optional[str] = None
-    if crop_file is not None:
-        crop_bucket_key = await upload_file(crop_file, token_payload.organization_id, token_payload.sub)
+    # Authorize before any S3 upload to avoid orphan objects on 403
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     if pose.camera_id != token_payload.sub:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -384,6 +380,12 @@ async def create_detection(
     bbox_strings = _extract_bbox_strings(bboxes)
     if not bbox_strings:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
+
+    # Upload media
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    crop_bucket_key: Optional[str] = None
+    if crop_file is not None:
+        crop_bucket_key = await upload_file(crop_file, token_payload.organization_id, token_payload.sub)
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
