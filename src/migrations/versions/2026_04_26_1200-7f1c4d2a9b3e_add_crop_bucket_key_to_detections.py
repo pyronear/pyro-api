@@ -1,7 +1,7 @@
 """Add crop_bucket_key to detections
 
 Revision ID: 7f1c4d2a9b3e
-Revises: 307a1d6d490d
+Revises: 9700bbccb2f1
 Create Date: 2026-04-26 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "7f1c4d2a9b3e"
-down_revision: Union[str, None] = "307a1d6d490d"
+down_revision: Union[str, None] = "9700bbccb2f1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
