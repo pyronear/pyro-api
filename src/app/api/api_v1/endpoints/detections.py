@@ -385,7 +385,9 @@ async def create_detection(
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     crop_bucket_key: Optional[str] = None
     if crop_file is not None:
-        crop_bucket_key = await upload_file(crop_file, token_payload.organization_id, token_payload.sub)
+        crop_bucket_key = await upload_file(
+            crop_file, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+        )
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))

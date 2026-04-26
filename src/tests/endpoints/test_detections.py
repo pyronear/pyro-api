@@ -1455,6 +1455,32 @@ async def test_get_detection_url_crop_url_null_without_crop(
 
 
 @pytest.mark.asyncio
+async def test_create_detection_with_identical_crop_bytes_produces_distinct_keys(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    # Same bytes for frame and crop must not collide on the same bucket key.
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["bucket_key"] != data["crop_bucket_key"]
+    assert data["crop_bucket_key"].startswith("crop_")
+
+
+@pytest.mark.asyncio
 async def test_create_detection_authorizes_pose_before_uploading(
     async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
 ):
