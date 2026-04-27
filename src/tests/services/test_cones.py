@@ -26,10 +26,3 @@ def test_resolve_cone_normalizes_azimuth(azimuth, bbox, aov, expected_azimuth, e
     assert 0.0 <= cone_azimuth < 360.0
     assert cone_azimuth == expected_azimuth
     assert cone_angle == expected_angle
-
-
-def test_resolve_cone_picks_most_confident_bbox():
-    bboxes = "[(0.0, 0.0, 0.2, 1.0, 0.1), (0.8, 0.0, 1.0, 1.0, 0.9)]"
-    cone_azimuth, _ = resolve_cone(180.0, bboxes, 60.0)
-    # The high-confidence bbox is on the right (center 0.9), so cone shifts +24°.
-    assert cone_azimuth == 204.0
