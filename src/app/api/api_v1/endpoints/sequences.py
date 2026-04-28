@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
 import pandas as pd
@@ -13,6 +13,7 @@ from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
+from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
@@ -147,7 +148,7 @@ async def fetch_latest_unlabeled_sequences(
     fetched_sequences = (
         await session.exec(
             select(Sequence)
-            .where(Sequence.started_at > datetime.utcnow() - timedelta(hours=24))
+            .where(Sequence.started_at > utcnow() - timedelta(hours=24))
             .where(Sequence.camera_id.in_(camera_ids.all()))  # type: ignore[attr-defined]
             .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
             .order_by(Sequence.started_at.desc())  # type: ignore[attr-defined]
