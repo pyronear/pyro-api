@@ -208,7 +208,7 @@
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -367,14 +367,16 @@
         <span class="n">camera_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">active</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a pose for a camera</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;camera_id&quot;</span><span class="p">:</span> <span class="n">camera_id</span><span class="p">,</span>
             <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
+            <span class="s2">&quot;active&quot;</span><span class="p">:</span> <span class="n">active</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
@@ -408,18 +410,21 @@
         <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">azimuth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">active</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update a pose</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.update_pose(pose_id=1, azimuth=90.0)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either azimuth or patrol_id must be provided&quot;</span><span class="p">)</span>
-        <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">active</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one of azimuth, patrol_id, or active must be provided&quot;</span><span class="p">)</span>
+        <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;azimuth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">azimuth</span>
         <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
+        <span class="k">if</span> <span class="n">active</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;active&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">active</span>
 
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
