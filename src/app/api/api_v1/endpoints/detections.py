@@ -151,6 +151,7 @@ def _build_overlap_records(
             continue
         records.append({
             "id": int(seq.id),
+            "pose_id": seq.pose_id,
             "lat": float(cam.lat),
             "lon": float(cam.lon),
             "sequence_azimuth": float(seq.sequence_azimuth),
@@ -274,7 +275,7 @@ async def _attach_sequence_to_alert(
     cameras: CameraCRUD,
     sequences: SequenceCRUD,
     alerts: AlertCRUD,
-) -> None:
+) -> Optional[int]:
     """Assign the given sequence to an alert based on cone/time overlap."""
     camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
 
@@ -285,7 +286,7 @@ async def _attach_sequence_to_alert(
     records = _build_overlap_records(recent_sequences, camera_by_id)
     resolved = _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:
-        return
+        return None
     groups, group_locations = resolved
 
     seq_by_id = {seq.id: seq for seq in recent_sequences}
@@ -296,6 +297,7 @@ async def _attach_sequence_to_alert(
     mapping = await _fetch_alert_mapping(session, seq_ids)
 
     to_link: List[AlertSequence] = []
+    alert_id: Optional[int] = None
 
     for g in groups:
         location = group_locations.get(g)
@@ -309,11 +311,15 @@ async def _attach_sequence_to_alert(
             last_seen_at,
             alerts,
         )
+        if int(sequence_.id) in g:
+            alert_id = target_alert_id
         to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
 
     if to_link:
         session.add_all(to_link)
         await session.commit()
+
+    return alert_id
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
@@ -444,7 +450,7 @@ async def create_detection(
                     if det_.id == det.id:
                         det = updated
 
-                await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
 
                 # Webhooks
                 whs = await webhooks.fetch_all()
@@ -463,14 +469,10 @@ async def create_detection(
                     if org is None:
                         org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.slack_hook:
-                        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-                        url = bucket.get_public_url(det.bucket_key)
-
                         slack_payload = jsonable_encoder(det)
-                        slack_payload["pose_azimuth"] = pose.azimuth
                         slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
                         background_tasks.add_task(
-                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), url, camera.name
+                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
                         )
 
         created.append(det)

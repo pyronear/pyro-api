@@ -1,9 +1,15 @@
+from datetime import datetime
 from typing import Any, Dict, List, Union
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.dependencies import get_camera_crud, get_jwt
+from app.main import app
+from app.models import Camera, Role
+from app.schemas.login import TokenPayload
 from app.services.storage import s3_service
 
 
@@ -158,12 +164,13 @@ async def test_get_camera(
 
 
 @pytest.mark.parametrize(
-    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses"),
+    ("user_idx", "status_code", "status_detail", "expected_response", "expected_poses", "include_non_trustable"),
     [
-        (None, 401, "Not authenticated", None, None),
-        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
-        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]]),
-        (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]]),
+        (None, 401, "Not authenticated", None, None, False),
+        (0, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]], False),
+        (1, 200, None, pytest.camera_table[0], [pytest.pose_table[0], pytest.pose_table[1]], False),
+        (2, 200, None, None, None, False),
+        (2, 200, None, pytest.camera_table[1], [pytest.pose_table[2]], True),
     ],
 )
 @pytest.mark.asyncio
@@ -176,6 +183,7 @@ async def test_fetch_cameras(
     status_detail: Union[str, None],
     expected_response: Union[List[Dict[str, Any]], None],
     expected_poses: Union[list, None],
+    include_non_trustable: bool,
 ):
     auth = None
     if isinstance(user_idx, int):
@@ -185,12 +193,19 @@ async def test_fetch_cameras(
             pytest.user_table[user_idx]["organization_id"],
         )
 
-    response = await async_client.get("/cameras", headers=auth)
+    params = {}
+    if include_non_trustable:
+        params["include_non_trustable"] = True
+    response = await async_client.get("/cameras", headers=auth, params=params)
     assert response.status_code == status_code, print(response.__dict__)
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         json_response = response.json()
+
+        if expected_response is None:
+            assert json_response == []
+            return
 
         for cam in json_response:
             assert "poses" in cam
@@ -599,6 +614,54 @@ async def test_update_camera_name(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert all(response.json()[k] == v for k, v in payload.items())
+
+
+@pytest.mark.asyncio
+async def test_update_camera_trustable(
+    async_client: AsyncClient,
+):
+    updated_camera = Camera(
+        id=1,
+        organization_id=1,
+        name="cam-1",
+        angle_of_view=91.3,
+        elevation=110.6,
+        lat=3.6,
+        lon=-45.2,
+        is_trustable=False,
+        last_active_at=None,
+        last_image=None,
+        created_at=datetime.utcnow(),
+    )
+    mock_cameras = AsyncMock()
+    mock_cameras.update = AsyncMock(return_value=updated_camera)
+
+    def override_cameras():
+        return mock_cameras
+
+    def override_jwt():
+        return TokenPayload(sub=1, scopes=[Role.ADMIN], organization_id=1)
+
+    app.dependency_overrides[get_camera_crud] = override_cameras
+    app.dependency_overrides[get_jwt] = override_jwt
+
+    try:
+        with patch("app.api.api_v1.endpoints.cameras.telemetry_client.capture") as capture:
+            response = await async_client.patch("/cameras/1/trustable", json={"is_trustable": False})
+    finally:
+        app.dependency_overrides.pop(get_camera_crud, None)
+        app.dependency_overrides.pop(get_jwt, None)
+
+    assert response.status_code == 200, print(response.__dict__)
+    assert response.json()["is_trustable"] is False
+    mock_cameras.update.assert_awaited_once()
+    assert mock_cameras.update.await_args.args[0] == 1
+    assert mock_cameras.update.await_args.args[1].is_trustable is False
+    capture.assert_called_once_with(
+        1,
+        event="cameras-update-trustable",
+        properties={"camera_id": 1, "is_trustable": False},
+    )
 
 
 @pytest.mark.asyncio

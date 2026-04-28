@@ -5,7 +5,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import List, cast
+from typing import Any, List, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
@@ -22,6 +22,7 @@ from app.schemas.cameras import (
     CameraName,
     CameraOut,
     CameraRead,
+    CameraTrustable,
     LastActive,
     LastImage,
 )
@@ -84,13 +85,15 @@ async def get_camera(
     description="Returns all cameras accessible to the current user. `last_image_url` is null for a given camera if no image has been uploaded yet or if the image is temporarily unavailable in storage.",
 )
 async def fetch_cameras(
+    include_non_trustable: bool = False,
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
+    trustable_filter: list[tuple[str, Any]] | None = None if include_non_trustable else [("is_trustable", True)]
     if UserRole.ADMIN in token_payload.scopes:
-        cams = [elt for elt in await cameras.fetch_all(order_by="id")]
+        cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=trustable_filter)]
 
         async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
@@ -104,12 +107,10 @@ async def fetch_cameras(
         urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
     else:
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-        cams = [
-            elt
-            for elt in await cameras.fetch_all(
-                order_by="id", filters=("organization_id", token_payload.organization_id)
-            )
-        ]
+        org_filters: list[tuple[str, Any]] = [("organization_id", token_payload.organization_id)]
+        if not include_non_trustable:
+            org_filters.append(("is_trustable", True))
+        cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=org_filters)]
 
         async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
             if cam.last_image:
@@ -194,6 +195,24 @@ async def update_camera_name(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
+
+
+@router.patch(
+    "/{camera_id}/trustable", status_code=status.HTTP_200_OK, summary="Update the trustable status of a camera"
+)
+async def update_camera_trustable(
+    payload: CameraTrustable,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> CameraOut:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="cameras-update-trustable",
+        properties={"camera_id": camera_id, "is_trustable": payload.is_trustable},
+    )
     camera = await cameras.update(camera_id, payload)
     return CameraOut(**camera.model_dump())
 

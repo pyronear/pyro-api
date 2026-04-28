@@ -658,7 +658,7 @@ async def test_create_detection_triggers_slack_notifications(
     def fake_dispatch_webhook(url: str, det: Detection) -> None:
         calls["webhooks"].append(url)
 
-    def fake_slack_notify(slack_hook: str, message: str, url: str, camera_name: str) -> object:
+    def fake_slack_notify(slack_hook: str, message: str, camera_name: str, alert_id: int | None = None) -> object:
         calls["slack"].append(slack_hook)
 
         class DummyResponse:

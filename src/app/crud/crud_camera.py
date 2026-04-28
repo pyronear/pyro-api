@@ -12,12 +12,15 @@ from app.schemas.cameras import (
     CameraDeviceConfig,
     CameraEdit,
     CameraName,
+    CameraTrustable,
     LastActive,
 )
 
 __all__ = ["CameraCRUD"]
 
 
-class CameraCRUD(BaseCRUD[Camera, CameraCreate, LastActive | CameraEdit | CameraName | CameraDeviceConfig]):
+class CameraCRUD(
+    BaseCRUD[Camera, CameraCreate, LastActive | CameraEdit | CameraName | CameraDeviceConfig | CameraTrustable]
+):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Camera)

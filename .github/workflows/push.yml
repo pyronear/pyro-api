@@ -2,6 +2,8 @@ name: push
 on:
   push:
     branches: main
+    tags:
+      - 'v*'
 
 env:
   BACKEND_IMAGE_NAME: alert-api
@@ -23,15 +25,22 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
       - name: Resolve dependencies
         run: poetry export -f requirements.txt --without-hashes --output requirements.txt
+      - name: Resolve image tag
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "IMAGE_TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+          fi
       - name: Build docker
-        run: docker build -f src/Dockerfile . -t $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest
+        run: docker build -f src/Dockerfile . -t $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_PW }}
       - name: Push to hub
-        run: docker push $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest
+        run: docker push $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -42,10 +51,11 @@ jobs:
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$BACKEND_IMAGE_NAME
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          docker tag $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:latest $IMAGE_ID:latest
-          docker push $IMAGE_ID:latest
+          docker tag $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG $IMAGE_ID:$IMAGE_TAG
+          docker push $IMAGE_ID:$IMAGE_TAG
 
   deploy-dev:
+    if: github.ref == 'refs/heads/main'
     needs: docker
     runs-on: ubuntu-latest
     steps:

@@ -64,6 +64,7 @@ services:
       - S3_REGION=${S3_REGION:-us-east-1}
       - S3_PROXY_URL=${S3_PROXY_URL}
       - SERVER_NAME=${SERVER_NAME}
+      - PLATFORM_URL=${PLATFORM_URL:-https://platform.pyronear.org}
     volumes:
       - ./src/:/app/
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
