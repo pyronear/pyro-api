@@ -9,7 +9,6 @@ Create Date: 2026-04-18 08:05:12.294228
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -24,16 +23,16 @@ def upgrade() -> None:
     op.create_table(
         "organizations",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-        sa.Column("telegram_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("slack_hook", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("name", sa.String(length=100), nullable=False),
+        sa.Column("telegram_id", sa.String(), nullable=True),
+        sa.Column("slack_hook", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )
     op.create_table(
         "webhooks",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("url", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("url"),
     )
@@ -55,17 +54,17 @@ def upgrade() -> None:
         "cameras",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("organization_id", sa.Integer(), nullable=False),
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+        sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("angle_of_view", sa.Float(), nullable=False),
         sa.Column("elevation", sa.Float(), nullable=False),
         sa.Column("lat", sa.Float(), nullable=False),
         sa.Column("lon", sa.Float(), nullable=False),
         sa.Column("is_trustable", sa.Boolean(), nullable=False),
         sa.Column("last_active_at", sa.DateTime(), nullable=True),
-        sa.Column("last_image", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("last_image", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("camera_ip", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("device_ip", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("camera_ip", sa.String(), nullable=True),
+        sa.Column("device_ip", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["organization_id"],
             ["organizations.id"],
@@ -78,8 +77,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("organization_id", sa.Integer(), nullable=False),
         sa.Column("role", sa.Enum("ADMIN", "AGENT", "USER", name="userrole"), nullable=False),
-        sa.Column("login", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
-        sa.Column("hashed_password", sqlmodel.sql.sqltypes.AutoString(length=70), nullable=False),
+        sa.Column("login", sa.String(length=50), nullable=False),
+        sa.Column("hashed_password", sa.String(length=70), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["organization_id"],
@@ -94,7 +93,7 @@ def upgrade() -> None:
         sa.Column("camera_id", sa.Integer(), nullable=False),
         sa.Column("azimuth", sa.Float(), nullable=False),
         sa.Column("patrol_id", sa.Integer(), nullable=True),
-        sa.Column("image", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("image", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["camera_id"],
             ["cameras.id"],
@@ -105,7 +104,7 @@ def upgrade() -> None:
         "occlusion_masks",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("pose_id", sa.Integer(), nullable=False),
-        sa.Column("mask", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+        sa.Column("mask", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["pose_id"],
@@ -156,9 +155,9 @@ def upgrade() -> None:
         sa.Column("camera_id", sa.Integer(), nullable=False),
         sa.Column("pose_id", sa.Integer(), nullable=False),
         sa.Column("sequence_id", sa.Integer(), nullable=True),
-        sa.Column("bucket_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("bbox", sqlmodel.sql.sqltypes.AutoString(length=37), nullable=False),
-        sa.Column("others_bboxes", sqlmodel.sql.sqltypes.AutoString(length=148), nullable=True),
+        sa.Column("bucket_key", sa.String(), nullable=False),
+        sa.Column("bbox", sa.String(length=37), nullable=False),
+        sa.Column("others_bboxes", sa.String(length=148), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["camera_id"],
