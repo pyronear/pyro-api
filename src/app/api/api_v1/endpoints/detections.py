@@ -352,13 +352,14 @@ async def create_detection(
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
         )
 
-    # Upload media
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     if pose.camera_id != token_payload.sub:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     if not pose.active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
+
+    # Upload media
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
 
     bbox_strings = _extract_bbox_strings(bboxes)
     if not bbox_strings:
