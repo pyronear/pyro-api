@@ -4,10 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, timedelta
-from typing import Any, Dict, List, Union, cast
+import csv
+import io
+from datetime import date, datetime, time, timedelta
+from typing import Any, Dict, Iterable, Iterator, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import asc, desc
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -50,6 +53,75 @@ def _serialize_alert(alert: Alert, sequences: List[Sequence]) -> AlertReadWithSe
     return AlertReadWithSequences(
         **alert.model_dump(),
         sequences=[SequenceRead(**seq.model_dump()) for seq in sequences],
+    )
+
+
+_ALERT_EXPORT_COLUMNS = ["id", "lat", "lon", "started_at", "last_seen_at"]
+
+
+def _iter_alerts_csv(alerts: Iterable[Alert]) -> Iterator[str]:
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(_ALERT_EXPORT_COLUMNS)
+    yield buf.getvalue()
+    buf.seek(0)
+    buf.truncate(0)
+    for a in alerts:
+        writer.writerow([
+            a.id,
+            "" if a.lat is None else a.lat,
+            "" if a.lon is None else a.lon,
+            a.started_at.isoformat(),
+            a.last_seen_at.isoformat(),
+        ])
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate(0)
+
+
+@router.get(
+    "/export",
+    status_code=status.HTTP_200_OK,
+    summary="Export alerts in a date range as CSV",
+    response_class=StreamingResponse,
+)
+async def export_alerts_csv(
+    from_date: date = Query(..., description="Inclusive lower bound on started_at (UTC date)"),
+    to_date: date = Query(..., description="Inclusive upper bound on started_at (UTC date)"),
+    session: AsyncSession = Depends(get_session),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+) -> StreamingResponse:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="alerts-export",
+        properties={"from_date": from_date.isoformat(), "to_date": to_date.isoformat()},
+    )
+
+    if to_date < from_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="to_date must be on or after from_date",
+        )
+
+    # DB columns store naive UTC datetimes (see app.core.time.utcnow), so we drop tzinfo here.
+    start_dt = datetime.combine(from_date, time.min)
+    end_dt = datetime.combine(to_date, time.max)
+
+    stmt: Any = (
+        select(Alert)
+        .where(Alert.organization_id == token_payload.organization_id)
+        .where(Alert.started_at >= start_dt)
+        .where(Alert.started_at <= end_dt)
+        .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
+    )
+    res = await session.exec(stmt)
+    alerts = res.all()
+
+    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
+    return StreamingResponse(
+        _iter_alerts_csv(alerts),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
