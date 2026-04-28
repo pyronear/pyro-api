@@ -1,3 +1,5 @@
+.PHONY: quality style lock build run stop migrate migrate-up test build-client test-client docs-client e2e
+
 # this target runs checks on all files
 quality:
 	ruff format --check .
@@ -26,6 +28,16 @@ run:
 # Run the docker
 stop:
 	docker compose down
+
+# Generate a new alembic migration from the current models
+# Requires the stack to be running (make run). Usage: make migrate m="add foo column"
+migrate:
+	@if [ -z "$(m)" ]; then echo "Usage: make migrate m=\"short description\""; exit 1; fi
+	docker compose exec -T backend alembic revision --autogenerate -m "$(m)"
+
+# Apply pending alembic migrations to the running DB
+migrate-up:
+	docker compose exec -T backend alembic upgrade head
 
 # Run tests for the library
 # the "-" are used to launch the next command even if a command fail
