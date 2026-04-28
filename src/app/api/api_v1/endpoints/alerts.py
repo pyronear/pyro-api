@@ -79,6 +79,12 @@ def _iter_alerts_csv(alerts: Iterable[Alert]) -> Iterator[str]:
         buf.truncate(0)
 
 
+def _build_alerts_csv_response(alerts: List[Alert], from_date: date, to_date: date) -> StreamingResponse:
+    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(_iter_alerts_csv(alerts), media_type="text/csv", headers=headers)
+
+
 @router.get(
     "/export",
     status_code=status.HTTP_200_OK,
@@ -114,15 +120,7 @@ async def export_alerts_csv(
         .where(Alert.started_at <= end_dt)
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
-    res = await session.exec(stmt)
-    alerts = res.all()
-
-    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
-    return StreamingResponse(
-        _iter_alerts_csv(alerts),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return _build_alerts_csv_response(list((await session.exec(stmt)).all()), from_date, to_date)
 
 
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
