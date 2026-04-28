@@ -46,16 +46,3 @@ Equivalent to:
 ```shell
 docker compose exec backend alembic upgrade head
 ```
-
-## Other useful commands
-
-```shell
-docker compose exec backend alembic current     # which revision the DB is at
-docker compose exec backend alembic history     # full chain of revisions
-docker compose exec backend alembic downgrade -1 # roll back one revision
-docker compose exec backend alembic stamp <rev> # set alembic_version without running DDL
-```
-
-`stamp` is what you use when adopting an existing schema into alembic
-without re-running migrations on it (e.g. when bringing an environment
-onto a new baseline).
