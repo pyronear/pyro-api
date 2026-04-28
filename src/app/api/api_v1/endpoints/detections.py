@@ -54,7 +54,7 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
-from app.services.overlap import compute_overlap
+from app.services.overlap import compute_overlap, haversine_km
 from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
@@ -229,6 +229,24 @@ async def _maybe_update_alert(
         )
 
 
+async def _filter_candidate_alert_ids(
+    existing_alert_ids: Set[int],
+    location: Optional[Tuple[float, float]],
+    alerts: AlertCRUD,
+) -> Set[int]:
+    if location is None or not existing_alert_ids:
+        return existing_alert_ids
+    kept: Set[int] = set()
+    for aid in existing_alert_ids:
+        alert = cast(Alert, await alerts.get(aid, strict=True))
+        if alert.lat is None or alert.lon is None:
+            kept.add(aid)
+            continue
+        if haversine_km(location[0], location[1], alert.lat, alert.lon) <= settings.ALERT_MERGE_MAX_DISTANCE_KM:
+            kept.add(aid)
+    return kept
+
+
 async def _get_or_create_alert_id(
     existing_alert_ids: Set[int],
     location: Optional[Tuple[float, float]],
@@ -237,8 +255,9 @@ async def _get_or_create_alert_id(
     last_seen_at: datetime,
     alerts: AlertCRUD,
 ) -> int:
-    if existing_alert_ids:
-        target_alert_id = min(existing_alert_ids)
+    candidates = await _filter_candidate_alert_ids(existing_alert_ids, location, alerts)
+    if candidates:
+        target_alert_id = min(candidates)
         if isinstance(location, tuple):
             await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
         return target_alert_id
