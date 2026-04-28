@@ -445,6 +445,27 @@ async def test_alerts_export_empty_range(async_client: AsyncClient, detection_se
 
 
 @pytest.mark.asyncio
+async def test_alerts_export_renders_null_coordinates_as_empty(
+    async_client: AsyncClient, detection_session: AsyncSession
+):
+    base = datetime(2026, 4, 10, 12, 0, 0)
+    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5), lat=None, lon=None)
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    _, data_rows = _parse_csv_body(resp.text)
+    row = next(r for r in data_rows if int(r[0]) == alert.id)
+    assert row[1] == ""
+    assert row[2] == ""
+
+
+@pytest.mark.asyncio
 async def test_alerts_export_invalid_range(async_client: AsyncClient, detection_session: AsyncSession):
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
