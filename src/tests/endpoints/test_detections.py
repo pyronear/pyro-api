@@ -511,7 +511,7 @@ DISTANT_LOCATION = (48.5529, 2.8536)
 @pytest.mark.asyncio
 async def test_filter_candidate_keeps_alert_within_threshold(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     nearby = Alert(
         organization_id=1,
         lat=SMOKE_LOCATION[0] + 0.005,
@@ -530,7 +530,7 @@ async def test_filter_candidate_keeps_alert_within_threshold(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     far = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -549,7 +549,7 @@ async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_keeps_alert_with_no_location(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     anchorless = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
     detection_session.add(anchorless)
     await detection_session.commit()
@@ -562,7 +562,7 @@ async def test_filter_candidate_keeps_alert_with_no_location(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_returns_unchanged_when_location_missing(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     a = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -581,7 +581,7 @@ async def test_filter_candidate_returns_unchanged_when_location_missing(detectio
 @pytest.mark.asyncio
 async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     distant = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -609,7 +609,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
 @pytest.mark.asyncio
 async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     distant = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -1256,7 +1256,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     seq_crud = SequenceCRUD(detection_session)
     alert_crud = AlertCRUD(detection_session)
     cam_crud = CameraCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
 
     cam2 = Camera(
         organization_id=1,
