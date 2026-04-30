@@ -40,6 +40,8 @@ class ClientRoute(str, Enum):
     SEQUENCES_FETCH_DETECTIONS = "sequences/{seq_id}/detections"
     SEQUENCES_FETCH_LATEST = "sequences/unlabeled/latest"
     SEQUENCES_FETCH_FROMDATE = "sequences/all/fromdate"
+    # ALERTS
+    ALERTS_UNMATCH_SEQUENCE = "alerts/{alert_id}/sequences/{seq_id}/unmatch"
     # ORGS
     ORGS_FETCH = "organizations"
 
@@ -493,6 +495,32 @@ class Client:
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
             params={"limit": limit, "desc": desc},
+            timeout=self.timeout,
+        )
+
+    # ALERTS
+
+    def unmatch_alert_sequence(self, alert_id: int, sequence_id: int) -> Response:
+        """Detach a sequence from an alert. If the sequence is no longer linked to any alert,
+        a new alert is created for it.
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.unmatch_alert_sequence(1, 2)
+
+        Args:
+            alert_id: ID of the alert the sequence should be detached from
+            sequence_id: ID of the sequence to detach
+
+        Returns:
+            HTTP response
+        """
+        return requests.post(
+            urljoin(
+                self._route_prefix,
+                ClientRoute.ALERTS_UNMATCH_SEQUENCE.format(alert_id=alert_id, seq_id=sequence_id),
+            ),
+            headers=self.headers,
             timeout=self.timeout,
         )
 
