@@ -177,9 +177,7 @@ async def unmatch_alert_sequence(
     )
     link = (await session.exec(link_stmt)).first()
     if link is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Sequence is not attached to this alert."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sequence is not attached to this alert.")
 
     count_stmt: Any = select(func.count()).select_from(AlertSequence).where(AlertSequence.alert_id == alert_id)
     sequence_count = int((await session.exec(count_stmt)).one())
@@ -198,8 +196,8 @@ async def unmatch_alert_sequence(
 
     await refresh_alert_state(alert_id, session, alerts)
 
-    other_links_stmt: Any = select(func.count()).select_from(AlertSequence).where(
-        AlertSequence.sequence_id == sequence_id
+    other_links_stmt: Any = (
+        select(func.count()).select_from(AlertSequence).where(AlertSequence.sequence_id == sequence_id)
     )
     other_links = int((await session.exec(other_links_stmt)).one())
     if other_links > 0:
@@ -207,9 +205,14 @@ async def unmatch_alert_sequence(
 
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    if camera.organization_id != alert.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sequence camera does not belong to the same organization as the alert.",
+        )
     new_alert = await alerts.create(
         AlertCreate(
-            organization_id=camera.organization_id,
+            organization_id=alert.organization_id,
             started_at=sequence.started_at,
             last_seen_at=sequence.last_seen_at,
             lat=None,
