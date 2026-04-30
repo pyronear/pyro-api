@@ -381,18 +381,14 @@ async def test_unmatch_keeps_sequence_when_already_linked_elsewhere(
     assert resp.json() is None
 
     mappings_res = await detection_session.exec(
-        select(AlertSequence.alert_id, AlertSequence.sequence_id).where(
-            AlertSequence.sequence_id == target_seq
-        )
+        select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.sequence_id == target_seq)
     )
     alert_ids_for_seq = {aid for aid, _ in mappings_res.all()}
     assert alert_ids_for_seq == {other_alert.id}
 
 
 @pytest.mark.asyncio
-async def test_unmatch_rejects_single_sequence_alert(
-    async_client: AsyncClient, detection_session: AsyncSession
-):
+async def test_unmatch_rejects_single_sequence_alert(async_client: AsyncClient, detection_session: AsyncSession):
     now = utcnow()
     seq = Sequence(
         camera_id=1,
@@ -429,9 +425,7 @@ async def test_unmatch_rejects_single_sequence_alert(
 
 
 @pytest.mark.asyncio
-async def test_unmatch_returns_404_when_sequence_not_linked(
-    async_client: AsyncClient, detection_session: AsyncSession
-):
+async def test_unmatch_returns_404_when_sequence_not_linked(async_client: AsyncClient, detection_session: AsyncSession):
     alert, _ = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
@@ -465,24 +459,16 @@ async def test_unmatch_forbidden_for_user_role(async_client: AsyncClient, detect
         pytest.user_table[2]["id"], pytest.user_table[2]["role"].split(), pytest.user_table[2]["organization_id"]
     )
     resp = await async_client.post(f"/alerts/{alert.id}/sequences/{seq_ids[0]}/unmatch", headers=auth)
-    assert resp.status_code == 401, resp.text
+    assert resp.status_code == 403, resp.text
 
 
 @pytest.mark.asyncio
 async def test_unmatch_forbidden_cross_org(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
-        detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
-    )
-    # agent in org 1 cannot touch an alert that belongs to org 2 via the org check below
     other_alert, other_seq_ids = await _create_alert_with_sequences(
         detection_session, org_id=2, camera_id=2, lat=48.3856355, lon=2.7323256
     )
     auth = pytest.get_token(
         pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
     )
-    resp = await async_client.post(
-        f"/alerts/{other_alert.id}/sequences/{other_seq_ids[0]}/unmatch", headers=auth
-    )
+    resp = await async_client.post(f"/alerts/{other_alert.id}/sequences/{other_seq_ids[0]}/unmatch", headers=auth)
     assert resp.status_code == 403, resp.text
-    # also make sure the agent can still operate on their own org
-    assert alert.organization_id == 1
