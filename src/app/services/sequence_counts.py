@@ -23,7 +23,5 @@ async def get_detection_counts_by_sequence_ids(session: AsyncSession, sequence_i
     )
     res = await session.exec(stmt)
     return {
-        int(sequence_id): int(detections_count)
-        for sequence_id, detections_count in res.all()
-        if sequence_id is not None
+        sequence_id: detections_count for sequence_id, detections_count in res.all() if sequence_id is not None
     }
