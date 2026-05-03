@@ -20,6 +20,7 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
+from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -46,10 +47,16 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
     return mapping
 
 
-def _serialize_alert(alert: Alert, sequences: List[Sequence]) -> AlertReadWithSequences:
+def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
+    return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
+
+
+def _serialize_alert(
+    alert: Alert, sequences: List[Sequence], detection_counts: Dict[int, int]
+) -> AlertReadWithSequences:
     return AlertReadWithSequences(
         **alert.model_dump(),
-        sequences=[SequenceRead(**seq.model_dump()) for seq in sequences],
+        sequences=[_serialize_sequence(sequence, detection_counts.get(sequence.id, 0)) for sequence in sequences],
     )
 
 
@@ -66,9 +73,11 @@ async def get_alert(
     if UserRole.ADMIN not in token_payload.scopes:
         verify_org_rights(token_payload.organization_id, alert)
 
-    alert_id_int = int(alert.id)
-    seq_map = await _fetch_sequences_by_alert_ids(session, [alert_id_int])
-    return _serialize_alert(alert, seq_map.get(alert_id_int, []))
+    seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id])
+    detection_counts = await get_detection_counts_by_sequence_ids(
+        session, [sequence.id for sequence in seq_map.get(alert.id, [])]
+    )
+    return _serialize_alert(alert, seq_map.get(alert.id, []), detection_counts)
 
 
 @router.get(
@@ -81,7 +90,7 @@ async def fetch_alert_sequences(
     alerts: AlertCRUD = Depends(get_alert_crud),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> List[Sequence]:
+) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
     if UserRole.ADMIN not in token_payload.scopes:
@@ -93,7 +102,9 @@ async def fetch_alert_sequences(
     seq_stmt = seq_stmt.where(AlertSequence.alert_id == alert_id).order_by(order_clause).limit(limit)
 
     res = await session.exec(seq_stmt)
-    return list(res.all())
+    sequences = list(res.all())
+    detection_counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in sequences])
+    return [_serialize_sequence(sequence, detection_counts.get(sequence.id, 0)) for sequence in sequences]
 
 
 @router.get(
@@ -118,9 +129,13 @@ async def fetch_latest_unlabeled_alerts(
     )
     alerts_res = await session.exec(alerts_stmt)
     alerts = alerts_res.unique().all()
-    alert_ids = [int(alert.id) for alert in alerts]
+    alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    return [_serialize_alert(alert, seq_map.get(int(alert.id), [])) for alert in alerts]
+    detection_counts = await get_detection_counts_by_sequence_ids(
+        session,
+        list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
+    )
+    return [_serialize_alert(alert, seq_map.get(alert.id, []), detection_counts) for alert in alerts]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
@@ -143,9 +158,13 @@ async def fetch_alerts_from_date(
     )
     alerts_res = await session.exec(alerts_stmt)
     alerts = alerts_res.all()
-    alert_ids = [int(alert.id) for alert in alerts]
+    alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    return [_serialize_alert(alert, seq_map.get(int(alert.id), [])) for alert in alerts]
+    detection_counts = await get_detection_counts_by_sequence_ids(
+        session,
+        list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
+    )
+    return [_serialize_alert(alert, seq_map.get(alert.id, []), detection_counts) for alert in alerts]
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")

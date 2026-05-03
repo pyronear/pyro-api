@@ -22,6 +22,7 @@ from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWi
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.overlap import compute_overlap
+from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
@@ -83,20 +84,26 @@ async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Ale
     )
 
 
+def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
+    return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
+
+
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
 async def get_sequence(
     sequence_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Sequence:
+) -> SequenceRead:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
-    return SequenceRead(**sequence.model_dump())
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
+    return _serialize_sequence(sequence, counts.get(sequence.id, 0))
 
 
 @router.get(
@@ -155,7 +162,8 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    return [SequenceRead(**elt.model_dump()) for elt in fetched_sequences]
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -180,7 +188,8 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    return [SequenceRead(**elt.model_dump()) for elt in fetched_sequences]
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
