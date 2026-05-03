@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints._sequence_counts import get_detection_counts_by_sequence_ids
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
@@ -23,6 +22,7 @@ from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWi
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.overlap import compute_overlap
+from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 

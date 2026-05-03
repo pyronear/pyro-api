@@ -12,7 +12,6 @@ from sqlalchemy import asc, desc
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints._sequence_counts import get_detection_counts_by_sequence_ids
 from app.api.dependencies import get_alert_crud, get_jwt
 from app.core.time import utcnow
 from app.crud import AlertCRUD
@@ -21,6 +20,7 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
+from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
