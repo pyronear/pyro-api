@@ -691,6 +691,53 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
 
 
 @pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_paging(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Page 1 (limit=2, offset=0) + page 2 (limit=2, offset=2) covers a 3-detection
+    sequence with no gaps and no duplicates."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    # Sequence id 1 has 3 detections in the test fixtures (see existing
+    # test_fetch_sequence_detections expectations).
+    full = await async_client.get("/sequences/1/detections?limit=10&offset=0&desc=false", headers=auth)
+    assert full.status_code == 200
+    full_ids = [det["id"] for det in full.json()]
+    assert len(full_ids) == 3
+
+    page1 = await async_client.get("/sequences/1/detections?limit=2&offset=0&desc=false", headers=auth)
+    page2 = await async_client.get("/sequences/1/detections?limit=2&offset=2&desc=false", headers=auth)
+    assert page1.status_code == 200
+    assert page2.status_code == 200
+
+    page1_ids = [det["id"] for det in page1.json()]
+    page2_ids = [det["id"] for det in page2.json()]
+    assert page1_ids + page2_ids == full_ids
+    assert len(page1_ids) == 2
+    assert len(page2_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_validation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Negative offset must be rejected."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/sequences/1/detections?offset=-1", headers=auth)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
     # 1. Mocks Setup

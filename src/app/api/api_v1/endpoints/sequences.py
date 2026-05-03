@@ -114,6 +114,7 @@ async def get_sequence(
 async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),
     limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
+    offset: int = Query(0, description="Number of detections to skip", ge=0),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -126,7 +127,6 @@ async def fetch_sequence_detections(
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
-    # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     return [
         DetectionWithUrl(
@@ -138,6 +138,7 @@ async def fetch_sequence_detections(
             order_by="created_at",
             order_desc=desc,
             limit=limit,
+            offset=offset,
         )
     ]
 
