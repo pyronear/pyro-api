@@ -65,7 +65,7 @@ async def _create_alert_with_sequences(
     await session.commit()
     for seq in sequences:
         await session.refresh(seq)
-    for sequence, detections_count in zip(sequences, detections_count_by_sequence, strict=False):
+    for sequence, detections_count in zip(sequences, detections_count_by_sequence, strict=True):
         for det_idx in range(detections_count):
             session.add(
                 Detection(
