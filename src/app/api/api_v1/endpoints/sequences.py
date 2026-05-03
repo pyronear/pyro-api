@@ -102,8 +102,8 @@ async def get_sequence(
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
-    counts = await get_detection_counts_by_sequence_ids(session, [int(sequence.id)])
-    return _serialize_sequence(sequence, counts.get(int(sequence.id), 0))
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
+    return _serialize_sequence(sequence, counts.get(sequence.id, 0))
 
 
 @router.get(
@@ -162,8 +162,8 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    counts = await get_detection_counts_by_sequence_ids(session, [int(sequence.id) for sequence in fetched_sequences])
-    return [_serialize_sequence(sequence, counts.get(int(sequence.id), 0)) for sequence in fetched_sequences]
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -188,8 +188,8 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    counts = await get_detection_counts_by_sequence_ids(session, [int(sequence.id) for sequence in fetched_sequences])
-    return [_serialize_sequence(sequence, counts.get(int(sequence.id), 0)) for sequence in fetched_sequences]
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")
