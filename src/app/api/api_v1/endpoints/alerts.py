@@ -47,8 +47,8 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
     return mapping
 
 
-def _serialize_sequence(sequence: Sequence, detection_counts: Dict[int, int]) -> SequenceRead:
-    return SequenceRead(**sequence.model_dump(), detections_count=detection_counts.get(int(sequence.id), 0))
+def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
+    return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
 
 
 def _serialize_alert(
@@ -56,7 +56,9 @@ def _serialize_alert(
 ) -> AlertReadWithSequences:
     return AlertReadWithSequences(
         **alert.model_dump(),
-        sequences=[_serialize_sequence(sequence, detection_counts) for sequence in sequences],
+        sequences=[
+            _serialize_sequence(sequence, detection_counts.get(int(sequence.id), 0)) for sequence in sequences
+        ],
     )
 
 
@@ -105,7 +107,7 @@ async def fetch_alert_sequences(
     res = await session.exec(seq_stmt)
     sequences = list(res.all())
     detection_counts = await get_detection_counts_by_sequence_ids(session, [int(sequence.id) for sequence in sequences])
-    return [_serialize_sequence(sequence, detection_counts) for sequence in sequences]
+    return [_serialize_sequence(sequence, detection_counts.get(int(sequence.id), 0)) for sequence in sequences]
 
 
 @router.get(
