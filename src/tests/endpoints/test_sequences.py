@@ -262,7 +262,7 @@ async def test_latest_sequences(
 
 @pytest.mark.asyncio
 async def test_latest_sequences_include_detections_count(async_client: AsyncClient, detection_session: AsyncSession):
-    now = datetime.utcnow()
+    now = utcnow()
     sequence_with_detections = Sequence(
         camera_id=pytest.camera_table[0]["id"],
         pose_id=pytest.pose_table[0]["id"],
