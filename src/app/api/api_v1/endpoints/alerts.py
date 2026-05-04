@@ -20,6 +20,7 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
+from app.services.sequence_confidence import filter_sequences_by_risk
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
@@ -45,6 +46,24 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
     for alert_id, sequence in res.all():
         mapping.setdefault(int(alert_id), []).append(sequence)
     return mapping
+
+
+async def _apply_risk_filter_to_alerts(
+    session: AsyncSession,
+    alerts: List[Alert],
+    seq_map: Dict[int, List[Sequence]],
+) -> List[Alert]:
+    """Drop sequences below the risk threshold and alerts that end up empty."""
+    all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
+    kept_seqs = await filter_sequences_by_risk(session, all_sequences)
+    kept_ids = {seq.id for seq in kept_seqs}
+    kept_alerts: List[Alert] = []
+    for alert in alerts:
+        filtered = [seq for seq in seq_map.get(alert.id, []) if seq.id in kept_ids]
+        if filtered:
+            seq_map[alert.id] = filtered
+            kept_alerts.append(alert)
+    return kept_alerts
 
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
@@ -128,9 +147,10 @@ async def fetch_latest_unlabeled_alerts(
         .limit(15)
     )
     alerts_res = await session.exec(alerts_stmt)
-    alerts = alerts_res.unique().all()
+    alerts = list(alerts_res.unique().all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
+    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
@@ -157,9 +177,10 @@ async def fetch_alerts_from_date(
         .offset(offset)
     )
     alerts_res = await session.exec(alerts_stmt)
-    alerts = alerts_res.all()
+    alerts = list(alerts_res.all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
+    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),

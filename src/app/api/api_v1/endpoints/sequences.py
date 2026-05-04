@@ -22,6 +22,7 @@ from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWi
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.overlap import compute_overlap
+from app.services.sequence_confidence import filter_sequences_by_risk
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
@@ -162,6 +163,7 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
+    fetched_sequences = await filter_sequences_by_risk(session, fetched_sequences)
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
@@ -188,6 +190,7 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
+    fetched_sequences = await filter_sequences_by_risk(session, fetched_sequences)
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 

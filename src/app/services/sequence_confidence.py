@@ -7,17 +7,22 @@
 import logging
 import re
 from ast import literal_eval
-from typing import Any, Dict, Iterable, List, Union, cast
+from typing import Any, Dict, Iterable, List, Sequence as TypingSequence, Union, cast
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import Detection
+from app.models import Detection, Sequence
 from app.schemas.detections import BOX_PATTERN
+from app.services.risk import risk_service
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["max_conf_from_bboxes", "get_max_conf_by_sequence_ids"]
+__all__ = [
+    "max_conf_from_bboxes",
+    "get_max_conf_by_sequence_ids",
+    "filter_sequences_by_risk",
+]
 
 
 def max_conf_from_bboxes(*bbox_strings: Union[str, None]) -> Union[float, None]:
@@ -70,3 +75,33 @@ async def get_max_conf_by_sequence_ids(
         if current is None or conf > current:
             out[sequence_id] = conf
     return out
+
+
+async def filter_sequences_by_risk(
+    session: AsyncSession,
+    sequences: TypingSequence[Sequence],
+) -> List[Sequence]:
+    """Drop sequences whose max conf is below the risk-driven threshold for their camera.
+
+    Fail-open: a sequence is kept if either the camera has no FWI score (moderate+ or unknown)
+    or the sequence has no parseable confidence.
+    """
+    if not sequences:
+        return []
+    thresholds = {seq.camera_id: risk_service.min_confidence(seq.camera_id) for seq in sequences}
+    if all(threshold is None for threshold in thresholds.values()):
+        return list(sequences)
+
+    seq_ids_to_check = [seq.id for seq in sequences if thresholds.get(seq.camera_id) is not None]
+    confs = await get_max_conf_by_sequence_ids(session, seq_ids_to_check)
+
+    kept: List[Sequence] = []
+    for seq in sequences:
+        threshold = thresholds.get(seq.camera_id)
+        if threshold is None:
+            kept.append(seq)
+            continue
+        conf = confs.get(seq.id)
+        if conf is None or conf >= threshold:
+            kept.append(seq)
+    return kept
