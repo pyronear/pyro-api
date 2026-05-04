@@ -65,6 +65,12 @@ services:
       - S3_PROXY_URL=${S3_PROXY_URL}
       - SERVER_NAME=${SERVER_NAME}
       - PLATFORM_URL=${PLATFORM_URL:-https://platform.pyronear.org}
+      - RISK_API_URL=${RISK_API_URL}
+      - RISK_API_LOGIN=${RISK_API_LOGIN}
+      - RISK_API_PWD=${RISK_API_PWD}
+      - RISK_REFRESH_HOUR_UTC=${RISK_REFRESH_HOUR_UTC:-4}
+      - FWI_LOW_MIN_CONF=${FWI_LOW_MIN_CONF:-0.45}
+      - FWI_VERY_LOW_MIN_CONF=${FWI_VERY_LOW_MIN_CONF:-0.6}
     volumes:
       - ./src/:/app/
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
