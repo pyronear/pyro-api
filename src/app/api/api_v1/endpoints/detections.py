@@ -5,6 +5,7 @@
 
 
 import json
+import logging
 import re
 from ast import literal_eval
 from datetime import datetime, timedelta
@@ -56,10 +57,14 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
+from app.services.risk import risk_service
+from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
+
+logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
@@ -490,11 +495,26 @@ async def create_detection(
                     if org is None:
                         org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.slack_hook:
-                        slack_payload = jsonable_encoder(det)
-                        slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-                        background_tasks.add_task(
-                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                        )
+                        min_conf = risk_service.min_confidence(camera.id)
+                        seq_max_conf: Optional[float] = None
+                        if min_conf is not None:
+                            seq_max_conf = max_conf_from_bboxes(
+                                *[d.bbox for d in overlapping_dets],
+                                *[d.others_bboxes for d in overlapping_dets],
+                            )
+                        if min_conf is None or seq_max_conf is None or seq_max_conf >= min_conf:
+                            slack_payload = jsonable_encoder(det)
+                            slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+                            background_tasks.add_task(
+                                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+                            )
+                        else:
+                            logger.info(
+                                "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
+                                camera.name,
+                                seq_max_conf,
+                                min_conf,
+                            )
 
         created.append(det)
 
