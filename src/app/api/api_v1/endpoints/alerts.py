@@ -20,7 +20,7 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
-from app.services.sequence_confidence import filter_sequences_by_risk
+from app.services.sequence_confidence import filter_sequences_by_risk, filter_sequences_by_risk_for_date
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
@@ -52,10 +52,18 @@ async def _apply_risk_filter_to_alerts(
     session: AsyncSession,
     alerts: List[Alert],
     seq_map: Dict[int, List[Sequence]],
+    target_date: Union[date, None] = None,
 ) -> List[Alert]:
-    """Drop sequences below the risk threshold and alerts that end up empty."""
+    """Drop sequences below the risk threshold and alerts that end up empty.
+
+    When ``target_date`` is provided, look up the FWI class persisted for that day;
+    otherwise use today's cached value.
+    """
     all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
-    kept_seqs = await filter_sequences_by_risk(session, all_sequences)
+    if target_date is None:
+        kept_seqs = await filter_sequences_by_risk(session, all_sequences)
+    else:
+        kept_seqs = await filter_sequences_by_risk_for_date(session, all_sequences, target_date)
     kept_ids = {seq.id for seq in kept_seqs}
     kept_alerts: List[Alert] = []
     for alert in alerts:
@@ -180,7 +188,7 @@ async def fetch_alerts_from_date(
     alerts = list(alerts_res.all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map)
+    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map, target_date=from_date)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),

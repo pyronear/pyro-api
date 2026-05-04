@@ -7,6 +7,7 @@
 import logging
 import re
 from ast import literal_eval
+from datetime import date
 from typing import Any, Dict, Iterable, List, Sequence as TypingSequence, Union, cast
 
 from sqlmodel import select
@@ -14,7 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Detection, Sequence
 from app.schemas.detections import BOX_PATTERN
-from app.services.risk import risk_service
+from app.services.risk import min_confidence_for_class, risk_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -22,6 +23,7 @@ __all__ = [
     "max_conf_from_bboxes",
     "get_max_conf_by_sequence_ids",
     "filter_sequences_by_risk",
+    "filter_sequences_by_risk_for_date",
 ]
 
 
@@ -77,18 +79,11 @@ async def get_max_conf_by_sequence_ids(
     return out
 
 
-async def filter_sequences_by_risk(
+async def _filter_sequences(
     session: AsyncSession,
     sequences: TypingSequence[Sequence],
+    thresholds: Dict[int, Union[float, None]],
 ) -> List[Sequence]:
-    """Drop sequences whose max conf is below the risk-driven threshold for their camera.
-
-    Fail-open: a sequence is kept if either the camera has no FWI score (moderate+ or unknown)
-    or the sequence has no parseable confidence.
-    """
-    if not sequences:
-        return []
-    thresholds = {seq.camera_id: risk_service.min_confidence(seq.camera_id) for seq in sequences}
     if all(threshold is None for threshold in thresholds.values()):
         return list(sequences)
 
@@ -105,3 +100,33 @@ async def filter_sequences_by_risk(
         if conf is None or conf >= threshold:
             kept.append(seq)
     return kept
+
+
+async def filter_sequences_by_risk(
+    session: AsyncSession,
+    sequences: TypingSequence[Sequence],
+) -> List[Sequence]:
+    """Drop sequences whose max conf is below today's risk-driven threshold for their camera.
+
+    Fail-open: a sequence is kept if either the camera has no FWI score (moderate+ or unknown)
+    or the sequence has no parseable confidence.
+    """
+    if not sequences:
+        return []
+    thresholds = {seq.camera_id: risk_service.min_confidence(seq.camera_id) for seq in sequences}
+    return await _filter_sequences(session, sequences, thresholds)
+
+
+async def filter_sequences_by_risk_for_date(
+    session: AsyncSession,
+    sequences: TypingSequence[Sequence],
+    target_date: date,
+) -> List[Sequence]:
+    """Like filter_sequences_by_risk, but uses the FWI class persisted for a specific date."""
+    if not sequences:
+        return []
+    scores = await risk_service.get_scores_for_date(target_date)
+    thresholds = {
+        seq.camera_id: min_confidence_for_class(scores.get(seq.camera_id)) for seq in sequences
+    }
+    return await _filter_sequences(session, sequences, thresholds)
