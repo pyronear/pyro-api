@@ -13,7 +13,7 @@ from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["risk_service", "min_confidence_for_class"]
+__all__ = ["min_confidence_for_class", "risk_service"]
 
 # EFFIS classes that should trigger filtering. Anything else (moderate+) → no filter.
 _LOW = "low"

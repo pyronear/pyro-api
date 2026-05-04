@@ -8,7 +8,8 @@ import logging
 import re
 from ast import literal_eval
 from datetime import date
-from typing import Any, Dict, Iterable, List, Sequence as TypingSequence, Union, cast
+from typing import Any, Dict, Iterable, List, Union, cast
+from typing import Sequence as TypingSequence
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -20,10 +21,10 @@ from app.services.risk import min_confidence_for_class, risk_service
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = [
-    "max_conf_from_bboxes",
-    "get_max_conf_by_sequence_ids",
     "filter_sequences_by_risk",
     "filter_sequences_by_risk_for_date",
+    "get_max_conf_by_sequence_ids",
+    "max_conf_from_bboxes",
 ]
 
 
@@ -126,7 +127,5 @@ async def filter_sequences_by_risk_for_date(
     if not sequences:
         return []
     scores = await risk_service.get_scores_for_date(target_date)
-    thresholds = {
-        seq.camera_id: min_confidence_for_class(scores.get(seq.camera_id)) for seq in sequences
-    }
+    thresholds = {seq.camera_id: min_confidence_for_class(scores.get(seq.camera_id)) for seq in sequences}
     return await _filter_sequences(session, sequences, thresholds)

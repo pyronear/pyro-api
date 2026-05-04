@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import asyncio
+import contextlib
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -76,10 +77,8 @@ async def lifespan(_: FastAPI):
     finally:
         if task is not None:
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except (asyncio.CancelledError, Exception):
-                pass
 
 
 app = FastAPI(
