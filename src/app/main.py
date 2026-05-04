@@ -3,8 +3,11 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+import asyncio
 import logging
 import time
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 import sentry_sdk
 from fastapi import FastAPI, Request, status
@@ -19,6 +22,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from app.api.api_v1.router import api_router
 from app.core.config import settings
 from app.schemas.base import Status
+from app.services.risk import risk_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -40,6 +44,44 @@ if isinstance(settings.SENTRY_DSN, str):
     logger.info(f"Sentry middleware enabled on server {settings.SERVER_NAME}")
 
 
+def _seconds_until_next_utc_hour(target_hour: int) -> float:
+    now = datetime.now(tz=timezone.utc)
+    target = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    if target <= now:
+        target += timedelta(days=1)
+    return (target - now).total_seconds()
+
+
+async def _risk_refresh_loop() -> None:
+    while True:
+        try:
+            await asyncio.sleep(_seconds_until_next_utc_hour(settings.RISK_REFRESH_HOUR_UTC))
+            await risk_service.refresh()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Risk refresh loop iteration failed; continuing")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if risk_service.is_configured:
+        await risk_service.refresh()
+        task = asyncio.create_task(_risk_refresh_loop())
+    else:
+        task = None
+        logger.info("Risk API not configured; skipping daily refresh")
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description=settings.PROJECT_DESCRIPTION,
@@ -47,6 +89,7 @@ app = FastAPI(
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=None,
+    lifespan=lifespan,
 )
 
 
