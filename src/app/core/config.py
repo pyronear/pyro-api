@@ -77,6 +77,14 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
     PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
 
+    # Risk API (daily fire-weather index per camera)
+    RISK_API_HOST: Union[str, None] = os.environ.get("RISK_API_HOST")
+    RISK_API_USERNAME: Union[str, None] = os.environ.get("RISK_API_USERNAME")
+    RISK_API_PASSWORD: Union[str, None] = os.environ.get("RISK_API_PASSWORD")
+    RISK_REFRESH_HOUR_UTC: int = int(os.environ.get("RISK_REFRESH_HOUR_UTC") or 4)
+    FWI_LOW_MIN_CONF: float = float(os.environ.get("FWI_LOW_MIN_CONF") or 0.45)
+    FWI_VERY_LOW_MIN_CONF: float = float(os.environ.get("FWI_VERY_LOW_MIN_CONF") or 0.6)
+
     # Error monitoring
     SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")
     SERVER_NAME: str = os.environ.get("SERVER_NAME", socket.gethostname())
