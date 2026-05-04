@@ -122,10 +122,14 @@ async def filter_sequences_by_risk_for_date(
     session: AsyncSession,
     sequences: TypingSequence[Sequence],
     target_date: date,
+    organization_id: Union[int, None] = None,
 ) -> List[Sequence]:
-    """Like filter_sequences_by_risk, but uses the FWI class persisted for a specific date."""
+    """Like filter_sequences_by_risk, but uses the FWI class persisted for a specific date.
+
+    When ``organization_id`` is provided, the risk-api call is scoped to that organization.
+    """
     if not sequences:
         return []
-    scores = await risk_service.get_scores_for_date(target_date)
+    scores = await risk_service.get_scores_for_date(target_date, organization_id=organization_id)
     thresholds = {seq.camera_id: min_confidence_for_class(scores.get(seq.camera_id)) for seq in sequences}
     return await _filter_sequences(session, sequences, thresholds)

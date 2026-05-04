@@ -20,6 +20,12 @@ def test_min_confidence_for_class():
     assert min_confidence_for_class("unexpected") is None
 
 
+def test_min_confidence_for_class_normalizes_casing():
+    assert min_confidence_for_class("Very Low") == settings.FWI_VERY_LOW_MIN_CONF
+    assert min_confidence_for_class("LOW") == settings.FWI_LOW_MIN_CONF
+    assert min_confidence_for_class("  very_low  ") == settings.FWI_VERY_LOW_MIN_CONF
+
+
 def test_risk_service_min_confidence_uses_cached_class():
     service = RiskService()
     service._scores = {1: "very_low", 2: "low", 3: "moderate"}
@@ -31,7 +37,7 @@ def test_risk_service_min_confidence_uses_cached_class():
 
 @pytest.mark.asyncio
 async def test_refresh_no_op_when_not_configured(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(settings, "RISK_API_HOST", None)
+    monkeypatch.setattr(settings, "RISK_API_URL", None)
     service = RiskService()
     service._scores = {1: "low"}
     await service.refresh()

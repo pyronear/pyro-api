@@ -53,17 +53,20 @@ async def _apply_risk_filter_to_alerts(
     alerts: List[Alert],
     seq_map: Dict[int, List[Sequence]],
     target_date: Union[date, None] = None,
+    organization_id: Union[int, None] = None,
 ) -> List[Alert]:
     """Drop sequences below the risk threshold and alerts that end up empty.
 
-    When ``target_date`` is provided, look up the FWI class persisted for that day;
-    otherwise use today's cached value.
+    When ``target_date`` is provided, look up the FWI class persisted for that day
+    (scoped to ``organization_id`` if given); otherwise use today's cached value.
     """
     all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
     if target_date is None:
         kept_seqs = await filter_sequences_by_risk(session, all_sequences)
     else:
-        kept_seqs = await filter_sequences_by_risk_for_date(session, all_sequences, target_date)
+        kept_seqs = await filter_sequences_by_risk_for_date(
+            session, all_sequences, target_date, organization_id=organization_id
+        )
     kept_ids = {seq.id for seq in kept_seqs}
     kept_alerts: List[Alert] = []
     for alert in alerts:
@@ -188,7 +191,9 @@ async def fetch_alerts_from_date(
     alerts = list(alerts_res.all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map, target_date=from_date)
+    alerts = await _apply_risk_filter_to_alerts(
+        session, alerts, seq_map, target_date=from_date, organization_id=token_payload.organization_id
+    )
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
