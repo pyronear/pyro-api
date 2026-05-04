@@ -46,8 +46,9 @@ if isinstance(settings.SENTRY_DSN, str):
 
 
 def _seconds_until_next_utc_hour(target_hour: int) -> float:
+    hour = max(0, min(23, target_hour))
     now = datetime.now(tz=timezone.utc)
-    target = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
     if target <= now:
         target += timedelta(days=1)
     return (target - now).total_seconds()
