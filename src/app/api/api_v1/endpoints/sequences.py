@@ -258,30 +258,45 @@ async def label_sequence(
 
     updated = await sequences.update(sequence_id, payload)
 
-    # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
-    if payload.is_wildfire is not None and payload.is_wildfire != AnnotationType.WILDFIRE_SMOKE:
-        alert_ids_res = await session.exec(
-            select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id)
+    if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
+        return updated
+
+    alert_ids_res = await session.exec(
+        select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id)
+    )
+    alert_ids = list(alert_ids_res.all())
+
+    # If the sequence is the only one in all of its alerts, leave them as-is —
+    # detaching and recreating would just churn the alert id for no benefit.
+    if alert_ids:
+        siblings_stmt: Any = (
+            select(AlertSequence.sequence_id)
+            .where(cast(Any, AlertSequence.alert_id).in_(alert_ids))
+            .where(AlertSequence.sequence_id != sequence_id)
+            .limit(1)
         )
-        alert_ids = list(alert_ids_res.all())
-        if alert_ids:
-            delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
-            await session.exec(delete_links)
-            await session.commit()
-            for aid in alert_ids:
-                await _refresh_alert_state(aid, session, alerts)
-        # Create a fresh alert for this sequence alone
-        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-        new_alert = await alerts.create(
-            AlertCreate(
-                organization_id=camera.organization_id,
-                started_at=sequence.started_at,
-                last_seen_at=sequence.last_seen_at,
-                lat=None,
-                lon=None,
-            )
-        )
-        session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+        siblings_res = await session.exec(siblings_stmt)
+        if siblings_res.first() is None:
+            return updated
+
+        delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+        await session.exec(delete_links)
         await session.commit()
+        for aid in alert_ids:
+            await _refresh_alert_state(aid, session, alerts)
+
+    # Create a fresh alert for this sequence alone
+    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    new_alert = await alerts.create(
+        AlertCreate(
+            organization_id=camera.organization_id,
+            started_at=sequence.started_at,
+            last_seen_at=sequence.last_seen_at,
+            lat=None,
+            lon=None,
+        )
+    )
+    session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+    await session.commit()
 
     return updated
