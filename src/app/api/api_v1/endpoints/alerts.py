@@ -5,10 +5,11 @@
 
 
 from datetime import date, timedelta
-from typing import Any, Dict, List, Literal, Union, cast
+from typing import Any, Dict, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlalchemy import asc, desc
+from sqlalchemy.sql import ColumnElement
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -16,18 +17,14 @@ from app.api.dependencies import get_alert_crud, get_jwt
 from app.core.time import utcnow
 from app.crud import AlertCRUD
 from app.db import get_session
-from app.models import Alert, AlertSequence, Sequence, UserRole
+from app.models import Alert, AlertSequence, Camera, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
-from app.services.risk import risk_service
-from app.services.sequence_confidence import filter_by_class_per_camera
+from app.services.risk import FwiClass, risk_service
+from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
-
-# FWI classes accepted as a manual ``risk_score`` override on the listing endpoints.
-FwiClass = Literal["very_low", "low", "moderate", "high", "very_high", "extreme"]
-
 
 router = APIRouter()
 
@@ -37,7 +34,11 @@ def verify_org_rights(organization_id: int, alert: Alert) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
-async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[int]) -> Dict[int, List[Sequence]]:
+async def _fetch_sequences_by_alert_ids(
+    session: AsyncSession,
+    alert_ids: List[int],
+    seq_filter: Union[ColumnElement[bool], None] = None,
+) -> Dict[int, List[Sequence]]:
     mapping: Dict[int, List[Sequence]] = {}
     if not alert_ids:
         return mapping
@@ -45,44 +46,30 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
         select(AlertSequence.alert_id, Sequence)
         .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
         .where(AlertSequence.alert_id.in_(alert_ids))  # type: ignore[attr-defined]
-        .order_by(cast(Any, AlertSequence.alert_id), desc(cast(Any, Sequence.last_seen_at)))
     )
+    if seq_filter is not None:
+        seq_stmt = seq_stmt.where(seq_filter)
+    seq_stmt = seq_stmt.order_by(cast(Any, AlertSequence.alert_id), desc(cast(Any, Sequence.last_seen_at)))
     res = await session.exec(seq_stmt)
     for alert_id, sequence in res.all():
         mapping.setdefault(int(alert_id), []).append(sequence)
     return mapping
 
 
-async def _apply_risk_filter_to_alerts(
-    alerts: List[Alert],
-    seq_map: Dict[int, List[Sequence]],
+async def _resolve_class_per_camera(
+    session: AsyncSession,
+    organization_id: int,
     target_date: Union[date, None] = None,
-    organization_id: Union[int, None] = None,
     override_class: Union[str, None] = None,
-) -> List[Alert]:
-    """Drop sequences below the risk threshold and alerts that end up empty.
-
-    Resolution priority for the per-camera FWI class:
-    ``override_class`` (single value applied to all cameras) → risk-api ``/scores/{date}``
-    when ``target_date`` is set → today's RAM cache.
-    """
-    all_seqs = [seq for seqs in seq_map.values() for seq in seqs]
+) -> Dict[int, Union[str, None]]:
+    """Resolve ``{camera_id: fwi_class}`` for the org, picking override → per-date → today's cache."""
     if override_class is not None:
-        class_per_camera: Dict[int, Union[str, None]] = {seq.camera_id: override_class for seq in all_seqs}
-    elif target_date is not None:
+        cam_ids = (await session.exec(select(Camera.id).where(Camera.organization_id == organization_id))).all()
+        return dict.fromkeys(cam_ids, override_class)
+    if target_date is not None:
         scores = await risk_service.get_scores_for_date(target_date, organization_id=organization_id)
-        class_per_camera = {seq.camera_id: scores.get(seq.camera_id) for seq in all_seqs}
-    else:
-        class_per_camera = {seq.camera_id: risk_service.class_for_camera(seq.camera_id) for seq in all_seqs}
-
-    kept_ids = {seq.id for seq in filter_by_class_per_camera(all_seqs, class_per_camera)}
-    kept_alerts: List[Alert] = []
-    for alert in alerts:
-        filtered = [seq for seq in seq_map.get(alert.id, []) if seq.id in kept_ids]
-        if filtered:
-            seq_map[alert.id] = filtered
-            kept_alerts.append(alert)
-    return kept_alerts
+        return {cid: cls for cid, cls in scores.items()}
+    return {cid: cls for cid, cls in risk_service.scores().items()}
 
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
@@ -159,20 +146,28 @@ async def fetch_latest_unlabeled_alerts(
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
-    alerts_stmt: Any = select(Alert).join(AlertSequence, cast(Any, AlertSequence.alert_id == Alert.id))
-    alerts_stmt = alerts_stmt.join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-    alerts_stmt = (
-        alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
+    classes = await _resolve_class_per_camera(session, token_payload.organization_id, override_class=risk_score)
+    seq_filter = max_conf_filter_clause(classes)
+
+    seq_match: Any = (
+        select(AlertSequence.alert_id)
+        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
         .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    )
+    if seq_filter is not None:
+        seq_match = seq_match.where(seq_filter)
+
+    alerts_stmt: Any = (
+        select(Alert)
+        .where(Alert.organization_id == token_payload.organization_id)
+        .where(cast(Any, Alert.id).in_(seq_match))
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
         .limit(15)
     )
-    alerts_res = await session.exec(alerts_stmt)
-    alerts = list(alerts_res.unique().all())
+    alerts = list((await session.exec(alerts_stmt)).all())
     alert_ids = [alert.id for alert in alerts]
-    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(alerts, seq_map, override_class=risk_score)
+    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids, seq_filter)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
@@ -193,25 +188,28 @@ async def fetch_alerts_from_date(
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
+    classes = await _resolve_class_per_camera(
+        session, token_payload.organization_id, target_date=from_date, override_class=risk_score
+    )
+    seq_filter = max_conf_filter_clause(classes)
+
     alerts_stmt: Any = (
         select(Alert)
         .where(Alert.organization_id == token_payload.organization_id)
         .where(func.date(Alert.started_at) == from_date)
-        .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
-        .limit(limit)
-        .offset(offset)
     )
-    alerts_res = await session.exec(alerts_stmt)
-    alerts = list(alerts_res.all())
+    if seq_filter is not None:
+        seq_match: Any = (
+            select(AlertSequence.alert_id)
+            .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+            .where(seq_filter)
+        )
+        alerts_stmt = alerts_stmt.where(cast(Any, Alert.id).in_(seq_match))
+    alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
+
+    alerts = list((await session.exec(alerts_stmt)).all())
     alert_ids = [alert.id for alert in alerts]
-    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(
-        alerts,
-        seq_map,
-        target_date=from_date,
-        organization_id=token_payload.organization_id,
-        override_class=risk_score,
-    )
+    seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids, seq_filter)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),

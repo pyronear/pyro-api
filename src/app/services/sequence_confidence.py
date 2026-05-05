@@ -10,13 +10,16 @@ from ast import literal_eval
 from typing import Dict, List, Union
 from typing import Sequence as TypingSequence
 
+from sqlalchemy import case, or_
+from sqlalchemy.sql import ColumnElement
+
 from app.models import Sequence
 from app.schemas.detections import BOX_PATTERN
 from app.services.risk import min_confidence_for_class
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["filter_by_class_per_camera", "max_conf_from_bboxes"]
+__all__ = ["filter_by_class_per_camera", "max_conf_filter_clause", "max_conf_from_bboxes"]
 
 
 def max_conf_from_bboxes(*bbox_strings: Union[str, None]) -> Union[float, None]:
@@ -38,6 +41,26 @@ def max_conf_from_bboxes(*bbox_strings: Union[str, None]) -> Union[float, None]:
             if best is None or conf > best:
                 best = float(conf)
     return best
+
+
+def max_conf_filter_clause(class_per_camera: Dict[int, Union[str, None]]) -> Union[ColumnElement[bool], None]:
+    """SQL ``WHERE`` clause keeping sequences whose ``max_conf`` passes their camera's threshold.
+
+    Returns ``None`` when no camera has an active threshold (caller should skip the filter).
+    Fail-open: rows with ``max_conf IS NULL`` are kept; cameras without an entry default to 0.
+    Collapses to a constant comparison when all active thresholds are equal (avoids a per-camera
+    ``CASE`` with one arm per camera).
+    """
+    thresholds = {
+        cid: t for cid, klass in class_per_camera.items() if (t := min_confidence_for_class(klass)) is not None
+    }
+    if not thresholds:
+        return None
+    distinct = set(thresholds.values())
+    if len(distinct) == 1:
+        return or_(Sequence.max_conf.is_(None), Sequence.max_conf >= distinct.pop())  # type: ignore[union-attr]
+    threshold_expr = case(*[(Sequence.camera_id == cid, t) for cid, t in thresholds.items()], else_=0.0)
+    return or_(Sequence.max_conf.is_(None), Sequence.max_conf >= threshold_expr)  # type: ignore[union-attr]
 
 
 def filter_by_class_per_camera(
