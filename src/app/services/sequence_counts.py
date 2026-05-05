@@ -17,7 +17,7 @@ async def get_detection_counts_by_sequence_ids(session: AsyncSession, sequence_i
         return {}
 
     stmt: Any = (
-        select(cast(Any, Detection.sequence_id), func.count(Detection.id))
+        select(cast(Any, Detection.sequence_id), func.count(cast(Any, Detection.id)))
         .where(cast(Any, Detection.sequence_id).in_(sequence_ids))
         .group_by(cast(Any, Detection.sequence_id))
     )

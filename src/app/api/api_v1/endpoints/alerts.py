@@ -151,11 +151,12 @@ async def fetch_latest_unlabeled_alerts(
     )
     seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
-    seq_match: Any = (
-        select(AlertSequence.alert_id)
-        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
-        .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    seq_match: Any = cast(
+        Any,
+        select(AlertSequence.alert_id).join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)),
+    )
+    seq_match = (
+        seq_match.where(Sequence.last_seen_at > utcnow() - timedelta(hours=24)).where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     )
     if seq_filter is not None:
         seq_match = seq_match.where(seq_filter)

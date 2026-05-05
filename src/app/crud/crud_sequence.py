@@ -26,7 +26,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         Uses a portable CASE expression so it runs on SQLite as well as Postgres.
         """
         max_conf_col = cast(Any, Sequence.max_conf)
-        bumped: Any = case(
+        bumped: Any = cast(Any, case)(
             (or_(max_conf_col.is_(None), max_conf_col < candidate), candidate),
             else_=max_conf_col,
         )
