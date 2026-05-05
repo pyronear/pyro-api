@@ -5,6 +5,7 @@
 
 
 from datetime import date, timedelta
+from enum import Enum
 from typing import Any, Dict, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
@@ -20,9 +21,25 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
-from app.services.sequence_confidence import filter_sequences_by_risk, filter_sequences_by_risk_for_date
+from app.services.sequence_confidence import (
+    filter_sequences_by_class,
+    filter_sequences_by_risk,
+    filter_sequences_by_risk_for_date,
+)
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
+
+
+class FwiClass(str, Enum):
+    """FWI classes accepted as a manual ``risk_score`` override."""
+
+    very_low = "very_low"
+    low = "low"
+    moderate = "moderate"
+    high = "high"
+    very_high = "very_high"
+    extreme = "extreme"
+
 
 router = APIRouter()
 
@@ -53,14 +70,19 @@ async def _apply_risk_filter_to_alerts(
     seq_map: Dict[int, List[Sequence]],
     target_date: Union[date, None] = None,
     organization_id: Union[int, None] = None,
+    override_class: Union[str, None] = None,
 ) -> List[Alert]:
     """Drop sequences below the risk threshold and alerts that end up empty.
 
-    When ``target_date`` is provided, look up the FWI class persisted for that day
-    (scoped to ``organization_id`` if given); otherwise use today's cached value.
+    When ``override_class`` is provided, that single FWI class is applied to every
+    sequence (no risk-api lookup). Otherwise: ``target_date`` triggers a per-date
+    risk-api call (scoped to ``organization_id`` if given); without it we use today's
+    cached value.
     """
     all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
-    if target_date is None:
+    if override_class is not None:
+        kept_seqs = filter_sequences_by_class(all_sequences, override_class)
+    elif target_date is None:
         kept_seqs = filter_sequences_by_risk(all_sequences)
     else:
         kept_seqs = await filter_sequences_by_risk_for_date(all_sequences, target_date, organization_id=organization_id)
@@ -140,6 +162,10 @@ async def fetch_alert_sequences(
     summary="Fetch all the alerts with unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_alerts(
+    risk_score: Union[FwiClass, None] = Query(
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup.",
+    ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
@@ -158,7 +184,9 @@ async def fetch_latest_unlabeled_alerts(
     alerts = list(alerts_res.unique().all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(alerts, seq_map)
+    alerts = await _apply_risk_filter_to_alerts(
+        alerts, seq_map, override_class=risk_score.value if risk_score is not None else None
+    )
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
@@ -171,6 +199,10 @@ async def fetch_alerts_from_date(
     from_date: date = Query(),
     limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
+    risk_score: Union[FwiClass, None] = Query(
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup.",
+    ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
@@ -189,7 +221,11 @@ async def fetch_alerts_from_date(
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
     alerts = await _apply_risk_filter_to_alerts(
-        alerts, seq_map, target_date=from_date, organization_id=token_payload.organization_id
+        alerts,
+        seq_map,
+        target_date=from_date,
+        organization_id=token_payload.organization_id,
+        override_class=risk_score.value if risk_score is not None else None,
     )
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,

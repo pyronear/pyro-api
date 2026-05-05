@@ -111,6 +111,21 @@ async def test_unlabeled_latest_keeps_all_when_class_is_moderate(
     assert low_seq.id in {item["id"] for item in response.json()}
 
 
+async def _seed_alert_with_sequence(session: AsyncSession, organization_id: int, seq: Sequence) -> Alert:
+    now = utcnow()
+    alert = Alert(
+        organization_id=organization_id,
+        started_at=now - timedelta(minutes=20),
+        last_seen_at=now - timedelta(minutes=19),
+    )
+    session.add(alert)
+    await session.commit()
+    await session.refresh(alert)
+    session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+    await session.commit()
+    return alert
+
+
 @pytest.mark.asyncio
 async def test_alerts_unlabeled_latest_drops_alert_when_all_seqs_below_threshold(
     async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
@@ -118,18 +133,7 @@ async def test_alerts_unlabeled_latest_drops_alert_when_all_seqs_below_threshold
     camera_id = pytest.camera_table[1]["id"]  # belongs to org 2 (user_idx 2)
     pose_id = pytest.pose_table[2]["id"]
     seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
-
-    now = utcnow()
-    alert = Alert(
-        organization_id=2,
-        started_at=now - timedelta(minutes=20),
-        last_seen_at=now - timedelta(minutes=19),
-    )
-    detection_session.add(alert)
-    await detection_session.commit()
-    await detection_session.refresh(alert)
-    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
-    await detection_session.commit()
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
     risk_service._scores = {camera_id: "low"}
 
@@ -141,3 +145,60 @@ async def test_alerts_unlabeled_latest_drops_alert_when_all_seqs_below_threshold
     response = await async_client.get("/alerts/unlabeled/latest", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
     assert alert.id not in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_risk_score_override(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+
+    # Risk-api would say "moderate" (no filter), but the override forces "low" -> 0.45 threshold drops it.
+    risk_service._scores = {camera_id: "moderate"}
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/alerts/unlabeled/latest?risk_score=low", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert alert.id not in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_risk_score_moderate_keeps_everything(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20)
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+
+    # Cache says very_low (would drop everything), but the override forces moderate.
+    risk_service._scores = {camera_id: "very_low"}
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/alerts/unlabeled/latest?risk_score=moderate", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert alert.id in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_risk_score_invalid_value_returns_422(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/alerts/unlabeled/latest?risk_score=bogus", headers=auth)
+    assert response.status_code == 422

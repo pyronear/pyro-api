@@ -18,6 +18,7 @@ from app.services.risk import min_confidence_for_class, risk_service
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = [
+    "filter_sequences_by_class",
     "filter_sequences_by_risk",
     "filter_sequences_by_risk_for_date",
     "max_conf_from_bboxes",
@@ -58,6 +59,24 @@ def _filter_sequences(
         if threshold is None or seq.max_conf is None or seq.max_conf >= threshold:
             kept.append(seq)
     return kept
+
+
+def filter_sequences_by_class(
+    sequences: TypingSequence[Sequence],
+    fwi_class: Union[str, None],
+) -> List[Sequence]:
+    """Apply a single FWI class threshold to every sequence, regardless of camera.
+
+    Used when callers pass an explicit ``risk_score`` override instead of consulting
+    the risk-api. ``moderate``/``high``/etc. yield no filtering (returns the input).
+    """
+    if not sequences:
+        return []
+    threshold = min_confidence_for_class(fwi_class)
+    if threshold is None:
+        return list(sequences)
+    thresholds: Dict[int, Union[float, None]] = {seq.camera_id: threshold for seq in sequences}
+    return _filter_sequences(sequences, thresholds)
 
 
 def filter_sequences_by_risk(sequences: TypingSequence[Sequence]) -> List[Sequence]:
