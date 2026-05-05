@@ -432,6 +432,9 @@ async def create_detection(
         if matched_sequence is not None:
             await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
             det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
+            det_max_conf = max_conf_from_bboxes(det.bbox, det.others_bboxes)
+            if det_max_conf is not None:
+                await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -460,6 +463,10 @@ async def create_detection(
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
                 first_det = min(overlapping_dets, key=lambda item: item.created_at)
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
+                seq_max_conf = max_conf_from_bboxes(
+                    *[d.bbox for d in overlapping_dets],
+                    *[d.others_bboxes for d in overlapping_dets],
+                )
                 sequence_ = await sequences.create(
                     Sequence(
                         camera_id=token_payload.sub,
@@ -469,6 +476,7 @@ async def create_detection(
                         cone_angle=cone_angle,
                         started_at=first_det.created_at,
                         last_seen_at=det.created_at,
+                        max_conf=seq_max_conf,
                     )
                 )
                 for det_ in overlapping_dets:
@@ -496,13 +504,7 @@ async def create_detection(
                         org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.slack_hook:
                         min_conf = risk_service.min_confidence(camera.id)
-                        seq_max_conf: Optional[float] = None
-                        if min_conf is not None:
-                            seq_max_conf = max_conf_from_bboxes(
-                                *[d.bbox for d in overlapping_dets],
-                                *[d.others_bboxes for d in overlapping_dets],
-                            )
-                        if min_conf is None or seq_max_conf is None or seq_max_conf >= min_conf:
+                        if min_conf is None or sequence_.max_conf is None or sequence_.max_conf >= min_conf:
                             slack_payload = jsonable_encoder(det)
                             slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
                             background_tasks.add_task(
@@ -512,7 +514,7 @@ async def create_detection(
                             logger.info(
                                 "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
                                 camera.name,
-                                seq_max_conf,
+                                sequence_.max_conf,
                                 min_conf,
                             )
 
