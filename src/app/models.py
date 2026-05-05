@@ -104,6 +104,9 @@ class Sequence(SQLModel, table=True):
     cone_angle: Union[float, None] = Field(None, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
+    # Highest detection confidence ever attached to this sequence.
+    # Monotonic: never recomputed downward when detections are deleted/reassigned.
+    max_conf: Union[float, None] = Field(None, nullable=True)
 
 
 class Alert(SQLModel, table=True):
