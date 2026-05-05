@@ -296,7 +296,7 @@ async def label_sequence(
         )
         alert_ids = list(alert_ids_res.all())
         if alert_ids:
-            delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+            delete_links = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
             await session.exec(delete_links)
             await session.commit()
             for aid in alert_ids:
