@@ -116,6 +116,65 @@ async def test_unlabeled_latest_keeps_all_when_class_is_moderate_or_above(
     assert low_seq.id in {item["id"] for item in response.json()}
 
 
+@pytest.mark.asyncio
+async def test_unlabeled_latest_keeps_seq_with_null_max_conf_under_filter(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """Sequences with NULL max_conf (legacy / unparseable bbox) must pass even under an active filter."""
+    camera_id = pytest.camera_table[0]["id"]
+    pose_id = pytest.pose_table[0]["id"]
+    null_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=None, minutes_ago=20)  # type: ignore[arg-type]
+
+    risk_service._scores = {camera_id: "low"}  # 0.45 threshold, would normally drop
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert null_seq.id in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_unlabeled_latest_keeps_seq_for_camera_unknown_to_risk_api(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """A camera absent from the risk-api cache stays unfiltered even when sibling cameras are filtered."""
+    known_cam = pytest.camera_table[0]["id"]
+    unknown_cam = pytest.camera_table[1]["id"]
+    known_pose = pytest.pose_table[0]["id"]
+    unknown_pose = pytest.pose_table[2]["id"]
+
+    # Cache only knows about ``known_cam`` and flags it ``low`` (0.45 threshold).
+    # ``unknown_cam`` has no entry -> CASE else_=0.0 -> any max_conf passes.
+    risk_service._scores = {known_cam: "low"}
+
+    known_dropped = await _seed_unlabeled_sequence(detection_session, known_cam, known_pose, max_conf=0.20)
+    unknown_kept = await _seed_unlabeled_sequence(detection_session, unknown_cam, unknown_pose, max_conf=0.10)
+
+    # known_cam belongs to org 1; unknown_cam belongs to org 2 -> query both orgs.
+    auth_org1 = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    auth_org2 = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+
+    resp1 = await async_client.get("/sequences/unlabeled/latest", headers=auth_org1)
+    assert resp1.status_code == 200, print(resp1.__dict__)
+    assert known_dropped.id not in {item["id"] for item in resp1.json()}
+
+    resp2 = await async_client.get("/sequences/unlabeled/latest", headers=auth_org2)
+    assert resp2.status_code == 200, print(resp2.__dict__)
+    assert unknown_kept.id in {item["id"] for item in resp2.json()}
+
+
 async def _seed_alert_with_sequence(session: AsyncSession, organization_id: int, seq: Sequence) -> Alert:
     now = utcnow()
     alert = Alert(
