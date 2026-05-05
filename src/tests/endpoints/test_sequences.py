@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,11 +8,53 @@ from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints.sequences import label_sequence
+from app.api.api_v1.endpoints.sequences import (
+    fetch_latest_unlabeled_sequences,
+    fetch_sequences_from_date,
+    label_sequence,
+)
 from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
+
+
+class _ExecResult:
+    def __init__(self, rows) -> None:
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
+class _FakeSequenceSession:
+    def __init__(self, *results) -> None:
+        self._results = list(results)
+        self.statements = []
+
+    async def exec(self, stmt):
+        self.statements.append(stmt)
+        return self._results.pop(0)
+
+
+def _unit_sequence(sequence_id: int = 101, camera_id: int = 1, max_conf: float = 0.75) -> Sequence:
+    now = utcnow()
+    return Sequence(
+        id=sequence_id,
+        camera_id=camera_id,
+        pose_id=1,
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=20),
+        last_seen_at=now - timedelta(minutes=5),
+        max_conf=max_conf,
+    )
+
+
+def _unit_token(organization_id: int = 1) -> TokenPayload:
+    return TokenPayload(sub=1, scopes=[UserRole.USER], organization_id=organization_id)
 
 
 @pytest.mark.parametrize(
@@ -678,3 +720,76 @@ async def test_unit_label_sequence_forbidden_for_wrong_org():
         )
 
     assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_unit_fetch_latest_unlabeled_sequences_uses_risk_score_override():
+    sequence = _unit_sequence(sequence_id=201, camera_id=1, max_conf=0.55)
+    session = _FakeSequenceSession(_ExecResult([1]), _ExecResult([sequence]))
+    counts_mock = AsyncMock(return_value={sequence.id: 4})
+
+    with patch("app.api.api_v1.endpoints.sequences.get_detection_counts_by_sequence_ids", new=counts_mock):
+        result = await fetch_latest_unlabeled_sequences(
+            risk_score="low",
+            session=session,
+            token_payload=_unit_token(),
+        )
+
+    assert len(session.statements) == 2
+    counts_mock.assert_awaited_once_with(session, [sequence.id])
+    assert [item.id for item in result] == [sequence.id]
+    assert result[0].detections_count == 4
+
+
+@pytest.mark.asyncio
+async def test_unit_fetch_sequences_from_date_gets_risk_scores_for_requested_date():
+    target_date = date(2026, 5, 5)
+    sequence = _unit_sequence(sequence_id=202, camera_id=1, max_conf=0.65)
+    session = _FakeSequenceSession(_ExecResult([1]), _ExecResult([sequence]))
+    risk_scores_mock = AsyncMock(return_value={1: "very_low"})
+    counts_mock = AsyncMock(return_value={sequence.id: 2})
+
+    with (
+        patch("app.api.api_v1.endpoints.sequences.risk_service.get_scores_for_date", new=risk_scores_mock),
+        patch("app.api.api_v1.endpoints.sequences.get_detection_counts_by_sequence_ids", new=counts_mock),
+    ):
+        result = await fetch_sequences_from_date(
+            from_date=target_date,
+            limit=10,
+            offset=0,
+            risk_score=None,
+            session=session,
+            token_payload=_unit_token(),
+        )
+
+    risk_scores_mock.assert_awaited_once_with(target_date, organization_id=1)
+    counts_mock.assert_awaited_once_with(session, [sequence.id])
+    assert [item.id for item in result] == [sequence.id]
+    assert result[0].detections_count == 2
+
+
+@pytest.mark.asyncio
+async def test_unit_fetch_sequences_from_date_risk_score_override_bypasses_risk_api():
+    target_date = date(2026, 5, 5)
+    sequence = _unit_sequence(sequence_id=203, camera_id=1, max_conf=0.50)
+    session = _FakeSequenceSession(_ExecResult([1]), _ExecResult([sequence]))
+    risk_scores_mock = AsyncMock()
+    counts_mock = AsyncMock(return_value={sequence.id: 1})
+
+    with (
+        patch("app.api.api_v1.endpoints.sequences.risk_service.get_scores_for_date", new=risk_scores_mock),
+        patch("app.api.api_v1.endpoints.sequences.get_detection_counts_by_sequence_ids", new=counts_mock),
+    ):
+        result = await fetch_sequences_from_date(
+            from_date=target_date,
+            limit=10,
+            offset=0,
+            risk_score="low",
+            session=session,
+            token_payload=_unit_token(),
+        )
+
+    risk_scores_mock.assert_not_awaited()
+    counts_mock.assert_awaited_once_with(session, [sequence.id])
+    assert [item.id for item in result] == [sequence.id]
+    assert result[0].detections_count == 1
