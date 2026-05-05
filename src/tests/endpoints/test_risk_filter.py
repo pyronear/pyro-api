@@ -202,3 +202,35 @@ async def test_alerts_unlabeled_latest_risk_score_invalid_value_returns_422(
     )
     response = await async_client.get("/alerts/unlabeled/latest?risk_score=bogus", headers=auth)
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_sequences_fromdate_pagination_filters_before_limit(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """A page must come back full when the filter would otherwise consume the whole limit."""
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    target_date = utcnow().date().isoformat()
+
+    # 2 below threshold + 3 above. With LIMIT 3, naive post-filter would return at most 1.
+    for max_conf, minutes_ago in [(0.10, 50), (0.20, 45), (0.50, 40), (0.60, 35), (0.80, 30)]:
+        await _seed_unlabeled_sequence(
+            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago
+        )
+
+    risk_service._scores = {camera_id: "low"}  # threshold 0.45
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/all/fromdate?from_date={target_date}&limit=3", headers=auth
+    )
+    assert response.status_code == 200, print(response.__dict__)
+    page = response.json()
+    assert len(page) == 3
+    assert all(seq["max_conf"] >= 0.45 for seq in page)
