@@ -6,12 +6,12 @@
 import pytest
 
 from app.core.config import settings
-from app.services.risk import RiskService, min_confidence_for_class
+from app.services.risk import FWI_MIN_CONF, RiskService, min_confidence_for_class
 
 
 def test_min_confidence_for_class():
-    assert min_confidence_for_class("very_low") == settings.FWI_VERY_LOW_MIN_CONF
-    assert min_confidence_for_class("low") == settings.FWI_LOW_MIN_CONF
+    assert min_confidence_for_class("very_low") == FWI_MIN_CONF["very_low"]
+    assert min_confidence_for_class("low") == FWI_MIN_CONF["low"]
     assert min_confidence_for_class("moderate") is None
     assert min_confidence_for_class("high") is None
     assert min_confidence_for_class("very_high") is None
@@ -21,16 +21,16 @@ def test_min_confidence_for_class():
 
 
 def test_min_confidence_for_class_normalizes_casing():
-    assert min_confidence_for_class("Very Low") == settings.FWI_VERY_LOW_MIN_CONF
-    assert min_confidence_for_class("LOW") == settings.FWI_LOW_MIN_CONF
-    assert min_confidence_for_class("  very_low  ") == settings.FWI_VERY_LOW_MIN_CONF
+    assert min_confidence_for_class("Very Low") == FWI_MIN_CONF["very_low"]
+    assert min_confidence_for_class("LOW") == FWI_MIN_CONF["low"]
+    assert min_confidence_for_class("  very_low  ") == FWI_MIN_CONF["very_low"]
 
 
 def test_risk_service_min_confidence_uses_cached_class():
     service = RiskService()
     service._scores = {1: "very_low", 2: "low", 3: "moderate"}
-    assert service.min_confidence(1) == settings.FWI_VERY_LOW_MIN_CONF
-    assert service.min_confidence(2) == settings.FWI_LOW_MIN_CONF
+    assert service.min_confidence(1) == FWI_MIN_CONF["very_low"]
+    assert service.min_confidence(2) == FWI_MIN_CONF["low"]
     assert service.min_confidence(3) is None
     assert service.min_confidence(99) is None
 

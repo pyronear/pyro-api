@@ -82,15 +82,6 @@ class Settings(BaseSettings):
     RISK_API_LOGIN: Union[str, None] = os.environ.get("RISK_API_LOGIN")
     RISK_API_PWD: Union[str, None] = os.environ.get("RISK_API_PWD")
     RISK_REFRESH_HOUR_UTC: int = int(os.environ.get("RISK_REFRESH_HOUR_UTC") or 4)
-    FWI_LOW_MIN_CONF: float = float(os.environ.get("FWI_LOW_MIN_CONF") or 0.45)
-    FWI_VERY_LOW_MIN_CONF: float = float(os.environ.get("FWI_VERY_LOW_MIN_CONF") or 0.6)
-
-    @field_validator("FWI_LOW_MIN_CONF", "FWI_VERY_LOW_MIN_CONF")
-    @classmethod
-    def fwi_min_conf_in_unit_range(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError("FWI confidence thresholds must lie in [0, 1]")
-        return v
 
     # Error monitoring
     SENTRY_DSN: Union[str, None] = os.environ.get("SENTRY_DSN")

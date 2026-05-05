@@ -5,7 +5,7 @@
 
 import logging
 from datetime import date
-from typing import Union
+from typing import Literal, Union
 
 import httpx
 
@@ -13,15 +13,29 @@ from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["min_confidence_for_class", "risk_service"]
+__all__ = ["FWI_MIN_CONF", "FwiClass", "min_confidence_for_class", "risk_service"]
+
+# FWI classes accepted by the risk-api and as a manual ``risk_score`` override.
+FwiClass = Literal["very_low", "low", "moderate", "high", "very_high", "extreme"]
+
+# Minimum sequence ``max_conf`` required per FWI class. Zero or absent → no filter.
+# All EFFIS classes are listed even when unused so the table stays explicit and easy to tune.
+FWI_MIN_CONF: dict[str, float] = {
+    "very_low": 0.6,
+    "low": 0.45,
+    "moderate": 0.0,
+    "high": 0.0,
+    "very_high": 0.0,
+    "extreme": 0.0,
+}
 
 
 def min_confidence_for_class(fwi_class: Union[str, None]) -> Union[float, None]:
     """Return the min confidence required for this FWI class, or None if no filter applies."""
     if not fwi_class:
         return None
-    table = {"very_low": settings.FWI_VERY_LOW_MIN_CONF, "low": settings.FWI_LOW_MIN_CONF}
-    return table.get(fwi_class.strip().lower().replace(" ", "_"))
+    threshold = FWI_MIN_CONF.get(fwi_class.strip().lower().replace(" ", "_"))
+    return threshold or None
 
 
 def _parse_scores_payload(payload: object) -> dict[int, str]:
@@ -56,6 +70,10 @@ class RiskService:
     def class_for_camera(self, camera_id: int) -> Union[str, None]:
         """Return today's cached FWI class for a camera, or None if unknown."""
         return self._scores.get(camera_id)
+
+    def scores(self) -> dict[int, str]:
+        """Return a copy of the full ``{camera_id: fwi_class}`` cache."""
+        return dict(self._scores)
 
     def min_confidence(self, camera_id: int) -> Union[float, None]:
         """Return the min confidence required for this camera (today), or None if no filter."""
