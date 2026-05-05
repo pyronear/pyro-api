@@ -10,7 +10,7 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.time import utcnow
-from app.models import Alert, AlertSequence, Detection, Sequence
+from app.models import Alert, AlertSequence, Sequence
 from app.services.risk import risk_service
 
 
@@ -26,7 +26,7 @@ async def _seed_unlabeled_sequence(
     session: AsyncSession,
     camera_id: int,
     pose_id: int,
-    bbox: str,
+    max_conf: float,
     minutes_ago: int = 30,
 ) -> Sequence:
     now = utcnow()
@@ -39,22 +39,11 @@ async def _seed_unlabeled_sequence(
         is_wildfire=None,
         started_at=now - timedelta(minutes=minutes_ago),
         last_seen_at=now - timedelta(minutes=minutes_ago - 1),
+        max_conf=max_conf,
     )
     session.add(seq)
     await session.commit()
     await session.refresh(seq)
-    session.add(
-        Detection(
-            camera_id=camera_id,
-            pose_id=pose_id,
-            sequence_id=seq.id,
-            bucket_key=f"risk-test-{seq.id}.jpg",
-            bbox=bbox,
-            others_bboxes=None,
-            created_at=now - timedelta(minutes=minutes_ago - 1),
-        )
-    )
-    await session.commit()
     return seq
 
 
@@ -64,8 +53,8 @@ async def test_unlabeled_latest_drops_low_conf_when_camera_is_low_risk(
 ):
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, "[(.1,.1,.7,.8,.40)]", 30)
-    high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, "[(.1,.1,.7,.8,.55)]", 20)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.40, minutes_ago=30)
+    high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=20)
 
     risk_service._scores = {camera_id: "low"}
 
@@ -88,7 +77,7 @@ async def test_unlabeled_latest_drops_below_very_low_threshold(
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
     # 0.55 passes the low threshold (0.45) but fails very_low (0.6)
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, "[(.1,.1,.7,.8,.55)]", 25)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=25)
 
     risk_service._scores = {camera_id: "very_low"}
 
@@ -108,7 +97,7 @@ async def test_unlabeled_latest_keeps_all_when_class_is_moderate(
 ):
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, "[(.1,.1,.7,.8,.10)]", 30)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=30)
 
     risk_service._scores = {camera_id: "moderate"}
 
@@ -128,7 +117,7 @@ async def test_alerts_unlabeled_latest_drops_alert_when_all_seqs_below_threshold
 ):
     camera_id = pytest.camera_table[1]["id"]  # belongs to org 2 (user_idx 2)
     pose_id = pytest.pose_table[2]["id"]
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, "[(.1,.1,.7,.8,.30)]", 20)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
 
     now = utcnow()
     alert = Alert(

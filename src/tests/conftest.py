@@ -199,6 +199,7 @@ SEQ_TABLE = [
         "cone_angle": 54.8,
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+        "max_conf": None,
     },
     {
         "id": 2,
@@ -210,6 +211,7 @@ SEQ_TABLE = [
         "cone_angle": 54.8,
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "max_conf": None,
     },
 ]
 
