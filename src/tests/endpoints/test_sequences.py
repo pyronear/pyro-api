@@ -448,6 +448,61 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
 
 
 @pytest.mark.asyncio
+async def test_sequence_label_keeps_solo_alert(async_client: AsyncClient, detection_session: AsyncSession):
+    # A sequence alone in its alert should keep that alert as-is when labeled non-wildfire.
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    now = utcnow()
+    seq = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        camera_azimuth=180.0,
+        sequence_azimuth=170.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=10),
+    )
+    detection_session.add(seq)
+    await detection_session.commit()
+    await detection_session.refresh(seq)
+
+    alert = Alert(
+        organization_id=camera.organization_id,
+        lat=1.0,
+        lon=2.0,
+        started_at=seq.started_at,
+        last_seen_at=seq.last_seen_at,
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+    await detection_session.commit()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    original_alert_id = alert.id
+
+    resp = await async_client.patch(
+        f"/sequences/{seq.id}/label",
+        json={"is_wildfire": SequenceLabel(is_wildfire="other_smoke").is_wildfire},
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+
+    alerts_res = await detection_session.exec(select(Alert).execution_options(populate_existing=True))
+    alerts_rows = alerts_res.all()
+    assert [row.id for row in alerts_rows] == [original_alert_id]
+
+    mappings_res = await detection_session.exec(
+        select(AlertSequence.alert_id, AlertSequence.sequence_id).execution_options(populate_existing=True)
+    )
+    assert {(aid, sid) for aid, sid in mappings_res.all()} == {(original_alert_id, seq.id)}
+
+
+@pytest.mark.asyncio
 async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncClient, detection_session: AsyncSession):
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
@@ -619,11 +674,12 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_alerts_crud = AsyncMock()
     mock_alerts_crud.create.return_value = MagicMock(id=99)  # New alert created
 
-    # Mock for session.exec to return an alert_id
+    # Mock for session.exec to return an alert_id, then a sibling sequence id, then delete
     mock_session = AsyncMock()
     mock_session.add = MagicMock()  # .add is synchronous
     mock_exec_result = MagicMock()
     mock_exec_result.all.return_value = [101]  # Belongs to alert 101
+    mock_exec_result.first.return_value = 2  # Sibling sequence id exists in alert 101
     mock_session.exec.return_value = mock_exec_result
 
     mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.AGENT], organization_id=1)
@@ -644,9 +700,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_sequences_crud.get.assert_called_once_with(1, strict=True)
     mock_sequences_crud.update.assert_called_once_with(1, payload)
 
-    # Verify it was removed from the old alert and the alert was refreshed
-    # Two session.exec calls: one to get alert_ids, one to delete links
-    assert mock_session.exec.call_count == 2
+    # Three session.exec calls: alert_ids lookup, siblings probe, delete links
+    assert mock_session.exec.call_count == 3
     mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud)
 
     # Verify a new alert was created for this sequence
@@ -654,6 +709,58 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     # Verify the new alert link was added
     mock_session.add.assert_called_once()
 
+    assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
+
+
+@pytest.mark.asyncio
+@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+async def test_unit_label_sequence_solo_alert_keeps_alert(
+    mock_refresh_alert_state: AsyncMock,
+):
+    """Labeling a sequence as non-wildfire when it is alone in its alert must not
+    detach it, refresh the alert, or create a replacement — the alert id must stay stable."""
+    mock_sequence = Sequence(id=1, camera_id=1, is_wildfire=None, started_at=utcnow(), last_seen_at=utcnow())
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+    mock_sequences_crud.update.return_value = Sequence(
+        id=1,
+        camera_id=1,
+        is_wildfire=AnnotationType.OTHER_SMOKE,
+        started_at=mock_sequence.started_at,
+        last_seen_at=mock_sequence.last_seen_at,
+    )
+
+    mock_cameras_crud = AsyncMock()
+    mock_alerts_crud = AsyncMock()
+
+    # Two exec calls: alert_ids -> [101], siblings -> None (no other sequence in the alert)
+    alert_ids_result = MagicMock()
+    alert_ids_result.all.return_value = [101]
+    siblings_result = MagicMock()
+    siblings_result.first.return_value = None
+
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    mock_session.exec.side_effect = [alert_ids_result, siblings_result]
+
+    mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.ADMIN], organization_id=1)
+    payload = SequenceLabel(is_wildfire=AnnotationType.OTHER_SMOKE)
+
+    updated_sequence = await label_sequence(
+        payload=payload,
+        sequence_id=1,
+        cameras=mock_cameras_crud,
+        sequences=mock_sequences_crud,
+        alerts=mock_alerts_crud,
+        session=mock_session,
+        token_payload=mock_token_payload,
+    )
+
+    assert mock_session.exec.call_count == 2
+    mock_refresh_alert_state.assert_not_called()
+    mock_alerts_crud.create.assert_not_called()
+    mock_session.add.assert_not_called()
     assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
 
 
