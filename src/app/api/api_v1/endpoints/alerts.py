@@ -5,8 +5,7 @@
 
 
 from datetime import date, timedelta
-from enum import Enum
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Literal, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlalchemy import asc, desc
@@ -21,24 +20,13 @@ from app.models import Alert, AlertSequence, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
-from app.services.sequence_confidence import (
-    filter_sequences_by_class,
-    filter_sequences_by_risk,
-    filter_sequences_by_risk_for_date,
-)
+from app.services.risk import risk_service
+from app.services.sequence_confidence import filter_by_class_per_camera
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
-
-class FwiClass(str, Enum):
-    """FWI classes accepted as a manual ``risk_score`` override."""
-
-    very_low = "very_low"
-    low = "low"
-    moderate = "moderate"
-    high = "high"
-    very_high = "very_high"
-    extreme = "extreme"
+# FWI classes accepted as a manual ``risk_score`` override on the listing endpoints.
+FwiClass = Literal["very_low", "low", "moderate", "high", "very_high", "extreme"]
 
 
 router = APIRouter()
@@ -74,19 +62,20 @@ async def _apply_risk_filter_to_alerts(
 ) -> List[Alert]:
     """Drop sequences below the risk threshold and alerts that end up empty.
 
-    When ``override_class`` is provided, that single FWI class is applied to every
-    sequence (no risk-api lookup). Otherwise: ``target_date`` triggers a per-date
-    risk-api call (scoped to ``organization_id`` if given); without it we use today's
-    cached value.
+    Resolution priority for the per-camera FWI class:
+    ``override_class`` (single value applied to all cameras) → risk-api ``/scores/{date}``
+    when ``target_date`` is set → today's RAM cache.
     """
-    all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
+    all_seqs = [seq for seqs in seq_map.values() for seq in seqs]
     if override_class is not None:
-        kept_seqs = filter_sequences_by_class(all_sequences, override_class)
-    elif target_date is None:
-        kept_seqs = filter_sequences_by_risk(all_sequences)
+        class_per_camera: Dict[int, Union[str, None]] = {seq.camera_id: override_class for seq in all_seqs}
+    elif target_date is not None:
+        scores = await risk_service.get_scores_for_date(target_date, organization_id=organization_id)
+        class_per_camera = {seq.camera_id: scores.get(seq.camera_id) for seq in all_seqs}
     else:
-        kept_seqs = await filter_sequences_by_risk_for_date(all_sequences, target_date, organization_id=organization_id)
-    kept_ids = {seq.id for seq in kept_seqs}
+        class_per_camera = {seq.camera_id: risk_service.class_for_camera(seq.camera_id) for seq in all_seqs}
+
+    kept_ids = {seq.id for seq in filter_by_class_per_camera(all_seqs, class_per_camera)}
     kept_alerts: List[Alert] = []
     for alert in alerts:
         filtered = [seq for seq in seq_map.get(alert.id, []) if seq.id in kept_ids]
@@ -163,8 +152,7 @@ async def fetch_alert_sequences(
 )
 async def fetch_latest_unlabeled_alerts(
     risk_score: Union[FwiClass, None] = Query(
-        None,
-        description="Override FWI class applied to every sequence; bypasses risk-api lookup.",
+        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -184,9 +172,7 @@ async def fetch_latest_unlabeled_alerts(
     alerts = list(alerts_res.unique().all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(
-        alerts, seq_map, override_class=risk_score.value if risk_score is not None else None
-    )
+    alerts = await _apply_risk_filter_to_alerts(alerts, seq_map, override_class=risk_score)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
@@ -200,8 +186,7 @@ async def fetch_alerts_from_date(
     limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None,
-        description="Override FWI class applied to every sequence; bypasses risk-api lookup.",
+        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
@@ -225,7 +210,7 @@ async def fetch_alerts_from_date(
         seq_map,
         target_date=from_date,
         organization_id=token_payload.organization_id,
-        override_class=risk_score.value if risk_score is not None else None,
+        override_class=risk_score,
     )
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,

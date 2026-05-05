@@ -15,21 +15,26 @@ logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["min_confidence_for_class", "risk_service"]
 
-# EFFIS classes that should trigger filtering. Anything else (moderate+) → no filter.
-_LOW = "low"
-_VERY_LOW = "very_low"
-
 
 def min_confidence_for_class(fwi_class: Union[str, None]) -> Union[float, None]:
     """Return the min confidence required for this FWI class, or None if no filter applies."""
     if not fwi_class:
         return None
-    normalized = fwi_class.strip().lower().replace(" ", "_")
-    if normalized == _VERY_LOW:
-        return settings.FWI_VERY_LOW_MIN_CONF
-    if normalized == _LOW:
-        return settings.FWI_LOW_MIN_CONF
-    return None
+    table = {"very_low": settings.FWI_VERY_LOW_MIN_CONF, "low": settings.FWI_LOW_MIN_CONF}
+    return table.get(fwi_class.strip().lower().replace(" ", "_"))
+
+
+def _parse_scores_payload(payload: object) -> dict[int, str]:
+    """Pull ``{camera_id: fwi_class}`` from a list of risk-api items. Skip malformed rows."""
+    if not isinstance(payload, list):
+        return {}
+    scores: dict[int, str] = {}
+    for item in payload:
+        cid = item.get("id") or item.get("camera_id")
+        fwi = item.get("fwi_class")
+        if isinstance(cid, int) and isinstance(fwi, str):
+            scores[cid] = fwi
+    return scores
 
 
 class RiskService:
@@ -46,11 +51,15 @@ class RiskService:
     def is_configured(self) -> bool:
         return bool(settings.RISK_API_URL and settings.RISK_API_LOGIN and settings.RISK_API_PWD)
 
+    def class_for_camera(self, camera_id: int) -> Union[str, None]:
+        """Return today's cached FWI class for a camera, or None if unknown."""
+        return self._scores.get(camera_id)
+
     def min_confidence(self, camera_id: int) -> Union[float, None]:
         """Return the min confidence required for this camera (today), or None if no filter."""
         return min_confidence_for_class(self._scores.get(camera_id))
 
-    async def _fetch(self, path: str, params: Union[dict, None] = None) -> Union[list, dict, None]:
+    async def _fetch(self, path: str, params: Union[dict, None] = None) -> object:
         if not self.is_configured:
             return None
         host = settings.RISK_API_URL.rstrip("/")  # type: ignore[union-attr]
@@ -69,17 +78,10 @@ class RiskService:
 
     async def refresh(self) -> None:
         """Fetch fresh FWI classes from the risk API. On error, keep the previous cache."""
-        payload = await self._fetch("cameras")
-        if not isinstance(payload, list):
+        scores = _parse_scores_payload(await self._fetch("cameras"))
+        if not scores:
             logger.warning("Risk API refresh: keeping previous cache (%d entries)", len(self._scores))
             return
-
-        scores: dict[int, str] = {}
-        for item in payload:
-            camera_id = item.get("id")
-            fwi_class = item.get("fwi_class")
-            if isinstance(camera_id, int) and isinstance(fwi_class, str):
-                scores[camera_id] = fwi_class
         self._scores = scores
         logger.info("Risk API refresh: cached FWI class for %d camera(s)", len(scores))
 
@@ -88,17 +90,8 @@ class RiskService:
 
         Returns {} on error or when not configured.
         """
-        params: Union[dict, None] = {"organization_id": organization_id} if organization_id is not None else None
-        payload = await self._fetch(f"scores/{target_date.isoformat()}", params=params)
-        if not isinstance(payload, list):
-            return {}
-        scores: dict[int, str] = {}
-        for item in payload:
-            camera_id = item.get("id") or item.get("camera_id")
-            fwi_class = item.get("fwi_class")
-            if isinstance(camera_id, int) and isinstance(fwi_class, str):
-                scores[camera_id] = fwi_class
-        return scores
+        params = {"organization_id": organization_id} if organization_id is not None else None
+        return _parse_scores_payload(await self._fetch(f"scores/{target_date.isoformat()}", params=params))
 
 
 risk_service = RiskService()

@@ -7,22 +7,16 @@
 import logging
 import re
 from ast import literal_eval
-from datetime import date
 from typing import Dict, List, Union
 from typing import Sequence as TypingSequence
 
 from app.models import Sequence
 from app.schemas.detections import BOX_PATTERN
-from app.services.risk import min_confidence_for_class, risk_service
+from app.services.risk import min_confidence_for_class
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = [
-    "filter_sequences_by_class",
-    "filter_sequences_by_risk",
-    "filter_sequences_by_risk_for_date",
-    "max_conf_from_bboxes",
-]
+__all__ = ["filter_by_class_per_camera", "max_conf_from_bboxes"]
 
 
 def max_conf_from_bboxes(*bbox_strings: Union[str, None]) -> Union[float, None]:
@@ -46,62 +40,22 @@ def max_conf_from_bboxes(*bbox_strings: Union[str, None]) -> Union[float, None]:
     return best
 
 
-def _filter_sequences(
+def filter_by_class_per_camera(
     sequences: TypingSequence[Sequence],
-    thresholds: Dict[int, Union[float, None]],
+    class_per_camera: Dict[int, Union[str, None]],
 ) -> List[Sequence]:
-    if all(threshold is None for threshold in thresholds.values()):
+    """Drop sequences whose stored ``max_conf`` falls below the threshold for their camera's FWI class.
+
+    Fail-open: a sequence is kept when its camera has no FWI class (moderate+ or unknown)
+    or when ``seq.max_conf`` is NULL.
+    """
+    if not sequences:
+        return []
+    thresholds = {cid: min_confidence_for_class(c) for cid, c in class_per_camera.items()}
+    if all(t is None for t in thresholds.values()):
         return list(sequences)
-
-    kept: List[Sequence] = []
-    for seq in sequences:
-        threshold = thresholds.get(seq.camera_id)
-        if threshold is None or seq.max_conf is None or seq.max_conf >= threshold:
-            kept.append(seq)
-    return kept
-
-
-def filter_sequences_by_class(
-    sequences: TypingSequence[Sequence],
-    fwi_class: Union[str, None],
-) -> List[Sequence]:
-    """Apply a single FWI class threshold to every sequence, regardless of camera.
-
-    Used when callers pass an explicit ``risk_score`` override instead of consulting
-    the risk-api. ``moderate``/``high``/etc. yield no filtering (returns the input).
-    """
-    if not sequences:
-        return []
-    threshold = min_confidence_for_class(fwi_class)
-    if threshold is None:
-        return list(sequences)
-    thresholds: Dict[int, Union[float, None]] = {seq.camera_id: threshold for seq in sequences}
-    return _filter_sequences(sequences, thresholds)
-
-
-def filter_sequences_by_risk(sequences: TypingSequence[Sequence]) -> List[Sequence]:
-    """Drop sequences whose stored ``max_conf`` is below today's risk-driven threshold for their camera.
-
-    Fail-open: a sequence is kept if either the camera has no FWI score (moderate+ or unknown)
-    or ``seq.max_conf`` is NULL.
-    """
-    if not sequences:
-        return []
-    thresholds = {seq.camera_id: risk_service.min_confidence(seq.camera_id) for seq in sequences}
-    return _filter_sequences(sequences, thresholds)
-
-
-async def filter_sequences_by_risk_for_date(
-    sequences: TypingSequence[Sequence],
-    target_date: date,
-    organization_id: Union[int, None] = None,
-) -> List[Sequence]:
-    """Like ``filter_sequences_by_risk``, but uses the FWI class persisted for a specific date.
-
-    When ``organization_id`` is provided, the risk-api call is scoped to that organization.
-    """
-    if not sequences:
-        return []
-    scores = await risk_service.get_scores_for_date(target_date, organization_id=organization_id)
-    thresholds = {seq.camera_id: min_confidence_for_class(scores.get(seq.camera_id)) for seq in sequences}
-    return _filter_sequences(sequences, thresholds)
+    return [
+        seq
+        for seq in sequences
+        if (t := thresholds.get(seq.camera_id)) is None or seq.max_conf is None or seq.max_conf >= t
+    ]

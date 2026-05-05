@@ -22,7 +22,8 @@ from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWi
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.overlap import compute_overlap
-from app.services.sequence_confidence import filter_sequences_by_risk, filter_sequences_by_risk_for_date
+from app.services.risk import risk_service
+from app.services.sequence_confidence import filter_by_class_per_camera
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
@@ -163,7 +164,8 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    fetched_sequences = filter_sequences_by_risk(fetched_sequences)
+    classes = {seq.camera_id: risk_service.class_for_camera(seq.camera_id) for seq in fetched_sequences}
+    fetched_sequences = filter_by_class_per_camera(fetched_sequences, classes)
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
@@ -190,9 +192,9 @@ async def fetch_sequences_from_date(
             .offset(offset)
         )
     ).all()
-    fetched_sequences = await filter_sequences_by_risk_for_date(
-        fetched_sequences, from_date, organization_id=token_payload.organization_id
-    )
+    scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
+    classes = {seq.camera_id: scores.get(seq.camera_id) for seq in fetched_sequences}
+    fetched_sequences = filter_by_class_per_camera(fetched_sequences, classes)
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
