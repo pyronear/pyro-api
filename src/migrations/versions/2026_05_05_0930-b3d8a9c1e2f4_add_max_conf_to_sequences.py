@@ -50,13 +50,14 @@ def upgrade() -> None:
     op.add_column("sequences", sa.Column("max_conf", sa.Float(), nullable=True))
 
     bind = op.get_bind()
+    # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
     rows = bind.execute(
-        sa.text("SELECT sequence_id, bbox, others_bboxes FROM detections WHERE sequence_id IS NOT NULL")
+        sa.text("SELECT sequence_id, bbox FROM detections WHERE sequence_id IS NOT NULL")
     ).fetchall()
 
     seq_max: dict[int, float] = {}
-    for sequence_id, bbox, others in rows:
-        conf = _max_conf(bbox, others)
+    for sequence_id, bbox in rows:
+        conf = _max_conf(bbox)
         if conf is None:
             continue
         current = seq_max.get(sequence_id)

@@ -432,7 +432,8 @@ async def create_detection(
         if matched_sequence is not None:
             await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
             det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
-            det_max_conf = max_conf_from_bboxes(det.bbox, det.others_bboxes)
+            # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
+            det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
         else:
@@ -463,10 +464,7 @@ async def create_detection(
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
                 first_det = min(overlapping_dets, key=lambda item: item.created_at)
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
-                seq_max_conf = max_conf_from_bboxes(
-                    *[d.bbox for d in overlapping_dets],
-                    *[d.others_bboxes for d in overlapping_dets],
-                )
+                seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
                     Sequence(
                         camera_id=token_payload.sub,
