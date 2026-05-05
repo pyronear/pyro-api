@@ -95,14 +95,16 @@ async def test_unlabeled_latest_drops_below_very_low_threshold(
 
 
 @pytest.mark.asyncio
-async def test_unlabeled_latest_keeps_all_when_class_is_moderate(
-    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+@pytest.mark.parametrize("fwi_class", ["moderate", "high", "very_high", "extreme"])
+async def test_unlabeled_latest_keeps_all_when_class_is_moderate_or_above(
+    fwi_class: str, async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
 ):
+    """No filter is applied for ``moderate`` and above; pin every class so future tweaks stay covered."""
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
     low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=30)
 
-    risk_service._scores = {camera_id: "moderate"}
+    risk_service._scores = {camera_id: fwi_class}
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"],
