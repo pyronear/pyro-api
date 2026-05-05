@@ -294,7 +294,7 @@ def _build_links_for_group(
     return links
 
 
-async def _attach_sequence_to_alert(
+async def attach_sequence_to_alert(
     sequence_: Sequence,
     camera: Camera,
     cameras: CameraCRUD,
@@ -482,7 +482,7 @@ async def create_detection(
                     if det_.id == det.id:
                         det = updated
 
-                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+                alert_id = await attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
 
                 # Webhooks
                 whs = await webhooks.fetch_all()
