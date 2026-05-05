@@ -713,7 +713,12 @@ async def test_unit_relabel_sequence_to_wildfire_smoke_reattaches(
     assert mock_session.exec.call_count == 2  # fetch alert_ids + delete links
     mock_refresh_alert_state.assert_called_once_with(202, mock_session, mock_alerts_crud)
     mock_attach_sequence_to_alert.assert_awaited_once_with(
-        updated_seq, mock_camera, mock_cameras_crud, mock_sequences_crud, mock_alerts_crud
+        updated_seq,
+        mock_camera,
+        mock_cameras_crud,
+        mock_sequences_crud,
+        mock_alerts_crud,
+        reference_time=mock_sequence.last_seen_at,
     )
     mock_alerts_crud.create.assert_not_called()
     assert result.is_wildfire == AnnotationType.WILDFIRE_SMOKE

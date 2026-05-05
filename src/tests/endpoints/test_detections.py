@@ -13,7 +13,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import detections as detections_api
 from app.api.api_v1.endpoints.detections import (
-    attach_sequence_to_alert,
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
@@ -25,6 +24,7 @@ from app.api.api_v1.endpoints.detections import (
     _maybe_update_alert,
     _parse_bbox,
     _resolve_groups_and_locations,
+    attach_sequence_to_alert,
     create_detection,
 )
 from app.core.config import settings
