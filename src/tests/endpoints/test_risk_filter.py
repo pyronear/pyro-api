@@ -234,15 +234,17 @@ async def test_alerts_unlabeled_latest_risk_score_override(
 
 
 @pytest.mark.asyncio
-async def test_alerts_unlabeled_latest_risk_score_moderate_keeps_everything(
-    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+@pytest.mark.parametrize("fwi_class", ["moderate", "high", "very_high", "extreme"])
+async def test_alerts_unlabeled_latest_risk_score_moderate_or_above_keeps_everything(
+    fwi_class: str, async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
 ):
+    """Override at any moderate-or-above class disables the filter even when the cache would drop the alert."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
     seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20)
     alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
-    # Cache says very_low (would drop everything), but the override forces moderate.
+    # Cache says very_low (would drop everything), but the override forces a no-filter class.
     risk_service._scores = {camera_id: "very_low"}
 
     auth = pytest.get_token(
@@ -250,7 +252,7 @@ async def test_alerts_unlabeled_latest_risk_score_moderate_keeps_everything(
         pytest.user_table[2]["role"].split(),
         pytest.user_table[2]["organization_id"],
     )
-    response = await async_client.get("/alerts/unlabeled/latest?risk_score=moderate", headers=auth)
+    response = await async_client.get(f"/alerts/unlabeled/latest?risk_score={fwi_class}", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
     assert alert.id in {item["id"] for item in response.json()}
 
@@ -392,17 +394,18 @@ async def test_alerts_fromdate_risk_score_override_drops_low_conf_alert(
 
 
 @pytest.mark.asyncio
-async def test_alerts_fromdate_risk_score_moderate_keeps_alert(
-    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+@pytest.mark.parametrize("fwi_class", ["moderate", "high", "very_high", "extreme"])
+async def test_alerts_fromdate_risk_score_moderate_or_above_keeps_alert(
+    fwi_class: str, async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
 ):
-    """``risk_score=moderate`` is the kill switch on the from_date endpoint too."""
+    """No-filter override (``moderate`` and above) keeps the alert on ``/alerts/all/fromdate`` too."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
     target_date = utcnow().date().isoformat()
     seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20)
     alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
-    # Cache says very_low (would drop everything), but the override forces moderate.
+    # Cache says very_low (would drop everything), but the override forces a no-filter class.
     risk_service._scores = {camera_id: "very_low"}
 
     auth = pytest.get_token(
@@ -410,7 +413,9 @@ async def test_alerts_fromdate_risk_score_moderate_keeps_alert(
         pytest.user_table[2]["role"].split(),
         pytest.user_table[2]["organization_id"],
     )
-    response = await async_client.get(f"/alerts/all/fromdate?from_date={target_date}&risk_score=moderate", headers=auth)
+    response = await async_client.get(
+        f"/alerts/all/fromdate?from_date={target_date}&risk_score={fwi_class}", headers=auth
+    )
     assert response.status_code == 200, print(response.__dict__)
     assert alert.id in {item["id"] for item in response.json()}
 
