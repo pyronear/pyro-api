@@ -3,14 +3,17 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import timedelta
+from datetime import date, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.api_v1.endpoints.alerts import fetch_alerts_from_date
 from app.core.time import utcnow
-from app.models import Alert, AlertSequence, Sequence
+from app.models import Alert, AlertSequence, Sequence, UserRole
+from app.schemas.login import TokenPayload
 from app.services.risk import risk_service
 
 
@@ -265,6 +268,212 @@ async def test_sequences_fromdate_risk_score_moderate_disables_filter(
     assert response.status_code == 200, print(response.__dict__)
     returned_ids = {item["id"] for item in response.json()}
     assert set(seeded).issubset(returned_ids)
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_keeps_alert_with_mixed_seqs(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """An alert mixing one passing and one failing sequence stays, with only the passing seq in payload."""
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=25)
+    high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.70, minutes_ago=15)
+
+    now = utcnow()
+    alert = Alert(
+        organization_id=2,
+        started_at=now - timedelta(minutes=30),
+        last_seen_at=now - timedelta(minutes=10),
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=low_seq.id))
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=high_seq.id))
+    await detection_session.commit()
+
+    risk_service._scores = {camera_id: "low"}  # 0.45 threshold
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/alerts/unlabeled/latest", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+
+    payload = next((a for a in response.json() if a["id"] == alert.id), None)
+    assert payload is not None, "alert with at least one passing sequence must remain"
+    seq_ids = {s["id"] for s in payload["sequences"]}
+    assert high_seq.id in seq_ids
+    assert low_seq.id not in seq_ids
+
+
+@pytest.mark.asyncio
+async def test_alerts_fromdate_risk_score_override_drops_low_conf_alert(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    target_date = utcnow().date().isoformat()
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get(f"/alerts/all/fromdate?from_date={target_date}&risk_score=low", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert alert.id not in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_alerts_fromdate_risk_score_moderate_keeps_alert(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """``risk_score=moderate`` is the kill switch on the from_date endpoint too."""
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    target_date = utcnow().date().isoformat()
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20)
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+
+    # Cache says very_low (would drop everything), but the override forces moderate.
+    risk_service._scores = {camera_id: "very_low"}
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get(f"/alerts/all/fromdate?from_date={target_date}&risk_score=moderate", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert alert.id in {item["id"] for item in response.json()}
+
+
+@pytest.mark.asyncio
+async def test_alerts_fromdate_risk_score_invalid_value_returns_422(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    target_date = utcnow().date().isoformat()
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get(f"/alerts/all/fromdate?from_date={target_date}&risk_score=bogus", headers=auth)
+    assert response.status_code == 422
+
+
+class _ExecResult:
+    def __init__(self, rows) -> None:
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
+class _FakeAlertsSession:
+    def __init__(self, *results) -> None:
+        self._results = list(results)
+        self.statements = []
+
+    async def exec(self, stmt):
+        self.statements.append(stmt)
+        return self._results.pop(0)
+
+
+def _unit_token(organization_id: int = 1) -> TokenPayload:
+    return TokenPayload(sub=1, scopes=[UserRole.USER], organization_id=organization_id)
+
+
+@pytest.mark.asyncio
+async def test_unit_fetch_alerts_from_date_calls_risk_scores_for_requested_date():
+    """The per-date branch must dispatch ``get_scores_for_date`` with the requested date and org."""
+    target_date = date(2026, 5, 5)
+    now = utcnow()
+    alert = Alert(id=501, organization_id=1, started_at=now, last_seen_at=now)
+    seq = Sequence(
+        id=601,
+        camera_id=1,
+        pose_id=1,
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=20),
+        last_seen_at=now - timedelta(minutes=5),
+        max_conf=0.70,
+    )
+    session = _FakeAlertsSession(_ExecResult([alert]), _ExecResult([(alert.id, seq)]))
+    risk_scores_mock = AsyncMock(return_value={})  # empty -> no SQL filter, simpler stmt order
+    counts_mock = AsyncMock(return_value={seq.id: 3})
+
+    with (
+        patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=risk_scores_mock),
+        patch("app.api.api_v1.endpoints.alerts.get_detection_counts_by_sequence_ids", new=counts_mock),
+    ):
+        result = await fetch_alerts_from_date(
+            from_date=target_date,
+            limit=10,
+            offset=0,
+            risk_score=None,
+            session=session,
+            token_payload=_unit_token(),
+        )
+
+    risk_scores_mock.assert_awaited_once_with(target_date, organization_id=1)
+    counts_mock.assert_awaited_once_with(session, [seq.id])
+    assert [item.id for item in result] == [alert.id]
+    assert [s.id for s in result[0].sequences] == [seq.id]
+
+
+@pytest.mark.asyncio
+async def test_unit_fetch_alerts_from_date_risk_score_override_bypasses_risk_api():
+    """The override branch must NOT hit the risk API and must apply the override class to all org cameras."""
+    target_date = date(2026, 5, 5)
+    now = utcnow()
+    alert = Alert(id=502, organization_id=1, started_at=now, last_seen_at=now)
+    seq = Sequence(
+        id=602,
+        camera_id=1,
+        pose_id=1,
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=20),
+        last_seen_at=now - timedelta(minutes=5),
+        max_conf=0.55,
+    )
+    # Override path -> first exec: select Camera.id, then alerts_stmt, then alert_seq map
+    session = _FakeAlertsSession(
+        _ExecResult([1]),
+        _ExecResult([alert]),
+        _ExecResult([(alert.id, seq)]),
+    )
+    risk_scores_mock = AsyncMock()
+    counts_mock = AsyncMock(return_value={seq.id: 1})
+
+    with (
+        patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=risk_scores_mock),
+        patch("app.api.api_v1.endpoints.alerts.get_detection_counts_by_sequence_ids", new=counts_mock),
+    ):
+        result = await fetch_alerts_from_date(
+            from_date=target_date,
+            limit=10,
+            offset=0,
+            risk_score="low",
+            session=session,
+            token_payload=_unit_token(),
+        )
+
+    risk_scores_mock.assert_not_awaited()
+    assert [item.id for item in result] == [alert.id]
+    assert [s.id for s in result[0].sequences] == [seq.id]
 
 
 @pytest.mark.asyncio
