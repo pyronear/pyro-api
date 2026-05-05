@@ -47,18 +47,14 @@ def max_conf_filter_clause(class_per_camera: Dict[int, Union[str, None]]) -> Uni
     """SQL ``WHERE`` clause keeping sequences whose ``max_conf`` passes their camera's threshold.
 
     Returns ``None`` when no camera has an active threshold (caller should skip the filter).
-    Fail-open: rows with ``max_conf IS NULL`` are kept; cameras without an entry default to 0.
-    Collapses to a constant comparison when all active thresholds are equal (avoids a per-camera
-    ``CASE`` with one arm per camera).
+    Fail-open: rows with ``max_conf IS NULL`` are kept, and cameras absent from ``class_per_camera``
+    default to threshold 0 (everything passes) via the ``CASE`` ``else_`` clause.
     """
     thresholds = {
         cid: t for cid, klass in class_per_camera.items() if (t := min_confidence_for_class(klass)) is not None
     }
     if not thresholds:
         return None
-    distinct = set(thresholds.values())
-    if len(distinct) == 1:
-        return or_(Sequence.max_conf.is_(None), Sequence.max_conf >= distinct.pop())  # type: ignore[union-attr]
     threshold_expr = case(*[(Sequence.camera_id == cid, t) for cid, t in thresholds.items()], else_=0.0)
     return or_(Sequence.max_conf.is_(None), Sequence.max_conf >= threshold_expr)  # type: ignore[union-attr]
 

@@ -219,16 +219,15 @@ async def test_sequences_fromdate_pagination_filters_before_limit(
             detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago
         )
 
-    risk_service._scores = {camera_id: "low"}  # threshold 0.45
-
     auth = pytest.get_token(
         pytest.user_table[2]["id"],
         pytest.user_table[2]["role"].split(),
         pytest.user_table[2]["organization_id"],
     )
 
+    # The ``risk_score=low`` override drives the threshold without hitting the risk API.
     response = await async_client.get(
-        f"/sequences/all/fromdate?from_date={target_date}&limit=3", headers=auth
+        f"/sequences/all/fromdate?from_date={target_date}&limit=3&risk_score=low", headers=auth
     )
     assert response.status_code == 200, print(response.__dict__)
     page = response.json()
