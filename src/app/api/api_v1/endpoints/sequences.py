@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.api_v1.endpoints.detections import attach_sequence_to_alert
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
@@ -256,6 +257,7 @@ async def label_sequence(
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
+    previous_label = sequence.is_wildfire
     updated = await sequences.update(sequence_id, payload)
 
     # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
@@ -283,5 +285,23 @@ async def label_sequence(
         )
         session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
         await session.commit()
+    # Reverting a previously non-wildfire label back to wildfire_smoke: re-run cone matching
+    elif (
+        payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE
+        and previous_label is not None
+        and previous_label != AnnotationType.WILDFIRE_SMOKE
+    ):
+        alert_ids_res = await session.exec(
+            select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id)
+        )
+        alert_ids = list(alert_ids_res.all())
+        if alert_ids:
+            delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+            await session.exec(delete_links)
+            await session.commit()
+            for aid in alert_ids:
+                await _refresh_alert_state(aid, session, alerts)
+        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+        await attach_sequence_to_alert(updated, camera, cameras, sequences, alerts)
 
     return updated
