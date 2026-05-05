@@ -3,10 +3,29 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.main import _seconds_until_next_utc_hour
+import pytest
+from fastapi import FastAPI
+
+from app.main import _risk_refresh_loop, _seconds_until_next_utc_hour, lifespan
+
+
+class _CancelledTask:
+    def __init__(self) -> None:
+        self.cancel_called = False
+
+    def cancel(self) -> None:
+        self.cancel_called = True
+
+    def __await__(self) -> Generator[None, None, None]:
+        if not self.cancel_called:
+            yield None
+        raise asyncio.CancelledError
 
 
 def test_seconds_until_next_utc_hour_future_today():
@@ -57,3 +76,72 @@ def test_seconds_until_next_utc_hour_returns_full_day_when_now_equals_target():
         mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
         seconds = _seconds_until_next_utc_hour(4)
     assert seconds == timedelta(days=1).total_seconds()
+
+
+@pytest.mark.asyncio
+async def test_risk_refresh_loop_calls_refresh_then_cancels_cleanly():
+    sleep_mock = AsyncMock(side_effect=[None, asyncio.CancelledError()])
+    refresh_mock = AsyncMock()
+
+    with (
+        patch("app.main.asyncio.sleep", sleep_mock),
+        patch("app.main.risk_service.refresh", new=refresh_mock),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await _risk_refresh_loop()
+
+    refresh_mock.assert_awaited_once()
+    assert sleep_mock.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_risk_refresh_loop_swallows_refresh_errors_and_continues():
+    sleep_mock = AsyncMock(side_effect=[None, None, asyncio.CancelledError()])
+    refresh_mock = AsyncMock(side_effect=[RuntimeError("boom"), None])
+
+    with (
+        patch("app.main.asyncio.sleep", sleep_mock),
+        patch("app.main.risk_service.refresh", new=refresh_mock),
+        patch("app.main.logger.exception") as exception_mock,
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await _risk_refresh_loop()
+
+    assert refresh_mock.await_count == 2
+    assert sleep_mock.await_count == 3
+    exception_mock.assert_called_once_with("Risk refresh loop iteration failed; continuing")
+
+
+@pytest.mark.asyncio
+async def test_lifespan_refreshes_and_cancels_daily_task_when_risk_api_configured():
+    fake_service = SimpleNamespace(is_configured=True, refresh=AsyncMock())
+    fake_task = _CancelledTask()
+
+    def fake_create_task(coro):
+        coro.close()
+        return fake_task
+
+    create_task_mock = MagicMock(side_effect=fake_create_task)
+    with (
+        patch("app.main.risk_service", fake_service),
+        patch("app.main.asyncio.create_task", create_task_mock),
+    ):
+        async with lifespan(FastAPI()):
+            fake_service.refresh.assert_awaited_once()
+            create_task_mock.assert_called_once()
+            assert fake_task.cancel_called is False
+
+    assert fake_task.cancel_called is True
+
+
+@pytest.mark.asyncio
+async def test_lifespan_skips_risk_refresh_when_risk_api_not_configured():
+    fake_service = SimpleNamespace(is_configured=False, refresh=AsyncMock())
+
+    with (
+        patch("app.main.risk_service", fake_service),
+        patch("app.main.asyncio.create_task") as create_task_mock,
+    ):
+        async with lifespan(FastAPI()):
+            fake_service.refresh.assert_not_awaited()
+            create_task_mock.assert_not_called()
