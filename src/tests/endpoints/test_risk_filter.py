@@ -205,6 +205,69 @@ async def test_alerts_unlabeled_latest_risk_score_invalid_value_returns_422(
 
 
 @pytest.mark.asyncio
+async def test_sequences_unlabeled_latest_risk_score_override_drops_low_conf(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=15)
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/sequences/unlabeled/latest?risk_score=low", headers=auth)
+    assert response.status_code == 200, print(response.__dict__)
+    returned_ids = {item["id"] for item in response.json()}
+    assert low_seq.id not in returned_ids
+    assert high_seq.id in returned_ids
+
+
+@pytest.mark.asyncio
+async def test_sequences_unlabeled_latest_risk_score_invalid_value_returns_422(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get("/sequences/unlabeled/latest?risk_score=bogus", headers=auth)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_sequences_fromdate_risk_score_moderate_disables_filter(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """``risk_score=moderate`` is the kill switch: every seed seq comes back regardless of max_conf."""
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    target_date = utcnow().date().isoformat()
+
+    seeded = []
+    for max_conf, minutes_ago in [(0.05, 50), (0.20, 45), (0.55, 30)]:
+        seq = await _seed_unlabeled_sequence(
+            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago
+        )
+        seeded.append(seq.id)
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+    response = await async_client.get(
+        f"/sequences/all/fromdate?from_date={target_date}&limit=200&risk_score=moderate", headers=auth
+    )
+    assert response.status_code == 200, print(response.__dict__)
+    returned_ids = {item["id"] for item in response.json()}
+    assert set(seeded).issubset(returned_ids)
+
+
+@pytest.mark.asyncio
 async def test_sequences_fromdate_pagination_filters_before_limit(
     async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
 ):
