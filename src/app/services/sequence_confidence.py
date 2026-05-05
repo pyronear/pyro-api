@@ -57,7 +57,7 @@ def max_conf_filter_clause(class_per_camera: Dict[int, Union[str, None]]) -> Uni
         return None
     max_conf_col = cast(Any, Sequence.max_conf)
     whens: List[Any] = [(Sequence.camera_id == cid, t) for cid, t in thresholds.items()]
-    threshold_expr = case(*whens, else_=0.0)
+    threshold_expr: Any = case(*whens, else_=0.0)
     return or_(max_conf_col.is_(None), max_conf_col >= threshold_expr)
 
 

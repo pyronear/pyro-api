@@ -149,9 +149,7 @@ async def fetch_latest_unlabeled_alerts(
     classes = await _resolve_class_per_camera(session, token_payload.organization_id, override_class=risk_score)
     seq_filter = max_conf_filter_clause(classes)
 
-    seq_match: Any = select(AlertSequence.alert_id).join(
-        Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
-    )
+    seq_match: Any = select(AlertSequence.alert_id).join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
     seq_match = seq_match.where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
     seq_match = seq_match.where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     if seq_filter is not None:
