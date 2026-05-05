@@ -56,13 +56,13 @@ async def _fetch_sequences_by_alert_ids(
     return mapping
 
 
-async def _resolve_class_per_camera(
+async def _resolve_fwi_class_per_camera(
     session: AsyncSession,
     organization_id: int,
     target_date: Union[date, None] = None,
     override_class: Union[str, None] = None,
 ) -> Dict[int, Union[str, None]]:
-    """Resolve ``{camera_id: fwi_class}`` for the org, picking override → per-date → today's cache."""
+    """Resolve ``{camera_id: fwi_class}`` for the org, picking override -> per-date -> today's cache."""
     if override_class is not None:
         cam_ids = (await session.exec(select(Camera.id).where(Camera.organization_id == organization_id))).all()
         return dict.fromkeys(cam_ids, override_class)
@@ -146,12 +146,17 @@ async def fetch_latest_unlabeled_alerts(
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
 
-    classes = await _resolve_class_per_camera(session, token_payload.organization_id, override_class=risk_score)
-    seq_filter = max_conf_filter_clause(classes)
+    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
+        session, token_payload.organization_id, override_class=risk_score
+    )
+    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
-    seq_match: Any = select(AlertSequence.alert_id).join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-    seq_match = seq_match.where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
-    seq_match = seq_match.where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    seq_match: Any = (
+        select(AlertSequence.alert_id)
+        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
+        .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    )
     if seq_filter is not None:
         seq_match = seq_match.where(seq_filter)
 
@@ -185,10 +190,10 @@ async def fetch_alerts_from_date(
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
 
-    classes = await _resolve_class_per_camera(
+    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
         session, token_payload.organization_id, target_date=from_date, override_class=risk_score
     )
-    seq_filter = max_conf_filter_clause(classes)
+    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
     alerts_stmt: Any = (
         select(Alert)
