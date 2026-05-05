@@ -49,7 +49,6 @@ async def _fetch_sequences_by_alert_ids(session: AsyncSession, alert_ids: List[i
 
 
 async def _apply_risk_filter_to_alerts(
-    session: AsyncSession,
     alerts: List[Alert],
     seq_map: Dict[int, List[Sequence]],
     target_date: Union[date, None] = None,
@@ -62,11 +61,9 @@ async def _apply_risk_filter_to_alerts(
     """
     all_sequences = [seq for seqs in seq_map.values() for seq in seqs]
     if target_date is None:
-        kept_seqs = await filter_sequences_by_risk(session, all_sequences)
+        kept_seqs = filter_sequences_by_risk(all_sequences)
     else:
-        kept_seqs = await filter_sequences_by_risk_for_date(
-            session, all_sequences, target_date, organization_id=organization_id
-        )
+        kept_seqs = await filter_sequences_by_risk_for_date(all_sequences, target_date, organization_id=organization_id)
     kept_ids = {seq.id for seq in kept_seqs}
     kept_alerts: List[Alert] = []
     for alert in alerts:
@@ -161,7 +158,7 @@ async def fetch_latest_unlabeled_alerts(
     alerts = list(alerts_res.unique().all())
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
-    alerts = await _apply_risk_filter_to_alerts(session, alerts, seq_map)
+    alerts = await _apply_risk_filter_to_alerts(alerts, seq_map)
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
@@ -192,7 +189,7 @@ async def fetch_alerts_from_date(
     alert_ids = [alert.id for alert in alerts]
     seq_map = await _fetch_sequences_by_alert_ids(session, alert_ids)
     alerts = await _apply_risk_filter_to_alerts(
-        session, alerts, seq_map, target_date=from_date, organization_id=token_payload.organization_id
+        alerts, seq_map, target_date=from_date, organization_id=token_payload.organization_id
     )
     detection_counts = await get_detection_counts_by_sequence_ids(
         session,

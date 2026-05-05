@@ -163,7 +163,7 @@ async def fetch_latest_unlabeled_sequences(
             .limit(15)
         )
     ).all()
-    fetched_sequences = await filter_sequences_by_risk(session, fetched_sequences)
+    fetched_sequences = filter_sequences_by_risk(fetched_sequences)
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
@@ -191,7 +191,7 @@ async def fetch_sequences_from_date(
         )
     ).all()
     fetched_sequences = await filter_sequences_by_risk_for_date(
-        session, fetched_sequences, from_date, organization_id=token_payload.organization_id
+        fetched_sequences, from_date, organization_id=token_payload.organization_id
     )
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
     return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
