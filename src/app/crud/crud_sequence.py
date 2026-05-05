@@ -25,10 +25,8 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
 
         Uses a portable CASE expression so it runs on SQLite as well as Postgres.
         """
-        bumped = case(
-            (or_(Sequence.max_conf.is_(None), Sequence.max_conf < candidate), candidate),  # type: ignore[union-attr]
-            else_=Sequence.max_conf,
-        )
+        max_conf_col = cast(Any, Sequence.max_conf)
+        bumped = case((or_(max_conf_col.is_(None), max_conf_col < candidate), candidate), else_=max_conf_col)
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(max_conf=bumped)
         await self.session.exec(stmt)
         await self.session.commit()

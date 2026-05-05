@@ -149,12 +149,11 @@ async def fetch_latest_unlabeled_alerts(
     classes = await _resolve_class_per_camera(session, token_payload.organization_id, override_class=risk_score)
     seq_filter = max_conf_filter_clause(classes)
 
-    seq_match: Any = (
-        select(AlertSequence.alert_id)
-        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
-        .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    seq_match: Any = select(AlertSequence.alert_id).join(
+        Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
     )
+    seq_match = seq_match.where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
+    seq_match = seq_match.where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     if seq_filter is not None:
         seq_match = seq_match.where(seq_filter)
 
@@ -199,11 +198,10 @@ async def fetch_alerts_from_date(
         .where(func.date(Alert.started_at) == from_date)
     )
     if seq_filter is not None:
-        seq_match: Any = (
-            select(AlertSequence.alert_id)
-            .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
-            .where(seq_filter)
+        seq_match: Any = select(AlertSequence.alert_id).join(
+            Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
         )
+        seq_match = seq_match.where(seq_filter)
         alerts_stmt = alerts_stmt.where(cast(Any, Alert.id).in_(seq_match))
     alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
 

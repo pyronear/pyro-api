@@ -7,7 +7,7 @@
 import logging
 import re
 from ast import literal_eval
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union, cast
 from typing import Sequence as TypingSequence
 
 from sqlalchemy import case, or_
@@ -55,8 +55,10 @@ def max_conf_filter_clause(class_per_camera: Dict[int, Union[str, None]]) -> Uni
     }
     if not thresholds:
         return None
-    threshold_expr = case(*[(Sequence.camera_id == cid, t) for cid, t in thresholds.items()], else_=0.0)
-    return or_(Sequence.max_conf.is_(None), Sequence.max_conf >= threshold_expr)  # type: ignore[union-attr]
+    max_conf_col = cast(Any, Sequence.max_conf)
+    whens: List[Any] = [(Sequence.camera_id == cid, t) for cid, t in thresholds.items()]
+    threshold_expr = case(*whens, else_=0.0)
+    return or_(max_conf_col.is_(None), max_conf_col >= threshold_expr)
 
 
 def filter_by_class_per_camera(
