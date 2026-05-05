@@ -261,9 +261,7 @@ async def label_sequence(
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
         return updated
 
-    alert_ids_res = await session.exec(
-        select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id)
-    )
+    alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
 
     # If the sequence is the only one in all of its alerts, leave them as-is —
