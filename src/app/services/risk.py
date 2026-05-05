@@ -30,6 +30,8 @@ def _parse_scores_payload(payload: object) -> dict[int, str]:
         return {}
     scores: dict[int, str] = {}
     for item in payload:
+        if not isinstance(item, dict):
+            continue
         cid = item.get("id") or item.get("camera_id")
         fwi = item.get("fwi_class")
         if isinstance(cid, int) and isinstance(fwi, str):
@@ -77,13 +79,13 @@ class RiskService:
             return None
 
     async def refresh(self) -> None:
-        """Fetch fresh FWI classes from the risk API. On error, keep the previous cache."""
-        scores = _parse_scores_payload(await self._fetch("cameras"))
-        if not scores:
-            logger.warning("Risk API refresh: keeping previous cache (%d entries)", len(self._scores))
+        """Fetch fresh FWI classes from the risk API. On network/HTTP failure, keep the previous cache."""
+        payload = await self._fetch("cameras")
+        if payload is None:
+            logger.warning("Risk API refresh failed; keeping previous cache (%d entries)", len(self._scores))
             return
-        self._scores = scores
-        logger.info("Risk API refresh: cached FWI class for %d camera(s)", len(scores))
+        self._scores = _parse_scores_payload(payload)
+        logger.info("Risk API refresh: cached FWI class for %d camera(s)", len(self._scores))
 
     async def get_scores_for_date(self, target_date: date, organization_id: Union[int, None] = None) -> dict[int, str]:
         """Fetch persisted FWI classes for a specific date, optionally scoped to an organization.
