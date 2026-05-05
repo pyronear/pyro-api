@@ -51,9 +51,7 @@ def upgrade() -> None:
 
     bind = op.get_bind()
     # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
-    rows = bind.execute(
-        sa.text("SELECT sequence_id, bbox FROM detections WHERE sequence_id IS NOT NULL")
-    ).fetchall()
+    rows = bind.execute(sa.text("SELECT sequence_id, bbox FROM detections WHERE sequence_id IS NOT NULL")).fetchall()
 
     seq_max: dict[int, float] = {}
     for sequence_id, bbox in rows:
