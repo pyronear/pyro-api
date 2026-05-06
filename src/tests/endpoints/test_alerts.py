@@ -389,9 +389,9 @@ async def test_alerts_export_happy_path(async_client: AsyncClient, detection_ses
 @pytest.mark.asyncio
 async def test_alerts_export_window_narrows(async_client: AsyncClient, detection_session: AsyncSession):
     base = datetime(2026, 4, 10, 12, 0, 0)
-    a_before = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
+    await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
     a_in = await _create_alert(detection_session, 1, base + timedelta(days=1), base + timedelta(days=1, minutes=5))
-    a_after = await _create_alert(detection_session, 1, base + timedelta(days=2), base + timedelta(days=2, minutes=5))
+    await _create_alert(detection_session, 1, base + timedelta(days=2), base + timedelta(days=2, minutes=5))
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
@@ -404,8 +404,6 @@ async def test_alerts_export_window_narrows(async_client: AsyncClient, detection
     _, data_rows = _parse_csv_body(resp.text)
     returned_ids = {int(r[0]) for r in data_rows}
     assert returned_ids == {a_in.id}
-    assert a_before.id not in returned_ids
-    assert a_after.id not in returned_ids
 
 
 @pytest.mark.asyncio
