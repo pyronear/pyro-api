@@ -155,6 +155,34 @@ async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_sess
 
 
 @pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_pagination(async_client: AsyncClient, detection_session: AsyncSession):
+    alert_a, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
+    alert_b, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.1, lon=2.1)
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=10&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    full = resp.json()
+    full_ids = [item["id"] for item in full]
+    assert {alert_a.id, alert_b.id}.issubset(full_ids)
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=1&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    page_one = resp.json()
+    assert len(page_one) == 1
+    assert page_one[0]["id"] == full_ids[0]
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=1&offset=1", headers=auth)
+    assert resp.status_code == 200, resp.text
+    page_two = resp.json()
+    assert len(page_two) == 1
+    assert page_two[0]["id"] == full_ids[1]
+
+
+@pytest.mark.asyncio
 async def test_alerts_from_date(async_client: AsyncClient, detection_session: AsyncSession):
     alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256

@@ -208,6 +208,8 @@ async def fetch_alert_sequences(
     summary="Fetch all the alerts with unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_alerts(
+    limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
+    offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
         None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
     ),
@@ -236,7 +238,8 @@ async def fetch_latest_unlabeled_alerts(
         .where(Alert.organization_id == token_payload.organization_id)
         .where(cast(Any, Alert.id).in_(seq_match))
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
-        .limit(15)
+        .limit(limit)
+        .offset(offset)
     )
     alerts = list((await session.exec(alerts_stmt)).all())
     alert_ids = [alert.id for alert in alerts]
