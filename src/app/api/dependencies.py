@@ -15,9 +15,18 @@ from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
+from app.crud import (
+    AlertCRUD,
+    CameraCRUD,
+    DetectionCRUD,
+    OrganizationCRUD,
+    SequenceCRUD,
+    UserCRUD,
+    WebhookCRUD,
+)
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
+from app.crud.crud_push_subscription import PushSubscriptionCRUD
 from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
@@ -72,6 +81,10 @@ def get_sequence_crud(session: AsyncSession = Depends(get_session)) -> SequenceC
 
 def get_alert_crud(session: AsyncSession = Depends(get_session)) -> AlertCRUD:
     return AlertCRUD(session=session)
+
+
+def get_push_subscription_crud(session: AsyncSession = Depends(get_session)) -> PushSubscriptionCRUD:
+    return PushSubscriptionCRUD(session=session)
 
 
 def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:

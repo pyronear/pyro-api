@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db import engine
 from app.main import app
-from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
+from app.models import Camera, Detection, OcclusionMask, Organization, Pose, PushSubscription, Sequence, User, Webhook
 from app.services.storage import s3_service
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
@@ -226,6 +226,33 @@ WEBHOOK_TABLE = [
     },
 ]
 
+PUSH_SUBSCRIPTION_TABLE = [
+    {
+        "id": 1,
+        "user_id": 1,
+        "organization_id": 1,
+        "endpoint": "https://push.example.com/subscription-1",
+        "auth": "auth-key-1",
+        "p256dh": "p256dh-key-1",
+        "expiration_time": None,
+        "user_agent": "Desktop Chrome",
+        "created_at": datetime.strptime("2026-04-01T10:00:00.000000", dt_format),
+        "updated_at": datetime.strptime("2026-04-01T10:00:00.000000", dt_format),
+    },
+    {
+        "id": 2,
+        "user_id": 2,
+        "organization_id": 1,
+        "endpoint": "https://push.example.com/subscription-2",
+        "auth": "auth-key-2",
+        "p256dh": "p256dh-key-2",
+        "expiration_time": None,
+        "user_agent": "Android Chrome",
+        "created_at": datetime.strptime("2026-04-01T11:00:00.000000", dt_format),
+        "updated_at": datetime.strptime("2026-04-01T11:00:00.000000", dt_format),
+    },
+]
+
 
 @pytest.fixture(scope="session")
 def event_loop(request) -> Generator:
@@ -311,6 +338,22 @@ async def webhook_session(async_session: AsyncSession):
     await async_session.commit()
     yield async_session
     await async_session.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def push_subscription_session(user_session: AsyncSession):
+    for entry in PUSH_SUBSCRIPTION_TABLE:
+        user_session.add(PushSubscription(**entry))
+    await user_session.commit()
+    await user_session.exec(
+        text(
+            f"ALTER SEQUENCE {PushSubscription.__tablename__}_id_seq RESTART WITH "
+            f"{max(entry['id'] for entry in PUSH_SUBSCRIPTION_TABLE) + 1}"
+        )
+    )
+    await user_session.commit()
+    yield user_session
+    await user_session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -452,4 +495,8 @@ def pytest_configure():
     pytest.webhook_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in WEBHOOK_TABLE
+    ]
+    pytest.push_subscription_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in PUSH_SUBSCRIPTION_TABLE
     ]

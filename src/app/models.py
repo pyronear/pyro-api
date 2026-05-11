@@ -5,14 +5,24 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Union
+from typing import Optional, Union
 
 from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
 from app.core.time import utcnow
 
-__all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
+__all__ = [
+    "Alert",
+    "AlertSequence",
+    "Camera",
+    "Detection",
+    "Organization",
+    "Pose",
+    "PushSubscription",
+    "Sequence",
+    "User",
+]
 
 
 class UserRole(str, Enum):
@@ -142,3 +152,17 @@ class Webhook(SQLModel, table=True):
     __tablename__ = "webhooks"
     id: int = Field(None, primary_key=True)
     url: str = Field(..., nullable=False, unique=True)
+
+
+class PushSubscription(SQLModel, table=True):
+    __tablename__ = "push_subscriptions"
+    id: int = Field(None, primary_key=True)
+    user_id: int = Field(..., foreign_key="users.id", nullable=False)
+    organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
+    endpoint: str = Field(..., nullable=False, unique=True)
+    auth: str = Field(..., min_length=1, max_length=255, nullable=False)
+    p256dh: str = Field(..., min_length=1, max_length=255, nullable=False)
+    expiration_time: Optional[datetime] = Field(default=None, nullable=True)
+    user_agent: Union[str, None] = Field(default=None, max_length=512, nullable=True)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=utcnow, nullable=False)

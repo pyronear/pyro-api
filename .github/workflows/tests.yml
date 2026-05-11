@@ -40,7 +40,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage-src.xml
+          files: ./coverage-src.xml
           flags: backend
           fail_ci_if_error: true
 
@@ -76,7 +76,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./client/coverage.xml
+          files: ./client/coverage.xml
           flags: client
           fail_ci_if_error: true
 
