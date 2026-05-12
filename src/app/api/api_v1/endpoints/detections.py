@@ -36,12 +36,22 @@ from app.api.dependencies import (
     get_jwt,
     get_organization_crud,
     get_pose_crud,
+    get_push_subscription_crud,
     get_sequence_crud,
     get_webhook_crud,
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.crud import (
+    AlertCRUD,
+    CameraCRUD,
+    DetectionCRUD,
+    OrganizationCRUD,
+    PoseCRUD,
+    SequenceCRUD,
+    WebhookCRUD,
+)
+from app.crud.crud_push_subscription import PushSubscriptionCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
@@ -57,6 +67,7 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
+from app.services.push_notifications import push_notification_client
 from app.services.risk import risk_service
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.slack import slack_client
@@ -362,6 +373,7 @@ async def create_detection(
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
+    push_subscriptions_crud: PushSubscriptionCRUD = Depends(get_push_subscription_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
@@ -515,6 +527,20 @@ async def create_detection(
                                 sequence_.max_conf,
                                 min_conf,
                             )
+
+                if push_notification_client.is_enabled and alert_id is not None:
+                    subscriptions = await push_subscriptions_crud.fetch_all(
+                        filters=[("organization_id", token_payload.organization_id)]
+                    )
+                    if any(subscriptions):
+                        background_tasks.add_task(
+                            push_notification_client.notify_many,
+                            subscriptions,
+                            alert_id=alert_id,
+                            camera_name=camera.name,
+                            created_at=det.created_at,
+                            sequence_azimuth=sequence_.sequence_azimuth,
+                        )
 
         created.append(det)
 

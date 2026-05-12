@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
     PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
+    VAPID_PRIVATE_KEY: Union[str, None] = os.environ.get("VAPID_PRIVATE_KEY")
+    VAPID_PUBLIC_KEY: Union[str, None] = os.environ.get("VAPID_PUBLIC_KEY")
+    VAPID_SUBJECT: Union[str, None] = os.environ.get("VAPID_SUBJECT")
+    PUSH_NOTIFICATIONS_TTL_SECONDS: int = int(os.environ.get("PUSH_NOTIFICATIONS_TTL_SECONDS") or 300)
 
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")

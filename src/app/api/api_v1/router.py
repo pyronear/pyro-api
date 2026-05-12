@@ -14,6 +14,7 @@ from app.api.api_v1.endpoints import (
     occlusion_masks,
     organizations,
     poses,
+    push_subscriptions,
     sequences,
     users,
     webhooks,
@@ -31,3 +32,4 @@ api_router.include_router(sequences.router, prefix="/sequences", tags=["sequence
 api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 api_router.include_router(organizations.router, prefix="/organizations", tags=["organizations"])
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+api_router.include_router(push_subscriptions.router, prefix="/push-subscriptions", tags=["push-subscriptions"])
