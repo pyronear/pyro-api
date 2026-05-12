@@ -63,7 +63,7 @@ jobs:
           POSTGRES_DB: dummy_pg_db
         run: |
           docker compose -f docker-compose.dev.yml up -d --build --wait
-          uv run --group client-test pytest --cov=pyroclient --cov-report xml client/tests/
+          SUPERADMIN_LOGIN=superadmin_login SUPERADMIN_PWD=superadmin_pwd uv run --group client-test pytest --cov=pyroclient --cov-report xml client/tests/
           docker compose -f docker-compose.dev.yml down
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
