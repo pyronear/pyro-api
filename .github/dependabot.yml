@@ -7,24 +7,76 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    labels:
+      - "dependencies"
+      - "type: misc"
+    commit-message:
+      prefix: "ci(github)"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "08:00"
+    groups:
+      actions:
+        patterns:
+          - "*"
   - package-ecosystem: "pip"
     directory: "/"
+    labels:
+      - "dependencies"
+      - "type: misc"
+    commit-message:
+      prefix: "build(deps-dev)"
     schedule:
       interval: "daily"
+      time: "08:00"
     allow:
       - dependency-name: "ruff"
       - dependency-name: "mypy"
-      - dependency-name: "pre-commit"
+      - dependency-name: "prek"
+    groups:
+      quality:
+        patterns:
+          - "ruff"
+          - "ty"
+          - "prek"
+  - package-ecosystem: "pip"
+    directory: "/"
+    labels:
+      - "dependencies"
+      - "type: misc"
+    commit-message:
+      prefix: "build(deps-test)"
+    schedule:
+      interval: "daily"
+      time: "08:00"
+    allow:
+      - dependency-name: "pytest"
+  - package-ecosystem: "pip"
+    directory: "/"
+    labels:
+      - "dependencies"
+      - "type: misc"
+    commit-message:
+      prefix: "build(deps)"
+    schedule:
+      interval: "daily"
+      time: "08:00"
+    allow:
       - dependency-name: "fastapi"
       - dependency-name: "sqlmodel"
       - dependency-name: "uvicorn"
-      - dependency-name: "pytest"
+    groups:
+      quality:
+        patterns:
+          - "ruff"
+          - "ty"
+          - "prek"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "daily"
+      time: "08:00"
     allow:
       - dependency-name: "ghcr.io/astral-sh/uv"
       - dependency-name: "localstack/localstack"
