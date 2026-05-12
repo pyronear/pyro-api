@@ -8,7 +8,7 @@ import asyncio
 import io
 from collections.abc import Callable
 from functools import partial
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
@@ -20,6 +20,8 @@ from app.models import Camera, UserRole
 from app.schemas.login import TokenPayload
 
 router = APIRouter()
+
+CameraDirection = Literal["Left", "Right", "Up", "Down"]
 
 DEVICE_PORT = 8081
 TIMEOUT = 10.0
@@ -151,7 +153,7 @@ async def proxy_latest_image(
 # ── Control ───────────────────────────────────────────────────────────────────
 
 
-@router.post("/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera (legacy)")
+@router.post("/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera (legacy)", deprecated=True)
 async def proxy_move(
     direction: str | None = Query(default=None, description="Direction: Left, Right, Up, Down"),
     speed: int = Query(default=10, description="Movement speed"),
@@ -186,7 +188,7 @@ async def proxy_goto_preset(
 
 @router.post("/{camera_id}/control/start_move", status_code=status.HTTP_200_OK, summary="Start a continuous move")
 async def proxy_start_move(
-    direction: str = Query(..., description="Direction: Left, Right, Up, Down"),
+    direction: CameraDirection = Query(..., description="Direction: Left, Right, Up, Down"),
     speed: int = Query(default=10, description="Movement speed"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
@@ -206,7 +208,7 @@ async def proxy_stop_move(camera: Camera = Depends(_require_write)) -> Any:
     summary="Move for a fixed duration (seconds)",
 )
 async def proxy_move_for_duration(
-    direction: str = Query(..., description="Direction: Left, Right, Up, Down"),
+    direction: CameraDirection = Query(..., description="Direction: Left, Right, Up, Down"),
     duration: float = Query(..., gt=0, description="Movement duration in seconds"),
     speed: int = Query(default=10, description="Movement speed"),
     camera: Camera = Depends(_require_write),
@@ -227,7 +229,7 @@ async def proxy_move_for_duration(
     summary="Move by an approximate angle",
 )
 async def proxy_move_by_degrees(
-    direction: str = Query(..., description="Direction: Left, Right, Up, Down"),
+    direction: CameraDirection = Query(..., description="Direction: Left, Right, Up, Down"),
     degrees: float = Query(..., gt=0, description="Approximate rotation in degrees"),
     speed: int | None = Query(
         default=None,
