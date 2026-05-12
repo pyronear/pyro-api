@@ -95,7 +95,7 @@ build-client:
 
 test-client: build-client
 	docker compose -f $(COMPOSE_DEV) up -d --build --wait
-	- uv run --group client-test pytest --cov=pyroclient client/tests/
+	- SUPERADMIN_LOGIN=superadmin_login SUPERADMIN_PWD=superadmin_pwd uv run --group client-test pytest --cov=pyroclient client/tests/
 	docker compose -f $(COMPOSE_DEV) down
 
 docs-client:

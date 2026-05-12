@@ -190,6 +190,8 @@ jobs:
       - name: Run alembic migrations
         run: |
           docker compose -f docker-compose.dev.yml run --rm backend sh -c " \
+            echo '--- Upgrading to head ---' && \
+            alembic upgrade head && \
             echo '--- Checking current revision ---' && \
             alembic current && \
             echo '--- Showing history ---' && \
