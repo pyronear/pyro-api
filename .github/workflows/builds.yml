@@ -8,9 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  UV_VERSION: "0.5.13"
-  POETRY_VERSION: "1.8.3"
-
+  UV_VERSION: "0.11.14"
 
 jobs:
   docker:
@@ -21,11 +19,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v4
+      - uses: astral-sh/setup-uv@v7
         with:
-          poetry-version: ${{ env.POETRY_VERSION }}
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output requirements.txt
+          version: ${{ env.UV_VERSION }}
       - name: Build, run & check docker
         env:
           SUPERADMIN_LOGIN: dummy_login
