@@ -28,18 +28,18 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "requests>=2.31.0,<3.0.0",
+    "requests>=2.33.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest==8.3.4",
+    "pytest==9.0.3",
     "pytest-cov>=4.0.0,<5.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
     "types-requests>=2.0.0",
 ]
 quality = [
-    "mypy==1.10.0",
+    "ty==0.0.33",
 ]
 docs = [
     "sphinx>=3.0.0,!=3.5.0",
@@ -61,23 +61,6 @@ zip-safe = true
 
 [tool.setuptools.packages.find]
 exclude = ["docs*", "tests*"]
-
-[tool.mypy]
-python_version = "3.11"
-files = "pyroclient/"
-show_error_codes = true
-pretty = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_implicit_optional = true
-check_untyped_defs = true
-implicit_reexport = false
-
-[[tool.mypy.overrides]]
-module = [
-    "requests.*",
-]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["pyroclient/"]
