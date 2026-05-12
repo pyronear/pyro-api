@@ -135,8 +135,7 @@ jobs:
         run: |
           make install-quality
           git checkout -b temp
-          prek install
-          prek --version
+          uv run prek --version
           make precommit
 
   deps-sync:
