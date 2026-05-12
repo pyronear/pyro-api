@@ -153,7 +153,9 @@ async def proxy_latest_image(
 # ── Control ───────────────────────────────────────────────────────────────────
 
 
-@router.post("/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera (legacy)", deprecated=True)
+@router.post(
+    "/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera (legacy)", deprecated=True
+)
 async def proxy_move(
     direction: str | None = Query(default=None, description="Direction: Left, Right, Up, Down"),
     speed: int = Query(default=10, description="Movement speed"),
