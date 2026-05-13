@@ -24,39 +24,6 @@ updates:
     commit-message:
       prefix: "build(deps)"
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "08:00"
-    groups:
-      server:
-        patterns:
-          - "fastapi"
-          - "sqlmodel"
-          - "httpx"
-          - "uvicorn"
-      db:
-        patterns:
-          - "sqlmodel"
-          - "asyncpg"
-          - "alembic"
-      monitoring:
-        patterns:
-          - "sentry-sdk"
-          - "posthog"
-      test:
-        patterns:
-          - "pytest"
-          - "pytest-*"
-          - "aiosqlite"
-  - package-ecosystem: "uv"
-    target-branch: "main"
-    directory: "/"
-    labels:
-      - "dependencies"
-      - "type: misc"
-    commit-message:
-      prefix: "build(deps)"
-    schedule:
       interval: "daily"
       time: "08:00"
     groups:
