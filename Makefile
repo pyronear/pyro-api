@@ -8,7 +8,7 @@ COMPOSE_DEV := docker-compose.dev.yml
 .PHONY: lock build build-backend run run-dev stop migrate migrate-up test build-client test-client docs-client e2e uvicorn-backend
 
 sync-deps: $(PYPROJECT)
-	uv sync --locked --all-groups --all-packages --no-install-project
+	uv sync --locked --all-groups --no-install-project
 
 venv: $(PYPROJECT)
 	uv venv --python $(PYTHON_VERSION) --allow-existing
@@ -27,7 +27,7 @@ install-client-test: $(PYPROJECT)
 	uv sync --locked --group client-test --no-install-project
 
 install-docs: $(PYPROJECT)
-	uv sync --locked --group docs --no-install-project
+	uv sync --locked --group client-docs --no-install-project
 
 install-e2e: $(PYPROJECT)
 	uv sync --locked --group e2e --no-install-project
@@ -99,7 +99,7 @@ test-client: build-client
 	docker compose -f $(COMPOSE_DEV) down
 
 docs-client:
-	uv run --group docs sphinx-build client/docs/source client/docs/_build -a
+	uv run --group client-docs sphinx-build client/docs/source client/docs/_build -a
 
 e2e:
 	docker compose -f $(COMPOSE_DEV) up -d --build --wait

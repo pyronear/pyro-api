@@ -7,12 +7,6 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
-[manifest]
-members = [
-    "pyro-api",
-    "pyroclient",
-]
-
 [[package]]
 name = "aiosqlite"
 version = "0.22.1"
@@ -1625,9 +1619,6 @@ docs = [
     { name = "sphinx-copybutton" },
     { name = "sphinxemoji" },
 ]
-quality = [
-    { name = "ty" },
-]
 test = [
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1647,10 +1638,9 @@ requires-dist = [
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=3.0.0,!=3.5.0" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.3.1" },
     { name = "sphinxemoji", marker = "extra == 'docs'", specifier = ">=0.1.8" },
-    { name = "ty", marker = "extra == 'quality'", specifier = "==0.0.33" },
     { name = "types-requests", marker = "extra == 'test'", specifier = ">=2.0.0" },
 ]
-provides-extras = ["test", "quality", "docs"]
+provides-extras = ["test", "docs"]
 
 [[package]]
 name = "pytest"
