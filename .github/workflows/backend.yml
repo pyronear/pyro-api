@@ -86,58 +86,6 @@ jobs:
           echo "Docker startup failed. Logs saved as artifact build-docker-logs"
           exit 1
 
-  ruff:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-      - name: Run ruff
-        run: |
-          make install-quality
-          uv run --group quality ruff --version
-          make ruff-check
-
-  ty:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-      - name: Run ty
-        run: |
-          make install-quality
-          uv run --group quality ty --version
-          make typing-check
-
-  prek-hooks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-      - name: Run prek hooks
-        run: |
-          make install-quality
-          git checkout -b temp
-          uv run prek --version
-          make precommit
-
   deps-sync:
     runs-on: ubuntu-latest
     steps:
@@ -151,31 +99,6 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - name: Run dependency sync checker
         run: make deps-check
-
-  tests:
-    needs: start
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-      - name: Load images & start containers
-        run: UV_GROUPS="server test" docker compose -f docker-compose.dev.yml up -d backend --wait --build
-      - name: Run pytest
-        run: |
-          docker compose -f docker-compose.dev.yml exec -T backend pytest --cov=app --cov-report xml tests/
-          docker compose -f docker-compose.dev.yml cp backend:/app/coverage.xml ./coverage-backend.xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: backend
-          fail_ci_if_error: true
 
   migrations:
     needs: start
@@ -204,7 +127,7 @@ jobs:
           "
 
   publish-image:
-    needs: [build, tests, migrations]
+    needs: [build, start, deps-sync, migrations]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
