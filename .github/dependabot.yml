@@ -15,7 +15,39 @@ updates:
       actions:
         patterns:
           - "*"
-
+  - package-ecosystem: "uv"
+    target-branch: "main"
+    directory: "/"
+    labels:
+      - "dependencies"
+      - "type: misc"
+    commit-message:
+      prefix: "build(deps)"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+    groups:
+      server:
+        patterns:
+          - "fastapi"
+          - "sqlmodel"
+          - "httpx"
+          - "uvicorn"
+      db:
+        patterns:
+          - "sqlmodel"
+          - "asyncpg"
+          - "alembic"
+      monitoring:
+        patterns:
+          - "sentry-sdk"
+          - "posthog"
+      test:
+        patterns:
+          - "pytest"
+          - "pytest-*"
+          - "aiosqlite"
   - package-ecosystem: "uv"
     target-branch: "main"
     directory: "/"
@@ -28,35 +60,11 @@ updates:
       interval: "daily"
       time: "08:00"
     groups:
-      server:
+      security:
         patterns:
-          - "fastapi"
-          - "sqlmodel"
-          - "pydantic"
-          - "pydantic-settings"
-          - "requests"
           - "PyJWT"
           - "passlib"
           - "bcrypt"
-          - "uvicorn"
-          - "asyncpg"
-          - "alembic"
-          - "sentry-sdk"
-          - "posthog"
-          - "prometheus-fastapi-instrumentator"
-          - "python-multipart"
-          - "python-magic"
-          - "boto3"
-          - "httpx"
-          - "geopy"
-          - "networkx"
-          - "numpy"
-          - "pandas"
-          - "pyproj"
-          - "shapely"
-      client:
-        patterns:
-          - "pyroclient"
       quality:
         patterns:
           - "ruff"
@@ -64,19 +72,6 @@ updates:
           - "prek"
           - "types-*"
           - "sqlalchemy-stubs"
-      test:
-        patterns:
-          - "pytest"
-          - "pytest-*"
-          - "aiosqlite"
-      docs:
-        patterns:
-          - "sphinx"
-          - "sphinx*"
-          - "docutils"
-          - "Jinja2"
-          - "furo"
-
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
