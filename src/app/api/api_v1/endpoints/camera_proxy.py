@@ -198,7 +198,11 @@ async def proxy_start_move(
     return await _run_sync(_make_client(device_ip).start_move, camera_ip, direction, speed)
 
 
-@router.post("/{camera_id}/control/stop_move", status_code=status.HTTP_200_OK, summary="Halt current movement")
+@router.post(
+    "/{camera_id}/control/stop_move",
+    status_code=status.HTTP_200_OK,
+    summary="Halt the current continuous PTZ move",
+)
 async def proxy_stop_move(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
     return await _run_sync(_make_client(device_ip).stop_move, camera_ip)
@@ -278,7 +282,12 @@ async def proxy_speed_tables(camera: Camera = Depends(_require_read)) -> Any:
     return await _run_sync(_make_client(device_ip).get_speed_tables, camera_ip)
 
 
-@router.post("/{camera_id}/control/stop", status_code=status.HTTP_200_OK, summary="Stop the camera")
+@router.post(
+    "/{camera_id}/control/stop",
+    status_code=status.HTTP_200_OK,
+    summary="Stop the camera (legacy)",
+    deprecated=True,
+)
 async def proxy_stop(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
     return await _run_sync(_make_client(device_ip).stop_camera, camera_ip)
