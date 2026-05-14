@@ -123,6 +123,12 @@ def test_agent_workflow(test_cam_workflow, agent_token):
     assert response.status_code == 200, response.__dict__
 
 
+def test_unmatch_alert_sequence_not_found(agent_token):
+    agent_client = Client(agent_token, "http://localhost:5050", timeout=10)
+    response = agent_client.unmatch_alert_sequence(alert_id=999999, sequence_id=999999)
+    assert response.status_code == 404, response.__dict__
+
+
 def test_user_workflow(test_cam_workflow, user_token):
     # User workflow
     user_client = Client(user_token, "http://localhost:5050", timeout=10)
