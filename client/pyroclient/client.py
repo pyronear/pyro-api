@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -105,7 +105,7 @@ class Client:
         self.timeout = timeout
 
     @property
-    def headers(self) -> Dict[str, str]:
+    def headers(self) -> Dict[str, Union[str, bytes]]:
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
@@ -287,7 +287,7 @@ class Client:
 
         >>> api_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "pose_id": pose_id,
             "mask": mask,
         }

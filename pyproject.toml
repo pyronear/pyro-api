@@ -29,7 +29,7 @@ python-multipart = "==0.0.7"
 python-magic = "^0.4.17"
 boto3 = "^1.26.0"
 httpx = "^0.24.0"
-pyro-camera-api-client = {git = "https://github.com/pyronear/pyro-engine.git", subdirectory = "pyro_camera_api/client", branch = "develop"}
+pyro-camera-api-client = {git = "https://github.com/pyronear/pyro-engine.git", subdirectory = "pyro_camera_api/client", branch = "main"}
 geopy = "^2.4.0"
 networkx = "^3.2.0"
 numpy = "^1.26.0"
