@@ -20,7 +20,7 @@ from app.api.dependencies import get_alert_crud, get_jwt
 from app.core.time import utcnow
 from app.crud import AlertCRUD
 from app.db import get_session
-from app.models import Alert, AlertSequence, Camera, Sequence, UserRole
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
@@ -88,33 +88,102 @@ def _serialize_alert(
     )
 
 
-_ALERT_EXPORT_COLUMNS = ["id", "lat", "lon", "started_at", "last_seen_at"]
+_ALERT_EXPORT_COLUMNS = [
+    "alert_id",
+    "alert_started_at_date",
+    "alert_started_at_time",
+    "alert_last_seen_at",
+    "alert_duration_seconds",
+    "alert_triangulated_lat",
+    "alert_triangulated_lon",
+    "organization_id",
+    "sequence_id",
+    "sequence_started_at",
+    "sequence_last_seen_at",
+    "sequence_triangulated_azimuth",
+    "sequence_label",
+    "pose_id",
+    "camera_id",
+    "camera_name",
+]
+
+_WILDFIRE_LABELS: Dict[Union[AnnotationType, None], str] = {
+    AnnotationType.WILDFIRE_SMOKE: "wildfire",
+    AnnotationType.OTHER_SMOKE: "other",
+    AnnotationType.OTHER: "other",
+    None: "unknown",
+}
 
 
-def _iter_alerts_csv(alerts: Iterable[Alert]) -> Iterator[str]:
+async def _fetch_cameras_by_ids(session: AsyncSession, camera_ids: Iterable[int]) -> Dict[int, Camera]:
+    ids = list(set(camera_ids))
+    if not ids:
+        return {}
+    stmt: Any = select(Camera).where(cast(Any, Camera.id).in_(ids))
+    return {c.id: c for c in (await session.exec(stmt)).all()}
+
+
+def _iter_alerts_csv(
+    alerts: Iterable[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    cameras_by_id: Dict[int, Camera],
+) -> Iterator[str]:
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(_ALERT_EXPORT_COLUMNS)
     yield buf.getvalue()
     buf.seek(0)
     buf.truncate(0)
-    for a in alerts:
-        writer.writerow([
-            a.id,
-            "" if a.lat is None else a.lat,
-            "" if a.lon is None else a.lon,
-            a.started_at.isoformat(),
-            a.last_seen_at.isoformat(),
-        ])
-        yield buf.getvalue()
-        buf.seek(0)
-        buf.truncate(0)
+    for alert in alerts:
+        alert_cells = [
+            alert.id,
+            alert.started_at.date().isoformat(),
+            alert.started_at.time().isoformat(),
+            alert.last_seen_at.isoformat(),
+            int((alert.last_seen_at - alert.started_at).total_seconds()),
+            "" if alert.lat is None else alert.lat,
+            "" if alert.lon is None else alert.lon,
+            alert.organization_id,
+        ]
+        sequences = sorted(seq_map.get(alert.id, []), key=lambda s: s.started_at)
+        if not sequences:
+            writer.writerow([*alert_cells, "", "", "", "", "", "", "", ""])
+            yield buf.getvalue()
+            buf.seek(0)
+            buf.truncate(0)
+            continue
+        for sequence in sequences:
+            camera = cameras_by_id.get(sequence.camera_id)
+            writer.writerow([
+                *alert_cells,
+                sequence.id,
+                sequence.started_at.isoformat(),
+                sequence.last_seen_at.isoformat(),
+                "" if sequence.sequence_azimuth is None else sequence.sequence_azimuth,
+                _WILDFIRE_LABELS[sequence.is_wildfire],
+                "" if sequence.pose_id is None else sequence.pose_id,
+                sequence.camera_id,
+                "" if camera is None else camera.name,
+            ])
+            yield buf.getvalue()
+            buf.seek(0)
+            buf.truncate(0)
 
 
-def _build_alerts_csv_response(alerts: List[Alert], from_date: date, to_date: date) -> StreamingResponse:
+def _build_alerts_csv_response(
+    alerts: List[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    cameras_by_id: Dict[int, Camera],
+    from_date: date,
+    to_date: date,
+) -> StreamingResponse:
     filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return StreamingResponse(_iter_alerts_csv(alerts), media_type="text/csv", headers=headers)
+    return StreamingResponse(
+        _iter_alerts_csv(alerts, seq_map, cameras_by_id),
+        media_type="text/csv",
+        headers=headers,
+    )
 
 
 @router.get(
@@ -152,7 +221,13 @@ async def export_alerts_csv(
         .where(Alert.started_at <= end_dt)
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
-    return _build_alerts_csv_response(list((await session.exec(stmt)).all()), from_date, to_date)
+    alerts = list((await session.exec(stmt)).all())
+    seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
+    cameras_by_id = await _fetch_cameras_by_ids(
+        session,
+        (sequence.camera_id for sequences in seq_map.values() for sequence in sequences),
+    )
+    return _build_alerts_csv_response(alerts, seq_map, cameras_by_id, from_date, to_date)
 
 
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
