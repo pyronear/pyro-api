@@ -100,18 +100,21 @@ POSE_TABLE = [
         "camera_id": 1,
         "azimuth": 45.0,
         "patrol_id": 1,
+        "active": True,
     },
     {
         "id": 2,
         "camera_id": 1,
         "azimuth": 90.0,
         "patrol_id": 1,
+        "active": True,
     },
     {
         "id": 3,
         "camera_id": 2,
         "azimuth": 180.0,
         "patrol_id": 1,
+        "active": True,
     },
 ]
 
@@ -196,6 +199,7 @@ SEQ_TABLE = [
         "cone_angle": 54.8,
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+        "max_conf": None,
     },
     {
         "id": 2,
@@ -207,6 +211,7 @@ SEQ_TABLE = [
         "cone_angle": 54.8,
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "max_conf": None,
     },
 ]
 

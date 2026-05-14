@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, patch
 
@@ -7,6 +6,7 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import get_camera_crud, get_jwt
+from app.core.time import utcnow
 from app.main import app
 from app.models import Camera, Role
 from app.schemas.login import TokenPayload
@@ -121,8 +121,8 @@ async def test_create_camera(
             None,
             0,
             [
-                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1},
-                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1},
+                {"id": 1, "camera_id": 1, "azimuth": 45.0, "patrol_id": 1, "active": True},
+                {"id": 2, "camera_id": 1, "azimuth": 90.0, "patrol_id": 1, "active": True},
             ],
         ),
     ],
@@ -631,7 +631,7 @@ async def test_update_camera_trustable(
         is_trustable=False,
         last_active_at=None,
         last_image=None,
-        created_at=datetime.utcnow(),
+        created_at=utcnow(),
     )
     mock_cameras = AsyncMock()
     mock_cameras.update = AsyncMock(return_value=updated_camera)

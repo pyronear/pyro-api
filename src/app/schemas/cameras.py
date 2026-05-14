@@ -7,6 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.time import utcnow
 from app.schemas.poses import PoseReadWithoutImgInfo
 
 __all__ = [
@@ -16,7 +17,7 @@ __all__ = [
 
 
 class LastActive(BaseModel):
-    last_active_at: datetime = Field(default_factory=datetime.utcnow)
+    last_active_at: datetime = Field(default_factory=utcnow)
 
 
 class LastImage(LastActive):

@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
@@ -30,9 +30,6 @@ async def get_session() -> AsyncSession:  # type: ignore[misc]
 
 
 async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-
     async with AsyncSession(engine) as session:
         logger.info("Initializing PostgreSQL database...")
 
