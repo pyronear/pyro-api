@@ -21,6 +21,9 @@ from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWi
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.alerts import refresh_alert_state
+from app.services.risk import FwiClass, risk_service
+from app.services.sequence_confidence import max_conf_filter_clause
+from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
@@ -35,20 +38,26 @@ async def verify_org_rights(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
+def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
+    return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
+
+
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
 async def get_sequence(
     sequence_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
-) -> Sequence:
+) -> SequenceRead:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
-    return SequenceRead(**sequence.model_dump())
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
+    return _serialize_sequence(sequence, counts.get(sequence.id, 0))
 
 
 @router.get(
@@ -91,23 +100,34 @@ async def fetch_sequence_detections(
     summary="Fetch all the unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_sequences(
+    risk_score: Union[FwiClass, None] = Query(
+        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+    ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
-    camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-
-    fetched_sequences = (
-        await session.exec(
-            select(Sequence)
-            .where(Sequence.started_at > utcnow() - timedelta(hours=24))
-            .where(Sequence.camera_id.in_(camera_ids.all()))  # type: ignore[attr-defined]
-            .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
-            .order_by(Sequence.started_at.desc())  # type: ignore[attr-defined]
-            .limit(15)
-        )
+    camera_ids = (
+        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
     ).all()
-    return [SequenceRead(**elt.model_dump()) for elt in fetched_sequences]
+    classes: dict[int, Union[str, None]] = (
+        dict.fromkeys(camera_ids, risk_score) if risk_score is not None else dict(risk_service.scores())
+    )
+
+    stmt: Any = (
+        select(Sequence)
+        .where(Sequence.started_at > utcnow() - timedelta(hours=24))
+        .where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
+    )
+    seq_filter = max_conf_filter_clause(classes)
+    if seq_filter is not None:
+        stmt = stmt.where(seq_filter)
+    stmt = stmt.order_by(Sequence.started_at.desc()).limit(15)  # type: ignore[attr-defined]
+
+    fetched_sequences = (await session.exec(stmt)).all()
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
@@ -115,24 +135,34 @@ async def fetch_sequences_from_date(
     from_date: date = Query(),
     limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
     offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
+    risk_score: Union[FwiClass, None] = Query(
+        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+    ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
     # Limit to cameras in the same organization
-    camera_ids = await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-    # Identify the sequences from that day
-    fetched_sequences = (
-        await session.exec(
-            select(Sequence)
-            .where(func.date(Sequence.started_at) == from_date)
-            .where(Sequence.camera_id.in_(camera_ids.all()))  # type: ignore[attr-defined]
-            .order_by(Sequence.started_at.desc())  # type: ignore[attr-defined]
-            .limit(limit)
-            .offset(offset)
-        )
+    camera_ids = (
+        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
     ).all()
-    return [SequenceRead(**elt.model_dump()) for elt in fetched_sequences]
+    if risk_score is not None:
+        classes: dict[int, Union[str, None]] = dict.fromkeys(camera_ids, risk_score)
+    else:
+        scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
+        classes = dict(scores)
+
+    stmt: Any = (
+        select(Sequence).where(func.date(Sequence.started_at) == from_date).where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+    )
+    seq_filter = max_conf_filter_clause(classes)
+    if seq_filter is not None:
+        stmt = stmt.where(seq_filter)
+    stmt = stmt.order_by(Sequence.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
+
+    fetched_sequences = (await session.exec(stmt)).all()
+    counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
+    return [_serialize_sequence(sequence, counts.get(sequence.id, 0)) for sequence in fetched_sequences]
 
 
 @router.delete("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Delete a sequence")

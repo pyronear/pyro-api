@@ -3,7 +3,9 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import timedelta
+import csv
+import io
+from datetime import datetime, timedelta
 from typing import Any, List, Tuple, cast
 
 import pandas as pd
@@ -14,14 +16,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.time import utcnow
-from app.models import Alert, AlertSequence, AnnotationType, Camera, Organization, Pose, Sequence
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
 
 
 async def _create_alert_with_sequences(
     session: AsyncSession, org_id: int, camera_id: int, lat: float, lon: float
-) -> Tuple[Alert, List[int]]:
+) -> Tuple[Alert, List[int], List[int]]:
     now = utcnow()
+    pose = (
+        await session.exec(select(Pose).where(Pose.camera_id == camera_id).order_by(Pose.id))  # type: ignore[attr-defined]
+    ).first()
+    assert pose is not None
     seq_payloads = [
         {
             "camera_id": camera_id,
@@ -48,6 +54,7 @@ async def _create_alert_with_sequences(
             "cone_angle": 3.0,
         },
     ]
+    detections_count_by_sequence = [2, 1, 0]
     sequences: List[Sequence] = []
     for idx, payload in enumerate(seq_payloads):
         seq = Sequence(
@@ -60,6 +67,20 @@ async def _create_alert_with_sequences(
     await session.commit()
     for seq in sequences:
         await session.refresh(seq)
+    for sequence, detections_count in zip(sequences, detections_count_by_sequence, strict=True):
+        for det_idx in range(detections_count):
+            session.add(
+                Detection(
+                    camera_id=sequence.camera_id,
+                    pose_id=pose.id,
+                    sequence_id=sequence.id,
+                    bucket_key=f"alert-seq-{sequence.id}-{det_idx}.jpg",
+                    bbox="[(.1,.1,.7,.8,.9)]",
+                    others_bboxes=None,
+                    created_at=now - timedelta(seconds=det_idx),
+                )
+            )
+    await session.commit()
 
     alert = Alert(
         organization_id=org_id,
@@ -75,14 +96,15 @@ async def _create_alert_with_sequences(
     for seq in sequences:
         session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
     await session.commit()
-    return alert, [seq.id for seq in sequences]
+    return alert, [seq.id for seq in sequences], detections_count_by_sequence
 
 
 @pytest.mark.asyncio
 async def test_get_alert_and_sequences(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
@@ -97,19 +119,23 @@ async def test_get_alert_and_sequences(async_client: AsyncClient, detection_sess
     assert payload["started_at"] == alert.started_at.isoformat()
     assert payload["last_seen_at"] == alert.last_seen_at.isoformat()
     assert {seq["id"] for seq in payload["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in payload["sequences"]} == expected_counts
 
     resp = await async_client.get(f"/alerts/{alert.id}/sequences?limit=5&desc=true", headers=auth)
     assert resp.status_code == 200, resp.text
     returned = resp.json()
     last_seen_times = [item["last_seen_at"] for item in returned]
     assert last_seen_times == sorted(last_seen_times, reverse=True)
+    assert {sequence["id"]: sequence["detections_count"] for sequence in returned} == expected_counts
+    assert any(sequence["detections_count"] == 0 for sequence in returned)
 
 
 @pytest.mark.asyncio
 async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
@@ -124,13 +150,44 @@ async def test_alerts_unlabeled_latest(async_client: AsyncClient, detection_sess
     assert returned["started_at"] == alert.started_at.isoformat()
     assert returned["last_seen_at"] == alert.last_seen_at.isoformat()
     assert {seq["id"] for seq in returned["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in returned["sequences"]} == expected_counts
+    assert any(seq["detections_count"] == 0 for seq in returned["sequences"])
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_pagination(async_client: AsyncClient, detection_session: AsyncSession):
+    alert_a, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
+    alert_b, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.1, lon=2.1)
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=10&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    full = resp.json()
+    full_ids = [item["id"] for item in full]
+    assert {alert_a.id, alert_b.id}.issubset(full_ids)
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=1&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    page_one = resp.json()
+    assert len(page_one) == 1
+    assert page_one[0]["id"] == full_ids[0]
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=1&offset=1", headers=auth)
+    assert resp.status_code == 200, resp.text
+    page_two = resp.json()
+    assert len(page_two) == 1
+    assert page_two[0]["id"] == full_ids[1]
 
 
 @pytest.mark.asyncio
 async def test_alerts_from_date(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, detections_count_by_sequence = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
+    expected_counts = dict(zip(seq_ids, detections_count_by_sequence, strict=False))
     date_str = alert.started_at.date().isoformat()
 
     auth = pytest.get_token(
@@ -146,6 +203,8 @@ async def test_alerts_from_date(async_client: AsyncClient, detection_session: As
     assert started_times == sorted(started_times, reverse=True)
     alert_payload = next(item for item in returned if item["id"] == alert.id)
     assert {seq["id"] for seq in alert_payload["sequences"]} == set(seq_ids)
+    assert {seq["id"]: seq["detections_count"] for seq in alert_payload["sequences"]} == expected_counts
+    assert any(seq["detections_count"] == 0 for seq in alert_payload["sequences"])
 
 
 @pytest.mark.asyncio
@@ -321,7 +380,7 @@ async def test_triangulation_creates_single_alert(
 
 @pytest.mark.asyncio
 async def test_unmatch_creates_new_alert(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, _ = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
     target_seq = seq_ids[0]
@@ -355,7 +414,7 @@ async def test_unmatch_creates_new_alert(async_client: AsyncClient, detection_se
 async def test_unmatch_keeps_sequence_when_already_linked_elsewhere(
     async_client: AsyncClient, detection_session: AsyncSession
 ):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, _ = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
     target_seq = seq_ids[0]
@@ -426,7 +485,7 @@ async def test_unmatch_rejects_single_sequence_alert(async_client: AsyncClient, 
 
 @pytest.mark.asyncio
 async def test_unmatch_returns_404_when_sequence_not_linked(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, _ = await _create_alert_with_sequences(
+    alert, _, _ = await _create_alert_with_sequences(
         detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
     )
     other_seq = Sequence(
@@ -452,7 +511,7 @@ async def test_unmatch_returns_404_when_sequence_not_linked(async_client: AsyncC
 
 @pytest.mark.asyncio
 async def test_unmatch_forbidden_for_user_role(async_client: AsyncClient, detection_session: AsyncSession):
-    alert, seq_ids = await _create_alert_with_sequences(
+    alert, seq_ids, _ = await _create_alert_with_sequences(
         detection_session, org_id=2, camera_id=2, lat=48.3856355, lon=2.7323256
     )
     auth = pytest.get_token(
@@ -464,7 +523,7 @@ async def test_unmatch_forbidden_for_user_role(async_client: AsyncClient, detect
 
 @pytest.mark.asyncio
 async def test_unmatch_forbidden_cross_org(async_client: AsyncClient, detection_session: AsyncSession):
-    other_alert, other_seq_ids = await _create_alert_with_sequences(
+    other_alert, other_seq_ids, _ = await _create_alert_with_sequences(
         detection_session, org_id=2, camera_id=2, lat=48.3856355, lon=2.7323256
     )
     auth = pytest.get_token(
@@ -472,3 +531,163 @@ async def test_unmatch_forbidden_cross_org(async_client: AsyncClient, detection_
     )
     resp = await async_client.post(f"/alerts/{other_alert.id}/sequences/{other_seq_ids[0]}/unmatch", headers=auth)
     assert resp.status_code == 403, resp.text
+
+
+async def _create_alert(
+    session: AsyncSession,
+    org_id: int,
+    started_at: datetime,
+    last_seen_at: datetime,
+    lat: float | None = 48.0,
+    lon: float | None = 2.0,
+) -> Alert:
+    alert = Alert(
+        organization_id=org_id,
+        lat=lat,
+        lon=lon,
+        started_at=started_at,
+        last_seen_at=last_seen_at,
+    )
+    session.add(alert)
+    await session.commit()
+    await session.refresh(alert)
+    return alert
+
+
+def _parse_csv_body(body: str) -> Tuple[List[str], List[List[str]]]:
+    reader = csv.reader(io.StringIO(body))
+    rows = list(reader)
+    return rows[0], rows[1:]
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_happy_path(async_client: AsyncClient, detection_session: AsyncSession):
+    base = datetime(2026, 4, 10, 12, 0, 0)
+    alerts = [
+        await _create_alert(detection_session, 1, base, base + timedelta(minutes=5), 48.1, 2.1),
+        await _create_alert(
+            detection_session, 1, base + timedelta(days=1), base + timedelta(days=1, minutes=5), 48.2, 2.2
+        ),
+        await _create_alert(
+            detection_session, 1, base + timedelta(days=2), base + timedelta(days=2, minutes=5), 48.3, 2.3
+        ),
+    ]
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-10&to_date=2026-04-12",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "attachment" in resp.headers["content-disposition"]
+    assert "alerts_2026-04-10_2026-04-12.csv" in resp.headers["content-disposition"]
+
+    header, data_rows = _parse_csv_body(resp.text)
+    assert header == ["id", "lat", "lon", "started_at", "last_seen_at"]
+    assert [int(r[0]) for r in data_rows] == [a.id for a in alerts]
+    # ordering is ascending by started_at
+    started_values = [r[3] for r in data_rows]
+    assert started_values == sorted(started_values)
+    # spot-check values for the first row
+    assert float(data_rows[0][1]) == pytest.approx(48.1)
+    assert float(data_rows[0][2]) == pytest.approx(2.1)
+    assert data_rows[0][3] == alerts[0].started_at.isoformat()
+    assert data_rows[0][4] == alerts[0].last_seen_at.isoformat()
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_window_narrows(async_client: AsyncClient, detection_session: AsyncSession):
+    base = datetime(2026, 4, 10, 12, 0, 0)
+    await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
+    a_in = await _create_alert(detection_session, 1, base + timedelta(days=1), base + timedelta(days=1, minutes=5))
+    await _create_alert(detection_session, 1, base + timedelta(days=2), base + timedelta(days=2, minutes=5))
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-11&to_date=2026-04-11",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    _, data_rows = _parse_csv_body(resp.text)
+    returned_ids = {int(r[0]) for r in data_rows}
+    assert returned_ids == {a_in.id}
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_org_isolation(async_client: AsyncClient, detection_session: AsyncSession):
+    base = datetime(2026, 4, 10, 12, 0, 0)
+    org1_alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
+    org2_alert = await _create_alert(detection_session, 2, base, base + timedelta(minutes=5))
+
+    # Call as a non-admin user from org 1
+    auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    _, data_rows = _parse_csv_body(resp.text)
+    returned_ids = {int(r[0]) for r in data_rows}
+    assert org1_alert.id in returned_ids
+    assert org2_alert.id not in returned_ids
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_empty_range(async_client: AsyncClient, detection_session: AsyncSession):
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2099-01-01&to_date=2099-01-31",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    header, data_rows = _parse_csv_body(resp.text)
+    assert header == ["id", "lat", "lon", "started_at", "last_seen_at"]
+    assert data_rows == []
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_renders_null_coordinates_as_empty(
+    async_client: AsyncClient, detection_session: AsyncSession
+):
+    base = datetime(2026, 4, 10, 12, 0, 0)
+    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5), lat=None, lon=None)
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    _, data_rows = _parse_csv_body(resp.text)
+    row = next(r for r in data_rows if int(r[0]) == alert.id)
+    assert row[1] == ""
+    assert row[2] == ""
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_invalid_range(async_client: AsyncClient, detection_session: AsyncSession):
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(
+        "/alerts/export?from_date=2026-04-12&to_date=2026-04-10",
+        headers=auth,
+    )
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_unauthenticated(async_client: AsyncClient, detection_session: AsyncSession):
+    resp = await async_client.get("/alerts/export?from_date=2026-04-10&to_date=2026-04-12")
+    assert resp.status_code == 401, resp.text
