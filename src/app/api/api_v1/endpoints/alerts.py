@@ -146,12 +146,6 @@ def _iter_alerts_csv(
             alert.organization_id,
         ]
         sequences = sorted(seq_map.get(alert.id, []), key=lambda s: s.started_at)
-        if not sequences:
-            writer.writerow([*alert_cells, "", "", "", "", "", "", "", ""])
-            yield buf.getvalue()
-            buf.seek(0)
-            buf.truncate(0)
-            continue
         for sequence in sequences:
             writer.writerow([
                 *alert_cells,
