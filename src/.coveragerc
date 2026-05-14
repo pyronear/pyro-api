@@ -1,0 +1,3 @@
+[run]
+source = app
+concurrency = greenlet

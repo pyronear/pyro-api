@@ -65,6 +65,7 @@ skips = ["*/test_*.py", "*_test.py"]
 
 [tool.coverage.run]
 source = ["src/app", "client/pyroclient"]
+concurrency = ["greenlet"]
 
 [tool.bandit]
 exclude_dirs = ["src/tests", "client/tests"]
