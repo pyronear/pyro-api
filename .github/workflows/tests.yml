@@ -88,5 +88,5 @@ jobs:
           owner: "Pyronear"
           starting-year: 2020
           folders: "src,client,.github"
-          ignore-files: "version.py,__init__.py"
+          ignore-files: "version.py,__init__.py,verify_deps_sync.py"
           ignore-folders: "client/tests/,src/tests/,src/migrations/versions/"
