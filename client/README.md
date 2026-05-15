@@ -15,9 +15,6 @@
   <a href="https://pypi.org/project/pyroclient/">
     <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
   </a>
-  <a href="https://anaconda.org/pyronear/pyroclient">
-    <img alt="Anaconda" src="https://img.shields.io/conda/vn/pyronear/pyroclient?style=flat-square?style=flat-square&logo=Anaconda&logoColor=white&label=conda">
-  </a>
   <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
   <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
 </p>
@@ -62,7 +59,7 @@ response = cam_client.create_detection(image, 123.2)
 
 ### Prerequisites
 
-Python 3.8 (or higher) and [pip](https://pip.pypa.io/en/stable/)/[conda](https://docs.conda.io/en/latest/miniconda.html) are required to install the client of the alert API.
+Python 3.8 (or higher) and [pip](https://pip.pypa.io/en/stable/) are required to install the client of the alert API.
 
 ### Latest stable release
 
@@ -70,12 +67,6 @@ You can install the last stable release of the package using [pypi](https://pypi
 
 ```shell
 pip install pyroclient
-```
-
-or using [conda](https://anaconda.org/pyronear/pyroclient):
-
-```shell
-conda install -c pyronear pyroclient
 ```
 
 ### Developer mode
