@@ -1432,17 +1432,17 @@ async def test_get_detection_url_returns_crop_url(
     response = await async_client.get(f"/detections/{detection.id}/url", headers=auth)
     assert response.status_code == 200, response.text
     body = response.json()
-    assert isinstance(body["url"], str) and body["url"].startswith("http://")
-    assert isinstance(body["crop_url"], str) and body["crop_url"].startswith("http://")
+    assert isinstance(body["url"], str)
+    assert body["url"].startswith("http://")
+    assert isinstance(body["crop_url"], str)
+    assert body["crop_url"].startswith("http://")
     assert body["crop_url"] != body["url"]
 
     bucket.delete_file(crop_key)
 
 
 @pytest.mark.asyncio
-async def test_get_detection_url_crop_url_null_without_crop(
-    async_client: AsyncClient, detection_session: AsyncSession
-):
+async def test_get_detection_url_crop_url_null_without_crop(async_client: AsyncClient, detection_session: AsyncSession):
     auth = pytest.get_token(
         pytest.user_table[0]["id"],
         pytest.user_table[0]["role"].split(),
@@ -1486,7 +1486,7 @@ async def test_create_detection_authorizes_pose_before_uploading(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
+    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # noqa: RUF029
         upload_calls.append(file.filename or "")
         return "should-never-persist"
 

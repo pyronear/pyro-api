@@ -155,9 +155,7 @@ class S3Service:
         return f"{settings.SERVER_NAME}-alert-api-{organization_id!s}"
 
 
-async def upload_file(
-    file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
-) -> str:
+async def upload_file(file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = "") -> str:
     """Upload a file to S3 storage and return the public URL"""
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
