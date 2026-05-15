@@ -32,6 +32,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Pos
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
 from app.services.cones import resolve_cone
+from app.services.storage import s3_service
 
 
 @pytest.mark.parametrize(
@@ -877,6 +878,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         file=upload,
+        crop_file=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -914,6 +916,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         file=upload_again,
+        crop_file=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -1381,7 +1384,7 @@ async def test_create_detection_persists_crop_bucket_key(
     assert response.status_code == 201, response.text
     data = response.json()
     assert isinstance(data["crop_bucket_key"], str)
-    assert data["crop_bucket_key"]
+    assert data["crop_bucket_key"].startswith("crop_")
     assert data["crop_bucket_key"] != data["bucket_key"]
 
     det = await detection_session.get(Detection, data["id"])
@@ -1413,32 +1416,31 @@ async def test_create_detection_without_crop_leaves_field_null(
 async def test_get_detection_url_returns_crop_url(
     async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
 ):
-    from app.services.storage import s3_service
-
     detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
     assert detection is not None
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
     crop_key = "crop_for_url_test.jpg"
     bucket.upload_file(crop_key, io.BytesIO(mock_img))
-    detection.crop_bucket_key = crop_key
-    detection_session.add(detection)
-    await detection_session.commit()
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
-    response = await async_client.get(f"/detections/{detection.id}/url", headers=auth)
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert isinstance(body["url"], str)
-    assert body["url"].startswith("http://")
-    assert isinstance(body["crop_url"], str)
-    assert body["crop_url"].startswith("http://")
-    assert body["crop_url"] != body["url"]
-
-    bucket.delete_file(crop_key)
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        response = await async_client.get(f"/detections/{detection.id}/url", headers=auth)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert isinstance(body["url"], str)
+        assert body["url"].startswith("http://")
+        assert isinstance(body["crop_url"], str)
+        assert body["crop_url"].startswith("http://")
+        assert body["crop_url"] != body["url"]
+    finally:
+        bucket.delete_file(crop_key)
 
 
 @pytest.mark.asyncio
