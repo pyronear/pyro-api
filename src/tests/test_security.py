@@ -26,6 +26,23 @@ def test_verify_password():
     assert not verify_password("another_try", hash_pwd1)
 
 
+def test_password_longer_than_72_bytes_is_truncated():
+    # bcrypt only hashes the first 72 bytes. The previous passlib
+    # implementation silently truncated, so we keep the same contract to
+    # stay backward-compatible with hashes already in the DB.
+    base = "a" * 72
+    hashed = hash_password(base)
+    assert verify_password(base + "extra_ignored_bytes", hashed)
+    assert not verify_password("a" * 71 + "b", hashed)
+
+
+def test_verify_password_returns_false_on_malformed_hash():
+    # bcrypt.checkpw raises ValueError on malformed hashes; passlib used
+    # to swallow it and return False. We preserve that behaviour so a
+    # corrupt DB row produces 401, not 500.
+    assert not verify_password("anything", "not-a-bcrypt-hash")
+
+
 @pytest.mark.parametrize(
     ("content", "expires_minutes", "expected_delta"),
     [
