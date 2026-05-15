@@ -3,13 +3,13 @@ on:
   push:
     branches: main
     tags:
-      - 'v*'
+      - "v*"
 
 env:
   BACKEND_IMAGE_NAME: alert-api
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_LOGIN }}
   PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "1.8.3"
+  UV_VERSION: "0.11.14"
 
 jobs:
   docker:
@@ -20,11 +20,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v4
+      - uses: astral-sh/setup-uv@v7
         with:
-          poetry-version: ${{ env.POETRY_VERSION }}
-      - name: Resolve dependencies
-        run: poetry export -f requirements.txt --without-hashes --output requirements.txt
+          version: ${{ env.UV_VERSION }}
       - name: Resolve image tag
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then

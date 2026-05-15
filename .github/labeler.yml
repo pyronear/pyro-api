@@ -89,7 +89,7 @@
 - changed-files:
   - any-glob-to-any-file:
     - pyproject.toml
-    - poetry.lock
+    - uv.lock
     - client/pyproject.toml
     - client/setup.py
 

@@ -124,7 +124,7 @@ app.add_middleware(
 
 if isinstance(settings.SENTRY_DSN, str):
     # Sentry middleware is compatible at runtime
-    app.add_middleware(SentryAsgiMiddleware)  # type: ignore[arg-type]
+    app.add_middleware(SentryAsgiMiddleware)  # ty: ignore[invalid-argument-type]
 
 
 # Overrides swagger to include favicon
@@ -161,7 +161,7 @@ def custom_openapi():
     return app.openapi_schema
 
 
-app.openapi = custom_openapi  # type: ignore[method-assign]
+app.openapi = custom_openapi  # ty: ignore[invalid-assignment]
 if settings.PROMETHEUS_ENABLED:
     Instrumentator(
         excluded_handlers=["/metrics", "/docs", ".*openapi.json"],

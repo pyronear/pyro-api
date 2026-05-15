@@ -8,8 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  UV_VERSION: "0.5.13"
-  POETRY_VERSION: "1.8.3"
+  UV_VERSION: "0.11.14"
 
 jobs:
   end-to-end:
@@ -20,16 +19,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - name: Resolve dependencies
-        run: |
-          poetry export -f requirements.txt --without-hashes --output requirements.txt
-          uv pip install --system -r scripts/requirements.txt
       - name: Run the backend & the test
         env:
           SUPERUSER_LOGIN: dummy_login
@@ -39,4 +31,4 @@ jobs:
           POSTGRES_DB: dummy_pg_db
         run: |
           docker compose -f docker-compose.dev.yml up -d --build --wait
-          python scripts/test_e2e.py
+          uv run --group e2e python scripts/test_e2e.py
