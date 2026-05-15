@@ -153,3 +153,6 @@ requirements.txt
 src/app/requirements.txt
 src/requirements.txt
 src/requirements-dev.txt
+
+# Local working notes (drafts of external messages, scratch files)
+tmp/
