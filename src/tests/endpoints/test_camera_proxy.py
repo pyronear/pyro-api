@@ -137,6 +137,7 @@ async def test_proxy_write_auth(
         "/cameras/1/capture",
         "/cameras/1/latest_image?pose=0",
         "/cameras/1/control/presets",
+        "/cameras/1/control/speed_tables",
         "/cameras/1/focus/status",
         "/cameras/1/patrol/status",
         "/cameras/1/stream/status",
@@ -151,24 +152,35 @@ async def test_proxy_unconfigured_get(async_client: AsyncClient, camera_session:
 
 
 @pytest.mark.parametrize(
-    "path",
+    ("path", "json"),
     [
-        "/cameras/1/control/move",
-        "/cameras/1/control/stop",
-        "/cameras/1/control/preset",
-        "/cameras/1/control/zoom/5",
-        "/cameras/1/patrol/start",
-        "/cameras/1/patrol/stop",
-        "/cameras/1/stream/start",
-        "/cameras/1/stream/stop",
-        "/cameras/1/focus/manual?position=500",
-        "/cameras/1/focus/autofocus",
-        "/cameras/1/focus/optimize",
+        ("/cameras/1/control/move", None),
+        ("/cameras/1/control/goto_preset", {"pose_id": 1}),
+        ("/cameras/1/control/start_move", {"direction": "Left"}),
+        ("/cameras/1/control/stop_move", None),
+        ("/cameras/1/control/move_for_duration", {"direction": "Left", "duration": 1}),
+        ("/cameras/1/control/move_by_degrees", {"direction": "Left", "degrees": 5}),
+        ("/cameras/1/control/click_to_move", {"click_x": 0.5, "click_y": 0.5}),
+        ("/cameras/1/control/stop", None),
+        ("/cameras/1/control/preset", None),
+        ("/cameras/1/control/zoom/5", None),
+        ("/cameras/1/patrol/start", None),
+        ("/cameras/1/patrol/stop", None),
+        ("/cameras/1/stream/start", None),
+        ("/cameras/1/stream/stop", None),
+        ("/cameras/1/focus/manual?position=500", None),
+        ("/cameras/1/focus/autofocus", None),
+        ("/cameras/1/focus/optimize", None),
     ],
 )
 @pytest.mark.asyncio
-async def test_proxy_unconfigured_post(async_client: AsyncClient, camera_session: AsyncSession, path: str):
-    response = await async_client.post(path, headers=_auth(0))
+async def test_proxy_unconfigured_post(
+    async_client: AsyncClient, camera_session: AsyncSession, path: str, json: dict | None
+):
+    kwargs: dict = {"headers": _auth(0)}
+    if json is not None:
+        kwargs["json"] = json
+    response = await async_client.post(path, **kwargs)
     assert response.status_code == 409
     assert "not configured" in response.json()["detail"]
 
@@ -256,27 +268,34 @@ async def test_device_ip_not_leaked_in_camera_response(
 
 
 @pytest.mark.parametrize(
-    ("path", "method"),
+    ("path", "method", "json"),
     [
-        (f"/cameras/{CONFIGURED_CAM_ID}/health", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/cameras_list", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/is_running", "get"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/move", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/preset", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/control/zoom/5", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/manual?position=500", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/autofocus", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/focus/optimize", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/start", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/stop", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/start", "post"),
-        (f"/cameras/{CONFIGURED_CAM_ID}/stream/stop", "post"),
+        (f"/cameras/{CONFIGURED_CAM_ID}/health", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/cameras_list", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/speed_tables", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/is_running", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/move", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/goto_preset", "post", {"pose_id": 1}),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/start_move", "post", {"direction": "Left"}),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop_move", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/move_for_duration", "post", {"direction": "Left", "duration": 1}),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/move_by_degrees", "post", {"direction": "Left", "degrees": 5}),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/click_to_move", "post", {"click_x": 0.5, "click_y": 0.5}),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/stop", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/preset", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/zoom/5", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/manual?position=500", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/autofocus", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/focus/optimize", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/start", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/patrol/stop", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/start", "post", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/stream/stop", "post", None),
     ],
 )
 @pytest.mark.asyncio
@@ -285,7 +304,11 @@ async def test_proxy_happy_path(
     configured_camera_session: AsyncSession,
     path: str,
     method: str,
+    json: dict | None,
 ):
+    kwargs: dict = {"headers": _auth(0)}
+    if json is not None:
+        kwargs["json"] = json
     with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value={"ok": True})):
-        response = await getattr(async_client, method)(path, headers=_auth(0))
+        response = await getattr(async_client, method)(path, **kwargs)
     assert response.status_code == 200
