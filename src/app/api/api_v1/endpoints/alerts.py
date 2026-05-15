@@ -123,6 +123,32 @@ async def _fetch_camera_names_by_ids(session: AsyncSession, camera_ids: Iterable
     return {cid: name for cid, name in (await session.exec(stmt)).all()}
 
 
+def _alert_cells(alert: Alert) -> List[Any]:
+    return [
+        alert.id,
+        alert.started_at.date().isoformat(),
+        alert.started_at.time().isoformat(),
+        alert.last_seen_at.isoformat(),
+        int((alert.last_seen_at - alert.started_at).total_seconds()),
+        "" if alert.lat is None else alert.lat,
+        "" if alert.lon is None else alert.lon,
+        alert.organization_id,
+    ]
+
+
+def _sequence_cells(sequence: Sequence, camera_name: str) -> List[Any]:
+    return [
+        sequence.id,
+        sequence.started_at.isoformat(),
+        sequence.last_seen_at.isoformat(),
+        "" if sequence.sequence_azimuth is None else sequence.sequence_azimuth,
+        _WILDFIRE_LABELS[sequence.is_wildfire],
+        "" if sequence.pose_id is None else sequence.pose_id,
+        sequence.camera_id,
+        camera_name,
+    ]
+
+
 def _iter_alerts_csv(
     alerts: Iterable[Alert],
     seq_map: Dict[int, List[Sequence]],
@@ -130,37 +156,23 @@ def _iter_alerts_csv(
 ) -> Iterator[str]:
     buf = io.StringIO()
     writer = csv.writer(buf)
+
+    def drain() -> str:
+        value = buf.getvalue()
+        buf.seek(0)
+        buf.truncate(0)
+        return value
+
     writer.writerow(_ALERT_EXPORT_COLUMNS)
-    yield buf.getvalue()
-    buf.seek(0)
-    buf.truncate(0)
+    yield drain()
+
     for alert in alerts:
-        alert_cells = [
-            alert.id,
-            alert.started_at.date().isoformat(),
-            alert.started_at.time().isoformat(),
-            alert.last_seen_at.isoformat(),
-            int((alert.last_seen_at - alert.started_at).total_seconds()),
-            "" if alert.lat is None else alert.lat,
-            "" if alert.lon is None else alert.lon,
-            alert.organization_id,
-        ]
+        alert_cells = _alert_cells(alert)
         sequences = sorted(seq_map.get(alert.id, []), key=lambda s: s.started_at)
         for sequence in sequences:
-            writer.writerow([
-                *alert_cells,
-                sequence.id,
-                sequence.started_at.isoformat(),
-                sequence.last_seen_at.isoformat(),
-                "" if sequence.sequence_azimuth is None else sequence.sequence_azimuth,
-                _WILDFIRE_LABELS[sequence.is_wildfire],
-                "" if sequence.pose_id is None else sequence.pose_id,
-                sequence.camera_id,
-                camera_names_by_id.get(sequence.camera_id, ""),
-            ])
-            yield buf.getvalue()
-            buf.seek(0)
-            buf.truncate(0)
+            camera_name = camera_names_by_id.get(sequence.camera_id, "")
+            writer.writerow([*alert_cells, *_sequence_cells(sequence, camera_name)])
+            yield drain()
 
 
 def _build_alerts_csv_response(
