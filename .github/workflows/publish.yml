@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Miniconda setup
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: true
           python-version: ${{ env.PYTHON_VERSION }}
@@ -90,7 +90,7 @@ jobs:
         python: ["3.10", "3.11", "3.12"]
     steps:
       - name: Miniconda setup
-        uses: conda-incubator/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v4
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python }}
