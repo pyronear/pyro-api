@@ -14,6 +14,7 @@ from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.api_v1.endpoints.alerts import _ALERT_EXPORT_COLUMNS
 from app.core.config import settings
 from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
@@ -428,26 +429,6 @@ async def _attach_sequence(
     return seq
 
 
-_EXPORT_COLUMNS = [
-    "alert_id",
-    "alert_started_at_date",
-    "alert_started_at_time",
-    "alert_last_seen_at",
-    "alert_duration_seconds",
-    "alert_triangulated_lat",
-    "alert_triangulated_lon",
-    "organization_id",
-    "sequence_id",
-    "sequence_started_at",
-    "sequence_last_seen_at",
-    "sequence_triangulated_azimuth",
-    "sequence_label",
-    "pose_id",
-    "camera_id",
-    "camera_name",
-]
-
-
 def _parse_export_csv(body: str) -> Tuple[List[str], List[Dict[str, str]]]:
     reader = csv.DictReader(io.StringIO(body))
     rows = list(reader)
@@ -476,22 +457,31 @@ async def test_alerts_export_happy_path(async_client: AsyncClient, detection_ses
     assert "attachment" in resp.headers["content-disposition"]
     assert "alerts_2026-04-10_2026-04-12.csv" in resp.headers["content-disposition"]
 
-    header, rows = _parse_export_csv(resp.text)
-    assert header == _EXPORT_COLUMNS
+    _, rows = _parse_export_csv(resp.text)
     assert [int(r["alert_id"]) for r in rows] == [a.id for a in alerts]
     # ordering is ascending by alert.started_at
     started_iso = [f"{r['alert_started_at_date']}T{r['alert_started_at_time']}" for r in rows]
     assert started_iso == sorted(started_iso)
+    # One dict equality covers column set, names, and values in a single pytest diff.
     first = rows[0]
-    assert float(first["alert_triangulated_lat"]) == pytest.approx(48.1)
-    assert float(first["alert_triangulated_lon"]) == pytest.approx(2.1)
-    assert first["alert_started_at_date"] == alerts[0].started_at.date().isoformat()
-    assert first["alert_started_at_time"] == alerts[0].started_at.time().isoformat()
-    assert first["alert_last_seen_at"] == alerts[0].last_seen_at.isoformat()
-    assert int(first["alert_duration_seconds"]) == int((alerts[0].last_seen_at - alerts[0].started_at).total_seconds())
-    assert int(first["organization_id"]) == 1
-    assert first["camera_name"] == "cam-1"
-    assert first["sequence_label"] == "unknown"
+    assert first == {
+        "alert_id": str(alerts[0].id),
+        "alert_started_at_date": alerts[0].started_at.date().isoformat(),
+        "alert_started_at_time": alerts[0].started_at.time().isoformat(),
+        "alert_last_seen_at": alerts[0].last_seen_at.isoformat(),
+        "alert_duration_seconds": str(int((alerts[0].last_seen_at - alerts[0].started_at).total_seconds())),
+        "alert_triangulated_lat": "48.1",
+        "alert_triangulated_lon": "2.1",
+        "organization_id": "1",
+        "sequence_id": str(first["sequence_id"]),  # id auto-generated, just round-trip
+        "sequence_started_at": alerts[0].started_at.isoformat(),
+        "sequence_last_seen_at": alerts[0].last_seen_at.isoformat(),
+        "sequence_triangulated_azimuth": "100.0",
+        "sequence_label": "unknown",
+        "pose_id": "",
+        "camera_id": "1",
+        "camera_name": "cam-1",
+    }
 
 
 @pytest.mark.asyncio
@@ -551,7 +541,7 @@ async def test_alerts_export_empty_range(async_client: AsyncClient, detection_se
     )
     assert resp.status_code == 200, resp.text
     header, rows = _parse_export_csv(resp.text)
-    assert header == _EXPORT_COLUMNS
+    assert header == _ALERT_EXPORT_COLUMNS
     assert rows == []
 
 
