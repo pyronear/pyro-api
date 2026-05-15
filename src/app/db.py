@@ -5,10 +5,11 @@
 
 import asyncio
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from sqlalchemy.ext.asyncio import async_sessionmaker  # ty: ignore[unresolved-import]
+from sqlalchemy.ext.asyncio.engine import AsyncEngine  # ty: ignore[unresolved-import]
 from sqlmodel import create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +24,7 @@ logger = logging.getLogger("uvicorn.error")
 engine = AsyncEngine(create_engine(settings.POSTGRES_URL, echo=False))
 
 
-async def get_session() -> AsyncSession:  # type: ignore[misc]
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async_session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
         yield session

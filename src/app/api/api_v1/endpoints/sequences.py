@@ -194,8 +194,9 @@ async def fetch_sequences_from_date(
     camera_ids = (
         await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
     ).all()
+    classes: dict[int, str | None]
     if risk_score is not None:
-        classes: dict[int, Union[str, None]] = dict.fromkeys(camera_ids, risk_score)
+        classes = dict.fromkeys(camera_ids, risk_score)
     else:
         scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
         classes = dict(scores)

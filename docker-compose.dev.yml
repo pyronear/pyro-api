@@ -35,6 +35,8 @@ services:
     build:
       context: .
       dockerfile: ./src/Dockerfile
+      args:
+        UV_GROUPS: ${UV_GROUPS:-server}
     depends_on:
       db:
         condition: service_healthy

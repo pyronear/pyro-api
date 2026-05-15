@@ -8,7 +8,7 @@ import pytest
 import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -236,8 +236,12 @@ def event_loop(request) -> Generator:
 
 @pytest_asyncio.fixture(scope="function")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
+    transport = ASGITransport(app=app)
     async with AsyncClient(
-        app=app, base_url=f"http://api.localhost:8050{settings.API_V1_STR}", follow_redirects=True, timeout=5
+        transport=transport,
+        base_url=f"http://api.localhost:8050{settings.API_V1_STR}",
+        follow_redirects=True,
+        timeout=5,
     ) as client:
         yield client
 

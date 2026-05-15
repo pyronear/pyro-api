@@ -5,7 +5,7 @@
 
 import logging
 from datetime import date
-from typing import Literal, Union
+from typing import Literal, Union, cast
 
 import httpx
 
@@ -46,6 +46,7 @@ def _parse_scores_payload(payload: object) -> dict[int, str]:
     for item in payload:
         if not isinstance(item, dict):
             continue
+        item = cast(dict[str, object], item)
         cid = item.get("id") or item.get("camera_id")
         fwi = item.get("fwi_class")
         if isinstance(cid, int) and isinstance(fwi, str):
@@ -80,15 +81,18 @@ class RiskService:
         return min_confidence_for_class(self._scores.get(camera_id))
 
     async def _fetch(self, path: str, params: Union[dict, None] = None) -> object:
-        if not self.is_configured:
+        risk_api_url = settings.RISK_API_URL
+        risk_api_login = settings.RISK_API_LOGIN
+        risk_api_pwd = settings.RISK_API_PWD
+        if not (risk_api_url and risk_api_login and risk_api_pwd):
             return None
-        host = settings.RISK_API_URL.rstrip("/")  # type: ignore[union-attr]
+        host = risk_api_url.rstrip("/")
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
                     f"{host}/{path.lstrip('/')}",
                     params=params,
-                    auth=(settings.RISK_API_LOGIN, settings.RISK_API_PWD),  # type: ignore[arg-type]
+                    auth=(risk_api_login, risk_api_pwd),
                 )
                 response.raise_for_status()
                 return response.json()

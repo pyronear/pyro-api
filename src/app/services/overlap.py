@@ -13,7 +13,7 @@ from datetime import timedelta
 from math import atan2, cos, radians, sin, sqrt
 from typing import Any, Dict, List, Optional, Tuple
 
-import networkx as nx  # type: ignore
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pyproj
