@@ -435,23 +435,47 @@ def _parse_export_csv(body: str) -> Tuple[List[str], List[Dict[str, str]]]:
     return list(reader.fieldnames or []), rows
 
 
+async def _get_export(
+    async_client: AsyncClient, auth: Dict[str, str], from_date: str, to_date: str
+) -> Tuple[List[str], List[Dict[str, str]]]:
+    resp = await async_client.get(f"/alerts/export?from_date={from_date}&to_date={to_date}", headers=auth)
+    assert resp.status_code == 200, resp.text
+    return _parse_export_csv(resp.text)
+
+
+@pytest.fixture
+def export_base_dt() -> datetime:
+    """Anchor datetime for export tests; date is stable so query windows in test bodies stay readable."""
+    return datetime(2026, 4, 10, 12, 0, 0)
+
+
+@pytest.fixture
+def org1_admin_auth() -> Dict[str, str]:
+    user = pytest.user_table[0]
+    return pytest.get_token(user["id"], user["role"].split(), user["organization_id"])
+
+
+@pytest.fixture
+def org1_agent_auth() -> Dict[str, str]:
+    user = pytest.user_table[1]
+    return pytest.get_token(user["id"], user["role"].split(), user["organization_id"])
+
+
 @pytest.mark.asyncio
-async def test_alerts_export_happy_path(async_client: AsyncClient, detection_session: AsyncSession):
-    base = datetime(2026, 4, 10, 12, 0, 0)
+async def test_alerts_export_happy_path(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+):
     alerts: List[Alert] = []
     for offset_days, (lat, lon) in enumerate([(48.1, 2.1), (48.2, 2.2), (48.3, 2.3)]):
-        started = base + timedelta(days=offset_days)
+        started = export_base_dt + timedelta(days=offset_days)
         alert = await _create_alert(detection_session, 1, started, started + timedelta(minutes=5), lat, lon)
         await _attach_sequence(detection_session, alert)
         alerts.append(alert)
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-12",
-        headers=auth,
-    )
+    resp = await async_client.get("/alerts/export?from_date=2026-04-10&to_date=2026-04-12", headers=org1_admin_auth)
     assert resp.status_code == 200, resp.text
     assert resp.headers["content-type"].startswith("text/csv")
     assert "attachment" in resp.headers["content-disposition"]
@@ -485,97 +509,72 @@ async def test_alerts_export_happy_path(async_client: AsyncClient, detection_ses
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_window_narrows(async_client: AsyncClient, detection_session: AsyncSession):
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    a_before = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
-    await _attach_sequence(detection_session, a_before)
-    a_in = await _create_alert(detection_session, 1, base + timedelta(days=1), base + timedelta(days=1, minutes=5))
-    await _attach_sequence(detection_session, a_in)
-    a_after = await _create_alert(detection_session, 1, base + timedelta(days=2), base + timedelta(days=2, minutes=5))
-    await _attach_sequence(detection_session, a_after)
+async def test_alerts_export_window_narrows(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+):
+    for offset_days in range(3):
+        started = export_base_dt + timedelta(days=offset_days)
+        alert = await _create_alert(detection_session, 1, started, started + timedelta(minutes=5))
+        await _attach_sequence(detection_session, alert)
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-11&to_date=2026-04-11",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
-    returned_ids = {int(r["alert_id"]) for r in rows}
-    assert returned_ids == {a_in.id}
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-11", "2026-04-11")
+    returned_dates = {r["alert_started_at_date"] for r in rows}
+    assert returned_dates == {"2026-04-11"}
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_org_isolation(async_client: AsyncClient, detection_session: AsyncSession):
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    org1_alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5))
+async def test_alerts_export_org_isolation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_agent_auth: Dict[str, str],
+):
+    org1_alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5))
     await _attach_sequence(detection_session, org1_alert, camera_id=1)
-    org2_alert = await _create_alert(detection_session, 2, base, base + timedelta(minutes=5))
+    org2_alert = await _create_alert(detection_session, 2, export_base_dt, export_base_dt + timedelta(minutes=5))
     await _attach_sequence(detection_session, org2_alert, camera_id=2)
 
-    # Call as a non-admin user from org 1
-    auth = pytest.get_token(
-        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
+    _, rows = await _get_export(async_client, org1_agent_auth, "2026-04-10", "2026-04-10")
     returned_ids = {int(r["alert_id"]) for r in rows}
     assert org1_alert.id in returned_ids
     assert org2_alert.id not in returned_ids
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_empty_range(async_client: AsyncClient, detection_session: AsyncSession):
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2099-01-01&to_date=2099-01-31",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    header, rows = _parse_export_csv(resp.text)
+async def test_alerts_export_empty_range(
+    async_client: AsyncClient, detection_session: AsyncSession, org1_admin_auth: Dict[str, str]
+):
+    header, rows = await _get_export(async_client, org1_admin_auth, "2099-01-01", "2099-01-31")
     assert header == _ALERT_EXPORT_COLUMNS
     assert rows == []
 
 
 @pytest.mark.asyncio
 async def test_alerts_export_renders_null_coordinates_as_empty(
-    async_client: AsyncClient, detection_session: AsyncSession
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
 ):
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=5), lat=None, lon=None)
+    alert = await _create_alert(
+        detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5), lat=None, lon=None
+    )
     await _attach_sequence(detection_session, alert)
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
     row = next(r for r in rows if int(r["alert_id"]) == alert.id)
     assert row["alert_triangulated_lat"] == ""
     assert row["alert_triangulated_lon"] == ""
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_invalid_range(async_client: AsyncClient, detection_session: AsyncSession):
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-12&to_date=2026-04-10",
-        headers=auth,
-    )
+async def test_alerts_export_invalid_range(
+    async_client: AsyncClient, detection_session: AsyncSession, org1_admin_auth: Dict[str, str]
+):
+    resp = await async_client.get("/alerts/export?from_date=2026-04-12&to_date=2026-04-10", headers=org1_admin_auth)
     assert resp.status_code == 422, resp.text
 
 
@@ -586,38 +585,34 @@ async def test_alerts_export_unauthenticated(async_client: AsyncClient, detectio
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_emits_one_row_per_sequence(async_client: AsyncClient, detection_session: AsyncSession):
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=30))
+async def test_alerts_export_emits_one_row_per_sequence(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+):
+    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=30))
     # Attach in non-monotonic order to verify the export sorts ASC by sequence.started_at.
     middle = await _attach_sequence(
         detection_session,
         alert,
-        started_at=base + timedelta(minutes=10),
-        last_seen_at=base + timedelta(minutes=20),
+        started_at=export_base_dt + timedelta(minutes=10),
+        last_seen_at=export_base_dt + timedelta(minutes=20),
     )
     last = await _attach_sequence(
         detection_session,
         alert,
-        started_at=base + timedelta(minutes=20),
-        last_seen_at=base + timedelta(minutes=30),
+        started_at=export_base_dt + timedelta(minutes=20),
+        last_seen_at=export_base_dt + timedelta(minutes=30),
     )
     first = await _attach_sequence(
         detection_session,
         alert,
-        started_at=base,
-        last_seen_at=base + timedelta(minutes=10),
+        started_at=export_base_dt,
+        last_seen_at=export_base_dt + timedelta(minutes=10),
     )
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
     alert_rows = [r for r in rows if int(r["alert_id"]) == alert.id]
     assert len(alert_rows) == 3
     assert [int(r["sequence_id"]) for r in alert_rows] == [first.id, middle.id, last.id]
@@ -626,47 +621,39 @@ async def test_alerts_export_emits_one_row_per_sequence(async_client: AsyncClien
     assert {r["alert_last_seen_at"] for r in alert_rows} == {alert.last_seen_at.isoformat()}
 
 
+@pytest.mark.parametrize(
+    ("is_wildfire", "expected_label"),
+    [
+        (AnnotationType.WILDFIRE_SMOKE, "wildfire"),
+        (AnnotationType.OTHER_SMOKE, "other"),
+        (AnnotationType.OTHER, "other"),
+        (None, "unknown"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_alerts_export_wildfire_label_mapping(async_client: AsyncClient, detection_session: AsyncSession):
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=30))
-    wf = await _attach_sequence(
-        detection_session,
-        alert,
-        is_wildfire=AnnotationType.WILDFIRE_SMOKE,
-        started_at=base,
-        last_seen_at=base + timedelta(minutes=10),
-    )
-    other = await _attach_sequence(
-        detection_session,
-        alert,
-        is_wildfire=AnnotationType.OTHER_SMOKE,
-        started_at=base + timedelta(minutes=10),
-        last_seen_at=base + timedelta(minutes=20),
-    )
-    unk = await _attach_sequence(
-        detection_session,
-        alert,
-        is_wildfire=None,
-        started_at=base + timedelta(minutes=20),
-        last_seen_at=base + timedelta(minutes=30),
-    )
+async def test_alerts_export_wildfire_label_mapping(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+    is_wildfire: AnnotationType | None,
+    expected_label: str,
+):
+    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5))
+    await _attach_sequence(detection_session, alert, is_wildfire=is_wildfire)
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
-    label_by_seq = {int(r["sequence_id"]): r["sequence_label"] for r in rows if int(r["alert_id"]) == alert.id}
-    assert label_by_seq == {wf.id: "wildfire", other.id: "other", unk.id: "unknown"}
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
+    row = next(r for r in rows if int(r["alert_id"]) == alert.id)
+    assert row["sequence_label"] == expected_label
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_camera_name_resolution(async_client: AsyncClient, detection_session: AsyncSession):
+async def test_alerts_export_camera_name_resolution(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+):
     extra_camera = Camera(
         organization_id=1,
         name="cam-extra",
@@ -680,31 +667,22 @@ async def test_alerts_export_camera_name_resolution(async_client: AsyncClient, d
     await detection_session.commit()
     await detection_session.refresh(extra_camera)
 
-    base = datetime(2026, 4, 10, 12, 0, 0)
-    alert = await _create_alert(detection_session, 1, base, base + timedelta(minutes=20))
+    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=20))
     seq_cam1 = await _attach_sequence(
         detection_session,
         alert,
         camera_id=1,
-        started_at=base,
-        last_seen_at=base + timedelta(minutes=10),
+        started_at=export_base_dt,
+        last_seen_at=export_base_dt + timedelta(minutes=10),
     )
     seq_extra = await _attach_sequence(
         detection_session,
         alert,
         camera_id=extra_camera.id,
-        started_at=base + timedelta(minutes=10),
-        last_seen_at=base + timedelta(minutes=20),
+        started_at=export_base_dt + timedelta(minutes=10),
+        last_seen_at=export_base_dt + timedelta(minutes=20),
     )
 
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
-    )
-    resp = await async_client.get(
-        "/alerts/export?from_date=2026-04-10&to_date=2026-04-10",
-        headers=auth,
-    )
-    assert resp.status_code == 200, resp.text
-    _, rows = _parse_export_csv(resp.text)
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
     cam_by_seq = {int(r["sequence_id"]): r["camera_name"] for r in rows if int(r["alert_id"]) == alert.id}
     assert cam_by_seq == {seq_cam1.id: "cam-1", seq_extra.id: "cam-extra"}
