@@ -5,6 +5,7 @@
 
 
 import json
+import logging
 import re
 from ast import literal_eval
 from datetime import datetime, timedelta
@@ -39,6 +40,7 @@ from app.api.dependencies import (
     get_webhook_crud,
 )
 from app.core.config import settings
+from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
@@ -55,10 +57,14 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
+from app.services.risk import risk_service
+from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
+
+logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
@@ -132,7 +138,7 @@ async def _get_recent_sequences(
         inequality_pair=(
             "last_seen_at",
             ">",
-            datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
     )
     if all(seq.id != sequence_.id for seq in recent_sequences):
@@ -376,6 +382,8 @@ async def create_detection(
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     if pose.camera_id != token_payload.sub:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+    if not pose.active:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
 
     bbox_strings = _extract_bbox_strings(bboxes)
     if not bbox_strings:
@@ -415,7 +423,7 @@ async def create_detection(
             inequality_pair=(
                 "last_seen_at",
                 ">",
-                datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+                utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
             ),
             order_by="last_seen_at",
             order_desc=True,
@@ -432,6 +440,10 @@ async def create_detection(
         if matched_sequence is not None:
             await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
             det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
+            # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
+            det_max_conf = max_conf_from_bboxes(det.bbox)
+            if det_max_conf is not None:
+                await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -443,7 +455,7 @@ async def create_detection(
                 inequality_pair=(
                     "created_at",
                     ">",
-                    datetime.utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                    utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
                 ),
                 order_by="created_at",
                 order_desc=False,
@@ -460,6 +472,7 @@ async def create_detection(
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
                 first_det = min(overlapping_dets, key=lambda item: item.created_at)
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
+                seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
                     Sequence(
                         camera_id=token_payload.sub,
@@ -469,6 +482,7 @@ async def create_detection(
                         cone_angle=cone_angle,
                         started_at=first_det.created_at,
                         last_seen_at=det.created_at,
+                        max_conf=seq_max_conf,
                     )
                 )
                 for det_ in overlapping_dets:
@@ -495,11 +509,20 @@ async def create_detection(
                     if org is None:
                         org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.slack_hook:
-                        slack_payload = jsonable_encoder(det)
-                        slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-                        background_tasks.add_task(
-                            slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                        )
+                        min_conf = risk_service.min_confidence(camera.id)
+                        if min_conf is None or sequence_.max_conf is None or sequence_.max_conf >= min_conf:
+                            slack_payload = jsonable_encoder(det)
+                            slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+                            background_tasks.add_task(
+                                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+                            )
+                        else:
+                            logger.info(
+                                "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
+                                camera.name,
+                                sequence_.max_conf,
+                                min_conf,
+                            )
 
         created.append(det)
 
@@ -554,7 +577,7 @@ async def fetch_detections(
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
     if UserRole.ADMIN in token_payload.scopes:
-        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all()]
+        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
     camera_ids = [camera.id for camera in cameras_list]

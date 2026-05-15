@@ -22,4 +22,4 @@ class SequenceLabel(BaseModel):
 
 
 class SequenceRead(Sequence):
-    pass
+    detections_count: int = 0

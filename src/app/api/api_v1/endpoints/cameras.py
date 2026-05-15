@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import asyncio
-from datetime import datetime
 from typing import Any, List, cast
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
@@ -12,6 +11,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, Upl
 from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
 from app.core.config import settings
 from app.core.security import create_access_token
+from app.core.time import utcnow
 from app.crud import CameraCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
@@ -65,7 +65,7 @@ async def get_camera(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     cam_poses = await poses.fetch_all(
-        filters=("camera_id", camera_id),
+        filters=[("camera_id", camera_id), ("active", True)],
         order_by="id",
     )
     pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
@@ -123,7 +123,7 @@ async def fetch_cameras(
         urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
 
     async def get_poses(cam: Camera) -> list[PoseReadWithoutImgInfo]:
-        p = await poses.fetch_all(filters=("camera_id", cam.id))
+        p = await poses.fetch_all(filters=[("camera_id", cam.id), ("active", True)])
         return [PoseReadWithoutImgInfo(**pose.model_dump()) for pose in p]
 
     poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
@@ -140,7 +140,7 @@ async def heartbeat(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
-    camera = await cameras.update(token_payload.sub, LastActive(last_active_at=datetime.utcnow()))
+    camera = await cameras.update(token_payload.sub, LastActive(last_active_at=utcnow()))
     return CameraOut(**camera.model_dump())
 
 
@@ -157,7 +157,7 @@ async def update_image(
     if isinstance(cam.last_image, str):
         s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
-    camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=datetime.utcnow()))
+    camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=utcnow()))
     return CameraOut(**camera.model_dump())
 
 

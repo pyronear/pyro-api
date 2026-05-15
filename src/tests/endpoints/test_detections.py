@@ -2,7 +2,7 @@ import asyncio
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
@@ -28,6 +28,7 @@ from app.api.api_v1.endpoints.detections import (
     create_detection,
 )
 from app.core.config import settings
+from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
@@ -227,7 +228,7 @@ async def test_create_detection_rejects_empty_bbox_strings(
 @pytest.mark.asyncio
 async def test_get_last_bbox_for_sequence_returns_latest(detection_session: AsyncSession):
     detections = DetectionCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     camera_id = pytest.camera_table[0]["id"]
 
     pose = Pose(camera_id=camera_id, azimuth=50.0)
@@ -275,7 +276,7 @@ async def test_get_last_bbox_for_sequence_returns_latest(detection_session: Asyn
 @pytest.mark.asyncio
 async def test_get_last_bbox_for_sequence_returns_none_without_detections(detection_session: AsyncSession):
     detections = DetectionCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     camera_id = pytest.camera_table[0]["id"]
     pose = Pose(camera_id=camera_id, azimuth=60.0)
     detection_session.add(pose)
@@ -302,7 +303,7 @@ async def test_get_last_bbox_for_sequence_returns_none_without_detections(detect
 @pytest.mark.asyncio
 async def test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox(detection_session: AsyncSession):
     detections = DetectionCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     camera_id = pytest.camera_table[0]["id"]
     pose = Pose(camera_id=camera_id, azimuth=70.0)
     detection_session.add(pose)
@@ -351,7 +352,7 @@ async def test_get_camera_by_id_adds_missing_sequence_camera(detection_session: 
 @pytest.mark.asyncio
 async def test_get_recent_sequences_appends_missing_sequence(detection_session: AsyncSession):
     seq_crud = SequenceCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
     old_seq = Sequence(
@@ -383,7 +384,7 @@ async def test_get_recent_sequences_appends_missing_sequence(detection_session: 
 
 @pytest.mark.asyncio
 async def test_build_overlap_records_skips_missing_cone_data(detection_session: AsyncSession):
-    now = datetime.utcnow()
+    now = utcnow()
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
     seq = Sequence(
@@ -404,7 +405,7 @@ def test_resolve_groups_and_locations_empty_records_returns_none():
 
 
 def test_resolve_groups_and_locations_no_match_returns_none():
-    now = datetime.utcnow()
+    now = utcnow()
     records = [
         {
             "id": 1,
@@ -428,7 +429,7 @@ async def test_fetch_alert_mapping_empty(detection_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_fetch_alert_mapping_returns_mapping(detection_session: AsyncSession):
-    now = datetime.utcnow()
+    now = utcnow()
     alert = Alert(organization_id=1, lat=1.0, lon=1.0, started_at=now, last_seen_at=now)
     detection_session.add(alert)
     await detection_session.commit()
@@ -447,7 +448,7 @@ async def test_fetch_alert_mapping_returns_mapping(detection_session: AsyncSessi
 @pytest.mark.asyncio
 async def test_maybe_update_alert_updates_fields(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     alert = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
     detection_session.add(alert)
     await detection_session.commit()
@@ -468,7 +469,7 @@ async def test_maybe_update_alert_updates_fields(detection_session: AsyncSession
 @pytest.mark.asyncio
 async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     alert1 = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
     alert2 = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
     detection_session.add(alert1)
@@ -511,7 +512,7 @@ DISTANT_LOCATION = (48.5529, 2.8536)
 @pytest.mark.asyncio
 async def test_filter_candidate_keeps_alert_within_threshold(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     nearby = Alert(
         organization_id=1,
         lat=SMOKE_LOCATION[0] + 0.005,
@@ -530,7 +531,7 @@ async def test_filter_candidate_keeps_alert_within_threshold(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     far = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -549,7 +550,7 @@ async def test_filter_candidate_drops_alert_beyond_threshold(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_keeps_alert_with_no_location(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     anchorless = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
     detection_session.add(anchorless)
     await detection_session.commit()
@@ -562,7 +563,7 @@ async def test_filter_candidate_keeps_alert_with_no_location(detection_session: 
 @pytest.mark.asyncio
 async def test_filter_candidate_returns_unchanged_when_location_missing(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     a = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -581,7 +582,7 @@ async def test_filter_candidate_returns_unchanged_when_location_missing(detectio
 @pytest.mark.asyncio
 async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     distant = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -609,7 +610,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
 @pytest.mark.asyncio
 async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     distant = Alert(
         organization_id=1,
         lat=DISTANT_LOCATION[0],
@@ -649,7 +650,7 @@ async def test_attach_sequence_to_alert_returns_without_overlap_records(detectio
     cam_crud = CameraCRUD(detection_session)
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
     assert camera is not None
-    now = datetime.utcnow()
+    now = utcnow()
     sequence = Sequence(
         camera_id=camera.id,
         pose_id=None,
@@ -1182,7 +1183,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     seq_crud = SequenceCRUD(detection_session)
     alert_crud = AlertCRUD(detection_session)
     cam_crud = CameraCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
     cam1 = await detection_session.get(Camera, 1)
     assert cam1 is not None
     cam2 = Camera(
@@ -1258,7 +1259,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     seq_crud = SequenceCRUD(detection_session)
     alert_crud = AlertCRUD(detection_session)
     cam_crud = CameraCRUD(detection_session)
-    now = datetime.utcnow()
+    now = utcnow()
 
     cam2 = Camera(
         organization_id=1,

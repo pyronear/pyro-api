@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
+from app.core.time import utcnow
 from app.services.overlap import compute_overlap
 
 
@@ -35,7 +36,7 @@ def _make_sequence(
 
 
 def test_compute_overlap_groups_and_locations() -> None:
-    now = datetime.utcnow()
+    now = utcnow()
     seqs = [
         _make_sequence(1, 48.3792, 2.8208, 276.5, 3.0, now - timedelta(seconds=9), now - timedelta(seconds=1)),
         _make_sequence(2, 48.2605, 2.7064, 8.3, 0.8, now - timedelta(seconds=8), now - timedelta(seconds=2)),
@@ -76,7 +77,7 @@ def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
 
 
 def test_compute_overlap_skips_same_pose_pair() -> None:
-    now = datetime.utcnow()
+    now = utcnow()
     # Two sequences from the exact same pose with time and angular overlap
     # share the same apex, so they must not be triangulated together.
     seqs = [

@@ -5,7 +5,6 @@
 
 import hashlib
 import logging
-from datetime import datetime
 from mimetypes import guess_extension
 from typing import Any, Dict, Union
 
@@ -15,6 +14,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError, NoCredenti
 from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import settings
+from app.core.time import utcnow
 
 __all__ = ["s3_service", "upload_file"]
 
@@ -167,7 +167,7 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int, ke
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
     # Concatenate timestamp & hash; key_prefix lets callers segregate distinct uploads in the
     # same request (e.g. frame vs crop) so identical bytes don't collide on the same key.
-    bucket_key = f"{key_prefix}{camera_id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    bucket_key = f"{key_prefix}{camera_id}-{utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(organization_id)

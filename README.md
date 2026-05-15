@@ -4,9 +4,6 @@
   <a href="https://github.com/pyronear/pyro-api/actions?query=workflow%3Abuilds">
     <img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/pyronear/pyro-api/builds.yml?branch=main&label=CI&logo=github&style=flat-square">
   </a>
-  <a href="http://pyronear-api.herokuapp.com/redoc">
-    <img src="https://img.shields.io/github/actions/workflow/status/pyronear/pyro-api/builds.yml?brain=main&label=docs&logo=read-the-docs&style=flat-square" alt="Documentation Status">
-  </a>
   <a href="https://codecov.io/gh/pyronear/pyro-api">
     <img src="https://img.shields.io/codecov/c/github/pyronear/pyro-api.svg?logo=codecov&style=flat-square" alt="Test coverage percentage">
   </a>
@@ -32,21 +29,38 @@
 
 The building blocks of our wildfire detection & monitoring API.
 
+The API stores access metadata (Users, Cameras, Organizations), the core wildfire-monitoring workflow (Detections grouped into Sequences), and client integrations (Webhooks). End to end, an alert flows like this: an admin registers a user, the user registers a camera and mints a camera token, then the camera uploads a picture as a detection, which is grouped into a sequence over a dense time window. For the full data model, UML diagram, codebase tour and developer setup, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Quick Tour
 
-### Running/stopping the service
+Two ways to run the stack, depending on whether you just want to use the API or to develop against it.
 
-You can run the API containers using this command:
+### As a user (no Poetry needed)
+
+Pull the published `ghcr.io/pyronear/alert-api` image and start the stack:
+
+```shell
+cp .env.example .env
+docker compose pull
+docker compose up
+```
+
+Then navigate to [http://localhost:5050/docs](http://localhost:5050/docs) to interact with the API and explore the OpenAPI documentation.
+
+To stop the service:
+```shell
+docker compose down
+```
+
+### As a contributor (builds locally, requires Poetry)
 
 ```shell
 make run
 ```
 
-You can now navigate to `http://localhost:8080/docs` to interact with the API (or do it through HTTP requests) and explore the documentation.
+This regenerates `requirements.txt` from `poetry.lock` and builds the backend image locally, so it requires [Poetry](https://python-poetry.org/docs/) to be installed. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full developer setup, tests, and migration workflow.
 
-![Swagger](https://github.com/pyronear/pyro-api/releases/download/v0.1.2/swagger_interface.png)
-
-In order to stop the service, run:
+To stop the service:
 ```shell
 make stop
 ```
@@ -59,28 +73,16 @@ make stop
 - [Docker](https://docs.docker.com/engine/install/)
 - [Docker compose](https://docs.docker.com/compose/)
 
-### Starting your service
+Contributors building the image locally also need [Poetry](https://python-poetry.org/docs/); see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-#### 1 - Clone the repository
+### First-time setup
+
 ```shell
 git clone https://github.com/pyronear/pyro-api.git && cd pyro-api
-```
-#### 2 - Set your environment variables
-First copy the example environment setup
-```shell
 cp .env.example .env
 ```
 
-#### 3 - Start the services
-
-```shell
-docker compose pull
-docker compose up
-```
-
-#### 4 - Check how what you've deployed
-
-You can now access your backend API at [http://localhost:5050/docs](http://localhost:5050/docs)
+Then run the stack as described in the [Quick Tour](#quick-tour) above.
 
 
 ## More goodies
@@ -94,7 +96,7 @@ This project is a REST-API, and you can interact with the service through HTTP r
 
 Any sort of contribution is greatly appreciated!
 
-You can find a short guide in [`CONTRIBUTING`](CONTRIBUTING.md) to help grow this project!
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers more than the contribution guidelines: it also documents the data model, codebase structure, developer setup, testing workflow and database migrations. Start there if you want to understand how the project is organised.
 
 
 
