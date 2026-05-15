@@ -46,5 +46,5 @@ COPY src/migrations /app/migrations
 COPY src/alembic.ini /app/alembic.ini
 
 EXPOSE 8000
-HEALTHCHECK --interval=10s --timeout=3s --retries=5 CMD ["curl", "-f", "http://localhost:8000/health", "--max-time", "3"]
+HEALTHCHECK --interval=10s --timeout=3s --retries=5 CMD ["curl", "-f", "http://localhost:8000/status", "--max-time", "3"]
 CMD ["uvicorn", "app.main:app", "--host=0.0.0.0", "--port=8000", "--proxy-headers", "--use-colors", "--log-level=info"]
