@@ -492,12 +492,16 @@ async def test_sequence_label_keeps_solo_alert(async_client: AsyncClient, detect
     )
     assert resp.status_code == 200, resp.text
 
-    alerts_res = await detection_session.exec(select(Alert).execution_options(populate_existing=True))
+    alerts_res = await detection_session.exec(
+        select(Alert.id).where(Alert.id == original_alert_id).execution_options(populate_existing=True)
+    )
     alerts_rows = alerts_res.all()
-    assert [row.id for row in alerts_rows] == [original_alert_id]
+    assert alerts_rows == [original_alert_id]
 
     mappings_res = await detection_session.exec(
-        select(AlertSequence.alert_id, AlertSequence.sequence_id).execution_options(populate_existing=True)
+        select(AlertSequence.alert_id, AlertSequence.sequence_id)
+        .where(AlertSequence.sequence_id == seq.id)
+        .execution_options(populate_existing=True)
     )
     assert {(aid, sid) for aid, sid in mappings_res.all()} == {(original_alert_id, seq.id)}
 
