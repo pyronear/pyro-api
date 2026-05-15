@@ -14,7 +14,7 @@ from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints.alerts import _ALERT_EXPORT_COLUMNS
+from app.api.api_v1.endpoints.alerts import _ALERT_EXPORT_COLUMNS, _iter_alerts_csv
 from app.core.config import settings
 from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
@@ -435,6 +435,132 @@ def _parse_export_csv(body: str) -> Tuple[List[str], List[Dict[str, str]]]:
     return list(reader.fieldnames or []), rows
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Unit tests for _iter_alerts_csv: pure serializer behavior, no DB / HTTP / auth
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_UNIT_BASE_DT = datetime(2026, 4, 10, 12, 0, 0)
+
+
+def _make_alert(
+    *,
+    id_: int = 1,
+    organization_id: int = 1,
+    lat: float | None = 48.0,
+    lon: float | None = 2.0,
+    started_at: datetime | None = None,
+    last_seen_at: datetime | None = None,
+) -> Alert:
+    return Alert(
+        id=id_,
+        organization_id=organization_id,
+        lat=lat,
+        lon=lon,
+        started_at=started_at or _UNIT_BASE_DT,
+        last_seen_at=last_seen_at or _UNIT_BASE_DT + timedelta(minutes=5),
+    )
+
+
+def _make_sequence(
+    *,
+    id_: int = 1,
+    camera_id: int = 1,
+    pose_id: int | None = None,
+    is_wildfire: AnnotationType | None = None,
+    sequence_azimuth: float | None = 100.0,
+    started_at: datetime | None = None,
+    last_seen_at: datetime | None = None,
+) -> Sequence:
+    return Sequence(
+        id=id_,
+        camera_id=camera_id,
+        pose_id=pose_id,
+        camera_azimuth=100.0,
+        is_wildfire=is_wildfire,
+        sequence_azimuth=sequence_azimuth,
+        cone_angle=1.0,
+        started_at=started_at or _UNIT_BASE_DT,
+        last_seen_at=last_seen_at or _UNIT_BASE_DT + timedelta(minutes=5),
+    )
+
+
+def _run_iter(
+    alerts: List[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    camera_names_by_id: Dict[int, str],
+) -> Tuple[List[str], List[Dict[str, str]]]:
+    body = "".join(_iter_alerts_csv(alerts, seq_map, camera_names_by_id))
+    return _parse_export_csv(body)
+
+
+def test_iter_alerts_csv_emits_only_header_when_no_alerts():
+    header, rows = _run_iter([], {}, {})
+    assert header == _ALERT_EXPORT_COLUMNS
+    assert rows == []
+
+
+def test_iter_alerts_csv_renders_null_coordinates_as_empty():
+    alert = _make_alert(lat=None, lon=None)
+    sequence = _make_sequence()
+    _, rows = _run_iter([alert], {alert.id: [sequence]}, {sequence.camera_id: "cam-1"})
+    assert rows[0]["alert_triangulated_lat"] == ""
+    assert rows[0]["alert_triangulated_lon"] == ""
+
+
+def test_iter_alerts_csv_emits_one_row_per_sequence_sorted_by_started_at():
+    alert = _make_alert(id_=10, started_at=_UNIT_BASE_DT, last_seen_at=_UNIT_BASE_DT + timedelta(minutes=30))
+    # Provided in non-monotonic order to verify the serializer sorts ASC by sequence.started_at.
+    sequences = [
+        _make_sequence(
+            id_=20,
+            started_at=_UNIT_BASE_DT + timedelta(minutes=10),
+            last_seen_at=_UNIT_BASE_DT + timedelta(minutes=20),
+        ),
+        _make_sequence(
+            id_=30,
+            started_at=_UNIT_BASE_DT + timedelta(minutes=20),
+            last_seen_at=_UNIT_BASE_DT + timedelta(minutes=30),
+        ),
+        _make_sequence(id_=10, started_at=_UNIT_BASE_DT, last_seen_at=_UNIT_BASE_DT + timedelta(minutes=10)),
+    ]
+    _, rows = _run_iter([alert], {alert.id: sequences}, {1: "cam-1"})
+    assert [int(r["sequence_id"]) for r in rows] == [10, 20, 30]
+    # Alert-level cells repeat across rows
+    assert {r["alert_started_at_date"] for r in rows} == {alert.started_at.date().isoformat()}
+    assert {r["alert_last_seen_at"] for r in rows} == {alert.last_seen_at.isoformat()}
+
+
+@pytest.mark.parametrize(
+    ("is_wildfire", "expected_label"),
+    [
+        (AnnotationType.WILDFIRE_SMOKE, "wildfire"),
+        (AnnotationType.OTHER_SMOKE, "other"),
+        (AnnotationType.OTHER, "other"),
+        (None, "unknown"),
+    ],
+)
+def test_iter_alerts_csv_wildfire_label_mapping(is_wildfire: AnnotationType | None, expected_label: str):
+    alert = _make_alert()
+    sequence = _make_sequence(is_wildfire=is_wildfire)
+    _, rows = _run_iter([alert], {alert.id: [sequence]}, {sequence.camera_id: "cam-1"})
+    assert rows[0]["sequence_label"] == expected_label
+
+
+def test_iter_alerts_csv_resolves_camera_name_per_sequence():
+    alert = _make_alert()
+    seq_a = _make_sequence(id_=1, camera_id=1, started_at=_UNIT_BASE_DT)
+    seq_b = _make_sequence(id_=2, camera_id=99, started_at=_UNIT_BASE_DT + timedelta(minutes=10))
+    _, rows = _run_iter([alert], {alert.id: [seq_a, seq_b]}, {1: "cam-a", 99: "cam-b"})
+    cam_by_seq = {int(r["sequence_id"]): r["camera_name"] for r in rows}
+    assert cam_by_seq == {1: "cam-a", 2: "cam-b"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Integration tests for GET /alerts/export: route wiring, SQL filter, JWT scope
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 async def _get_export(
     async_client: AsyncClient, auth: Dict[str, str], from_date: str, to_date: str
 ) -> Tuple[List[str], List[Dict[str, str]]]:
@@ -445,7 +571,7 @@ async def _get_export(
 
 @pytest.fixture
 def export_base_dt() -> datetime:
-    """Anchor datetime for export tests; date is stable so query windows in test bodies stay readable."""
+    """Anchor datetime for export integration tests; date is stable so query windows stay readable."""
     return datetime(2026, 4, 10, 12, 0, 0)
 
 
@@ -544,33 +670,6 @@ async def test_alerts_export_org_isolation(
 
 
 @pytest.mark.asyncio
-async def test_alerts_export_empty_range(
-    async_client: AsyncClient, detection_session: AsyncSession, org1_admin_auth: Dict[str, str]
-):
-    header, rows = await _get_export(async_client, org1_admin_auth, "2099-01-01", "2099-01-31")
-    assert header == _ALERT_EXPORT_COLUMNS
-    assert rows == []
-
-
-@pytest.mark.asyncio
-async def test_alerts_export_renders_null_coordinates_as_empty(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    export_base_dt: datetime,
-    org1_admin_auth: Dict[str, str],
-):
-    alert = await _create_alert(
-        detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5), lat=None, lon=None
-    )
-    await _attach_sequence(detection_session, alert)
-
-    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
-    row = next(r for r in rows if int(r["alert_id"]) == alert.id)
-    assert row["alert_triangulated_lat"] == ""
-    assert row["alert_triangulated_lon"] == ""
-
-
-@pytest.mark.asyncio
 async def test_alerts_export_invalid_range(
     async_client: AsyncClient, detection_session: AsyncSession, org1_admin_auth: Dict[str, str]
 ):
@@ -582,107 +681,3 @@ async def test_alerts_export_invalid_range(
 async def test_alerts_export_unauthenticated(async_client: AsyncClient, detection_session: AsyncSession):
     resp = await async_client.get("/alerts/export?from_date=2026-04-10&to_date=2026-04-12")
     assert resp.status_code == 401, resp.text
-
-
-@pytest.mark.asyncio
-async def test_alerts_export_emits_one_row_per_sequence(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    export_base_dt: datetime,
-    org1_admin_auth: Dict[str, str],
-):
-    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=30))
-    # Attach in non-monotonic order to verify the export sorts ASC by sequence.started_at.
-    middle = await _attach_sequence(
-        detection_session,
-        alert,
-        started_at=export_base_dt + timedelta(minutes=10),
-        last_seen_at=export_base_dt + timedelta(minutes=20),
-    )
-    last = await _attach_sequence(
-        detection_session,
-        alert,
-        started_at=export_base_dt + timedelta(minutes=20),
-        last_seen_at=export_base_dt + timedelta(minutes=30),
-    )
-    first = await _attach_sequence(
-        detection_session,
-        alert,
-        started_at=export_base_dt,
-        last_seen_at=export_base_dt + timedelta(minutes=10),
-    )
-
-    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
-    alert_rows = [r for r in rows if int(r["alert_id"]) == alert.id]
-    assert len(alert_rows) == 3
-    assert [int(r["sequence_id"]) for r in alert_rows] == [first.id, middle.id, last.id]
-    # Alert-level cells repeat across rows
-    assert {r["alert_started_at_date"] for r in alert_rows} == {alert.started_at.date().isoformat()}
-    assert {r["alert_last_seen_at"] for r in alert_rows} == {alert.last_seen_at.isoformat()}
-
-
-@pytest.mark.parametrize(
-    ("is_wildfire", "expected_label"),
-    [
-        (AnnotationType.WILDFIRE_SMOKE, "wildfire"),
-        (AnnotationType.OTHER_SMOKE, "other"),
-        (AnnotationType.OTHER, "other"),
-        (None, "unknown"),
-    ],
-)
-@pytest.mark.asyncio
-async def test_alerts_export_wildfire_label_mapping(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    export_base_dt: datetime,
-    org1_admin_auth: Dict[str, str],
-    is_wildfire: AnnotationType | None,
-    expected_label: str,
-):
-    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5))
-    await _attach_sequence(detection_session, alert, is_wildfire=is_wildfire)
-
-    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
-    row = next(r for r in rows if int(r["alert_id"]) == alert.id)
-    assert row["sequence_label"] == expected_label
-
-
-@pytest.mark.asyncio
-async def test_alerts_export_camera_name_resolution(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-    export_base_dt: datetime,
-    org1_admin_auth: Dict[str, str],
-):
-    extra_camera = Camera(
-        organization_id=1,
-        name="cam-extra",
-        angle_of_view=91.3,
-        elevation=110.0,
-        lat=3.7,
-        lon=-45.3,
-        is_trustable=True,
-    )
-    detection_session.add(extra_camera)
-    await detection_session.commit()
-    await detection_session.refresh(extra_camera)
-
-    alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=20))
-    seq_cam1 = await _attach_sequence(
-        detection_session,
-        alert,
-        camera_id=1,
-        started_at=export_base_dt,
-        last_seen_at=export_base_dt + timedelta(minutes=10),
-    )
-    seq_extra = await _attach_sequence(
-        detection_session,
-        alert,
-        camera_id=extra_camera.id,
-        started_at=export_base_dt + timedelta(minutes=10),
-        last_seen_at=export_base_dt + timedelta(minutes=20),
-    )
-
-    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
-    cam_by_seq = {int(r["sequence_id"]): r["camera_name"] for r in rows if int(r["alert_id"]) == alert.id}
-    assert cam_by_seq == {seq_cam1.id: "cam-1", seq_extra.id: "cam-extra"}
