@@ -31,7 +31,7 @@ server = [
     "prometheus-fastapi-instrumentator>=6.1.0,<7.0.0",
     "python-multipart==0.0.27",
     "python-magic>=0.4.17,<0.5.0",
-    "boto3>=1.26.0,<1.36.0", # https://github.com/boto/boto3/issues/4435
+    "boto3>=1.43.9,<1.44.0", # https://github.com/boto/boto3/issues/4435
     "httpx>=0.24.0,<1.0.0",
     "pyro-camera-api-client",
     "geopy>=2.4.0,<3.0.0",
