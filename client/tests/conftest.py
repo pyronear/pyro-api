@@ -8,11 +8,15 @@ import requests
 API_URL = os.getenv("API_URL", "http://localhost:5050/api/v1/")
 SUPERADMIN_LOGIN = os.getenv("SUPERADMIN_LOGIN", "superadmin_login")
 SUPERADMIN_PWD = os.getenv("SUPERADMIN_PWD", "superadmin_pwd")
-SUPERADMIN_TOKEN = requests.post(
+superadmin_response = requests.post(
     urljoin(API_URL, "login/creds"),
     data={"username": SUPERADMIN_LOGIN, "password": SUPERADMIN_PWD},
     timeout=5,
-).json()["access_token"]
+)
+assert superadmin_response.status_code == 200, superadmin_response.text
+superadmin_payload = superadmin_response.json()
+assert "access_token" in superadmin_payload, superadmin_payload
+SUPERADMIN_TOKEN = superadmin_payload["access_token"]
 
 
 def pytest_configure():

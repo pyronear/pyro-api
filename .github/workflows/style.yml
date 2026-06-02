@@ -8,8 +8,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  UV_VERSION: "0.5.13"
-  POETRY_VERSION: "1.8.3"
+  UV_VERSION: "0.11.14"
 
 jobs:
   ruff:
@@ -20,46 +19,15 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - name: Install dependencies
-        run: |
-          poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
-          uv pip install --system -r requirements.txt
       - name: Run ruff
         run: |
-          ruff --version
-          ruff format --check --diff .
-          ruff check --diff .
+          uv run --group quality ruff --version
+          make ruff-check
 
-  mypy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          architecture: x64
-      - uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
-      - name: Install dependencies
-        run: |
-          poetry export -f requirements.txt --without-hashes --with quality --output requirements.txt
-          uv pip install --system -r requirements.txt
-      - name: Run mypy
-        run: |
-          mypy --version
-          mypy
-
-  mypy-client:
+  ty:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -70,11 +38,10 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - name: Install dependencies
-        run: uv pip install --system -e "client/.[quality]"
-      - name: Run mypy
+      - name: Run ty
         run: |
-          mypy --config-file client/pyproject.toml client/pyroclient
+          uv run --group quality ty --version
+          make typing-check
 
   precommit-hooks:
     runs-on: ubuntu-latest
@@ -84,19 +51,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-      - name: Install dependencies
+      - name: Run prek hooks
         run: |
-          poetry export -f requirements.txt --without-hashes --only quality --output requirements.txt
-          uv pip install --system -r requirements.txt
-      - name: Run pre-commit hooks
-        run: |
-          git checkout -b temp
-          pre-commit install
-          pre-commit --version
-          pre-commit run --all-files
+          uv run --group quality prek --version
+          make precommit

@@ -1,70 +1,110 @@
-.PHONY: quality style lock build run stop migrate migrate-up test build-client test-client docs-client e2e
+PYTHON_VERSION ?= 3.11
+PYPROJECT := pyproject.toml
+BACKEND_IMAGE ?= pyronear/alert-api:latest
+COMPOSE_DEV := docker-compose.dev.yml
 
-# this target runs checks on all files
-quality:
-	ruff format --check .
-	ruff check .
-	mypy
+.PHONY: sync-deps venv install-backend install-quality install-test install-client-test install-docs install-e2e
+.PHONY: ruff-lint ruff-lint-fix ruff-format ruff-format-fix ruff-check ruff-fix typing-check deps-check quality style precommit
+.PHONY: lock build build-backend run run-dev stop migrate migrate-up test build-client test-client docs-client e2e uvicorn-backend
 
-# this target runs checks on all files and potentially modifies some of them
-style:
-	ruff format .
-	ruff check --fix .
+sync-deps: $(PYPROJECT)
+	uv sync --locked --all-groups --no-install-project
 
-# Pin the dependencies
-lock:
-	poetry lock
+venv: $(PYPROJECT)
+	uv venv --python $(PYTHON_VERSION) --allow-existing
+	$(MAKE) sync-deps
 
-# Build the docker
-build:
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker build -f src/Dockerfile . -t pyronear/alert-api:latest
+install-backend: $(PYPROJECT)
+	uv sync --locked --only-group server --no-install-project
 
-# Run the docker
+install-quality: $(PYPROJECT)
+	uv sync --locked --group server --group client --group quality --no-install-project
+
+install-test: $(PYPROJECT)
+	uv sync --locked --group server --group test --no-install-project
+
+install-client-test: $(PYPROJECT)
+	uv sync --locked --group client-test --no-install-project
+
+install-docs: $(PYPROJECT)
+	uv sync --locked --group client-docs --no-install-project
+
+install-e2e: $(PYPROJECT)
+	uv sync --locked --group e2e --no-install-project
+
+ruff-lint: $(PYPROJECT)
+	uv run --group quality ruff check . --config $(PYPROJECT)
+
+ruff-lint-fix: $(PYPROJECT)
+	uv run --group quality ruff check --fix . --config $(PYPROJECT)
+
+ruff-format: $(PYPROJECT)
+	uv run --group quality ruff format --check . --config $(PYPROJECT)
+
+ruff-format-fix: $(PYPROJECT)
+	uv run --group quality ruff format . --config $(PYPROJECT)
+
+ruff-check: ruff-lint ruff-format
+
+ruff-fix: ruff-lint-fix ruff-format-fix
+
+typing-check: $(PYPROJECT)
+	uv run --group server --group client --group quality ty check src/app client/pyroclient
+
+deps-check: .github/verify_deps_sync.py
+	uv lock --check
+	uv run --script .github/verify_deps_sync.py
+
+quality: ruff-check typing-check deps-check
+
+style: precommit
+
+precommit: $(PYPROJECT) .pre-commit-config.yaml
+	uv run --group quality prek run --all-files --hook-stage=pre-push
+
+lock: $(PYPROJECT)
+	uv lock
+
+build: build-backend
+
+build-backend:
+	docker build -f src/Dockerfile . -t $(BACKEND_IMAGE)
+
 run:
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
 	docker compose up -d --build --wait
 
-# Run the docker
+run-dev: run
+
 stop:
 	docker compose down
 
-# Generate a new alembic migration from the current models
-# Requires the stack to be running (make run). Usage: make migrate m="add foo column"
 migrate:
 	@if [ -z "$(m)" ]; then echo "Usage: make migrate m=\"short description\""; exit 1; fi
 	docker compose exec -T backend alembic revision --autogenerate -m "$(m)"
 
-# Apply pending alembic migrations to the running DB
 migrate-up:
 	docker compose exec -T backend alembic upgrade head
 
-# Run tests for the library
-# the "-" are used to launch the next command even if a command fail
 test:
-	poetry export -f requirements.txt --without-hashes --with test --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	- docker compose -f docker-compose.dev.yml exec -T backend pytest --cov=app
-	docker compose -f docker-compose.dev.yml down
+	UV_GROUPS="server test" docker compose -f $(COMPOSE_DEV) up -d --build --wait
+	- docker compose -f $(COMPOSE_DEV) exec -T backend pytest --cov=app
+	docker compose -f $(COMPOSE_DEV) down
 
 build-client:
-	pip install -e client/.
+	uv sync --locked --group client --no-install-project
 
-# Run tests for the Python client
-# the "-" are used to launch the next command even if a command fail
 test-client: build-client
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	- cd client && pytest --cov=pyroclient tests/ && cd ..
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f $(COMPOSE_DEV) up -d --build --wait
+	- SUPERADMIN_LOGIN=superadmin_login SUPERADMIN_PWD=superadmin_pwd uv run --group client-test pytest --cov=pyroclient client/tests/
+	docker compose -f $(COMPOSE_DEV) down
 
-# Check that docs can build for client
 docs-client:
-	sphinx-build client/docs/source client/docs/_build -a
-
+	uv run --group client-docs sphinx-build client/docs/source client/docs/_build -a
 
 e2e:
-	poetry export -f requirements.txt --without-hashes --output requirements.txt
-	docker compose -f docker-compose.dev.yml up -d --build --wait
-	- python scripts/test_e2e.py
-	docker compose -f docker-compose.dev.yml down
+	docker compose -f $(COMPOSE_DEV) up -d --build --wait
+	- uv run --group e2e python scripts/test_e2e.py
+	docker compose -f $(COMPOSE_DEV) down
+
+uvicorn-backend:
+	PYTHONPATH=src uv run --group server uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers

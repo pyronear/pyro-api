@@ -1,14 +1,13 @@
-import asyncio
 import io
 import os
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Generator
+from typing import AsyncGenerator, Dict
 
 import pytest
 import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -231,22 +230,19 @@ WEBHOOK_TABLE = [
 ]
 
 
-@pytest.fixture(scope="session")
-def event_loop(request) -> Generator:
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
+    transport = ASGITransport(app=app)
     async with AsyncClient(
-        app=app, base_url=f"http://api.localhost:8050{settings.API_V1_STR}", follow_redirects=True, timeout=5
+        transport=transport,
+        base_url=f"http://api.localhost:8050{settings.API_V1_STR}",
+        follow_redirects=True,
+        timeout=5,
     ) as client:
         yield client
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def async_session() -> AsyncSession:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -278,7 +274,7 @@ def mock_img():
     return requests.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def organization_session(async_session: AsyncSession):
     for entry in ORGANIZATION_TABLE:
         async_session.add(Organization(**entry))
@@ -302,7 +298,7 @@ async def organization_session(async_session: AsyncSession):
         pass
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def webhook_session(async_session: AsyncSession):
     for entry in WEBHOOK_TABLE:
         async_session.add(Webhook(**entry))
@@ -317,7 +313,7 @@ async def webhook_session(async_session: AsyncSession):
     await async_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def user_session(organization_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(users, "hash_password", mock_hash_password)
     monkeypatch.setattr(login, "verify_password", mock_verify_password)
@@ -332,7 +328,7 @@ async def user_session(organization_session: AsyncSession, monkeypatch):
     await organization_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def camera_session(user_session: AsyncSession, organization_session: AsyncSession):
     for entry in CAM_TABLE:
         user_session.add(Camera(**entry))
@@ -345,7 +341,7 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
     await user_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def pose_session(camera_session: AsyncSession):
     for entry in POSE_TABLE:
         camera_session.add(Pose(**entry))
@@ -358,7 +354,7 @@ async def pose_session(camera_session: AsyncSession):
     await camera_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def occlusion_mask_session(pose_session: AsyncSession):
     for entry in OCCLUSION_MASK_TABLE:
         pose_session.add(OcclusionMask(**entry))
@@ -373,7 +369,7 @@ async def occlusion_mask_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sequence_session(pose_session: AsyncSession):
     for entry in SEQ_TABLE:
         pose_session.add(Sequence(**entry))
@@ -388,7 +384,7 @@ async def sequence_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def detection_session(pose_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
         sequence_session.add(Detection(**entry))

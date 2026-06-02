@@ -6,7 +6,7 @@
 import hashlib
 import logging
 from mimetypes import guess_extension
-from typing import Any, Dict, Union
+from typing import Any, BinaryIO, Dict, Union
 
 import boto3
 import magic
@@ -56,7 +56,7 @@ class S3Bucket:
             logger.warning(e)
             return False
 
-    def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
+    def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
         self._s3.upload_fileobj(file_binary, self.name, bucket_key)
@@ -173,7 +173,7 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int, ke
     bucket_name = s3_service.resolve_bucket_name(organization_id)
     bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
-    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
+    if not bucket.upload_file(bucket_key, file.file):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     logger.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 

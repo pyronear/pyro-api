@@ -84,7 +84,7 @@ If you are wondering how to do something with Pyro-API, or a more general questi
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Docker](https://docs.docker.com/engine/install/)
 - [Docker compose](https://docs.docker.com/compose/)
-- [Poetry](https://python-poetry.org/docs/)
+- [UV](https://docs.astral.sh/uv/)
 - [Make](https://www.gnu.org/software/make/) (optional)
 
 ### Configure your fork
@@ -102,14 +102,13 @@ git remote add upstream https://github.com/pyronear/pyro-api.git
 
 Let's install the different libraries:
 ```shell
-poetry export -f requirements.txt --without-hashes --with quality --output requirements.txt
-pip install -r requirements.txt
+make venv
 ```
 
 #### Pre-commit hooks
 Let's make your life easier by formatting & fixing lint on each commit:
 ```shell
-pre-commit install
+uv run --group quality prek install
 ```
 
 ### Environment configuration

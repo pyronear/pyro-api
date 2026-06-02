@@ -16,9 +16,6 @@
   <a href="https://pypi.org/project/pyroclient/">
     <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
   </a>
-  <a href="https://anaconda.org/pyronear/pyroclient">
-    <img alt="Anaconda" src="https://img.shields.io/conda/vn/pyronear/pyroclient?style=flat-square?style=flat-square&logo=Anaconda&logoColor=white&label=conda">
-  </a>
   <a href="https://hub.docker.com/r/pyronear/alert-api">
     <img alt="Docker Image Version" src="https://img.shields.io/docker/v/pyronear/alert-api?style=flat-square&logo=Docker&logoColor=white&label=docker">
   </a>
@@ -35,7 +32,7 @@ The API stores access metadata (Users, Cameras, Organizations), the core wildfir
 
 Two ways to run the stack, depending on whether you just want to use the API or to develop against it.
 
-### As a user (no Poetry needed)
+### As a user (no local Python tooling needed)
 
 Pull the published `ghcr.io/pyronear/alert-api` image and start the stack:
 
@@ -52,13 +49,13 @@ To stop the service:
 docker compose down
 ```
 
-### As a contributor (builds locally, requires Poetry)
+### As a contributor (builds locally with UV)
 
 ```shell
 make run
 ```
 
-This regenerates `requirements.txt` from `poetry.lock` and builds the backend image locally, so it requires [Poetry](https://python-poetry.org/docs/) to be installed. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full developer setup, tests, and migration workflow.
+This builds the backend image from `uv.lock`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full developer setup, tests, and migration workflow.
 
 To stop the service:
 ```shell
@@ -72,14 +69,16 @@ make stop
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Docker](https://docs.docker.com/engine/install/)
 - [Docker compose](https://docs.docker.com/compose/)
+- [UV](https://docs.astral.sh/uv/)
 
-Contributors building the image locally also need [Poetry](https://python-poetry.org/docs/); see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Contributors building the image locally also need UV; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### First-time setup
 
 ```shell
 git clone https://github.com/pyronear/pyro-api.git && cd pyro-api
 cp .env.example .env
+make venv
 ```
 
 Then run the stack as described in the [Quick Tour](#quick-tour) above.
