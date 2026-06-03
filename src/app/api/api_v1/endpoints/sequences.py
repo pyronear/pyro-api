@@ -117,8 +117,8 @@ async def fetch_sequence_detections(
     offset: int = Query(0, description="Number of detections to skip", ge=0),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
     with_crop: bool = Query(
-        True,
-        description="If true, presign and include crop_url for detections that have a crop. Set to false to skip the extra S3 head requests when crops are not needed.",
+        False,
+        description="If true, presign and include crop_url for detections that have a crop. Defaults to false to skip the extra S3 head requests when crops are not needed.",
     ),
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),

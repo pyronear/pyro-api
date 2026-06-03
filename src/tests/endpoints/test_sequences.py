@@ -905,7 +905,9 @@ async def test_fetch_sequence_detections_includes_crop_url(
             pytest.user_table[0]["organization_id"],
         )
         sequence_id = pytest.detection_table[0]["sequence_id"]
-        response = await async_client.get(f"/sequences/{sequence_id}/detections", headers=auth)
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
+        )
         assert response.status_code == 200, response.text
         payload = response.json()
         enriched = next(det for det in payload if det["id"] == detection.id)

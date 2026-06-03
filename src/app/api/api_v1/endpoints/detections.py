@@ -600,4 +600,6 @@ async def delete_detection(
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     bucket.delete_file(detection.bucket_key)
+    if detection.crop_bucket_key:
+        bucket.delete_file(detection.crop_bucket_key)
     await detections.delete(detection_id)
