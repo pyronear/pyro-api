@@ -1,3 +1,4 @@
+import io
 from datetime import date, timedelta
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,6 +18,7 @@ from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
+from app.services.storage import s3_service
 
 
 class _ExecResult:
@@ -123,8 +125,11 @@ async def test_fetch_sequence_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2 and expected_result is not None:
-        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
+        assert [
+            {k: v for k, v in det.items() if k not in {"url", "crop_url"}} for det in response.json()
+        ] == expected_result
         assert all(det["url"].startswith("http://") for det in response.json())
+        assert all(det["crop_url"] is None for det in response.json())
 
 
 @pytest.mark.parametrize(
@@ -448,6 +453,65 @@ async def test_sequence_label_updates_alerts(async_client: AsyncClient, detectio
 
 
 @pytest.mark.asyncio
+async def test_sequence_label_keeps_solo_alert(async_client: AsyncClient, detection_session: AsyncSession):
+    # A sequence alone in its alert should keep that alert as-is when labeled non-wildfire.
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    now = utcnow()
+    seq = Sequence(
+        camera_id=camera.id,
+        pose_id=None,
+        camera_azimuth=180.0,
+        sequence_azimuth=170.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=10),
+    )
+    detection_session.add(seq)
+    await detection_session.commit()
+    await detection_session.refresh(seq)
+
+    alert = Alert(
+        organization_id=camera.organization_id,
+        lat=1.0,
+        lon=2.0,
+        started_at=seq.started_at,
+        last_seen_at=seq.last_seen_at,
+    )
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+    await detection_session.commit()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    original_alert_id = alert.id
+
+    resp = await async_client.patch(
+        f"/sequences/{seq.id}/label",
+        json={"is_wildfire": SequenceLabel(is_wildfire="other_smoke").is_wildfire},
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+
+    alerts_res = await detection_session.exec(
+        select(Alert.id).where(Alert.id == original_alert_id).execution_options(populate_existing=True)
+    )
+    alerts_rows = alerts_res.all()
+    assert alerts_rows == [original_alert_id]
+
+    mappings_res = await detection_session.exec(
+        select(AlertSequence.alert_id, AlertSequence.sequence_id)
+        .where(AlertSequence.sequence_id == seq.id)
+        .execution_options(populate_existing=True)
+    )
+    assert {(aid, sid) for aid, sid in mappings_res.all()} == {(original_alert_id, seq.id)}
+
+
+@pytest.mark.asyncio
 async def test_delete_sequence_cleans_alerts_and_detections(async_client: AsyncClient, detection_session: AsyncSession):
     camera = await detection_session.get(Camera, 1)
     assert camera is not None
@@ -619,11 +683,12 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_alerts_crud = AsyncMock()
     mock_alerts_crud.create.return_value = MagicMock(id=99)  # New alert created
 
-    # Mock for session.exec to return an alert_id
+    # Mock for session.exec to return an alert_id, then a sibling sequence id, then delete
     mock_session = AsyncMock()
     mock_session.add = MagicMock()  # .add is synchronous
     mock_exec_result = MagicMock()
     mock_exec_result.all.return_value = [101]  # Belongs to alert 101
+    mock_exec_result.first.return_value = 2  # Sibling sequence id exists in alert 101
     mock_session.exec.return_value = mock_exec_result
 
     mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.AGENT], organization_id=1)
@@ -644,9 +709,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_sequences_crud.get.assert_called_once_with(1, strict=True)
     mock_sequences_crud.update.assert_called_once_with(1, payload)
 
-    # Verify it was removed from the old alert and the alert was refreshed
-    # Two session.exec calls: one to get alert_ids, one to delete links
-    assert mock_session.exec.call_count == 2
+    # Three session.exec calls: alert_ids lookup, siblings probe, delete links
+    assert mock_session.exec.call_count == 3
     mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud)
 
     # Verify a new alert was created for this sequence
@@ -654,6 +718,58 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     # Verify the new alert link was added
     mock_session.add.assert_called_once()
 
+    assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
+
+
+@pytest.mark.asyncio
+@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
+async def test_unit_label_sequence_solo_alert_keeps_alert(
+    mock_refresh_alert_state: AsyncMock,
+):
+    """Labeling a sequence as non-wildfire when it is alone in its alert must not
+    detach it, refresh the alert, or create a replacement — the alert id must stay stable."""
+    mock_sequence = Sequence(id=1, camera_id=1, is_wildfire=None, started_at=utcnow(), last_seen_at=utcnow())
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+    mock_sequences_crud.update.return_value = Sequence(
+        id=1,
+        camera_id=1,
+        is_wildfire=AnnotationType.OTHER_SMOKE,
+        started_at=mock_sequence.started_at,
+        last_seen_at=mock_sequence.last_seen_at,
+    )
+
+    mock_cameras_crud = AsyncMock()
+    mock_alerts_crud = AsyncMock()
+
+    # Two exec calls: alert_ids -> [101], siblings -> None (no other sequence in the alert)
+    alert_ids_result = MagicMock()
+    alert_ids_result.all.return_value = [101]
+    siblings_result = MagicMock()
+    siblings_result.first.return_value = None
+
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    mock_session.exec.side_effect = [alert_ids_result, siblings_result]
+
+    mock_token_payload = TokenPayload(sub=1, scopes=[UserRole.ADMIN], organization_id=1)
+    payload = SequenceLabel(is_wildfire=AnnotationType.OTHER_SMOKE)
+
+    updated_sequence = await label_sequence(
+        payload=payload,
+        sequence_id=1,
+        cameras=mock_cameras_crud,
+        sequences=mock_sequences_crud,
+        alerts=mock_alerts_crud,
+        session=mock_session,
+        token_payload=mock_token_payload,
+    )
+
+    assert mock_session.exec.call_count == 2
+    mock_refresh_alert_state.assert_not_called()
+    mock_alerts_crud.create.assert_not_called()
+    mock_session.add.assert_not_called()
     assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
 
 
@@ -691,6 +807,53 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
 
 
 @pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_paging(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Page 1 (limit=2, offset=0) + page 2 (limit=2, offset=2) covers a 3-detection
+    sequence with no gaps and no duplicates."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    # Sequence id 1 has 3 detections in the test fixtures (see existing
+    # test_fetch_sequence_detections expectations).
+    full = await async_client.get("/sequences/1/detections?limit=10&offset=0&desc=false", headers=auth)
+    assert full.status_code == 200
+    full_ids = [det["id"] for det in full.json()]
+    assert len(full_ids) == 3
+
+    page1 = await async_client.get("/sequences/1/detections?limit=2&offset=0&desc=false", headers=auth)
+    page2 = await async_client.get("/sequences/1/detections?limit=2&offset=2&desc=false", headers=auth)
+    assert page1.status_code == 200
+    assert page2.status_code == 200
+
+    page1_ids = [det["id"] for det in page1.json()]
+    page2_ids = [det["id"] for det in page2.json()]
+    assert page1_ids + page2_ids == full_ids
+    assert len(page1_ids) == 2
+    assert len(page2_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_validation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Negative offset must be rejected."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/sequences/1/detections?offset=-1", headers=auth)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
     # 1. Mocks Setup
@@ -720,6 +883,70 @@ async def test_unit_label_sequence_forbidden_for_wrong_org():
         )
 
     assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_includes_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        enriched = next(det for det in payload if det["id"] == detection.id)
+        assert isinstance(enriched["crop_url"], str)
+        assert enriched["crop_url"].startswith("http://")
+        assert enriched["crop_url"] != enriched["url"]
+        other = [det for det in payload if det["id"] != detection.id]
+        assert all(det["crop_url"] is None for det in other)
+    finally:
+        bucket.delete_file(crop_key)
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_with_crop_false_skips_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_off_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "false"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        assert all(det["crop_url"] is None for det in response.json())
+    finally:
+        bucket.delete_file(crop_key)
 
 
 @pytest.mark.asyncio

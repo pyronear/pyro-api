@@ -1,8 +1,7 @@
-import asyncio
 import io
 import os
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Generator
+from typing import AsyncGenerator, Dict
 
 import pytest
 import pytest_asyncio
@@ -152,6 +151,7 @@ DET_TABLE = [
         "pose_id": 1,
         "sequence_id": 1,
         "bucket_key": "my_file",
+        "crop_bucket_key": None,
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
@@ -162,6 +162,7 @@ DET_TABLE = [
         "pose_id": 1,
         "sequence_id": 1,
         "bucket_key": "my_file",
+        "crop_bucket_key": None,
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
@@ -172,6 +173,7 @@ DET_TABLE = [
         "pose_id": 1,
         "sequence_id": 1,
         "bucket_key": "my_file",
+        "crop_bucket_key": None,
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
@@ -182,6 +184,7 @@ DET_TABLE = [
         "pose_id": 3,
         "sequence_id": 2,
         "bucket_key": "my_file",
+        "crop_bucket_key": None,
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
@@ -227,14 +230,7 @@ WEBHOOK_TABLE = [
 ]
 
 
-@pytest.fixture(scope="session")
-def event_loop(request) -> Generator:
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(
@@ -246,7 +242,7 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         yield client
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def async_session() -> AsyncSession:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -278,7 +274,7 @@ def mock_img():
     return requests.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def organization_session(async_session: AsyncSession):
     for entry in ORGANIZATION_TABLE:
         async_session.add(Organization(**entry))
@@ -302,7 +298,7 @@ async def organization_session(async_session: AsyncSession):
         pass
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def webhook_session(async_session: AsyncSession):
     for entry in WEBHOOK_TABLE:
         async_session.add(Webhook(**entry))
@@ -317,7 +313,7 @@ async def webhook_session(async_session: AsyncSession):
     await async_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def user_session(organization_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(users, "hash_password", mock_hash_password)
     monkeypatch.setattr(login, "verify_password", mock_verify_password)
@@ -332,7 +328,7 @@ async def user_session(organization_session: AsyncSession, monkeypatch):
     await organization_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def camera_session(user_session: AsyncSession, organization_session: AsyncSession):
     for entry in CAM_TABLE:
         user_session.add(Camera(**entry))
@@ -345,7 +341,7 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
     await user_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def pose_session(camera_session: AsyncSession):
     for entry in POSE_TABLE:
         camera_session.add(Pose(**entry))
@@ -358,7 +354,7 @@ async def pose_session(camera_session: AsyncSession):
     await camera_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def occlusion_mask_session(pose_session: AsyncSession):
     for entry in OCCLUSION_MASK_TABLE:
         pose_session.add(OcclusionMask(**entry))
@@ -373,7 +369,7 @@ async def occlusion_mask_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def sequence_session(pose_session: AsyncSession):
     for entry in SEQ_TABLE:
         pose_session.add(Sequence(**entry))
@@ -388,7 +384,7 @@ async def sequence_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function", loop_scope="session")
 async def detection_session(pose_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
         sequence_session.add(Detection(**entry))
