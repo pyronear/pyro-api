@@ -359,6 +359,7 @@ async def create_detection(
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
+    crop_file: Optional[UploadFile] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
@@ -377,18 +378,24 @@ async def create_detection(
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
         )
 
+    # Authorize before any S3 upload to avoid orphan objects on 403
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     if pose.camera_id != token_payload.sub:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     if not pose.active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
 
-    # Upload media
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-
     bbox_strings = _extract_bbox_strings(bboxes)
     if not bbox_strings:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
+
+    # Upload media
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    crop_bucket_key: Optional[str] = None
+    if crop_file is not None:
+        crop_bucket_key = await upload_file(
+            crop_file, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+        )
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
@@ -402,6 +409,7 @@ async def create_detection(
                 camera_id=token_payload.sub,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
+                crop_bucket_key=crop_bucket_key,
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
             )
@@ -553,17 +561,12 @@ async def get_detection_url(
     # Check in DB
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
-    if UserRole.ADMIN in token_payload.scopes:
-        camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-        return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
-
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id:
+    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    # Check in bucket
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key))
+    crop_url = bucket.get_public_url(detection.crop_bucket_key) if detection.crop_bucket_key else None
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key), crop_url=crop_url)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -597,4 +600,6 @@ async def delete_detection(
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     bucket.delete_file(detection.bucket_key)
+    if detection.crop_bucket_key:
+        bucket.delete_file(detection.crop_bucket_key)
     await detections.delete(detection_id)

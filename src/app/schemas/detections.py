@@ -29,6 +29,7 @@ class DetectionCreate(BaseModel):
     camera_id: int = Field(..., gt=0)
     pose_id: int = Field(..., gt=0)
     bucket_key: str
+    crop_bucket_key: Optional[str] = None
     bbox: str = Field(
         ...,
         min_length=2,
@@ -41,6 +42,7 @@ class DetectionCreate(BaseModel):
 
 class DetectionUrl(BaseModel):
     url: str = Field(..., description="temporary URL to access the media content")
+    crop_url: Optional[str] = Field(None, description="temporary URL to access the cropped media content, if any")
 
 
 class DetectionRead(Detection):
@@ -49,6 +51,7 @@ class DetectionRead(Detection):
 
 class DetectionWithUrl(Detection):
     url: str = Field(..., description="temporary URL to access the media content")
+    crop_url: Optional[str] = Field(None, description="temporary URL to access the cropped media content, if any")
 
 
 class DetectionSequence(BaseModel):

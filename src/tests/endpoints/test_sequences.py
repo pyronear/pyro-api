@@ -1,3 +1,4 @@
+import io
 from datetime import date, timedelta
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,6 +18,7 @@ from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
+from app.services.storage import s3_service
 
 
 class _ExecResult:
@@ -123,8 +125,11 @@ async def test_fetch_sequence_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2 and expected_result is not None:
-        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
+        assert [
+            {k: v for k, v in det.items() if k not in {"url", "crop_url"}} for det in response.json()
+        ] == expected_result
         assert all(det["url"].startswith("http://") for det in response.json())
+        assert all(det["crop_url"] is None for det in response.json())
 
 
 @pytest.mark.parametrize(
@@ -878,6 +883,70 @@ async def test_unit_label_sequence_forbidden_for_wrong_org():
         )
 
     assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_includes_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        enriched = next(det for det in payload if det["id"] == detection.id)
+        assert isinstance(enriched["crop_url"], str)
+        assert enriched["crop_url"].startswith("http://")
+        assert enriched["crop_url"] != enriched["url"]
+        other = [det for det in payload if det["id"] != detection.id]
+        assert all(det["crop_url"] is None for det in other)
+    finally:
+        bucket.delete_file(crop_key)
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_with_crop_false_skips_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_off_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "false"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        assert all(det["crop_url"] is None for det in response.json())
+    finally:
+        bucket.delete_file(crop_key)
 
 
 @pytest.mark.asyncio
