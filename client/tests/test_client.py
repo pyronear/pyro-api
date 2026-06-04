@@ -48,7 +48,7 @@ def test_create_pose_with_patrol_id(cam_id):
     response = admin_client.create_pose(camera_id=cam_id, azimuth=42.0, patrol_id=7)
     assert response.status_code == 201, response.__dict__
     pose = response.json()
-    assert pose["azimuth"] == 42.0
+    assert pose["azimuth"] == pytest.approx(42.0)
     assert pose["patrol_id"] == 7
     assert pose["active"] is True
 
@@ -58,7 +58,7 @@ def test_create_pose_without_patrol_id(cam_id):
     response = admin_client.create_pose(camera_id=cam_id, azimuth=55.0)
     assert response.status_code == 201, response.__dict__
     pose = response.json()
-    assert pose["azimuth"] == 55.0
+    assert pose["azimuth"] == pytest.approx(55.0)
     assert pose["patrol_id"] is None
     assert pose["active"] is True
 
@@ -69,7 +69,7 @@ def test_update_pose_camera(cam_token, cam_pose_id):
         cam_client.update_pose(cam_pose_id)
     response = cam_client.update_pose(cam_pose_id, azimuth=123.4)
     assert response.status_code == 200, response.__dict__
-    assert response.json()["azimuth"] == 123.4
+    assert response.json()["azimuth"] == pytest.approx(123.4)
 
 
 def test_update_pose_image_camera(cam_token, cam_pose_id, mock_img):

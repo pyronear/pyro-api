@@ -6,7 +6,7 @@
 import hashlib
 import logging
 from mimetypes import guess_extension
-from typing import Any, Dict, Union
+from typing import Any, BinaryIO, Dict, Union
 
 import boto3
 import magic
@@ -56,7 +56,7 @@ class S3Bucket:
             logger.warning(e)
             return False
 
-    def upload_file(self, bucket_key: str, file_binary: bytes) -> bool:
+    def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
         self._s3.upload_fileobj(file_binary, self.name, bucket_key)
@@ -155,7 +155,7 @@ class S3Service:
         return f"{settings.SERVER_NAME}-alert-api-{organization_id!s}"
 
 
-async def upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:
+async def upload_file(file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = "") -> str:
     """Upload a file to S3 storage and return the public URL"""
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
@@ -165,14 +165,15 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int) ->
     await file.seek(0)
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
-    # Concatenate timestamp & hash
-    bucket_key = f"{camera_id}-{utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
+    # Concatenate timestamp & hash; key_prefix lets callers segregate distinct uploads in the
+    # same request (e.g. frame vs crop) so identical bytes don't collide on the same key.
+    bucket_key = f"{key_prefix}{camera_id}-{utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
     await file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(organization_id)
     bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
-    if not bucket.upload_file(bucket_key, file.file):  # type: ignore[arg-type]
+    if not bucket.upload_file(bucket_key, file.file):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed upload")
     logger.info(f"File uploaded to bucket {bucket_name} with key {bucket_key}.")
 

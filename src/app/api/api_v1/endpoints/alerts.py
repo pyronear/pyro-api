@@ -4,10 +4,13 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-from datetime import date, timedelta
-from typing import Any, Dict, List, Union, cast
+import csv
+import io
+from datetime import date, datetime, time, timedelta
+from typing import Any, Dict, Iterable, Iterator, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import asc, desc
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import delete, func, select
@@ -17,7 +20,7 @@ from app.api.dependencies import get_alert_crud, get_jwt
 from app.core.time import utcnow
 from app.crud import AlertCRUD
 from app.db import get_session
-from app.models import Alert, AlertSequence, Camera, Sequence, UserRole
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, UserRole
 from app.schemas.alerts import AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
@@ -85,6 +88,153 @@ def _serialize_alert(
     )
 
 
+_ALERT_EXPORT_COLUMNS = [
+    "alert_id",
+    "alert_started_at_date",
+    "alert_started_at_time",
+    "alert_last_seen_at",
+    "alert_duration_seconds",
+    "alert_triangulated_lat",
+    "alert_triangulated_lon",
+    "organization_id",
+    "sequence_id",
+    "sequence_started_at",
+    "sequence_last_seen_at",
+    "sequence_triangulated_azimuth",
+    "sequence_label",
+    "pose_id",
+    "camera_id",
+    "camera_name",
+]
+
+_WILDFIRE_LABELS: Dict[Union[AnnotationType, None], str] = {
+    AnnotationType.WILDFIRE_SMOKE: "wildfire",
+    AnnotationType.OTHER_SMOKE: "other",
+    AnnotationType.OTHER: "other",
+    None: "unknown",
+}
+
+
+async def _fetch_camera_names_by_ids(session: AsyncSession, camera_ids: Iterable[int]) -> Dict[int, str]:
+    ids = list(set(camera_ids))
+    if not ids:
+        return {}
+    stmt: Any = select(Camera.id, Camera.name).where(cast(Any, Camera.id).in_(ids))
+    return {cid: name for cid, name in (await session.exec(stmt)).all()}
+
+
+def _alert_cells(alert: Alert) -> List[Any]:
+    return [
+        alert.id,
+        alert.started_at.date().isoformat(),
+        alert.started_at.time().isoformat(),
+        alert.last_seen_at.isoformat(),
+        int((alert.last_seen_at - alert.started_at).total_seconds()),
+        "" if alert.lat is None else alert.lat,
+        "" if alert.lon is None else alert.lon,
+        alert.organization_id,
+    ]
+
+
+def _sequence_cells(sequence: Sequence, camera_name: str) -> List[Any]:
+    return [
+        sequence.id,
+        sequence.started_at.isoformat(),
+        sequence.last_seen_at.isoformat(),
+        "" if sequence.sequence_azimuth is None else sequence.sequence_azimuth,
+        _WILDFIRE_LABELS[sequence.is_wildfire],
+        "" if sequence.pose_id is None else sequence.pose_id,
+        sequence.camera_id,
+        camera_name,
+    ]
+
+
+def _iter_alerts_csv(
+    alerts: Iterable[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    camera_names_by_id: Dict[int, str],
+) -> Iterator[str]:
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+
+    def drain() -> str:
+        value = buf.getvalue()
+        buf.seek(0)
+        buf.truncate(0)
+        return value
+
+    writer.writerow(_ALERT_EXPORT_COLUMNS)
+    yield drain()
+
+    for alert in alerts:
+        alert_cells = _alert_cells(alert)
+        sequences = sorted(seq_map.get(alert.id, []), key=lambda s: s.started_at)
+        for sequence in sequences:
+            camera_name = camera_names_by_id.get(sequence.camera_id, "")
+            writer.writerow([*alert_cells, *_sequence_cells(sequence, camera_name)])
+            yield drain()
+
+
+def _build_alerts_csv_response(
+    alerts: List[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    camera_names_by_id: Dict[int, str],
+    from_date: date,
+    to_date: date,
+) -> StreamingResponse:
+    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    return StreamingResponse(
+        _iter_alerts_csv(alerts, seq_map, camera_names_by_id),
+        media_type="text/csv",
+        headers=headers,
+    )
+
+
+@router.get(
+    "/export",
+    status_code=status.HTTP_200_OK,
+    summary="Export alerts in a date range as CSV",
+    response_class=StreamingResponse,
+)
+async def export_alerts_csv(
+    from_date: date = Query(..., description="Inclusive lower bound on started_at (UTC date)"),
+    to_date: date = Query(..., description="Inclusive upper bound on started_at (UTC date)"),
+    session: AsyncSession = Depends(get_session),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
+) -> StreamingResponse:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="alerts-export",
+        properties={"from_date": from_date.isoformat(), "to_date": to_date.isoformat()},
+    )
+
+    if to_date < from_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="to_date must be on or after from_date",
+        )
+
+    # DB columns store naive UTC datetimes (see app.core.time.utcnow), so we drop tzinfo here.
+    start_dt = datetime.combine(from_date, time.min)
+    end_dt = datetime.combine(to_date, time.max)
+
+    stmt: Any = (
+        select(Alert)
+        .where(Alert.organization_id == token_payload.organization_id)
+        .where(Alert.started_at >= start_dt)
+        .where(Alert.started_at <= end_dt)
+        .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
+    )
+    alerts = list((await session.exec(stmt)).all())
+    seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
+    camera_names_by_id = await _fetch_camera_names_by_ids(
+        session,
+        (sequence.camera_id for sequences in seq_map.values() for sequence in sequences),
+    )
+    return _build_alerts_csv_response(alerts, seq_map, camera_names_by_id, from_date, to_date)
+
+
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
 async def get_alert(
     alert_id: int = Path(..., gt=0),
@@ -138,6 +288,8 @@ async def fetch_alert_sequences(
     summary="Fetch all the alerts with unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_alerts(
+    limit: Union[int, None] = Query(15, ge=1, description="Maximum number of alerts to fetch"),
+    offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
         None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
     ),
@@ -166,7 +318,8 @@ async def fetch_latest_unlabeled_alerts(
         .where(Alert.organization_id == token_payload.organization_id)
         .where(cast(Any, Alert.id).in_(seq_match))
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
-        .limit(15)
+        .limit(limit)
+        .offset(offset)
     )
     alerts = list((await session.exec(alerts_stmt)).all())
     alert_ids = [alert.id for alert in alerts]

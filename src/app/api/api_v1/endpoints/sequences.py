@@ -127,7 +127,12 @@ async def get_sequence(
 async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),
     limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
+    offset: int = Query(0, description="Number of detections to skip", ge=0),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
+    with_crop: bool = Query(
+        False,
+        description="If true, presign and include crop_url for detections that have a crop. Defaults to false to skip the extra S3 head requests when crops are not needed.",
+    ),
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
@@ -141,17 +146,20 @@ async def fetch_sequence_detections(
 
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    fetched = await detections.fetch_all(
+        filters=("sequence_id", sequence_id),
+        order_by="created_at",
+        order_desc=desc,
+        limit=limit,
+        offset=offset,
+    )
     return [
         DetectionWithUrl(
             **DetectionRead(**elt.model_dump()).model_dump(),
             url=bucket.get_public_url(elt.bucket_key),
+            crop_url=(bucket.get_public_url(elt.crop_bucket_key) if with_crop and elt.crop_bucket_key else None),
         )
-        for elt in await detections.fetch_all(
-            filters=("sequence_id", sequence_id),
-            order_by="created_at",
-            order_desc=desc,
-            limit=limit,
-        )
+        for elt in fetched
     ]
 
 
@@ -207,8 +215,9 @@ async def fetch_sequences_from_date(
     camera_ids = (
         await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
     ).all()
+    classes: dict[int, str | None]
     if risk_score is not None:
-        classes: dict[int, Union[str, None]] = dict.fromkeys(camera_ids, risk_score)
+        classes = dict.fromkeys(camera_ids, risk_score)
     else:
         scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
         classes = dict(scores)
@@ -272,24 +281,8 @@ async def label_sequence(
     previous_label = sequence.is_wildfire
     updated = await sequences.update(sequence_id, payload)
 
-    # If sequence is labeled as non-wildfire, remove it from alerts and refresh those alerts
-    if payload.is_wildfire is not None and payload.is_wildfire != AnnotationType.WILDFIRE_SMOKE:
-        await _detach_sequence_from_alerts(sequence_id, session, alerts)
-        # Create a fresh alert for this sequence alone
-        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-        new_alert = await alerts.create(
-            AlertCreate(
-                organization_id=camera.organization_id,
-                started_at=sequence.started_at,
-                last_seen_at=sequence.last_seen_at,
-                lat=None,
-                lon=None,
-            )
-        )
-        session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
-        await session.commit()
     # Reverting a previously non-wildfire label back to wildfire_smoke: re-run cone matching
-    elif (
+    if (
         payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE
         and previous_label is not None
         and previous_label != AnnotationType.WILDFIRE_SMOKE
@@ -300,5 +293,46 @@ async def label_sequence(
         await attach_sequence_to_alert(
             updated, camera, cameras, sequences, alerts, reference_time=sequence.last_seen_at
         )
+        return updated
+
+    if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
+        return updated
+
+    # Sequence labeled as non-wildfire: detach it from its alerts and give it a fresh one.
+    alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
+    alert_ids = list(alert_ids_res.all())
+
+    # If the sequence is the only one in all of its alerts, leave them as-is —
+    # detaching and recreating would just churn the alert id for no benefit.
+    if alert_ids:
+        siblings_stmt: Any = (
+            select(AlertSequence.sequence_id)
+            .where(cast(Any, AlertSequence.alert_id).in_(alert_ids))
+            .where(AlertSequence.sequence_id != sequence_id)
+            .limit(1)
+        )
+        siblings_res = await session.exec(siblings_stmt)
+        if siblings_res.first() is None:
+            return updated
+
+        delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+        await session.exec(delete_links)
+        await session.commit()
+        for aid in alert_ids:
+            await _refresh_alert_state(aid, session, alerts)
+
+    # Create a fresh alert for this sequence alone
+    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    new_alert = await alerts.create(
+        AlertCreate(
+            organization_id=camera.organization_id,
+            started_at=sequence.started_at,
+            last_seen_at=sequence.last_seen_at,
+            lat=None,
+            lon=None,
+        )
+    )
+    session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+    await session.commit()
 
     return updated

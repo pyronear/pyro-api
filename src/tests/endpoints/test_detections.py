@@ -33,6 +33,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Pos
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
 from app.services.cones import resolve_cone
+from app.services.storage import s3_service
 
 
 @pytest.mark.parametrize(
@@ -878,6 +879,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         file=upload,
+        crop_file=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -915,6 +917,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         file=upload_again,
+        crop_file=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -1358,3 +1361,156 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+
+@pytest.mark.asyncio
+async def test_create_detection_persists_crop_bucket_key(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert isinstance(data["crop_bucket_key"], str)
+    assert data["crop_bucket_key"].startswith("crop_")
+    assert data["crop_bucket_key"] != data["bucket_key"]
+
+    det = await detection_session.get(Detection, data["id"])
+    assert det is not None
+    assert det.crop_bucket_key == data["crop_bucket_key"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_without_crop_leaves_field_null(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["crop_bucket_key"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_detection_url_returns_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_url_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        response = await async_client.get(f"/detections/{detection.id}/url", headers=auth)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert isinstance(body["url"], str)
+        assert body["url"].startswith("http://")
+        assert isinstance(body["crop_url"], str)
+        assert body["crop_url"].startswith("http://")
+        assert body["crop_url"] != body["url"]
+    finally:
+        bucket.delete_file(crop_key)
+
+
+@pytest.mark.asyncio
+async def test_get_detection_url_crop_url_null_without_crop(async_client: AsyncClient, detection_session: AsyncSession):
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    detection_id = pytest.detection_table[0]["id"]
+    response = await async_client.get(f"/detections/{detection_id}/url", headers=auth)
+    assert response.status_code == 200, response.text
+    assert response.json()["crop_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_with_identical_crop_bytes_produces_distinct_keys(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    # Same bytes for frame and crop must not collide on the same bucket key.
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["bucket_key"] != data["crop_bucket_key"]
+    assert data["crop_bucket_key"].startswith("crop_")
+
+
+@pytest.mark.asyncio
+async def test_create_detection_authorizes_pose_before_uploading(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # noqa: RUF029
+        upload_calls.append(file.filename or "")
+        return "should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    # Camera 1's token paired with pose 3 (owned by camera 2) must 403 before any upload.
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=auth,
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"] == "Access forbidden."
+    assert upload_calls == []

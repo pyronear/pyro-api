@@ -8,10 +8,11 @@ import asyncio
 import io
 from collections.abc import Callable
 from functools import partial
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
+from pydantic import BaseModel, Field
 from pyro_camera_api_client import PyroCameraAPIClient
 
 from app.api.dependencies import get_camera_crud, get_jwt
@@ -20,6 +21,39 @@ from app.models import Camera, UserRole
 from app.schemas.login import TokenPayload
 
 router = APIRouter()
+
+CameraDirection = Literal["Left", "Right", "Up", "Down"]
+
+
+class GotoPresetRequest(BaseModel):
+    pose_id: int = Field(..., description="Preset pose index to move to")
+    speed: int = Field(default=50, description="Movement speed")
+
+
+class StartMoveRequest(BaseModel):
+    direction: CameraDirection = Field(..., description="Direction: Left, Right, Up, Down")
+    speed: int = Field(default=10, description="Movement speed")
+
+
+class MoveForDurationRequest(BaseModel):
+    direction: CameraDirection = Field(..., description="Direction: Left, Right, Up, Down")
+    duration: float = Field(..., gt=0, description="Movement duration in seconds")
+    speed: int = Field(default=10, description="Movement speed")
+
+
+class MoveByDegreesRequest(BaseModel):
+    direction: CameraDirection = Field(..., description="Direction: Left, Right, Up, Down")
+    degrees: float = Field(..., gt=0, description="Approximate rotation in degrees")
+    speed: int | None = Field(
+        default=None,
+        description="Movement speed; omit to let the server auto-pick the best calibrated level (preferred)",
+    )
+
+
+class ClickToMoveRequest(BaseModel):
+    click_x: float = Field(..., ge=0.0, le=1.0, description="Normalized x coordinate in [0, 1]")
+    click_y: float = Field(..., ge=0.0, le=1.0, description="Normalized y coordinate in [0, 1]")
+
 
 DEVICE_PORT = 8081
 TIMEOUT = 10.0
@@ -111,7 +145,7 @@ async def proxy_camera_infos(camera: Camera = Depends(_require_read)) -> Any:
 
 @router.get("/{camera_id}/capture", status_code=status.HTTP_200_OK, summary="Capture a JPEG snapshot from the camera")
 async def proxy_capture(
-    pos_id: int | None = Query(default=None, description="Move to this preset pose before capturing"),
+    patrol_id: int | None = Query(default=None, description="Move to this preset pose before capturing"),
     anonymize: bool = Query(default=True, description="Overlay anonymization masks on the image"),
     max_age_ms: int | None = Query(default=None, description="Only use detection boxes newer than this many ms"),
     strict: bool = Query(default=False, description="Return 503 if no recent boxes are available for anonymization"),
@@ -123,7 +157,7 @@ async def proxy_capture(
     data = await _run_sync(
         _make_client(device_ip).capture_jpeg,
         camera_ip,
-        pos_id=pos_id,
+        patrol_id=patrol_id,
         anonymize=anonymize,
         max_age_ms=max_age_ms,
         strict=strict,
@@ -151,12 +185,16 @@ async def proxy_latest_image(
 # ── Control ───────────────────────────────────────────────────────────────────
 
 
-@router.post("/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera")
+@router.post(
+    "/{camera_id}/control/move", status_code=status.HTTP_200_OK, summary="Move the camera (legacy)", deprecated=True
+)
 async def proxy_move(
     direction: str | None = Query(default=None, description="Direction: Left, Right, Up, Down"),
     speed: int = Query(default=10, description="Movement speed"),
     pose_id: int | None = Query(default=None, description="Move to this preset pose index"),
     degrees: float | None = Query(default=None, description="Rotate by this many degrees (requires direction)"),
+    duration: float | None = Query(default=None, description="Move for this many seconds (requires direction)"),
+    zoom: int = Query(default=0, description="Zoom level; speed is forced to 1 server-side when zoom > 0"),
     camera: Camera = Depends(_require_write),
 ) -> Any:
     device_ip, camera_ip = _device_config(camera)
@@ -167,10 +205,111 @@ async def proxy_move(
         speed=speed,
         pose_id=pose_id,
         degrees=degrees,
+        duration=duration,
+        zoom=zoom,
     )
 
 
-@router.post("/{camera_id}/control/stop", status_code=status.HTTP_200_OK, summary="Stop camera movement")
+@router.post("/{camera_id}/control/goto_preset", status_code=status.HTTP_200_OK, summary="Move to a preset pose")
+async def proxy_goto_preset(
+    payload: GotoPresetRequest,
+    camera: Camera = Depends(_require_write),
+) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).goto_preset, camera_ip, payload.pose_id, payload.speed)
+
+
+@router.post("/{camera_id}/control/start_move", status_code=status.HTTP_200_OK, summary="Start a continuous move")
+async def proxy_start_move(
+    payload: StartMoveRequest,
+    camera: Camera = Depends(_require_write),
+) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).start_move, camera_ip, payload.direction, payload.speed)
+
+
+@router.post(
+    "/{camera_id}/control/stop_move",
+    status_code=status.HTTP_200_OK,
+    summary="Halt the current continuous PTZ move",
+)
+async def proxy_stop_move(camera: Camera = Depends(_require_write)) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).stop_move, camera_ip)
+
+
+@router.post(
+    "/{camera_id}/control/move_for_duration",
+    status_code=status.HTTP_200_OK,
+    summary="Move for a fixed duration (seconds)",
+)
+async def proxy_move_for_duration(
+    payload: MoveForDurationRequest,
+    camera: Camera = Depends(_require_write),
+) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(
+        _make_client(device_ip).move_for_duration,
+        camera_ip,
+        payload.direction,
+        payload.duration,
+        payload.speed,
+    )
+
+
+@router.post(
+    "/{camera_id}/control/move_by_degrees",
+    status_code=status.HTTP_200_OK,
+    summary="Move by an approximate angle",
+)
+async def proxy_move_by_degrees(
+    payload: MoveByDegreesRequest,
+    camera: Camera = Depends(_require_write),
+) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(
+        _make_client(device_ip).move_by_degrees,
+        camera_ip,
+        payload.direction,
+        payload.degrees,
+        payload.speed,
+    )
+
+
+@router.post(
+    "/{camera_id}/control/click_to_move",
+    status_code=status.HTTP_200_OK,
+    summary="Move toward a normalized image click",
+)
+async def proxy_click_to_move(
+    payload: ClickToMoveRequest,
+    camera: Camera = Depends(_require_write),
+) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(
+        _make_client(device_ip).click_to_move,
+        camera_ip,
+        payload.click_x,
+        payload.click_y,
+    )
+
+
+@router.get(
+    "/{camera_id}/control/speed_tables",
+    status_code=status.HTTP_200_OK,
+    summary="Get calibrated speed tables",
+)
+async def proxy_speed_tables(camera: Camera = Depends(_require_read)) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).get_speed_tables, camera_ip)
+
+
+@router.post(
+    "/{camera_id}/control/stop",
+    status_code=status.HTTP_200_OK,
+    summary="Stop the camera (legacy)",
+    deprecated=True,
+)
 async def proxy_stop(camera: Camera = Depends(_require_write)) -> Any:
     device_ip, camera_ip = _device_config(camera)
     return await _run_sync(_make_client(device_ip).stop_camera, camera_ip)

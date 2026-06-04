@@ -6,15 +6,13 @@
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.time import utcnow
 
 __all__ = ["create_access_token", "hash_password", "verify_password"]
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(content: Dict[str, Any], expires_minutes: Optional[int] = None) -> str:
@@ -24,9 +22,21 @@ def create_access_token(content: Dict[str, Any], expires_minutes: Optional[int] 
     return jwt.encode({**content, "exp": expire}, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
+def _encode_password(password: str) -> bytes:
+    # bcrypt only hashes the first 72 bytes of the password. passlib's
+    # CryptContext used to silently truncate; mirror that here so hashes
+    # generated under the previous implementation keep verifying.
+    return password.encode("utf-8")[:72]
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(_encode_password(plain_password), hashed_password.encode("utf-8"))
+    except ValueError:
+        # Malformed stored hash — match the previous CryptContext.verify
+        # behaviour which returned False rather than raising.
+        return False
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(_encode_password(password), bcrypt.gensalt()).decode("utf-8")
