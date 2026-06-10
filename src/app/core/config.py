@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
     PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
 
-    # Temporal model API (validates sequences from a sliding window of frames)
+    # Temporal model API (validates sequences from their frames)
     TEMPORAL_API_URL: Union[str, None] = os.environ.get("TEMPORAL_API_URL")
     # Shared bearer token for /predict; empty = server has auth disabled, send no header.
     TEMPORAL_API_TOKEN: Union[str, None] = os.environ.get("TEMPORAL_API_TOKEN") or None

@@ -388,10 +388,9 @@ async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bo
         # MIN_FRAMES is not validated while the model is reachable (no alert) -- short/noise
         # sequences are suppressed; only fail-open above (model unreachable) lets them through.
         return False, None
-    window = frames[max(0, n - temporal_service.WINDOW) : n]
     bucket = s3_service.resolve_bucket_name(organization_id)
     try:
-        probability = await temporal_service.predict(bucket, window)
+        probability = await temporal_service.predict(bucket, frames)
     except TemporalUnavailableError:
         # Call failed (or breaker opened while queued): fail open.
         return True, None

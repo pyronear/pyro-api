@@ -86,11 +86,11 @@ async def test_sequence_frames_distinct_and_ordered(detection_session: AsyncSess
     assert frames == ["frame-0.jpg", "frame-1.jpg", "frame-2.jpg", "frame-3.jpg"]
 
 
-# --- _temporal_verdict: sliding window, frame bounds, fail-open (no DB session) -
+# --- _temporal_verdict: frame bounds, fail-open (no DB session) --------------
 
 
 @pytest.mark.asyncio
-async def test_temporal_verdict_sends_last_six_frames(monkeypatch):
+async def test_temporal_verdict_sends_all_frames(monkeypatch):
     frames = [f"frame-{i}.jpg" for i in range(10)]
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
@@ -100,7 +100,7 @@ async def test_temporal_verdict_sends_last_six_frames(monkeypatch):
 
     assert validated is True
     assert score == pytest.approx(0.9)
-    assert predict.await_args.args[1] == [f"frame-{i}.jpg" for i in range(4, 10)]  # window = frames[n-6:n]
+    assert predict.await_args.args[1] == frames  # all frames, no sliding window
 
 
 @pytest.mark.asyncio

@@ -25,10 +25,10 @@ class TemporalUnavailableError(Exception):
 class TemporalModelService:
     """Client for the temporal smoke classifier API with an in-memory circuit breaker.
 
-    The model needs an ordered window of frame keys. We only query a sequence once it
-    holds between ``MIN_FRAMES`` and ``MAX_FRAMES`` distinct frames, sending the last
-    ``WINDOW`` frames. After ``MAX_CONSECUTIVE_FAILURES`` failed calls in a row, calls
-    are paused for ``PAUSE_SECONDS`` (the breaker), during which the caller fails open.
+    The model needs an ordered list of frame keys. We only query a sequence once it
+    holds between ``MIN_FRAMES`` and ``MAX_FRAMES`` distinct frames, sending all of them.
+    After ``MAX_CONSECUTIVE_FAILURES`` failed calls in a row, calls are paused for
+    ``PAUSE_SECONDS`` (the breaker), during which the caller fails open.
 
     The model infers serially, so a semaphore bounds in-flight calls: bursts queue and are
     all processed (no scores lost to timeouts) instead of overwhelming it. State (breaker +
@@ -39,7 +39,6 @@ class TemporalModelService:
 
     MIN_FRAMES: int = 4
     MAX_FRAMES: int = 10
-    WINDOW: int = 6
     MAX_CONSECUTIVE_FAILURES: int = 3
     PAUSE_SECONDS: int = 4 * 3600
 
