@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-import json
 import logging
 import re
 from ast import literal_eval
@@ -12,7 +11,6 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import pandas as pd
-from anyio import to_thread
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -25,7 +23,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.encoders import jsonable_encoder
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -42,7 +39,6 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
-from app.db import session_factory
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
@@ -58,13 +54,10 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
-from app.services.risk import risk_service
 from app.services.sequence_confidence import max_conf_from_bboxes
-from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
-from app.services.temporal import TemporalUnavailableError, temporal_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -352,178 +345,6 @@ async def _attach_sequence_to_alert(
     return alert_id
 
 
-async def _sequence_frames_and_roi(
-    detections: DetectionCRUD, sequence_id: int
-) -> Tuple[List[str], Optional[List[float]]]:
-    """Distinct frame keys of the sequence (oldest first) and the ROI covering its bboxes.
-
-    The ROI is the union envelope of the sequence's primary bboxes (normalized xyxyn corners),
-    scoping the temporal verdict to the tracked region so unrelated activity elsewhere in the
-    frame can't pollute it. ``None`` when no bbox parses (full-frame behavior).
-    """
-    dets = await detections.fetch_all(
-        filters=("sequence_id", sequence_id),
-        order_by="created_at",
-        order_desc=False,
-    )
-    frames: List[str] = []
-    seen: Set[str] = set()
-    corners: List[Tuple[float, float, float, float]] = []
-    for det in dets:
-        if det.bucket_key not in seen:
-            seen.add(det.bucket_key)
-            frames.append(det.bucket_key)
-        bbox_strs = _extract_bbox_strings(det.bbox)
-        if bbox_strs:
-            try:
-                xmin, ymin, xmax, ymax, _ = _parse_bbox(bbox_strs[0])
-            except HTTPException:
-                continue
-            corners.append((xmin, ymin, xmax, ymax))
-    if not corners:
-        return frames, None
-    roi = [
-        max(0.0, min(c[0] for c in corners)),
-        max(0.0, min(c[1] for c in corners)),
-        min(1.0, max(c[2] for c in corners)),
-        min(1.0, max(c[3] for c in corners)),
-    ]
-    if not (roi[0] < roi[2] and roi[1] < roi[3]):
-        return frames, None
-    return frames, roi
-
-
-async def _temporal_verdict(
-    frames: List[str], organization_id: int, roi_xyxyn: Optional[List[float]] = None
-) -> Tuple[bool, Optional[float]]:
-    """Decide validation from the temporal model, holding NO DB session.
-
-    Returns ``(validated, score)``. ``score`` is the latest probability to persist (or None).
-    Fail-open ``(True, None)`` when the model is unavailable or the call fails; skip
-    ``(False, None)`` when there are too few/many frames or the response carries no probability.
-    """
-    n = len(frames)
-    if n > temporal_service.MAX_FRAMES:
-        # Window exhausted while the model stayed reachable and declined: a hard drop, never
-        # resurrected by a later fail-open (checked before availability on purpose).
-        return False, None
-    if not temporal_service.is_available():
-        # Not configured, unreachable, or breaker open: trust the risk gate already passed.
-        return True, None
-    if n < temporal_service.MIN_FRAMES:
-        # Too few frames for the model to score. By design, a sequence that never reaches
-        # MIN_FRAMES is not validated while the model is reachable (no alert) -- short/noise
-        # sequences are suppressed; only fail-open above (model unreachable) lets them through.
-        return False, None
-    bucket = s3_service.resolve_bucket_name(organization_id)
-    try:
-        probability = await temporal_service.predict(bucket, frames, roi_xyxyn=roi_xyxyn)
-    except TemporalUnavailableError:
-        # Call failed (or breaker opened while queued): fail open.
-        return True, None
-    if probability is None:
-        # Successful but scoreless response (uncalibrated model): cannot confirm, retry next image.
-        return False, None
-    return probability > settings.TEMPORAL_MODEL_THRESHOLD, probability
-
-
-async def _notify_slack_for_sequence(
-    sequence_: Sequence,
-    camera: Camera,
-    detection_id: int,
-    organization_id: int,
-    detections: DetectionCRUD,
-    organizations: OrganizationCRUD,
-    alert_id: Optional[int],
-) -> None:
-    if not slack_client.is_enabled:
-        return
-    org = await organizations.get(organization_id)
-    if org is None or not org.slack_hook:
-        return
-    det = await detections.get(detection_id)
-    if det is None:
-        return
-    slack_payload = jsonable_encoder(det)
-    slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-    try:
-        await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
-    except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the task chain
-        logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
-
-
-async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
-    """Background-task entrypoint: best-effort wrapper around the validation pipeline.
-
-    Background tasks run sequentially and Starlette aborts the chain on the first that
-    raises, so any error here is caught and logged rather than starving sibling tasks
-    (other sequences' validation, webhooks, Telegram).
-    """
-    try:
-        await _run_sequence_validation(sequence_id, detection_id, organization_id)
-    except Exception as exc:  # noqa: BLE001 - one task's failure must not abort the others
-        logger.error("Sequence validation failed for sequence %s: %r", sequence_id, exc)
-
-
-async def _run_sequence_validation(sequence_id: int, detection_id: int, organization_id: int) -> None:
-    """Run the risk + temporal validation pipeline for a sequence.
-
-    Split into phases so the (possibly queued) temporal call never holds a DB session:
-    read + risk-gate, then call the model with no session, then persist + triangulate + notify.
-    Idempotent: returns early for an already-validated sequence.
-    """
-    # Phase 1 — read state and apply the risk gate (short-lived session).
-    async with session_factory() as session:
-        sequences = SequenceCRUD(session)
-        cameras = CameraCRUD(session)
-        detections = DetectionCRUD(session)
-        sequence_ = await sequences.get(sequence_id)
-        if sequence_ is None or sequence_.is_validated:
-            return
-        camera = await cameras.get(sequence_.camera_id)
-        if camera is None:
-            return
-        # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
-        threshold = risk_service.min_confidence(camera.id)
-        if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
-            return
-        frames, roi_xyxyn = await _sequence_frames_and_roi(detections, sequence_id)
-
-    # Phase 2 — temporal model, with no DB session held (the call may queue on the semaphore).
-    validated, score = await _temporal_verdict(frames, organization_id, roi_xyxyn)
-    if score is None and not validated:
-        return
-
-    # Phase 3 — persist the score and, once validated, claim + triangulate + notify.
-    async with session_factory() as session:
-        sequences = SequenceCRUD(session)
-        if score is not None:
-            await sequences.set_temporal_score(sequence_id, score)
-        if not validated:
-            return
-        # Atomically claim the sequence so concurrent tasks can't both triangulate/notify.
-        if not await sequences.claim_validation(sequence_id):
-            return
-        try:
-            cameras = CameraCRUD(session)
-            alerts = AlertCRUD(session)
-            detections = DetectionCRUD(session)
-            organizations = OrganizationCRUD(session)
-            sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
-            camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
-            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
-        except Exception:
-            # Release the claim so a later detection retries the attachment; otherwise the
-            # sequence would stay validated-but-never-alerted forever (the early is_validated
-            # check would skip it). Fresh session: the failing one may be unusable.
-            async with session_factory() as rollback_session:
-                await SequenceCRUD(rollback_session).release_validation(sequence_id)
-            raise
-        await _notify_slack_for_sequence(
-            sequence_, camera, detection_id, organization_id, detections, organizations, alert_id
-        )
-
-
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     background_tasks: BackgroundTasks,
@@ -575,8 +396,8 @@ async def create_detection(
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
-    # sequence id -> latest detection id, scheduled for validation after the response.
-    affected_sequences: Dict[int, int] = {}
+    # sequences touched by this request, to mark due for validation (DB-backed queue).
+    affected_sequences: Set[int] = set()
     # detections of newly created sequences, to notify (webhooks/telegram) after the response.
     notify_dets: List[Detection] = []
 
@@ -624,7 +445,7 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
-            affected_sequences[matched_sequence.id] = det.id
+            affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -670,15 +491,16 @@ async def create_detection(
                     updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
                     if det_.id == det.id:
                         det = updated
-                affected_sequences[sequence_.id] = det.id
+                affected_sequences.add(sequence_.id)
                 notify_dets.append(det)
 
         created.append(det)
 
-    # Schedule validation/triangulation FIRST: Starlette aborts the chain on the first task
-    # that raises, and a failing notification must not skip the gated triangulation + Slack.
-    for seq_id, latest_det_id in affected_sequences.items():
-        background_tasks.add_task(validate_sequence, seq_id, latest_det_id, token_payload.organization_id)
+    # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
+    # whichever uvicorn worker received the detection). The per-process validation worker
+    # claims due sequences from the DB and runs the gated triangulation + Slack pipeline.
+    for seq_id in affected_sequences:
+        await sequences.enqueue_validation(seq_id)
 
     # Best-effort notifications for newly created sequences (ungated, as before).
     if notify_dets:

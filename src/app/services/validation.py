@@ -1,0 +1,312 @@
+# Copyright (C) 2026, Pyronear.
+
+# This program is licensed under the Apache License 2.0.
+# See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
+
+"""DB-coordinated temporal validation worker.
+
+Each detection marks its sequence as due (``sequences.validation_due_at``, one entry per
+sequence); one worker loop per uvicorn process claims due sequences with ``FOR UPDATE SKIP
+LOCKED`` + a lease and runs the risk + temporal pipeline. Postgres is the coordination
+point, so the design holds with any number of uvicorn workers: no duplicate model calls,
+no in-memory queue lost on restart, and a worker dying mid-job just leaves an expired
+lease for a sibling to pick up.
+
+Frames are read at scoring time (not at enqueue time), so a sequence queued behind a
+backlog is scored with its freshest frame set. The job pipeline runs in three phases so
+the (slow) model call never holds a DB session.
+"""
+
+import asyncio
+import json
+import logging
+from typing import Dict, List, Optional, Set, Tuple, cast
+
+from anyio import to_thread
+from fastapi import HTTPException
+from fastapi.encoders import jsonable_encoder
+
+from app.core.config import settings
+from app.core.time import utcnow
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD
+from app.db import session_factory
+from app.models import Camera, Sequence
+from app.services.risk import risk_service
+from app.services.slack import slack_client
+from app.services.storage import s3_service
+from app.services.temporal import TemporalUnavailableError, temporal_service
+
+logger = logging.getLogger("uvicorn.error")
+
+__all__ = [
+    "FAIL_OPEN_STALE",
+    "FAIL_OPEN_UNAVAILABLE",
+    "VALIDATED_BY_MODEL",
+    "WINDOW_EXHAUSTED",
+    "process_next_due_validation",
+    "validation_worker_loop",
+]
+
+# sequences.validation_status values
+VALIDATED_BY_MODEL = "model"
+FAIL_OPEN_UNAVAILABLE = "fail_open_unavailable"
+FAIL_OPEN_STALE = "fail_open_stale"
+WINDOW_EXHAUSTED = "window_exhausted"
+
+# Backoff before retrying a job that errored (keeps a persistently failing job from
+# spinning the worker; the job stays due so it is never lost).
+RETRY_DELAY_SECONDS = 30.0
+
+
+async def _sequence_frames_and_roi(
+    detections: DetectionCRUD, sequence_id: int, last_n: Optional[int] = None
+) -> Tuple[int, List[str], Optional[List[float]]]:
+    """Distinct frame keys of the sequence (oldest first) and the ROI covering their bboxes.
+
+    Returns ``(total_distinct, frames, roi)``. With ``last_n`` set, ``frames`` is truncated
+    to the most recent ``last_n`` distinct frames (the most informative ones for smoke) and
+    the ROI only covers the kept frames; ``total_distinct`` always reports the full count so
+    the caller can apply the window rules.
+
+    The ROI is the union envelope of the kept detections' primary bboxes (normalized xyxyn
+    corners), scoping the temporal verdict to the tracked region so unrelated activity
+    elsewhere in the frame can't pollute it. ``None`` when no bbox parses (full-frame).
+    """
+    # Imported lazily: the endpoints module imports services at module load.
+    from app.api.api_v1.endpoints.detections import _extract_bbox_strings, _parse_bbox
+
+    dets = await detections.fetch_all(
+        filters=("sequence_id", sequence_id),
+        order_by="created_at",
+        order_desc=False,
+    )
+    frames: List[str] = []
+    seen: Set[str] = set()
+    corners_by_frame: Dict[str, List[Tuple[float, float, float, float]]] = {}
+    for det in dets:
+        if det.bucket_key not in seen:
+            seen.add(det.bucket_key)
+            frames.append(det.bucket_key)
+        bbox_strs = _extract_bbox_strings(det.bbox)
+        if bbox_strs:
+            try:
+                xmin, ymin, xmax, ymax, _ = _parse_bbox(bbox_strs[0])
+                corners_by_frame.setdefault(det.bucket_key, []).append((xmin, ymin, xmax, ymax))
+            except HTTPException:
+                logger.debug("Skipping unparseable bbox on detection %s", det.id)
+    total = len(frames)
+    kept = frames if last_n is None or total <= last_n else frames[-last_n:]
+    corners = [c for frame in kept for c in corners_by_frame.get(frame, [])]
+    if not corners:
+        return total, kept, None
+    roi = [
+        max(0.0, min(c[0] for c in corners)),
+        max(0.0, min(c[1] for c in corners)),
+        min(1.0, max(c[2] for c in corners)),
+        min(1.0, max(c[3] for c in corners)),
+    ]
+    if not (roi[0] < roi[2] and roi[1] < roi[3]):
+        return total, kept, None
+    return total, kept, roi
+
+
+async def _notify_slack_for_sequence(
+    sequence_: Sequence,
+    camera: Camera,
+    organization_id: int,
+    detections: DetectionCRUD,
+    organizations: OrganizationCRUD,
+    alert_id: Optional[int],
+) -> None:
+    """Best-effort Slack notification, carrying the sequence's latest detection."""
+    if not slack_client.is_enabled:
+        return
+    org = await organizations.get(organization_id)
+    if org is None or not org.slack_hook:
+        return
+    dets = await detections.fetch_all(
+        filters=("sequence_id", sequence_.id), order_by="created_at", order_desc=True, limit=1
+    )
+    if not dets:
+        return
+    slack_payload = jsonable_encoder(dets[0])
+    slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+    try:
+        await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
+    except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the job
+        logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
+
+
+async def _finish_job(sequence_id: int, frame_count: Optional[int] = None) -> None:
+    async with session_factory() as session:
+        await SequenceCRUD(session).finish_validation_job(sequence_id, frame_count)
+
+
+async def _conclude_terminal(sequence_id: int, validation_status: str) -> None:
+    async with session_factory() as session:
+        sequences = SequenceCRUD(session)
+        await sequences.set_validation_status(sequence_id, validation_status)
+        await sequences.finish_validation_job(sequence_id)
+
+
+async def _process_claimed_sequence(sequence_: Sequence) -> None:
+    """Run the risk + temporal validation pipeline for a claimed sequence.
+
+    Three phases so the (possibly slow) model call never holds a DB session: read state and
+    apply the risk gate, call the model, then persist + triangulate + notify.
+    """
+    sequence_id = sequence_.id
+    due_since = sequence_.validation_due_at
+
+    # Phase 1 — read state, risk gate, FRESH frames (short-lived session).
+    async with session_factory() as session:
+        cameras = CameraCRUD(session)
+        detections = DetectionCRUD(session)
+        camera = await cameras.get(sequence_.camera_id)
+        if camera is None:
+            await _finish_job(sequence_id)
+            return
+        organization_id = camera.organization_id
+        # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
+        # Completing the job is fine: the next detection re-enqueues and the gate re-evaluates
+        # as max_conf grows or the risk scores refresh.
+        threshold = risk_service.min_confidence(camera.id)
+        if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
+            await _finish_job(sequence_id)
+            return
+        total_frames, frames, roi_xyxyn = await _sequence_frames_and_roi(
+            detections, sequence_id, last_n=temporal_service.MAX_FRAMES
+        )
+
+    # Window + availability rules. A sequence past MAX_FRAMES that the model already scored
+    # (and declined, or it would be validated) is terminal: don't call the model again and
+    # never resurrect it via a later fail-open. Past MAX_FRAMES but never scored (backlog,
+    # model freshly configured): score the last MAX_FRAMES anyway — backlog must delay
+    # sequences, never silently drop them.
+    if total_frames > temporal_service.MAX_FRAMES and sequence_.temporal_model_score is not None:
+        await _conclude_terminal(sequence_id, WINDOW_EXHAUSTED)
+        return
+
+    score: Optional[float] = None
+    validation_status: Optional[str] = None
+    if not temporal_service.is_available():
+        # Not configured, unreachable, or breaker open: trust the risk gate already passed.
+        validated = True
+        validation_status = FAIL_OPEN_UNAVAILABLE
+    elif total_frames < temporal_service.MIN_FRAMES:
+        # Too few frames for the model to score; the next detection re-enqueues. By design a
+        # sequence that never reaches MIN_FRAMES is not validated while the model is reachable
+        # (short/noise sequences are suppressed); only fail-open lets them through.
+        await _finish_job(sequence_id, frame_count=total_frames)
+        return
+    elif due_since is not None and (utcnow() - due_since).total_seconds() > settings.TEMPORAL_VALIDATION_MAX_AGE:
+        # Queued past the useful scoring window (sustained backlog): bound the latency by
+        # failing open EXPLICITLY rather than scoring too late to matter. Traced in
+        # validation_status so overload-induced fail-opens are observable.
+        validated = True
+        validation_status = FAIL_OPEN_STALE
+        logger.warning(
+            "Sequence %s queued for >%ss; failing open on the risk gate alone",
+            sequence_id,
+            settings.TEMPORAL_VALIDATION_MAX_AGE,
+        )
+    else:
+        if total_frames > temporal_service.MAX_FRAMES:
+            logger.warning(
+                "Sequence %s exceeded %d frames before first scoring; scoring the last %d",
+                sequence_id,
+                temporal_service.MAX_FRAMES,
+                temporal_service.MAX_FRAMES,
+            )
+        # Phase 2 — model call, with NO DB session held.
+        bucket = s3_service.resolve_bucket_name(organization_id)
+        try:
+            score = await temporal_service.predict(bucket, frames, roi_xyxyn=roi_xyxyn)
+        except TemporalUnavailableError:
+            validated = True
+            validation_status = FAIL_OPEN_UNAVAILABLE
+        else:
+            if score is None:
+                # Successful but scoreless response (uncalibrated model): cannot confirm,
+                # retry on the next frame set.
+                await _finish_job(sequence_id, frame_count=total_frames)
+                return
+            validated = score > settings.TEMPORAL_MODEL_THRESHOLD
+            validation_status = VALIDATED_BY_MODEL if validated else None
+
+    # Phase 3 — persist the score and, once validated, claim + triangulate + notify.
+    async with session_factory() as session:
+        sequences = SequenceCRUD(session)
+        if score is not None:
+            await sequences.set_temporal_score(sequence_id, score)
+        if not validated:
+            # Below threshold: keep the score, retry when the frame set grows (the
+            # conditional finish keeps the job due if frames arrived during scoring).
+            await sequences.finish_validation_job(sequence_id, frame_count=total_frames)
+            return
+        # Atomically claim the sequence so concurrent workers can't both triangulate/notify.
+        if not await sequences.claim_validation(sequence_id):
+            await sequences.finish_validation_job(sequence_id)
+            return
+        try:
+            # Imported lazily to avoid a services -> endpoints import at module load.
+            from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
+
+            cameras = CameraCRUD(session)
+            alerts = AlertCRUD(session)
+            detections = DetectionCRUD(session)
+            organizations = OrganizationCRUD(session)
+            sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
+            camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
+            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+        except Exception:
+            # Release the claim so a retry picks the attachment back up; otherwise the
+            # sequence would stay validated-but-never-alerted forever (the is_validated guard
+            # would skip it). Fresh session: the failing one may be unusable. The job stays
+            # due (pushed back by the caller's error handling) so it retries even if the
+            # sequence sends no further detection.
+            async with session_factory() as rollback_session:
+                await SequenceCRUD(rollback_session).release_validation(sequence_id)
+            raise
+        if validation_status is not None:
+            await sequences.set_validation_status(sequence_id, validation_status)
+        await _notify_slack_for_sequence(sequence_, camera, organization_id, detections, organizations, alert_id)
+        # Validated is terminal: clear the job unconditionally.
+        await sequences.finish_validation_job(sequence_id)
+
+
+async def process_next_due_validation() -> bool:
+    """Claim and process one due sequence. Returns True when a job was claimed.
+
+    Any error releases the lease but keeps the job due, so it is retried (by this worker or
+    a sibling process) instead of being lost.
+    """
+    async with session_factory() as session:
+        sequence_ = await SequenceCRUD(session).claim_due_validation(settings.TEMPORAL_VALIDATION_LEASE_SECONDS)
+    if sequence_ is None:
+        return False
+    try:
+        await _process_claimed_sequence(sequence_)
+    except Exception:
+        logger.exception("Sequence validation failed for sequence %s; will retry", sequence_.id)
+        async with session_factory() as session:
+            await SequenceCRUD(session).release_validation_lease(sequence_.id, retry_in_seconds=RETRY_DELAY_SECONDS)
+    return True
+
+
+async def validation_worker_loop() -> None:
+    """Per-process validation worker: drains due sequences, then idles on a short poll.
+
+    Supervised by construction — every iteration is wrapped, so no exception can silently
+    kill the loop (only cancellation at shutdown stops it).
+    """
+    logger.info("Temporal validation worker started")
+    while True:
+        try:
+            if not await process_next_due_validation():
+                await asyncio.sleep(settings.TEMPORAL_VALIDATION_POLL_SECONDS)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Validation worker iteration failed; continuing")
+            await asyncio.sleep(settings.TEMPORAL_VALIDATION_POLL_SECONDS)

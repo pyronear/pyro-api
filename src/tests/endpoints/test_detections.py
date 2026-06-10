@@ -33,7 +33,9 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Pos
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
 from app.services.cones import resolve_cone
+from app.services.slack import slack_client
 from app.services.storage import s3_service
+from app.services.validation import process_next_due_validation
 
 
 @pytest.mark.parametrize(
@@ -693,6 +695,11 @@ async def test_detection_counts_split_sequences_and_alerts(
         res = await detection_session.exec(select(model))
         return len(res.all())
 
+    async def drain_validation_queue():
+        # The worker loop is not running in tests: process due sequences synchronously.
+        while await process_next_due_validation():
+            pass
+
     base_det = await count(Detection)
     base_seq = await count(Sequence)
     base_alert = await count(Alert)
@@ -705,6 +712,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp1.status_code == 201, resp1.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 1
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -717,6 +725,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp2.status_code == 201, resp2.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 2
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -729,6 +738,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp3.status_code == 201, resp3.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 3
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
@@ -741,6 +751,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp4.status_code == 201, resp4.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 5
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
@@ -766,7 +777,6 @@ async def test_create_detection_triggers_telegram_notifications(
     monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
     monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
     monkeypatch.setattr(detections_api.telegram_client, "notify", fake_telegram_notify)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", False)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -796,6 +806,7 @@ async def test_create_detection_triggers_slack_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """Slack fires only once the validation worker processes the due sequence (gated path)."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "slack": []}
 
@@ -813,8 +824,8 @@ async def test_create_detection_triggers_slack_notifications(
 
     monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
     monkeypatch.setattr(detections_api.telegram_client, "is_enabled", False)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "notify", fake_slack_notify)
+    monkeypatch.setattr(slack_client, "is_enabled", True)
+    monkeypatch.setattr(slack_client, "notify", fake_slack_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -833,23 +844,20 @@ async def test_create_detection_triggers_slack_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"]  # webhook fires at creation (ungated)
+    assert calls["slack"] == []  # Slack waits for validation
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    assert await process_next_due_validation() is True
     assert calls["slack"] == ["http://example.com/slack"]
 
 
 @pytest.mark.asyncio
-async def test_create_detection_schedules_validation_on_append(
+async def test_create_detection_enqueues_validation_on_append(
     async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
 ):
-    """Appending a detection to an existing sequence must schedule its validation (main path)."""
+    """Appending a detection to an existing sequence must mark it due for validation (main path)."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
-    scheduled: List[tuple] = []
-
-    async def fake_validate(sequence_id: int, detection_id: int, organization_id: int) -> None:
-        await asyncio.sleep(0)
-        scheduled.append((sequence_id, detection_id, organization_id))
-
-    monkeypatch.setattr(detections_api, "validate_sequence", fake_validate)
 
     cam = pytest.camera_table[1]
     auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
@@ -861,21 +869,28 @@ async def test_create_detection_schedules_validation_on_append(
     assert first.status_code == 201, first.text
     sequence_id = first.json()["sequence_id"]
     assert isinstance(sequence_id, int)
+    seq = await detection_session.get(Sequence, sequence_id)
+    assert seq is not None
+    assert seq.validation_due_at is not None  # creation path enqueues
 
-    scheduled.clear()  # ignore the creation-path scheduling; assert the append path on its own
+    # Reset the queue marker to assert the append path on its own.
+    seq.validation_due_at = None
+    detection_session.add(seq)
+    await detection_session.commit()
+
     second = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert second.status_code == 201, second.text
     assert second.json()["sequence_id"] == sequence_id  # appended, not a new sequence
-    assert (sequence_id, second.json()["id"], cam["organization_id"]) in scheduled
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is not None  # append path re-enqueues
 
 
 @pytest.mark.asyncio
 async def test_create_detection_sequence_flow_direct(detection_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
 
     camera_id = pytest.camera_table[0]["id"]
     org_id = pytest.camera_table[0]["organization_id"]
