@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
@@ -267,16 +266,6 @@ async def label_sequence(
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     updated = await sequences.update(sequence_id, payload)
-
-    if payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE and not sequence.is_validated:
-        # Manual confirmation overrides a temporal-model rejection: validate the sequence
-        # and attach it to an alert like any model-validated one, so correcting a temporal
-        # false negative actually raises an alert.
-        if await sequences.claim_validation(sequence_id):
-            await session.refresh(updated)
-            camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-            await _attach_sequence_to_alert(updated, camera, cameras, sequences, alerts)
-        return updated
 
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
         return updated
