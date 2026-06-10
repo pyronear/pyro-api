@@ -203,6 +203,7 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
         "is_validated": True,
     },
     {
@@ -216,6 +217,7 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
         "is_validated": True,
     },
 ]

@@ -851,7 +851,6 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     webhooks = WebhookCRUD(detection_session)
     organizations = OrganizationCRUD(detection_session)
     sequences = SequenceCRUD(detection_session)
-    alerts = AlertCRUD(detection_session)
     cameras = CameraCRUD(detection_session)
     poses = PoseCRUD(detection_session)
     org = await organizations.get(org_id, strict=True)
@@ -884,7 +883,6 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         webhooks=webhooks,
         organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
@@ -922,7 +920,6 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         webhooks=webhooks,
         organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
