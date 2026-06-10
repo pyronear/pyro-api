@@ -313,6 +313,27 @@ async def test_validate_sequence_releases_claim_when_attach_fails(detection_sess
 
 
 @pytest.mark.asyncio
+async def test_label_wildfire_validates_and_attaches_rejected_sequence(async_client, detection_session: AsyncSession):
+    """Manually labeling a temporal-rejected sequence as wildfire must validate it and raise an alert."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.9)  # is_validated=False (rejected/not yet scored)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.patch(
+        f"/sequences/{seq.id}/label", json={"is_wildfire": "wildfire_smoke"}, headers=auth
+    )
+
+    assert response.status_code == 200, response.text
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.is_wildfire == "wildfire_smoke"
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
 async def test_claim_validation_is_won_once(detection_session: AsyncSession):
     """Concurrent claims on the same sequence: exactly one wins the flip."""
     seq = await _seed_sequence(detection_session, 5)
