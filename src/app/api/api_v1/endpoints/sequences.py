@@ -7,7 +7,6 @@
 from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,11 +17,11 @@ from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
-from app.schemas.alerts import AlertCreate, AlertUpdate
+from app.schemas.alerts import AlertCreate
 from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
-from app.services.overlap import compute_overlap
+from app.services.alerts import refresh_alert_state
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
@@ -40,53 +39,6 @@ async def verify_org_rights(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
-async def _refresh_alert_state(alert_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
-    remaining_stmt: Any = (
-        select(Sequence, Camera)
-        .join(AlertSequence, cast(Any, AlertSequence.sequence_id) == Sequence.id)
-        .join(Camera, cast(Any, Camera.id) == Sequence.camera_id)
-    )
-    remaining_stmt = remaining_stmt.where(AlertSequence.alert_id == alert_id)
-    remaining_res = await session.exec(remaining_stmt)
-    rows = remaining_res.all()
-    if not rows:
-        await alerts.delete(alert_id)
-        return
-
-    seqs = [row[0] for row in rows]
-    cams = [row[1] for row in rows]
-    new_start = min(seq.started_at for seq in seqs)
-    new_last = max(seq.last_seen_at for seq in seqs)
-
-    loc: Union[tuple[float, float], None] = None
-    if len(rows) >= 2:
-        records = []
-        for seq, cam in zip(seqs, cams, strict=False):
-            records.append({
-                "id": seq.id,
-                "pose_id": seq.pose_id,
-                "lat": cam.lat,
-                "lon": cam.lon,
-                "sequence_azimuth": seq.sequence_azimuth,
-                "cone_angle": seq.cone_angle,
-                "is_wildfire": seq.is_wildfire,
-                "started_at": seq.started_at,
-                "last_seen_at": seq.last_seen_at,
-            })
-        df = compute_overlap(pd.DataFrame.from_records(records))
-        loc = next((loc for locs in df["event_smoke_locations"].tolist() for loc in locs if loc is not None), None)
-
-    await alerts.update(
-        alert_id,
-        AlertUpdate(
-            started_at=new_start,
-            last_seen_at=new_last,
-            lat=loc[0] if loc else None,
-            lon=loc[1] if loc else None,
-        ),
-    )
-
-
 async def _detach_sequence_from_alerts(sequence_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
@@ -96,7 +48,7 @@ async def _detach_sequence_from_alerts(sequence_id: int, session: AsyncSession, 
     await session.exec(delete_links)
     await session.commit()
     for aid in alert_ids:
-        await _refresh_alert_state(aid, session, alerts)
+        await refresh_alert_state(aid, session, alerts)
 
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
@@ -259,7 +211,7 @@ async def delete_sequence(
     await sequences.delete(sequence_id)
     # Refresh affected alerts
     for aid in alert_ids:
-        await _refresh_alert_state(aid, session, alerts)
+        await refresh_alert_state(aid, session, alerts)
 
 
 @router.patch("/{sequence_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the sequence")
@@ -319,7 +271,7 @@ async def label_sequence(
         await session.exec(delete_links)
         await session.commit()
         for aid in alert_ids:
-            await _refresh_alert_state(aid, session, alerts)
+            await refresh_alert_state(aid, session, alerts)
 
     # Create a fresh alert for this sequence alone
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
