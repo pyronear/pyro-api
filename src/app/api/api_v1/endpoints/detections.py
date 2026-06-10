@@ -104,7 +104,7 @@ async def _get_last_bbox_for_sequence(
 ) -> Optional[Tuple[float, float, float, float, float]]:
     dets = await detections.fetch_all(
         filters=("sequence_id", sequence_id),
-        order_by="created_at",
+        order_by="recorded_at",
         order_desc=True,
         limit=1,
     )
@@ -358,6 +358,9 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
+    recorded_at: Optional[datetime] = Form(
+        None, description="UTC timestamp of when the image was captured by the engine; defaults to server now if omitted"
+    ),
     file: UploadFile = File(..., alias="file"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
@@ -393,6 +396,10 @@ async def create_detection(
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
 
+    # The engine may report when the image was actually captured; fall back to now when it doesn't.
+    # All bboxes from a single upload share the same capture time.
+    effective_recorded_at = recorded_at or utcnow()
+
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
         other_bbox_strings = bbox_strings[:idx] + bbox_strings[idx + 1 :]
@@ -404,6 +411,7 @@ async def create_detection(
                 bucket_key=bucket_key,
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
+                recorded_at=effective_recorded_at,
             )
         )
 
@@ -415,7 +423,7 @@ async def create_detection(
             inequality_pair=(
                 "last_seen_at",
                 ">",
-                utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+                effective_recorded_at - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
             ),
             order_by="last_seen_at",
             order_desc=True,
@@ -430,7 +438,7 @@ async def create_detection(
                 break
 
         if matched_sequence is not None:
-            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
+            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.recorded_at))
             det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
             # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
             det_max_conf = max_conf_from_bboxes(det.bbox)
@@ -445,11 +453,11 @@ async def create_detection(
             dets_ = await detections.fetch_all(
                 filters=det_filters,
                 inequality_pair=(
-                    "created_at",
+                    "recorded_at",
                     ">",
-                    utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                    effective_recorded_at - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
                 ),
-                order_by="created_at",
+                order_by="recorded_at",
                 order_desc=False,
             )
             overlapping_dets: List[Detection] = []
@@ -462,7 +470,7 @@ async def create_detection(
                     overlapping_dets.append(cand)
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-                first_det = min(overlapping_dets, key=lambda item: item.created_at)
+                first_det = min(overlapping_dets, key=lambda item: item.recorded_at)
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
                 seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
@@ -472,8 +480,8 @@ async def create_detection(
                         camera_azimuth=pose.azimuth,
                         sequence_azimuth=cone_azimuth,
                         cone_angle=cone_angle,
-                        started_at=first_det.created_at,
-                        last_seen_at=det.created_at,
+                        started_at=first_det.recorded_at,
+                        last_seen_at=det.recorded_at,
                         max_conf=seq_max_conf,
                     )
                 )
