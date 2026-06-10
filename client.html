@@ -503,6 +503,29 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="pyroclient.client.Client.unmatch_alert_sequence">
+<span class="sig-name descname"><span class="pre">unmatch_alert_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alert_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.unmatch_alert_sequence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.unmatch_alert_sequence" title="Permalink to this definition">#</a></dt>
+<dd><p>Detach a sequence from an alert. If the sequence is no longer linked to any alert,
+a new alert is created for it.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">client</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;MY_USER_TOKEN&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">response</span> <span class="o">=</span> <span class="n">api_client</span><span class="o">.</span><span class="n">unmatch_alert_sequence</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alert_id</strong> – ID of the alert the sequence should be detached from</p></li>
+<li><p><strong>sequence_id</strong> – ID of the sequence to detach</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>HTTP response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.update_last_image">
 <span class="sig-name descname"><span class="pre">update_last_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">media</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.update_last_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.update_last_image" title="Permalink to this definition">#</a></dt>
 <dd><p>Update the last image of the camera</p>
@@ -640,6 +663,7 @@
 <li><a class="reference internal" href="#pyroclient.client.Client.list_pose_masks"><code class="docutils literal notranslate"><span class="pre">Client.list_pose_masks()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.patch_occlusion_mask"><code class="docutils literal notranslate"><span class="pre">Client.patch_occlusion_mask()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.patch_pose"><code class="docutils literal notranslate"><span class="pre">Client.patch_pose()</span></code></a></li>
+<li><a class="reference internal" href="#pyroclient.client.Client.unmatch_alert_sequence"><code class="docutils literal notranslate"><span class="pre">Client.unmatch_alert_sequence()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.update_last_image"><code class="docutils literal notranslate"><span class="pre">Client.update_last_image()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.update_pose"><code class="docutils literal notranslate"><span class="pre">Client.update_pose()</span></code></a></li>
 <li><a class="reference internal" href="#pyroclient.client.Client.update_pose_image"><code class="docutils literal notranslate"><span class="pre">Client.update_pose_image()</span></code></a></li>

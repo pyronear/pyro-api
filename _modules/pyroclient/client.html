@@ -208,7 +208,7 @@
 <span class="c1"># See LICENSE or go to &lt;https://opensource.org/licenses/Apache-2.0&gt; for full license details.</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urljoin</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -244,6 +244,8 @@
     <span class="n">SEQUENCES_FETCH_DETECTIONS</span> <span class="o">=</span> <span class="s2">&quot;sequences/</span><span class="si">{seq_id}</span><span class="s2">/detections&quot;</span>
     <span class="n">SEQUENCES_FETCH_LATEST</span> <span class="o">=</span> <span class="s2">&quot;sequences/unlabeled/latest&quot;</span>
     <span class="n">SEQUENCES_FETCH_FROMDATE</span> <span class="o">=</span> <span class="s2">&quot;sequences/all/fromdate&quot;</span>
+    <span class="c1"># ALERTS</span>
+    <span class="n">ALERTS_UNMATCH_SEQUENCE</span> <span class="o">=</span> <span class="s2">&quot;alerts/</span><span class="si">{alert_id}</span><span class="s2">/sequences/</span><span class="si">{seq_id}</span><span class="s2">/unmatch&quot;</span>
     <span class="c1"># ORGS</span>
     <span class="n">ORGS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;organizations&quot;</span>
 
@@ -309,7 +311,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">headers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">headers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
 
     <span class="c1"># CAMERAS</span>
@@ -709,6 +711,32 @@
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_DETECTIONS</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="n">desc</span><span class="p">,</span> <span class="s2">&quot;with_crop&quot;</span><span class="p">:</span> <span class="n">with_crop</span><span class="p">},</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="c1"># ALERTS</span>
+
+<div class="viewcode-block" id="Client.unmatch_alert_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.unmatch_alert_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">unmatch_alert_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alert_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Detach a sequence from an alert. If the sequence is no longer linked to any alert,</span>
+<span class="sd">        a new alert is created for it.</span>
+
+<span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.unmatch_alert_sequence(1, 2)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            alert_id: ID of the alert the sequence should be detached from</span>
+<span class="sd">            sequence_id: ID of the sequence to detach</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            HTTP response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="n">urljoin</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span>
+                <span class="n">ClientRoute</span><span class="o">.</span><span class="n">ALERTS_UNMATCH_SEQUENCE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">alert_id</span><span class="o">=</span><span class="n">alert_id</span><span class="p">,</span> <span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
