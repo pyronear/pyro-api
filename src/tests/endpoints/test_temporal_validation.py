@@ -13,7 +13,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.detections import (
-    _sequence_frames,
+    _sequence_frames_and_roi,
     _temporal_verdict,
     validate_sequence,
 )
@@ -62,12 +62,12 @@ async def _seed_sequence(
     return seq
 
 
-# --- _sequence_frames -------------------------------------------------------
+# --- _sequence_frames_and_roi ------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_sequence_frames_distinct_and_ordered(detection_session: AsyncSession):
-    seq = await _seed_sequence(detection_session, 4)
+async def test_sequence_frames_distinct_ordered_with_union_roi(detection_session: AsyncSession):
+    seq = await _seed_sequence(detection_session, 4)  # seeded bboxes are (.1,.1,.7,.8,.9)
     now = utcnow()
     # A second detection sharing an existing frame (same image, different bbox) must not duplicate it.
     detection_session.add(
@@ -76,14 +76,15 @@ async def test_sequence_frames_distinct_and_ordered(detection_session: AsyncSess
             pose_id=1,
             sequence_id=seq.id,
             bucket_key="frame-1.jpg",
-            bbox="[(.2,.2,.3,.3,.5)]",
+            bbox="[(.2,.2,.9,.3,.5)]",  # widens the union on x_max
             created_at=now,
         )
     )
     await detection_session.commit()
 
-    frames = await _sequence_frames(DetectionCRUD(detection_session), cast(int, seq.id))
+    frames, roi = await _sequence_frames_and_roi(DetectionCRUD(detection_session), cast(int, seq.id))
     assert frames == ["frame-0.jpg", "frame-1.jpg", "frame-2.jpg", "frame-3.jpg"]
+    assert roi == [pytest.approx(0.1), pytest.approx(0.1), pytest.approx(0.9), pytest.approx(0.8)]
 
 
 # --- _temporal_verdict: frame bounds, fail-open (no DB session) --------------
@@ -226,12 +227,20 @@ async def test_validate_sequence_marks_validated_and_triangulates(detection_sess
 async def test_validate_sequence_scores_and_triangulates(detection_session: AsyncSession, monkeypatch):
     seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
     det = (await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id)))[0]
+    predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(risk_service, "_scores", {})  # gate open
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
-    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.9))
+    monkeypatch.setattr(temporal_service, "predict", predict)
 
     await validate_sequence(cast(int, seq.id), cast(int, det.id), 1)
 
+    # The bbox-union ROI is forwarded so the verdict is scoped to the sequence's region.
+    assert predict.await_args.kwargs["roi_xyxyn"] == [
+        pytest.approx(0.1),
+        pytest.approx(0.1),
+        pytest.approx(0.7),
+        pytest.approx(0.8),
+    ]
     await detection_session.refresh(seq)
     assert seq.temporal_model_score == pytest.approx(0.9)
     assert seq.is_validated is True

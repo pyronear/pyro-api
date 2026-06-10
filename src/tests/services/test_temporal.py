@@ -57,8 +57,18 @@ async def test_predict_returns_probability_and_resets_breaker(configured_tempora
     assert service._consecutive_failures == 0
     args, kwargs = inner.post.await_args
     assert args[0].endswith("/predict")
-    assert kwargs["json"] == {"bucket": "bucket-2", "frames": ["a.jpg", "b.jpg"]}
+    assert kwargs["json"] == {"bucket": "bucket-2", "frames": ["a.jpg", "b.jpg"]}  # no roi key when unset
     assert kwargs["headers"] is None  # no token configured -> no Authorization header
+
+
+@pytest.mark.asyncio
+async def test_predict_sends_roi_when_given(configured_temporal):
+    service = TemporalModelService()
+    factory, inner = _fake_httpx_post_client(json_data={"probability": 0.5})
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        await service.predict("bucket", ["a.jpg"], roi_xyxyn=[0.1, 0.2, 0.7, 0.8])
+    _, kwargs = inner.post.await_args
+    assert kwargs["json"] == {"bucket": "bucket", "frames": ["a.jpg"], "roi_xyxyn": [0.1, 0.2, 0.7, 0.8]}
 
 
 @pytest.mark.asyncio

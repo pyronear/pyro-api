@@ -352,8 +352,15 @@ async def _attach_sequence_to_alert(
     return alert_id
 
 
-async def _sequence_frames(detections: DetectionCRUD, sequence_id: int) -> List[str]:
-    """Distinct frame keys of the sequence, oldest first (one entry per source image)."""
+async def _sequence_frames_and_roi(
+    detections: DetectionCRUD, sequence_id: int
+) -> Tuple[List[str], Optional[List[float]]]:
+    """Distinct frame keys of the sequence (oldest first) and the ROI covering its bboxes.
+
+    The ROI is the union envelope of the sequence's primary bboxes (normalized xyxyn corners),
+    scoping the temporal verdict to the tracked region so unrelated activity elsewhere in the
+    frame can't pollute it. ``None`` when no bbox parses (full-frame behavior).
+    """
     dets = await detections.fetch_all(
         filters=("sequence_id", sequence_id),
         order_by="created_at",
@@ -361,14 +368,34 @@ async def _sequence_frames(detections: DetectionCRUD, sequence_id: int) -> List[
     )
     frames: List[str] = []
     seen: Set[str] = set()
+    corners: List[Tuple[float, float, float, float]] = []
     for det in dets:
         if det.bucket_key not in seen:
             seen.add(det.bucket_key)
             frames.append(det.bucket_key)
-    return frames
+        bbox_strs = _extract_bbox_strings(det.bbox)
+        if bbox_strs:
+            try:
+                xmin, ymin, xmax, ymax, _ = _parse_bbox(bbox_strs[0])
+            except HTTPException:
+                continue
+            corners.append((xmin, ymin, xmax, ymax))
+    if not corners:
+        return frames, None
+    roi = [
+        max(0.0, min(c[0] for c in corners)),
+        max(0.0, min(c[1] for c in corners)),
+        min(1.0, max(c[2] for c in corners)),
+        min(1.0, max(c[3] for c in corners)),
+    ]
+    if not (roi[0] < roi[2] and roi[1] < roi[3]):
+        return frames, None
+    return frames, roi
 
 
-async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bool, Optional[float]]:
+async def _temporal_verdict(
+    frames: List[str], organization_id: int, roi_xyxyn: Optional[List[float]] = None
+) -> Tuple[bool, Optional[float]]:
     """Decide validation from the temporal model, holding NO DB session.
 
     Returns ``(validated, score)``. ``score`` is the latest probability to persist (or None).
@@ -390,7 +417,7 @@ async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bo
         return False, None
     bucket = s3_service.resolve_bucket_name(organization_id)
     try:
-        probability = await temporal_service.predict(bucket, frames)
+        probability = await temporal_service.predict(bucket, frames, roi_xyxyn=roi_xyxyn)
     except TemporalUnavailableError:
         # Call failed (or breaker opened while queued): fail open.
         return True, None
@@ -460,10 +487,10 @@ async def _run_sequence_validation(sequence_id: int, detection_id: int, organiza
         threshold = risk_service.min_confidence(camera.id)
         if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
             return
-        frames = await _sequence_frames(detections, sequence_id)
+        frames, roi_xyxyn = await _sequence_frames_and_roi(detections, sequence_id)
 
     # Phase 2 — temporal model, with no DB session held (the call may queue on the semaphore).
-    validated, score = await _temporal_verdict(frames, organization_id)
+    validated, score = await _temporal_verdict(frames, organization_id, roi_xyxyn)
     if score is None and not validated:
         return
 

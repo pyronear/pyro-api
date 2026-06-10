@@ -73,8 +73,13 @@ class TemporalModelService:
             self._paused_until = (utcnow() + timedelta(seconds=self.PAUSE_SECONDS)).timestamp()
             logger.warning("Temporal API breaker opened for %ds after repeated failures", self.PAUSE_SECONDS)
 
-    async def predict(self, bucket: str, frames: List[str]) -> Union[float, None]:
+    async def predict(
+        self, bucket: str, frames: List[str], roi_xyxyn: Union[List[float], None] = None
+    ) -> Union[float, None]:
         """Return the smoke probability for the given frames.
+
+        ``roi_xyxyn`` (normalized [x_min, y_min, x_max, y_max] corners) scopes the verdict
+        to the sequence's region so unrelated activity in the frame can't pollute it.
 
         Records success/failure for the circuit breaker. Returns ``None`` for a successful
         call that carries no calibrated probability. Raises :class:`TemporalUnavailableError`
@@ -85,6 +90,9 @@ class TemporalModelService:
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         headers = {"Authorization": f"Bearer {settings.TEMPORAL_API_TOKEN}"} if settings.TEMPORAL_API_TOKEN else None
+        payload: dict = {"bucket": bucket, "frames": frames}
+        if roi_xyxyn is not None:
+            payload["roi_xyxyn"] = roi_xyxyn
         try:
             # Serialize against the model's real throughput so bursts queue instead of timing out.
             async with self._semaphore:
@@ -92,9 +100,7 @@ class TemporalModelService:
                 if not self.is_available():
                     raise TemporalUnavailableError("breaker open")
                 async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
-                    response = await client.post(
-                        f"{host}/predict", json={"bucket": bucket, "frames": frames}, headers=headers
-                    )
+                    response = await client.post(f"{host}/predict", json=payload, headers=headers)
                     response.raise_for_status()
                     data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
