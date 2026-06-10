@@ -13,7 +13,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import detections as detections_api
 from app.api.api_v1.endpoints.detections import (
-    _attach_sequence_to_alert,
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
@@ -25,6 +24,7 @@ from app.api.api_v1.endpoints.detections import (
     _maybe_update_alert,
     _parse_bbox,
     _resolve_groups_and_locations,
+    attach_sequence_to_alert,
     create_detection,
 )
 from app.core.config import settings
@@ -664,7 +664,7 @@ async def test_attach_sequence_to_alert_returns_without_overlap_records(detectio
     await detection_session.commit()
     await detection_session.refresh(sequence)
 
-    await _attach_sequence_to_alert(sequence, camera, cam_crud, seq_crud, alert_crud)
+    await attach_sequence_to_alert(sequence, camera, cam_crud, seq_crud, alert_crud)
 
     alerts = await alert_crud.fetch_all()
     assert alerts == []
@@ -1228,7 +1228,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     await detection_session.refresh(seq1)
     await detection_session.refresh(seq2)
 
-    await _attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud)
+    await attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud)
 
     alerts = await alert_crud.fetch_all()
     assert len(alerts) == 1
@@ -1330,7 +1330,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     await detection_session.refresh(seq_cam5)
 
     # Step 1 — attach cam5 sequence triangulates with cam7, creates smoke-A alert.
-    smoke_a_alert_id = await _attach_sequence_to_alert(seq_cam5, cam5, cam_crud, seq_crud, alert_crud)
+    smoke_a_alert_id = await attach_sequence_to_alert(seq_cam5, cam5, cam_crud, seq_crud, alert_crud)
     assert smoke_a_alert_id is not None
     smoke_a = await alert_crud.get(smoke_a_alert_id, strict=True)
     assert smoke_a.lat is not None
@@ -1351,7 +1351,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     await detection_session.commit()
     await detection_session.refresh(seq_cam2)
 
-    target_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
+    target_id = await attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
 
     # The cam2 sequence must land on a NEW alert, not the smoke-A one.
     assert target_id is not None

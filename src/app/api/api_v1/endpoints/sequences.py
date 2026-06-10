@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, st
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.api_v1.endpoints.detections import attach_sequence_to_alert
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
@@ -36,6 +37,18 @@ async def verify_org_rights(
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
     if organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+
+async def _detach_sequence_from_alerts(sequence_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
+    alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
+    alert_ids = list(alert_ids_res.all())
+    if not alert_ids:
+        return
+    delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+    await session.exec(delete_links)
+    await session.commit()
+    for aid in alert_ids:
+        await refresh_alert_state(aid, session, alerts)
 
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
@@ -217,11 +230,27 @@ async def label_sequence(
     if UserRole.ADMIN not in token_payload.scopes:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
+    previous_label = sequence.is_wildfire
     updated = await sequences.update(sequence_id, payload)
+
+    # Reverting a previously non-wildfire label back to wildfire_smoke: re-run cone matching
+    if (
+        payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE
+        and previous_label is not None
+        and previous_label != AnnotationType.WILDFIRE_SMOKE
+    ):
+        await _detach_sequence_from_alerts(sequence_id, session, alerts)
+        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+        # Anchor the candidate window on the sequence's own time so old relabels still merge
+        await attach_sequence_to_alert(
+            updated, camera, cameras, sequences, alerts, reference_time=sequence.last_seen_at
+        )
+        return updated
 
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
         return updated
 
+    # Sequence labeled as non-wildfire: detach it from its alerts and give it a fresh one.
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
 
