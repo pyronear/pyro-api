@@ -1,4 +1,4 @@
-"""add temporal_model_score and is_validated columns to sequences
+"""add temporal validation columns and job state to sequences
 
 Revision ID: c5e2f7a8b1d0
 Revises: 7f1c4d2a9b3e
@@ -27,6 +27,18 @@ def upgrade() -> None:
         "sequences",
         sa.Column("is_validated", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
+    # Validation job state: due marker (the queue), worker lease, and final outcome.
+    op.add_column("sequences", sa.Column("validation_due_at", sa.DateTime(), nullable=True))
+    op.add_column("sequences", sa.Column("validation_lease_until", sa.DateTime(), nullable=True))
+    op.add_column("sequences", sa.Column("validation_status", sa.String(length=32), nullable=True))
+    # The worker polls for due rows; keep that scan off the table with a partial index
+    # (almost every row has validation_due_at IS NULL).
+    op.create_index(
+        "ix_sequences_validation_due_at",
+        "sequences",
+        ["validation_due_at"],
+        postgresql_where=sa.text("validation_due_at IS NOT NULL"),
+    )
     # Existing sequences predate the validation gate; treat them as already validated
     # so they keep triangulating and remain eligible as triangulation partners.
     bind = op.get_bind()
@@ -35,5 +47,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_sequences_validation_due_at", table_name="sequences")
+    op.drop_column("sequences", "validation_status")
+    op.drop_column("sequences", "validation_lease_until")
+    op.drop_column("sequences", "validation_due_at")
     op.drop_column("sequences", "is_validated")
     op.drop_column("sequences", "temporal_model_score")

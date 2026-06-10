@@ -126,6 +126,40 @@ class Sequence(SQLModel, table=True):
             "Only validated sequences are triangulated and notified."
         ),
     )
+    # The three validation-job fields below are internal plumbing (the DB-backed queue);
+    # they are excluded from API serialization.
+    validation_due_at: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description=(
+            "When set, the sequence is queued for temporal validation (set on each new detection, "
+            "kept at its oldest value while queued so ordering is FIFO). Cleared once the worker "
+            "reaches a verdict for the current frame set or a terminal state."
+        ),
+    )
+    validation_lease_until: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description=(
+            "Lease claimed by the validation worker processing this sequence; other workers skip "
+            "the row until it expires. An expired lease with validation_due_at still set means the "
+            "worker died mid-job and the job is up for grabs again."
+        ),
+    )
+    validation_status: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        exclude=True,
+        description=(
+            "How validation concluded: 'model' (temporal model confirmed), 'fail_open_unavailable' "
+            "(model unreachable/breaker open), 'fail_open_stale' (queued past the max age), "
+            "'window_exhausted' (scored but never confirmed within the frame window; terminal). "
+            "NULL while pending or for pre-gate sequences."
+        ),
+    )
 
 
 class Alert(SQLModel, table=True):
