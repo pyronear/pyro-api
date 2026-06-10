@@ -1209,6 +1209,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=0.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1219,6 +1220,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=5.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=10),
     )
@@ -1311,6 +1313,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=-17.5,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1321,6 +1324,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=276.5,
         cone_angle=3.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=15),
     )
@@ -1344,6 +1348,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=75.2,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=5),
         last_seen_at=now,
     )
