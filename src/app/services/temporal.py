@@ -3,8 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import asyncio
 import logging
+import random
 from datetime import timedelta
 from typing import List, Union
 
@@ -25,27 +25,36 @@ class TemporalUnavailableError(Exception):
 class TemporalModelService:
     """Client for the temporal smoke classifier API with an in-memory circuit breaker.
 
-    The model needs an ordered list of frame keys. We only query a sequence once it
-    holds between ``MIN_FRAMES`` and ``MAX_FRAMES`` distinct frames, sending all of them.
-    After ``MAX_CONSECUTIVE_FAILURES`` failed calls in a row, calls are paused for
-    ``PAUSE_SECONDS`` (the breaker), during which the caller fails open.
+    The model needs an ordered list of frame keys; the validation worker queries a sequence
+    once it holds at least ``MIN_FRAMES`` distinct frames (window rules live in the worker).
 
-    The model infers serially, so a semaphore bounds in-flight calls: bursts queue and are
-    all processed (no scores lost to timeouts) instead of overwhelming it. State (breaker +
-    semaphore) is per-process, like the risk cache: with N uvicorn workers the effective
-    concurrency is ``N * TEMPORAL_API_MAX_CONCURRENCY``, so run a single worker for this path
-    or move the limit server-side if the model is strictly serial.
+    Concurrency: the temporal API itself serializes inference server-side (single process,
+    lock around the model), so this client enforces no limit. Each pyro-api process runs one
+    validation worker, so with N uvicorn workers at most N calls are in flight — safe as
+    long as ``N * model_latency < TEMPORAL_API_TIMEOUT``.
+
+    Breaker: after ``MAX_CONSECUTIVE_FAILURES`` outage-like failures (network errors, 5xx)
+    in a row, calls are paused with exponential backoff — ``BASE_PAUSE_SECONDS`` doubled on
+    each re-trip up to ``MAX_PAUSE_SECONDS``, with jitter. Once the pause elapses the breaker
+    is half-open: the next call is a probe; success closes the breaker, failure re-opens it
+    immediately at the next backoff tier (no need for 3 more failures). 4xx responses are
+    treated as call failures (callers fail open) but do NOT trip the breaker: they signal a
+    config/input problem, not an outage. State is per-process, like the risk cache: with N
+    uvicorn workers each process keeps its own breaker.
     """
 
     MIN_FRAMES: int = 4
     MAX_FRAMES: int = 10
     MAX_CONSECUTIVE_FAILURES: int = 3
-    PAUSE_SECONDS: int = 4 * 3600
+    BASE_PAUSE_SECONDS: float = 60.0
+    MAX_PAUSE_SECONDS: float = 3600.0
+    JITTER_RATIO: float = 0.2
 
     def __init__(self) -> None:
         self._consecutive_failures: int = 0
+        self._open_count: int = 0
         self._paused_until: Union[float, None] = None
-        self._semaphore = asyncio.Semaphore(max(1, settings.TEMPORAL_API_MAX_CONCURRENCY))
+        self._half_open: bool = False
 
     @property
     def is_configured(self) -> bool:
@@ -58,20 +67,31 @@ class TemporalModelService:
         if self._paused_until is not None:
             if utcnow().timestamp() < self._paused_until:
                 return False
-            # Pause elapsed: half-open, reset and allow a retry.
+            # Pause elapsed: half-open — allow a probe call, but remember we were open so a
+            # probe failure re-opens immediately at the next backoff tier.
             self._paused_until = None
             self._consecutive_failures = 0
+            self._half_open = True
         return True
 
     def _record_success(self) -> None:
         self._consecutive_failures = 0
+        self._open_count = 0
         self._paused_until = None
+        self._half_open = False
+
+    def _open(self) -> None:
+        self._open_count += 1
+        pause = min(self.BASE_PAUSE_SECONDS * 2 ** (self._open_count - 1), self.MAX_PAUSE_SECONDS)
+        pause *= 1 + random.uniform(-self.JITTER_RATIO, self.JITTER_RATIO)  # noqa: S311 - jitter, not crypto
+        self._paused_until = (utcnow() + timedelta(seconds=pause)).timestamp()
+        self._half_open = False
+        logger.warning("Temporal API breaker opened for %.0fs (trip #%d)", pause, self._open_count)
 
     def _record_failure(self) -> None:
         self._consecutive_failures += 1
-        if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
-            self._paused_until = (utcnow() + timedelta(seconds=self.PAUSE_SECONDS)).timestamp()
-            logger.warning("Temporal API breaker opened for %ds after repeated failures", self.PAUSE_SECONDS)
+        if self._half_open or self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+            self._open()
 
     async def predict(
         self, bucket: str, frames: List[str], roi_xyxyn: Union[List[float], None] = None
@@ -81,9 +101,10 @@ class TemporalModelService:
         ``roi_xyxyn`` (normalized [x_min, y_min, x_max, y_max] corners) scopes the verdict
         to the sequence's region so unrelated activity in the frame can't pollute it.
 
-        Records success/failure for the circuit breaker. Returns ``None`` for a successful
-        call that carries no calibrated probability. Raises :class:`TemporalUnavailableError`
-        when the call itself fails (network/HTTP), so callers can fail open.
+        Records success/failure for the circuit breaker (4xx fails the call without counting
+        toward the breaker). Returns ``None`` for a successful call that carries no calibrated
+        probability. Raises :class:`TemporalUnavailableError` when the call itself fails, so
+        callers can fail open.
 
         Sends ``Authorization: Bearer`` when ``TEMPORAL_API_TOKEN`` is set (the temporal API
         guards /predict with a shared token); unset matches a server with auth disabled.
@@ -94,15 +115,19 @@ class TemporalModelService:
         if roi_xyxyn is not None:
             payload["roi_xyxyn"] = roi_xyxyn
         try:
-            # Serialize against the model's real throughput so bursts queue instead of timing out.
-            async with self._semaphore:
-                # The breaker may have opened while this call waited in the queue.
-                if not self.is_available():
-                    raise TemporalUnavailableError("breaker open")
-                async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
-                    response = await client.post(f"{host}/predict", json=payload, headers=headers)
-                    response.raise_for_status()
-                    data = response.json()
+            async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
+                response = await client.post(f"{host}/predict", json=payload, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPStatusError as exc:
+            logger.warning("Temporal API call failed: %r", exc)
+            if exc.response.status_code < 500:
+                # Config/input problem (auth, bad payload), not an outage: fail the call
+                # so the caller fails open, but don't pause a healthy API.
+                self._half_open = False
+            else:
+                self._record_failure()
+            raise TemporalUnavailableError(str(exc)) from exc
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("Temporal API call failed: %r", exc)
             self._record_failure()

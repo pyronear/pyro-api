@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import asyncio
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -111,41 +110,80 @@ async def test_breaker_opens_after_three_consecutive_failures(configured_tempora
             with pytest.raises(TemporalUnavailableError):
                 await service.predict("bucket", ["a.jpg"])
     assert service.is_available() is False  # breaker is open / paused
-
-
-@pytest.mark.asyncio
-async def test_predict_serializes_concurrent_calls(configured_temporal, monkeypatch):
-    """With concurrency 1, bursts queue: at most one call is ever in flight (none dropped)."""
-    monkeypatch.setattr(settings, "TEMPORAL_API_MAX_CONCURRENCY", 1)
-    service = TemporalModelService()
-    state = {"in_flight": 0, "max_in_flight": 0}
-
-    async def fake_post(*_args, **_kwargs):
-        state["in_flight"] += 1
-        state["max_in_flight"] = max(state["max_in_flight"], state["in_flight"])
-        await asyncio.sleep(0.02)
-        state["in_flight"] -= 1
-        resp = MagicMock()
-        resp.raise_for_status = MagicMock()
-        resp.json = MagicMock(return_value={"probability": 0.9})
-        return resp
-
-    inner = MagicMock()
-    inner.post = fake_post
-    cm = MagicMock()
-    cm.__aenter__ = AsyncMock(return_value=inner)
-    cm.__aexit__ = AsyncMock(return_value=None)
-    with patch("app.services.temporal.httpx.AsyncClient", MagicMock(return_value=cm)):
-        results = await asyncio.gather(*[service.predict("bucket", ["f.jpg"]) for _ in range(5)])
-
-    assert results == [pytest.approx(0.9)] * 5  # all five processed
-    assert state["max_in_flight"] == 1  # never more than one in flight
+    # First trip: base pause (with jitter), not a long blackout.
+    pause = service._paused_until - utcnow().timestamp()
+    assert pause == pytest.approx(service.BASE_PAUSE_SECONDS, rel=service.JITTER_RATIO + 0.05)
 
 
 def test_breaker_half_opens_after_pause_elapses(configured_temporal):
     service = TemporalModelService()
     service._consecutive_failures = 3
+    service._open_count = 1
     service._paused_until = (utcnow() - timedelta(seconds=1)).timestamp()  # pause already elapsed
-    assert service.is_available() is True
+    assert service.is_available() is True  # half-open: a probe call is allowed
     assert service._paused_until is None
     assert service._consecutive_failures == 0
+    assert service._half_open is True
+
+
+@pytest.mark.asyncio
+async def test_breaker_probe_failure_reopens_immediately_with_backoff(configured_temporal):
+    """A failed half-open probe re-opens at the next backoff tier, without 3 more failures."""
+    service = TemporalModelService()
+    service._open_count = 1
+    service._half_open = True  # pause elapsed, probing
+    factory, _ = _fake_httpx_post_client(raise_exc=httpx.ConnectError("still down"))
+    with patch("app.services.temporal.httpx.AsyncClient", factory), pytest.raises(TemporalUnavailableError):
+        await service.predict("bucket", ["a.jpg"])
+    assert service.is_available() is False  # re-opened on the single probe failure
+    pause = service._paused_until - utcnow().timestamp()
+    assert pause == pytest.approx(2 * service.BASE_PAUSE_SECONDS, rel=service.JITTER_RATIO + 0.05)
+
+
+@pytest.mark.asyncio
+async def test_breaker_probe_success_closes(configured_temporal):
+    service = TemporalModelService()
+    service._open_count = 3
+    service._half_open = True
+    factory, _ = _fake_httpx_post_client(json_data={"probability": 0.5})
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        assert await service.predict("bucket", ["a.jpg"]) == pytest.approx(0.5)
+    assert service._half_open is False
+    assert service._open_count == 0  # fully closed: a future outage backs off from the base again
+    assert service.is_available() is True
+
+
+def test_breaker_backoff_is_capped(configured_temporal):
+    service = TemporalModelService()
+    service._open_count = 20  # far past the cap
+    service._open()
+    pause = service._paused_until - utcnow().timestamp()
+    assert pause <= service.MAX_PAUSE_SECONDS * (1 + service.JITTER_RATIO) + 1
+
+
+@pytest.mark.asyncio
+async def test_4xx_fails_the_call_but_does_not_trip_the_breaker(configured_temporal):
+    """A 4xx signals a config/input problem, not an outage: fail open without pausing."""
+    service = TemporalModelService()
+    request = httpx.Request("POST", "http://temporal.test/predict")
+    response = httpx.Response(401, request=request)
+    factory, _ = _fake_httpx_post_client(raise_exc=httpx.HTTPStatusError("auth", request=request, response=response))
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        for _ in range(TemporalModelService.MAX_CONSECUTIVE_FAILURES + 2):
+            with pytest.raises(TemporalUnavailableError):
+                await service.predict("bucket", ["a.jpg"])
+    assert service._consecutive_failures == 0  # not counted as outage
+    assert service.is_available() is True  # breaker never opened
+
+
+@pytest.mark.asyncio
+async def test_5xx_counts_toward_the_breaker(configured_temporal):
+    service = TemporalModelService()
+    request = httpx.Request("POST", "http://temporal.test/predict")
+    response = httpx.Response(503, request=request)
+    factory, _ = _fake_httpx_post_client(raise_exc=httpx.HTTPStatusError("down", request=request, response=response))
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        for _ in range(TemporalModelService.MAX_CONSECUTIVE_FAILURES):
+            with pytest.raises(TemporalUnavailableError):
+                await service.predict("bucket", ["a.jpg"])
+    assert service.is_available() is False  # outage: breaker opened
