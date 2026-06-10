@@ -16,14 +16,15 @@ from sqlalchemy.sql import ColumnElement
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_alert_crud, get_jwt
+from app.api.dependencies import get_alert_crud, get_camera_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
-from app.crud import AlertCRUD
+from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, UserRole
-from app.schemas.alerts import AlertReadWithSequences
+from app.schemas.alerts import AlertCreate, AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
+from app.services.alerts import refresh_alert_state
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
@@ -370,6 +371,84 @@ async def fetch_alerts_from_date(
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
     )
     return [_serialize_alert(alert, seq_map.get(alert.id, []), detection_counts) for alert in alerts]
+
+
+@router.post(
+    "/{alert_id}/sequences/{sequence_id}/unmatch",
+    status_code=status.HTTP_200_OK,
+    summary="Detach a sequence from an alert; create a fresh alert if the sequence becomes orphaned",
+)
+async def unmatch_alert_sequence(
+    alert_id: int = Path(..., gt=0),
+    sequence_id: int = Path(..., gt=0),
+    alerts: AlertCRUD = Depends(get_alert_crud),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    session: AsyncSession = Depends(get_session),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+) -> Union[AlertReadWithSequences, None]:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="alerts-sequence-unmatch",
+        properties={"alert_id": alert_id, "sequence_id": sequence_id},
+    )
+    alert = cast(Alert, await alerts.get(alert_id, strict=True))
+    if UserRole.ADMIN not in token_payload.scopes:
+        verify_org_rights(token_payload.organization_id, alert)
+
+    link_stmt: Any = select(AlertSequence).where(
+        AlertSequence.alert_id == alert_id, AlertSequence.sequence_id == sequence_id
+    )
+    link = (await session.exec(link_stmt)).first()
+    if link is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sequence is not attached to this alert.")
+
+    count_stmt: Any = select(func.count()).select_from(AlertSequence).where(AlertSequence.alert_id == alert_id)
+    sequence_count = int((await session.exec(count_stmt)).one())
+    if sequence_count <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot unmatch the only sequence of an alert.",
+        )
+
+    delete_stmt: Any = (
+        delete(AlertSequence)
+        .where(cast(Any, AlertSequence.alert_id) == alert_id)
+        .where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+    )
+    await session.exec(delete_stmt)
+    await session.commit()
+
+    await refresh_alert_state(alert_id, session, alerts)
+
+    other_links_stmt: Any = (
+        select(func.count()).select_from(AlertSequence).where(AlertSequence.sequence_id == sequence_id)
+    )
+    other_links = int((await session.exec(other_links_stmt)).one())
+    if other_links > 0:
+        return None
+
+    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    if camera.organization_id != alert.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sequence camera does not belong to the same organization as the alert.",
+        )
+    new_alert = await alerts.create(
+        AlertCreate(
+            organization_id=alert.organization_id,
+            started_at=sequence.started_at,
+            last_seen_at=sequence.last_seen_at,
+            lat=None,
+            lon=None,
+        )
+    )
+    session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+    await session.commit()
+    await session.refresh(new_alert)
+    detection_counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
+    return _serialize_alert(new_alert, [sequence], detection_counts)
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")

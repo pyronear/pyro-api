@@ -650,7 +650,7 @@ async def test_delete_sequence_refreshes_alert(async_client: AsyncClient, detect
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
 async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_refresh_alert_state: AsyncMock,
 ):
@@ -722,7 +722,7 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
 async def test_unit_label_sequence_solo_alert_keeps_alert(
     mock_refresh_alert_state: AsyncMock,
 ):
