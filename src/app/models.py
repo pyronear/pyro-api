@@ -113,6 +113,19 @@ class Sequence(SQLModel, table=True):
             "Monotonic: not recomputed downward when detections are deleted or reassigned."
         ),
     )
+    temporal_model_score: Union[float, None] = Field(
+        None,
+        nullable=True,
+        description="Latest temporal-model smoke probability for this sequence, or None if never scored.",
+    )
+    is_validated: bool = Field(
+        default=False,
+        nullable=False,
+        description=(
+            "Whether the sequence passed validation (risk gate + temporal model, or fail-open). "
+            "Only validated sequences are triangulated and notified."
+        ),
+    )
 
 
 class Alert(SQLModel, table=True):
