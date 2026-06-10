@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 import pandas as pd
+from anyio import to_thread
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -30,7 +31,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
     dispatch_webhook,
-    get_alert_crud,
     get_camera_crud,
     get_detection_crud,
     get_jwt,
@@ -41,6 +41,7 @@ from app.api.dependencies import (
 )
 from app.core.config import settings
 from app.core.time import utcnow
+from app.db import session_factory
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
@@ -62,6 +63,7 @@ from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
+from app.services.temporal import temporal_service
 from app.services.telemetry import telemetry_client
 
 logger = logging.getLogger("uvicorn.error")
@@ -154,6 +156,9 @@ def _build_overlap_records(
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
+            continue
+        # Only validated sequences are eligible for triangulation (as target or partner).
+        if not seq.is_validated:
             continue
         records.append({
             "id": int(seq.id),
@@ -347,6 +352,107 @@ async def _attach_sequence_to_alert(
     return alert_id
 
 
+async def _sequence_frames(detections: DetectionCRUD, sequence_id: int) -> List[str]:
+    """Distinct frame keys of the sequence, oldest first (one entry per source image)."""
+    dets = await detections.fetch_all(
+        filters=("sequence_id", sequence_id),
+        order_by="created_at",
+        order_desc=False,
+    )
+    frames: List[str] = []
+    seen: Set[str] = set()
+    for det in dets:
+        if det.bucket_key not in seen:
+            seen.add(det.bucket_key)
+            frames.append(det.bucket_key)
+    return frames
+
+
+async def _run_temporal_validation(
+    sequence_: Sequence,
+    organization_id: int,
+    detections: DetectionCRUD,
+    sequences: SequenceCRUD,
+) -> bool:
+    """Return whether the temporal model validates the sequence (or fails open)."""
+    if not temporal_service.is_available():
+        # Not configured, unreachable, or breaker open: trust the risk gate already passed.
+        return True
+    frames = await _sequence_frames(detections, cast(int, sequence_.id))
+    n = len(frames)
+    if n < temporal_service.MIN_FRAMES or n > temporal_service.MAX_FRAMES:
+        # Too few frames to score yet, or window exhausted without confirmation.
+        return False
+    window = frames[max(0, n - temporal_service.WINDOW) : n]
+    bucket = s3_service.resolve_bucket_name(organization_id)
+    probability = await temporal_service.predict(bucket, window)
+    if probability is None:
+        # Call just failed: fail open (the breaker has counted the failure).
+        return True
+    await sequences.set_validation(cast(int, sequence_.id), temporal_model_score=probability)
+    return probability > settings.TEMPORAL_MODEL_THRESHOLD
+
+
+async def _notify_slack_for_sequence(
+    sequence_: Sequence,
+    camera: Camera,
+    detection_id: int,
+    organization_id: int,
+    detections: DetectionCRUD,
+    organizations: OrganizationCRUD,
+    alert_id: Optional[int],
+) -> None:
+    if not slack_client.is_enabled:
+        return
+    org = await organizations.get(organization_id)
+    if org is None or not org.slack_hook:
+        return
+    det = await detections.get(detection_id)
+    if det is None:
+        return
+    slack_payload = jsonable_encoder(det)
+    slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+    await to_thread.run_sync(
+        slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+    )
+
+
+async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
+    """Background task: run the risk + temporal validation pipeline for a sequence.
+
+    Once validated, flag it, triangulate it, and send the Slack notification (once).
+    Idempotent: returns early for an already-validated sequence.
+    """
+    async with session_factory() as session:
+        sequences = SequenceCRUD(session)
+        cameras = CameraCRUD(session)
+        alerts = AlertCRUD(session)
+        detections = DetectionCRUD(session)
+        organizations = OrganizationCRUD(session)
+
+        sequence_ = await sequences.get(sequence_id)
+        if sequence_ is None or sequence_.is_validated:
+            return
+        camera = await cameras.get(sequence_.camera_id)
+        if camera is None:
+            return
+
+        # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
+        threshold = risk_service.min_confidence(camera.id)
+        if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
+            return
+
+        if not await _run_temporal_validation(sequence_, organization_id, detections, sequences):
+            return
+
+        await sequences.set_validation(sequence_id, mark_validated=True)
+        sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
+        alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+        await _notify_slack_for_sequence(
+            sequence_, camera, detection_id, organization_id, detections, organizations, alert_id
+        )
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
     background_tasks: BackgroundTasks,
@@ -364,7 +470,6 @@ async def create_detection(
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
@@ -399,6 +504,8 @@ async def create_detection(
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    # sequence id -> latest detection id, scheduled for validation after the response.
+    affected_sequences: Dict[int, int] = {}
 
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
@@ -444,6 +551,7 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            affected_sequences[matched_sequence.id] = det.id
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -489,42 +597,26 @@ async def create_detection(
                     updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
                     if det_.id == det.id:
                         det = updated
-
-                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+                affected_sequences[cast(int, sequence_.id)] = det.id
 
                 # Webhooks
                 whs = await webhooks.fetch_all()
                 if any(whs):
-                    for webhook in await webhooks.fetch_all():
+                    for webhook in whs:
                         background_tasks.add_task(dispatch_webhook, webhook.url, det)
 
-                org = None
                 # Telegram notifications
                 if telegram_client.is_enabled:
                     org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
                     if org.telegram_id:
                         background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
 
-                if slack_client.is_enabled:
-                    if org is None:
-                        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.slack_hook:
-                        min_conf = risk_service.min_confidence(camera.id)
-                        if min_conf is None or sequence_.max_conf is None or sequence_.max_conf >= min_conf:
-                            slack_payload = jsonable_encoder(det)
-                            slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-                            background_tasks.add_task(
-                                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                            )
-                        else:
-                            logger.info(
-                                "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
-                                camera.name,
-                                sequence_.max_conf,
-                                min_conf,
-                            )
-
         created.append(det)
+
+    # Triangulation and Slack are gated on validation (risk + temporal model); run them
+    # after the response so the upload stays fast.
+    for seq_id, latest_det_id in affected_sequences.items():
+        background_tasks.add_task(validate_sequence, seq_id, latest_det_id, token_payload.organization_id)
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())
