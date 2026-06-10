@@ -12,8 +12,8 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.detections import (
-    _run_temporal_validation,
     _sequence_frames,
+    _temporal_verdict,
     validate_sequence,
 )
 from app.core.time import utcnow
@@ -85,126 +85,90 @@ async def test_sequence_frames_distinct_and_ordered(detection_session: AsyncSess
     assert frames == ["frame-0.jpg", "frame-1.jpg", "frame-2.jpg", "frame-3.jpg"]
 
 
-# --- _run_temporal_validation: sliding window & frame bounds ----------------
+# --- _temporal_verdict: sliding window, frame bounds, fail-open (no DB session) -
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_sends_last_six_frames(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 10)
+async def test_temporal_verdict_sends_last_six_frames(monkeypatch):
+    frames = [f"frame-{i}.jpg" for i in range(10)]
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
+    validated, score = await _temporal_verdict(frames, 1)
 
     assert validated is True
-    sent_frames = predict.await_args.args[1]
-    assert sent_frames == [f"frame-{i}.jpg" for i in range(4, 10)]  # window = frames[n-6:n]
-    await detection_session.refresh(seq)
-    assert seq.temporal_model_score == pytest.approx(0.9)
+    assert score == pytest.approx(0.9)
+    assert predict.await_args.args[1] == [f"frame-{i}.jpg" for i in range(4, 10)]  # window = frames[n-6:n]
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_sends_all_four_frames_at_minimum(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 4)
+async def test_temporal_verdict_sends_all_four_frames_at_minimum(monkeypatch):
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    await _run_temporal_validation(seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session))
+    await _temporal_verdict([f"frame-{i}.jpg" for i in range(4)], 1)
 
     assert predict.await_args.args[1] == [f"frame-{i}.jpg" for i in range(4)]
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_skips_below_min_frames(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 3)
+async def test_temporal_verdict_skips_below_min_frames(monkeypatch):
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
-
-    assert validated is False
+    assert await _temporal_verdict(["a.jpg", "b.jpg", "c.jpg"], 1) == (False, None)
     predict.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_skips_above_max_frames(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 11)
+async def test_temporal_verdict_skips_above_max_frames(monkeypatch):
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
-
-    assert validated is False
+    assert await _temporal_verdict([f"f{i}.jpg" for i in range(11)], 1) == (False, None)
     predict.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_below_threshold_stores_score_and_fails(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 5)
+async def test_temporal_verdict_below_threshold_returns_score_unvalidated(monkeypatch):
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.40))
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
+    validated, score = await _temporal_verdict([f"f{i}.jpg" for i in range(5)], 1)
 
     assert validated is False
-    await detection_session.refresh(seq)
-    assert seq.temporal_model_score == pytest.approx(0.40)
+    assert score == pytest.approx(0.40)
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_fails_open_when_unavailable(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 2)
+async def test_temporal_verdict_fails_open_when_unavailable(monkeypatch):
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: False)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
-
-    assert validated is True
+    assert await _temporal_verdict([f"f{i}.jpg" for i in range(5)], 1) == (True, None)
     predict.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_fails_open_on_predict_failure(detection_session: AsyncSession, monkeypatch):
-    seq = await _seed_sequence(detection_session, 5)
+async def test_temporal_verdict_fails_open_on_predict_failure(monkeypatch):
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=TemporalUnavailableError("boom")))
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
-
-    assert validated is True
+    assert await _temporal_verdict([f"f{i}.jpg" for i in range(5)], 1) == (True, None)
 
 
 @pytest.mark.asyncio
-async def test_temporal_validation_scoreless_response_does_not_validate(detection_session: AsyncSession, monkeypatch):
+async def test_temporal_verdict_scoreless_response_does_not_validate(monkeypatch):
     """A successful but scoreless (probability=None) response must not fail open."""
-    seq = await _seed_sequence(detection_session, 5)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=None))
 
-    validated = await _run_temporal_validation(
-        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
-    )
-
-    assert validated is False
-    await detection_session.refresh(seq)
-    assert seq.temporal_model_score is None
+    assert await _temporal_verdict([f"f{i}.jpg" for i in range(5)], 1) == (False, None)
 
 
 # --- validate_sequence: end-to-end gating ----------------------------------
@@ -244,6 +208,40 @@ async def test_validate_sequence_marks_validated_and_triangulates(detection_sess
     await detection_session.refresh(seq)
     assert seq.is_validated is True
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_validate_sequence_scores_and_triangulates(detection_session: AsyncSession, monkeypatch):
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    det = (await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id)))[0]
+    monkeypatch.setattr(risk_service, "_scores", {})  # gate open
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.9))
+
+    await validate_sequence(cast(int, seq.id), cast(int, det.id), 1)
+
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score == pytest.approx(0.9)
+    assert seq.is_validated is True
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_validate_sequence_persists_score_below_threshold_without_validating(
+    detection_session: AsyncSession, monkeypatch
+):
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    det = (await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id)))[0]
+    monkeypatch.setattr(risk_service, "_scores", {})  # gate open
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.40))  # below 0.45
+
+    await validate_sequence(cast(int, seq.id), cast(int, det.id), 1)
+
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score == pytest.approx(0.40)  # latest score persisted
+    assert seq.is_validated is False  # but not validated
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
 
 
 @pytest.mark.asyncio

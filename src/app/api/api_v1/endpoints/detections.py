@@ -368,33 +368,31 @@ async def _sequence_frames(detections: DetectionCRUD, sequence_id: int) -> List[
     return frames
 
 
-async def _run_temporal_validation(
-    sequence_: Sequence,
-    organization_id: int,
-    detections: DetectionCRUD,
-    sequences: SequenceCRUD,
-) -> bool:
-    """Return whether the temporal model validates the sequence (or fails open)."""
+async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bool, Optional[float]]:
+    """Decide validation from the temporal model, holding NO DB session.
+
+    Returns ``(validated, score)``. ``score`` is the latest probability to persist (or None).
+    Fail-open ``(True, None)`` when the model is unavailable or the call fails; skip
+    ``(False, None)`` when there are too few/many frames or the response carries no probability.
+    """
     if not temporal_service.is_available():
         # Not configured, unreachable, or breaker open: trust the risk gate already passed.
-        return True
-    frames = await _sequence_frames(detections, sequence_.id)
+        return True, None
     n = len(frames)
     if n < temporal_service.MIN_FRAMES or n > temporal_service.MAX_FRAMES:
         # Too few frames to score yet, or window exhausted without confirmation.
-        return False
+        return False, None
     window = frames[max(0, n - temporal_service.WINDOW) : n]
     bucket = s3_service.resolve_bucket_name(organization_id)
     try:
         probability = await temporal_service.predict(bucket, window)
     except TemporalUnavailableError:
-        # Call just failed: fail open (the breaker has counted the failure).
-        return True
+        # Call failed (or breaker opened while queued): fail open.
+        return True, None
     if probability is None:
         # Successful but scoreless response (uncalibrated model): cannot confirm, retry next image.
-        return False
-    await sequences.set_temporal_score(sequence_.id, probability)
-    return probability > settings.TEMPORAL_MODEL_THRESHOLD
+        return False, None
+    return probability > settings.TEMPORAL_MODEL_THRESHOLD, probability
 
 
 async def _notify_slack_for_sequence(
@@ -425,35 +423,48 @@ async def _notify_slack_for_sequence(
 async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
     """Background task: run the risk + temporal validation pipeline for a sequence.
 
-    Once validated, flag it, triangulate it, and send the Slack notification (once).
+    Split into phases so the (possibly queued) temporal call never holds a DB session:
+    read + risk-gate, then call the model with no session, then persist + triangulate + notify.
     Idempotent: returns early for an already-validated sequence.
     """
+    # Phase 1 — read state and apply the risk gate (short-lived session).
     async with session_factory() as session:
         sequences = SequenceCRUD(session)
         cameras = CameraCRUD(session)
-        alerts = AlertCRUD(session)
         detections = DetectionCRUD(session)
-        organizations = OrganizationCRUD(session)
-
         sequence_ = await sequences.get(sequence_id)
         if sequence_ is None or sequence_.is_validated:
             return
         camera = await cameras.get(sequence_.camera_id)
         if camera is None:
             return
-
         # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
         threshold = risk_service.min_confidence(camera.id)
         if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
             return
+        frames = await _sequence_frames(detections, sequence_id)
 
-        if not await _run_temporal_validation(sequence_, organization_id, detections, sequences):
+    # Phase 2 — temporal model, with no DB session held (the call may queue on the semaphore).
+    validated, score = await _temporal_verdict(frames, organization_id)
+    if score is None and not validated:
+        return
+
+    # Phase 3 — persist the score and, once validated, claim + triangulate + notify.
+    async with session_factory() as session:
+        sequences = SequenceCRUD(session)
+        if score is not None:
+            await sequences.set_temporal_score(sequence_id, score)
+        if not validated:
             return
-
         # Atomically claim the sequence so concurrent tasks can't both triangulate/notify.
         if not await sequences.claim_validation(sequence_id):
             return
+        cameras = CameraCRUD(session)
+        alerts = AlertCRUD(session)
+        detections = DetectionCRUD(session)
+        organizations = OrganizationCRUD(session)
         sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
+        camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
         alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
         await _notify_slack_for_sequence(
             sequence_, camera, detection_id, organization_id, detections, organizations, alert_id

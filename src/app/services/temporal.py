@@ -31,8 +31,10 @@ class TemporalModelService:
     are paused for ``PAUSE_SECONDS`` (the breaker), during which the caller fails open.
 
     The model infers serially, so a semaphore bounds in-flight calls: bursts queue and are
-    all processed (no scores lost to timeouts) instead of overwhelming it. State is
-    per-process, like the risk cache.
+    all processed (no scores lost to timeouts) instead of overwhelming it. State (breaker +
+    semaphore) is per-process, like the risk cache: with N uvicorn workers the effective
+    concurrency is ``N * TEMPORAL_API_MAX_CONCURRENCY``, so run a single worker for this path
+    or move the limit server-side if the model is strictly serial.
     """
 
     MIN_FRAMES: int = 4
@@ -82,10 +84,14 @@ class TemporalModelService:
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         try:
             # Serialize against the model's real throughput so bursts queue instead of timing out.
-            async with self._semaphore, httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
-                response = await client.post(f"{host}/predict", json={"bucket": bucket, "frames": frames})
-                response.raise_for_status()
-                data = response.json()
+            async with self._semaphore:
+                # The breaker may have opened while this call waited in the queue.
+                if not self.is_available():
+                    raise TemporalUnavailableError("breaker open")
+                async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
+                    response = await client.post(f"{host}/predict", json={"bucket": bucket, "frames": frames})
+                    response.raise_for_status()
+                    data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("Temporal API call failed: %r", exc)
             self._record_failure()
