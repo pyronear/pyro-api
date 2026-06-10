@@ -16,6 +16,7 @@ from app.core.time import utcnow
 from app.crud import DetectionCRUD, SequenceCRUD
 from app.db import session_factory
 from app.models import AlertSequence, Detection, Sequence
+from app.services import validation as validation_service
 from app.services.risk import risk_service
 from app.services.temporal import temporal_service
 from app.services.validation import (
@@ -23,8 +24,11 @@ from app.services.validation import (
     FAIL_OPEN_UNAVAILABLE,
     VALIDATED_BY_MODEL,
     WINDOW_EXHAUSTED,
+    _notify_for_sequence,
+    _process_claimed_sequence,
     _sequence_frames_and_roi,
     process_next_due_validation,
+    validation_worker_loop,
 )
 
 
@@ -590,3 +594,182 @@ async def test_claim_validation_is_won_once(detection_session: AsyncSession):
     second = await crud.claim_validation(cast(int, seq.id))
     assert first is True
     assert second is False
+
+
+# --- edge cases and failure paths --------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_sequence_frames_skips_unparseable_bboxes(detection_session: AsyncSession, monkeypatch):
+    """Unparseable bboxes are skipped (full-frame ROI), never abort the job."""
+    from fastapi import HTTPException
+
+    from app.api.api_v1.endpoints import detections as detections_api
+
+    seq = await _seed_sequence(detection_session, 4)
+
+    def bad_parse(_bbox_str):
+        raise HTTPException(status_code=422, detail="bad bbox")
+
+    monkeypatch.setattr(detections_api, "_parse_bbox", bad_parse)
+    total, frames, roi = await _sequence_frames_and_roi(DetectionCRUD(detection_session), cast(int, seq.id))
+    assert total == 4
+    assert frames == [f"frame-{i}.jpg" for i in range(4)]
+    assert roi is None  # no parseable corner -> full-frame behavior
+
+
+@pytest.mark.asyncio
+async def test_sequence_frames_degenerate_roi_is_dropped(detection_session: AsyncSession):
+    """A zero-area bbox union (xmin == xmax) yields no ROI (full-frame behavior)."""
+    seq = await _seed_sequence(detection_session, 0)
+    now = utcnow()
+    for i in range(2):
+        detection_session.add(
+            Detection(
+                camera_id=1,
+                pose_id=1,
+                sequence_id=seq.id,
+                bucket_key=f"flat-{i}.jpg",
+                bbox="[(.5,.1,.5,.8,.9)]",  # zero width
+                created_at=now,
+            )
+        )
+    await detection_session.commit()
+
+    total, _frames, roi = await _sequence_frames_and_roi(DetectionCRUD(detection_session), cast(int, seq.id))
+    assert total == 2
+    assert roi is None
+
+
+@pytest.mark.asyncio
+async def test_notify_without_detections_is_a_noop(detection_session: AsyncSession, monkeypatch):
+    """A sequence with no detections (deleted meanwhile) notifies nothing and doesn't crash."""
+    from app.crud import CameraCRUD, OrganizationCRUD, WebhookCRUD
+
+    seq = await _seed_sequence(detection_session, 0)
+    camera = await CameraCRUD(detection_session).get(1, strict=True)
+    slack_notify = AsyncMock()
+    monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
+    monkeypatch.setattr(validation_service.slack_client, "notify", slack_notify)
+
+    await _notify_for_sequence(
+        seq,
+        camera,
+        1,
+        DetectionCRUD(detection_session),
+        OrganizationCRUD(detection_session),
+        WebhookCRUD(detection_session),
+        alert_id=None,
+    )
+
+    slack_notify.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_notification_channel_failures_never_abort_the_job(detection_session: AsyncSession, monkeypatch):
+    """Every channel failing (webhook, Telegram, Slack) still completes validation."""
+    from app.models import Organization, Webhook
+
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    org = await detection_session.get(Organization, 1)
+    assert org is not None
+    org.telegram_id = "tg"
+    org.slack_hook = "http://example.com/hook"
+    detection_session.add(org)
+    detection_session.add(Webhook(url="http://example.com/webhook"))
+    await detection_session.commit()
+
+    def sync_boom(*_args, **_kwargs):
+        raise RuntimeError("channel down")
+
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: False)  # fail open -> validated
+    monkeypatch.setattr(validation_service, "dispatch_webhook", AsyncMock(side_effect=RuntimeError("down")))
+    monkeypatch.setattr(validation_service.telegram_client, "is_enabled", True)
+    monkeypatch.setattr(validation_service.telegram_client, "notify", sync_boom)
+    monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
+    monkeypatch.setattr(validation_service.slack_client, "notify", sync_boom)
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_due_at is None  # job completed despite every channel failing
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_handles_vanished_sequence_and_camera(detection_session: AsyncSession, monkeypatch):
+    """A sequence (or its camera) gone by processing time completes the job quietly."""
+    from app.crud import CameraCRUD
+
+    await _process_claimed_sequence(999_999)  # vanished sequence: no-op
+
+    seq = await _seed_sequence(detection_session, 5)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(CameraCRUD, "get", AsyncMock(return_value=None))  # vanished camera
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False
+    assert seq.validation_due_at is None  # job completed
+
+
+@pytest.mark.asyncio
+async def test_process_fails_open_when_predict_raises_in_flight(detection_session: AsyncSession, monkeypatch):
+    """A call failing while the breaker is closed fails open (TemporalUnavailableError path)."""
+    from app.services.temporal import TemporalUnavailableError
+
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=TemporalUnavailableError("boom")))
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == FAIL_OPEN_UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_process_lost_claim_completes_without_side_effects(detection_session: AsyncSession, monkeypatch):
+    """If another actor validates between the verdict and the claim, the loser just
+    completes its job without triangulating or notifying twice."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+
+    async def predict_and_steal_claim(*_args, **_kwargs):
+        # Simulate a concurrent actor winning the claim while the model call is in flight.
+        async with session_factory() as session:
+            await SequenceCRUD(session).claim_validation(cast(int, seq.id))
+        return 0.9
+
+    monkeypatch.setattr(temporal_service, "predict", predict_and_steal_claim)
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True  # the concurrent claim stands
+    assert seq.validation_due_at is None  # loser completed its job
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False  # no double attach
+
+
+@pytest.mark.asyncio
+async def test_validation_worker_loop_survives_errors_and_idles(monkeypatch):
+    """The loop never dies on errors, idles when nothing is due, and stops on cancellation."""
+    calls = AsyncMock(side_effect=[True, RuntimeError("boom"), False, asyncio.CancelledError()])
+    sleeps = AsyncMock()
+    monkeypatch.setattr(validation_service, "process_next_due_validation", calls)
+    monkeypatch.setattr(validation_service.asyncio, "sleep", sleeps)
+
+    with pytest.raises(asyncio.CancelledError):
+        await validation_worker_loop()
+
+    assert calls.await_count == 4
+    assert sleeps.await_count == 2  # after the error and after the idle poll, not after work
