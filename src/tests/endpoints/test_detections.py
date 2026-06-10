@@ -2,7 +2,7 @@ import asyncio
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
@@ -1385,6 +1385,33 @@ async def test_create_detection_uses_payload_recorded_at(
     det = await detection_session.get(Detection, response.json()["id"])
     assert det is not None
     assert det.recorded_at == recorded_at
+
+
+@pytest.mark.asyncio
+async def test_create_detection_converts_aware_recorded_at_to_utc(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    # A France-local (UTC+2) capture time must be stored as the equivalent naive-UTC instant.
+    aware = datetime(2024, 7, 1, 10, 30, 0, 123456, tzinfo=timezone(timedelta(hours=2)))
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": aware.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == datetime(2024, 7, 1, 8, 30, 0, 123456)
+    assert det.recorded_at.tzinfo is None
 
 
 @pytest.mark.asyncio
