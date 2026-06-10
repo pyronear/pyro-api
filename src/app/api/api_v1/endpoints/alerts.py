@@ -16,14 +16,15 @@ from sqlalchemy.sql import ColumnElement
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_alert_crud, get_jwt
+from app.api.dependencies import get_alert_crud, get_camera_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
-from app.crud import AlertCRUD
+from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
 from app.db import get_session
-from app.models import Alert, AlertSequence, Camera, Sequence, UserRole
-from app.schemas.alerts import AlertReadWithSequences
+from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, UserRole
+from app.schemas.alerts import AlertCreate, AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
+from app.services.alerts import refresh_alert_state
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
@@ -88,33 +89,107 @@ def _serialize_alert(
     )
 
 
-_ALERT_EXPORT_COLUMNS = ["id", "lat", "lon", "started_at", "last_seen_at"]
+_ALERT_EXPORT_COLUMNS = [
+    "alert_id",
+    "alert_started_at_date",
+    "alert_started_at_time",
+    "alert_last_seen_at",
+    "alert_duration_seconds",
+    "alert_triangulated_lat",
+    "alert_triangulated_lon",
+    "organization_id",
+    "sequence_id",
+    "sequence_started_at",
+    "sequence_last_seen_at",
+    "sequence_triangulated_azimuth",
+    "sequence_label",
+    "pose_id",
+    "camera_id",
+    "camera_name",
+]
+
+_WILDFIRE_LABELS: Dict[Union[AnnotationType, None], str] = {
+    AnnotationType.WILDFIRE_SMOKE: "wildfire",
+    AnnotationType.OTHER_SMOKE: "other",
+    AnnotationType.OTHER: "other",
+    None: "unknown",
+}
 
 
-def _iter_alerts_csv(alerts: Iterable[Alert]) -> Iterator[str]:
+async def _fetch_camera_names_by_ids(session: AsyncSession, camera_ids: Iterable[int]) -> Dict[int, str]:
+    ids = list(set(camera_ids))
+    if not ids:
+        return {}
+    stmt: Any = select(Camera.id, Camera.name).where(cast(Any, Camera.id).in_(ids))
+    return {cid: name for cid, name in (await session.exec(stmt)).all()}
+
+
+def _alert_cells(alert: Alert) -> List[Any]:
+    return [
+        alert.id,
+        alert.started_at.date().isoformat(),
+        alert.started_at.time().isoformat(),
+        alert.last_seen_at.isoformat(),
+        int((alert.last_seen_at - alert.started_at).total_seconds()),
+        "" if alert.lat is None else alert.lat,
+        "" if alert.lon is None else alert.lon,
+        alert.organization_id,
+    ]
+
+
+def _sequence_cells(sequence: Sequence, camera_name: str) -> List[Any]:
+    return [
+        sequence.id,
+        sequence.started_at.isoformat(),
+        sequence.last_seen_at.isoformat(),
+        "" if sequence.sequence_azimuth is None else sequence.sequence_azimuth,
+        _WILDFIRE_LABELS[sequence.is_wildfire],
+        "" if sequence.pose_id is None else sequence.pose_id,
+        sequence.camera_id,
+        camera_name,
+    ]
+
+
+def _iter_alerts_csv(
+    alerts: Iterable[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    camera_names_by_id: Dict[int, str],
+) -> Iterator[str]:
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(_ALERT_EXPORT_COLUMNS)
-    yield buf.getvalue()
-    buf.seek(0)
-    buf.truncate(0)
-    for a in alerts:
-        writer.writerow([
-            a.id,
-            "" if a.lat is None else a.lat,
-            "" if a.lon is None else a.lon,
-            a.started_at.isoformat(),
-            a.last_seen_at.isoformat(),
-        ])
-        yield buf.getvalue()
+
+    def drain() -> str:
+        value = buf.getvalue()
         buf.seek(0)
         buf.truncate(0)
+        return value
+
+    writer.writerow(_ALERT_EXPORT_COLUMNS)
+    yield drain()
+
+    for alert in alerts:
+        alert_cells = _alert_cells(alert)
+        sequences = sorted(seq_map.get(alert.id, []), key=lambda s: s.started_at)
+        for sequence in sequences:
+            camera_name = camera_names_by_id.get(sequence.camera_id, "")
+            writer.writerow([*alert_cells, *_sequence_cells(sequence, camera_name)])
+            yield drain()
 
 
-def _build_alerts_csv_response(alerts: List[Alert], from_date: date, to_date: date) -> StreamingResponse:
+def _build_alerts_csv_response(
+    alerts: List[Alert],
+    seq_map: Dict[int, List[Sequence]],
+    camera_names_by_id: Dict[int, str],
+    from_date: date,
+    to_date: date,
+) -> StreamingResponse:
     filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return StreamingResponse(_iter_alerts_csv(alerts), media_type="text/csv", headers=headers)
+    return StreamingResponse(
+        _iter_alerts_csv(alerts, seq_map, camera_names_by_id),
+        media_type="text/csv",
+        headers=headers,
+    )
 
 
 @router.get(
@@ -152,7 +227,13 @@ async def export_alerts_csv(
         .where(Alert.started_at <= end_dt)
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
-    return _build_alerts_csv_response(list((await session.exec(stmt)).all()), from_date, to_date)
+    alerts = list((await session.exec(stmt)).all())
+    seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
+    camera_names_by_id = await _fetch_camera_names_by_ids(
+        session,
+        (sequence.camera_id for sequences in seq_map.values() for sequence in sequences),
+    )
+    return _build_alerts_csv_response(alerts, seq_map, camera_names_by_id, from_date, to_date)
 
 
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
@@ -290,6 +371,84 @@ async def fetch_alerts_from_date(
         list({sequence.id for sequences in seq_map.values() for sequence in sequences}),
     )
     return [_serialize_alert(alert, seq_map.get(alert.id, []), detection_counts) for alert in alerts]
+
+
+@router.post(
+    "/{alert_id}/sequences/{sequence_id}/unmatch",
+    status_code=status.HTTP_200_OK,
+    summary="Detach a sequence from an alert; create a fresh alert if the sequence becomes orphaned",
+)
+async def unmatch_alert_sequence(
+    alert_id: int = Path(..., gt=0),
+    sequence_id: int = Path(..., gt=0),
+    alerts: AlertCRUD = Depends(get_alert_crud),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    session: AsyncSession = Depends(get_session),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
+) -> Union[AlertReadWithSequences, None]:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="alerts-sequence-unmatch",
+        properties={"alert_id": alert_id, "sequence_id": sequence_id},
+    )
+    alert = cast(Alert, await alerts.get(alert_id, strict=True))
+    if UserRole.ADMIN not in token_payload.scopes:
+        verify_org_rights(token_payload.organization_id, alert)
+
+    link_stmt: Any = select(AlertSequence).where(
+        AlertSequence.alert_id == alert_id, AlertSequence.sequence_id == sequence_id
+    )
+    link = (await session.exec(link_stmt)).first()
+    if link is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sequence is not attached to this alert.")
+
+    count_stmt: Any = select(func.count()).select_from(AlertSequence).where(AlertSequence.alert_id == alert_id)
+    sequence_count = int((await session.exec(count_stmt)).one())
+    if sequence_count <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot unmatch the only sequence of an alert.",
+        )
+
+    delete_stmt: Any = (
+        delete(AlertSequence)
+        .where(cast(Any, AlertSequence.alert_id) == alert_id)
+        .where(cast(Any, AlertSequence.sequence_id) == sequence_id)
+    )
+    await session.exec(delete_stmt)
+    await session.commit()
+
+    await refresh_alert_state(alert_id, session, alerts)
+
+    other_links_stmt: Any = (
+        select(func.count()).select_from(AlertSequence).where(AlertSequence.sequence_id == sequence_id)
+    )
+    other_links = int((await session.exec(other_links_stmt)).one())
+    if other_links > 0:
+        return None
+
+    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    if camera.organization_id != alert.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sequence camera does not belong to the same organization as the alert.",
+        )
+    new_alert = await alerts.create(
+        AlertCreate(
+            organization_id=alert.organization_id,
+            started_at=sequence.started_at,
+            last_seen_at=sequence.last_seen_at,
+            lat=None,
+            lon=None,
+        )
+    )
+    session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
+    await session.commit()
+    await session.refresh(new_alert)
+    detection_counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
+    return _serialize_alert(new_alert, [sequence], detection_counts)
 
 
 @router.delete("/{alert_id}", status_code=status.HTTP_200_OK, summary="Delete an alert")

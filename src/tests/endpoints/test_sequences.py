@@ -1,3 +1,4 @@
+import io
 from datetime import date, timedelta
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,6 +18,7 @@ from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
+from app.services.storage import s3_service
 
 
 class _ExecResult:
@@ -123,8 +125,11 @@ async def test_fetch_sequence_detections(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2 and expected_result is not None:
-        assert [{k: v for k, v in det.items() if k != "url"} for det in response.json()] == expected_result
+        assert [
+            {k: v for k, v in det.items() if k not in {"url", "crop_url"}} for det in response.json()
+        ] == expected_result
         assert all(det["url"].startswith("http://") for det in response.json())
+        assert all(det["crop_url"] is None for det in response.json())
 
 
 @pytest.mark.parametrize(
@@ -645,7 +650,7 @@ async def test_delete_sequence_refreshes_alert(async_client: AsyncClient, detect
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
 async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
     mock_refresh_alert_state: AsyncMock,
 ):
@@ -717,7 +722,7 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences._refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
 async def test_unit_label_sequence_solo_alert_keeps_alert(
     mock_refresh_alert_state: AsyncMock,
 ):
@@ -802,6 +807,53 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
 
 
 @pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_paging(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Page 1 (limit=2, offset=0) + page 2 (limit=2, offset=2) covers a 3-detection
+    sequence with no gaps and no duplicates."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    # Sequence id 1 has 3 detections in the test fixtures (see existing
+    # test_fetch_sequence_detections expectations).
+    full = await async_client.get("/sequences/1/detections?limit=10&offset=0&desc=false", headers=auth)
+    assert full.status_code == 200
+    full_ids = [det["id"] for det in full.json()]
+    assert len(full_ids) == 3
+
+    page1 = await async_client.get("/sequences/1/detections?limit=2&offset=0&desc=false", headers=auth)
+    page2 = await async_client.get("/sequences/1/detections?limit=2&offset=2&desc=false", headers=auth)
+    assert page1.status_code == 200
+    assert page2.status_code == 200
+
+    page1_ids = [det["id"] for det in page1.json()]
+    page2_ids = [det["id"] for det in page2.json()]
+    assert page1_ids + page2_ids == full_ids
+    assert len(page1_ids) == 2
+    assert len(page2_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_offset_validation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Negative offset must be rejected."""
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get("/sequences/1/detections?offset=-1", headers=auth)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
     # 1. Mocks Setup
@@ -831,6 +883,70 @@ async def test_unit_label_sequence_forbidden_for_wrong_org():
         )
 
     assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_includes_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        enriched = next(det for det in payload if det["id"] == detection.id)
+        assert isinstance(enriched["crop_url"], str)
+        assert enriched["crop_url"].startswith("http://")
+        assert enriched["crop_url"] != enriched["url"]
+        other = [det for det in payload if det["id"] != detection.id]
+        assert all(det["crop_url"] is None for det in other)
+    finally:
+        bucket.delete_file(crop_key)
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_with_crop_false_skips_crop_url(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await detection_session.get(Detection, pytest.detection_table[0]["id"])
+    assert detection is not None
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    crop_key = "crop_for_sequence_off_test.jpg"
+    bucket.upload_file(crop_key, io.BytesIO(mock_img))
+    try:
+        detection.crop_bucket_key = crop_key
+        detection_session.add(detection)
+        await detection_session.commit()
+
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
+        sequence_id = pytest.detection_table[0]["sequence_id"]
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections", params={"with_crop": "false"}, headers=auth
+        )
+        assert response.status_code == 200, response.text
+        assert all(det["crop_url"] is None for det in response.json())
+    finally:
+        bucket.delete_file(crop_key)
 
 
 @pytest.mark.asyncio

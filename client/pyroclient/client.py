@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, MutableMapping, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
@@ -40,6 +40,8 @@ class ClientRoute(str, Enum):
     SEQUENCES_FETCH_DETECTIONS = "sequences/{seq_id}/detections"
     SEQUENCES_FETCH_LATEST = "sequences/unlabeled/latest"
     SEQUENCES_FETCH_FROMDATE = "sequences/all/fromdate"
+    # ALERTS
+    ALERTS_UNMATCH_SEQUENCE = "alerts/{alert_id}/sequences/{seq_id}/unmatch"
     # ORGS
     ORGS_FETCH = "organizations"
 
@@ -105,7 +107,7 @@ class Client:
         self.timeout = timeout
 
     @property
-    def headers(self) -> Dict[str, Union[str, bytes]]:
+    def headers(self) -> MutableMapping[str, Union[str, bytes]]:
         return {"Authorization": f"Bearer {self.token}"}
 
     # CAMERAS
@@ -153,7 +155,7 @@ class Client:
         return requests.patch(
             urljoin(self._route_prefix, ClientRoute.CAMERAS_IMAGE),
             headers=self.headers,
-            files={"file": ("logo.png", media, "image/png")},
+            files={"file": ("logo.jpg", media, "image/jpeg")},
             timeout=self.timeout,
         )
 
@@ -250,7 +252,7 @@ class Client:
         return requests.patch(
             urljoin(self._route_prefix, ClientRoute.POSES_IMAGE.format(pose_id=pose_id)),
             headers=self.headers,
-            files={"file": ("image.png", media, "image/png")},
+            files={"file": ("image.jpg", media, "image/jpeg")},
             timeout=self.timeout,
         )
 
@@ -349,6 +351,7 @@ class Client:
         media: bytes,
         bboxes: List[Tuple[float, float, float, float, float]],
         pose_id: int,
+        crop: bytes | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -361,6 +364,7 @@ class Client:
             media: byte data of the picture
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
             pose_id: pose_id of the detection
+            crop: optional byte data of a cropped picture associated with the detection
 
         Returns:
             HTTP response
@@ -371,12 +375,15 @@ class Client:
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
+        files: Dict[str, Tuple[str, bytes, str]] = {"file": ("frame.jpg", media, "image/jpeg")}
+        if crop is not None:
+            files["crop"] = ("crop.jpg", crop, "image/jpeg")
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
             data=data,
             timeout=self.timeout,
-            files={"file": ("logo.png", media, "image/png")},
+            files=files,
         )
 
     def get_detection_url(self, detection_id: int) -> Response:
@@ -474,7 +481,13 @@ class Client:
             timeout=self.timeout,
         )
 
-    def fetch_sequences_detections(self, sequence_id: int, limit: int = 10, desc: bool = True) -> Response:
+    def fetch_sequences_detections(
+        self,
+        sequence_id: int,
+        limit: int = 10,
+        desc: bool = True,
+        with_crop: bool = True,
+    ) -> Response:
         """List the detections of a sequence
 
         >>> from pyroclient import client
@@ -485,6 +498,7 @@ class Client:
             sequence_id: ID of the associated sequence entry
             limit: maximum number of detections to fetch
             desc: whether to order the detections by created_at in descending order
+            with_crop: whether to include the crop_url for detections that have a crop
 
         Returns:
             HTTP response
@@ -492,7 +506,33 @@ class Client:
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
-            params={"limit": limit, "desc": desc},
+            params={"limit": limit, "desc": desc, "with_crop": with_crop},
+            timeout=self.timeout,
+        )
+
+    # ALERTS
+
+    def unmatch_alert_sequence(self, alert_id: int, sequence_id: int) -> Response:
+        """Detach a sequence from an alert. If the sequence is no longer linked to any alert,
+        a new alert is created for it.
+
+        >>> from pyroclient import client
+        >>> api_client = Client("MY_USER_TOKEN")
+        >>> response = api_client.unmatch_alert_sequence(1, 2)
+
+        Args:
+            alert_id: ID of the alert the sequence should be detached from
+            sequence_id: ID of the sequence to detach
+
+        Returns:
+            HTTP response
+        """
+        return requests.post(
+            urljoin(
+                self._route_prefix,
+                ClientRoute.ALERTS_UNMATCH_SEQUENCE.format(alert_id=alert_id, seq_id=sequence_id),
+            ),
+            headers=self.headers,
             timeout=self.timeout,
         )
 
