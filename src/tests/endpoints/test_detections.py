@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import io
 from ast import literal_eval
 from collections import Counter
@@ -879,7 +880,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         file=upload,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -917,7 +918,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         file=upload_again,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
         webhooks=webhooks,
         organizations=organizations,
@@ -1391,6 +1392,85 @@ async def test_create_detection_persists_crop_bucket_key(
     det = await detection_session.get(Detection, data["id"])
     assert det is not None
     assert det.crop_bucket_key == data["crop_bucket_key"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_assigns_distinct_crop_per_bbox(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    # Each crop frames a different object, so the two crops carry distinct bytes.
+    crop_0 = mock_img + b"crop-0"
+    crop_1 = mock_img + b"crop-1"
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", crop_0, "image/jpeg")),
+            ("crop", ("crop-1.jpg", crop_1, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    bucket_key = response.json()["bucket_key"]
+
+    dets_res = await detection_session.exec(
+        select(Detection)
+        .where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        .order_by(Detection.id)  # type: ignore[attr-defined]
+    )
+    dets = dets_res.all()
+    assert len(dets) == 2
+    crop_keys = [det.crop_bucket_key for det in dets]
+    # Every detection gets its own crop, and crops are not shared across detections.
+    assert all(isinstance(key, str) and key.startswith("crop_") for key in crop_keys)
+    assert len(set(crop_keys)) == 2
+    assert all(key != bucket_key for key in crop_keys)
+    # The first bbox maps to the first crop, the second bbox to the second crop.
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # noqa: S324
+    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # noqa: S324
+
+
+@pytest.mark.asyncio
+async def test_create_detection_rejects_crop_bbox_count_mismatch(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(  # noqa: RUF029
+        file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
+    ) -> str:
+        upload_calls.append(file.filename or "")
+        return f"{key_prefix}should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", mock_img, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == "Number of crops must match the number of bboxes."
+    # Validation runs before any upload, so no orphan S3 objects are created.
+    assert upload_calls == []
 
 
 @pytest.mark.asyncio

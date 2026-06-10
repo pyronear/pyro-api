@@ -359,7 +359,7 @@ async def create_detection(
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
     file: UploadFile = File(..., alias="file"),
-    crop_file: Optional[UploadFile] = File(None, alias="crop"),
+    crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
     webhooks: WebhookCRUD = Depends(get_webhook_crud),
     organizations: OrganizationCRUD = Depends(get_organization_crud),
@@ -389,12 +389,21 @@ async def create_detection(
     if not bbox_strings:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
 
+    # Validate crop/bbox alignment before any S3 upload to avoid orphan objects.
+    # Each crop frames a single object, so there must be exactly one crop per bbox (or none at all).
+    crops = crop_files or []
+    if crops and len(crops) != len(bbox_strings):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Number of crops must match the number of bboxes.",
+        )
+
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    crop_bucket_key: Optional[str] = None
-    if crop_file is not None:
-        crop_bucket_key = await upload_file(
-            crop_file, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+    crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
+    for idx, crop in enumerate(crops):
+        crop_bucket_keys[idx] = await upload_file(
+            crop, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
         )
 
     created: List[Detection] = []
@@ -409,7 +418,7 @@ async def create_detection(
                 camera_id=token_payload.sub,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
-                crop_bucket_key=crop_bucket_key,
+                crop_bucket_key=crop_bucket_keys[idx],
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
             )
