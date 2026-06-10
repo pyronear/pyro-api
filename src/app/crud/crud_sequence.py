@@ -33,3 +33,21 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(max_conf=bumped)
         await self.session.exec(stmt)
         await self.session.commit()
+
+    async def set_validation(
+        self,
+        sequence_id: int,
+        temporal_model_score: Union[float, None] = None,
+        mark_validated: bool = False,
+    ) -> None:
+        """Persist the latest temporal score and/or flag the sequence as validated."""
+        values: dict[str, Any] = {}
+        if temporal_model_score is not None:
+            values["temporal_model_score"] = temporal_model_score
+        if mark_validated:
+            values["is_validated"] = True
+        if not values:
+            return
+        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
+        await self.session.exec(stmt)
+        await self.session.commit()
