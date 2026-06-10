@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     # Temporal model API (validates sequences from a sliding window of frames)
     TEMPORAL_API_URL: Union[str, None] = os.environ.get("TEMPORAL_API_URL")
     TEMPORAL_MODEL_THRESHOLD: float = float(os.environ.get("TEMPORAL_MODEL_THRESHOLD") or 0.45)
+    # Generous timeout: the model infers serially, so concurrent calls queue.
+    TEMPORAL_API_TIMEOUT: float = float(os.environ.get("TEMPORAL_API_TIMEOUT") or 30.0)
 
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")

@@ -37,7 +37,6 @@ class TemporalModelService:
     WINDOW: int = 6
     MAX_CONSECUTIVE_FAILURES: int = 3
     PAUSE_SECONDS: int = 4 * 3600
-    TIMEOUT_SECONDS: float = 10.0
 
     def __init__(self) -> None:
         self._consecutive_failures: int = 0
@@ -78,12 +77,12 @@ class TemporalModelService:
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         try:
-            async with httpx.AsyncClient(timeout=self.TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
                 response = await client.post(f"{host}/predict", json={"bucket": bucket, "frames": frames})
                 response.raise_for_status()
                 data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
-            logger.warning("Temporal API call failed (%s)", exc)
+            logger.warning("Temporal API call failed: %r", exc)
             self._record_failure()
             raise TemporalUnavailableError(str(exc)) from exc
         self._record_success()
