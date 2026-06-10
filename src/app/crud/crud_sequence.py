@@ -53,3 +53,13 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         result = await self.session.exec(stmt)
         await self.session.commit()
         return bool(getattr(result, "rowcount", 0))
+
+    async def release_validation(self, sequence_id: int) -> None:
+        """Flip ``is_validated`` back to False so a later detection can retry the claim.
+
+        Used when post-claim work (alert attachment) fails: without the release, the
+        sequence would stay validated-but-never-alerted forever.
+        """
+        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(is_validated=False)
+        await self.session.exec(stmt)
+        await self.session.commit()

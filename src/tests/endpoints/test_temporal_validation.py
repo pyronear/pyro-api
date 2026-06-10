@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import timedelta
 from typing import Any, cast
 from unittest.mock import AsyncMock
@@ -268,6 +269,38 @@ async def test_validate_sequence_idempotent_when_already_validated(detection_ses
 
     predict.assert_not_awaited()
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+
+
+@pytest.mark.asyncio
+async def test_validate_sequence_releases_claim_when_attach_fails(detection_session: AsyncSession, monkeypatch):
+    """A failed alert attachment must release the claim so a later detection retries it."""
+    from app.api.api_v1.endpoints import detections as detections_api
+
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    det = (await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id)))[0]
+    monkeypatch.setattr(risk_service, "_scores", {})  # gate open
+    monkeypatch.setattr(temporal_service, "is_available", lambda: False)  # fail open -> validated
+
+    async def boom(*_args, **_kwargs):
+        await asyncio.sleep(0)
+        raise RuntimeError("attach failed")
+
+    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", boom)
+    await validate_sequence(cast(int, seq.id), cast(int, det.id), 1)  # error swallowed by wrapper
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False  # claim released for retry
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+
+    # A later run (attach healthy again) picks the sequence back up end-to-end.
+    monkeypatch.undo()
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: False)
+    await validate_sequence(cast(int, seq.id), cast(int, det.id), 1)
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
 
 
 @pytest.mark.asyncio

@@ -478,13 +478,21 @@ async def _run_sequence_validation(sequence_id: int, detection_id: int, organiza
         # Atomically claim the sequence so concurrent tasks can't both triangulate/notify.
         if not await sequences.claim_validation(sequence_id):
             return
-        cameras = CameraCRUD(session)
-        alerts = AlertCRUD(session)
-        detections = DetectionCRUD(session)
-        organizations = OrganizationCRUD(session)
-        sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
-        camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
-        alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+        try:
+            cameras = CameraCRUD(session)
+            alerts = AlertCRUD(session)
+            detections = DetectionCRUD(session)
+            organizations = OrganizationCRUD(session)
+            sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
+            camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
+            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+        except Exception:
+            # Release the claim so a later detection retries the attachment; otherwise the
+            # sequence would stay validated-but-never-alerted forever (the early is_validated
+            # check would skip it). Fresh session: the failing one may be unusable.
+            async with session_factory() as rollback_session:
+                await SequenceCRUD(rollback_session).release_validation(sequence_id)
+            raise
         await _notify_slack_for_sequence(
             sequence_, camera, detection_id, organization_id, detections, organizations, alert_id
         )
