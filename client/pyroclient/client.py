@@ -349,7 +349,7 @@ class Client:
         media: bytes,
         bboxes: List[Tuple[float, float, float, float, float]],
         pose_id: int,
-        crop: bytes | None = None,
+        crops: List[bytes] | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -362,20 +362,24 @@ class Client:
             media: byte data of the picture
             bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
             pose_id: pose_id of the detection
-            crop: optional byte data of a cropped picture associated with the detection
+            crops: optional list of cropped pictures, one per bbox (must align with `bboxes`).
+                Each crop frames a single object, so its length must equal that of `bboxes`.
 
         Returns:
             HTTP response
         """
         if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
             raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
+        if crops is not None and len(crops) != len(bboxes):
+            raise ValueError("crops must have the same length as bboxes")
         data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
-        files: Dict[str, Tuple[str, bytes, str]] = {"file": ("frame.jpg", media, "image/jpeg")}
-        if crop is not None:
-            files["crop"] = ("crop.jpg", crop, "image/jpeg")
+        # Use a list of tuples (not a dict) so the repeated "crop" key is preserved per bbox.
+        files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", ("frame.jpg", media, "image/jpeg"))]
+        if crops is not None:
+            files.extend(("crop", ("crop.jpg", crop, "image/jpeg")) for crop in crops)
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,

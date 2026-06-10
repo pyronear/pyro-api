@@ -105,6 +105,22 @@ def test_cam_workflow(cam_token, cam_pose_id, mock_img):
     assert response.status_code == 201, response.__dict__
     response = cam_client.create_detection(mock_img, [(0, 0, 1.0, 0.9, 0.5)], pose_id=cam_pose_id)
     assert response.status_code == 201, response.__dict__
+    # One crop per bbox is accepted
+    response = cam_client.create_detection(
+        mock_img,
+        [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)],
+        pose_id=cam_pose_id,
+        crops=[mock_img, mock_img],
+    )
+    assert response.status_code == 201, response.__dict__
+    # A crop/bbox count mismatch is rejected client-side
+    with pytest.raises(ValueError, match="crops must have the same length as bboxes"):
+        cam_client.create_detection(
+            mock_img,
+            [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)],
+            pose_id=cam_pose_id,
+            crops=[mock_img],
+        )
     return response.json()["id"]
 
 
