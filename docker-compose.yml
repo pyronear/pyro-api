@@ -71,6 +71,8 @@ services:
       - RISK_API_LOGIN=${RISK_API_LOGIN}
       - RISK_API_PWD=${RISK_API_PWD}
       - RISK_REFRESH_HOUR_UTC=${RISK_REFRESH_HOUR_UTC:-4}
+      - TEMPORAL_API_URL=${TEMPORAL_API_URL}
+      - TEMPORAL_MODEL_THRESHOLD=${TEMPORAL_MODEL_THRESHOLD:-0.45}
     volumes:
       - ./src/:/app/
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
