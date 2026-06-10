@@ -2,7 +2,7 @@ import asyncio
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
@@ -878,6 +878,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         background_tasks=BackgroundTasks(),
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload,
         crop_file=None,
         detections=detections,
@@ -916,6 +917,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         background_tasks=BackgroundTasks(),
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload_again,
         crop_file=None,
         detections=detections,
@@ -1361,6 +1363,177 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+
+@pytest.mark.asyncio
+async def test_create_detection_uses_payload_recorded_at(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    recorded_at = datetime(2024, 1, 15, 10, 30, 0, 123456)
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": recorded_at.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == recorded_at
+
+
+@pytest.mark.asyncio
+async def test_create_detection_converts_aware_recorded_at_to_utc(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    # A France-local (UTC+2) capture time must be stored as the equivalent naive-UTC instant.
+    aware = datetime(2024, 7, 1, 10, 30, 0, 123456, tzinfo=timezone(timedelta(hours=2)))
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": aware.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == datetime(2024, 7, 1, 8, 30, 0, 123456)
+    assert det.recorded_at.tzinfo is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_defaults_recorded_at_to_now(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    # When the engine omits recorded_at it falls back to the server clock, lining up with created_at.
+    assert abs((det.recorded_at - det.created_at).total_seconds()) < 5
+
+
+@pytest.mark.asyncio
+async def test_sequence_linking_uses_recorded_at(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+
+    # Two detections uploaded back-to-back but captured ~2h ago, 30s apart (within SEQUENCE_MIN_INTERVAL_SECONDS).
+    t1 = utcnow() - timedelta(hours=2)
+    t2 = t1 + timedelta(seconds=30)
+
+    resp1 = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.1,0.1,0.3,0.3,0.9)]",
+            "recorded_at": t1.isoformat(),
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp1.status_code == 201, resp1.text
+    assert resp1.json()["sequence_id"] is None
+
+    resp2 = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.15,0.15,0.35,0.35,0.9)]",
+            "recorded_at": t2.isoformat(),
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp2.status_code == 201, resp2.text
+    seq_id = resp2.json()["sequence_id"]
+    assert isinstance(seq_id, int)
+
+    seq = await detection_session.get(Sequence, seq_id)
+    assert seq is not None
+    # Sequence bounds come from recorded_at (capture time), not from created_at (~now).
+    assert abs((seq.started_at - t1).total_seconds()) < 1
+    assert abs((seq.last_seen_at - t2).total_seconds()) < 1
+    assert (utcnow() - seq.started_at).total_seconds() > 3600
+
+
+@pytest.mark.asyncio
+async def test_distant_recorded_at_does_not_group_into_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+
+    async def count_sequences() -> int:
+        res = await detection_session.exec(select(Sequence))
+        return len(res.all())
+
+    base_seq = await count_sequences()
+
+    # Same upload burst, but captured 1h apart — beyond SEQUENCE_MIN_INTERVAL_SECONDS, so they must NOT group.
+    t1 = utcnow() - timedelta(hours=3)
+    t2 = t1 + timedelta(hours=1)
+
+    resp1 = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.1,0.1,0.3,0.3,0.9)]",
+            "recorded_at": t1.isoformat(),
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp1.status_code == 201, resp1.text
+
+    resp2 = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.15,0.15,0.35,0.35,0.9)]",
+            "recorded_at": t2.isoformat(),
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert resp2.status_code == 201, resp2.text
+    assert resp2.json()["sequence_id"] is None
+    assert await count_sequences() == base_seq
 
 
 @pytest.mark.asyncio

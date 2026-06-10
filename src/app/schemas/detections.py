@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import re
+from datetime import datetime
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
@@ -38,6 +39,9 @@ class DetectionCreate(BaseModel):
         json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9, 0.5)]"]},
     )
     others_bboxes: Optional[str] = Field(None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS)
+    recorded_at: Optional[datetime] = Field(
+        None, description="UTC timestamp of when the image was captured on-device. Defaults to server now if omitted."
+    )
 
 
 class DetectionUrl(BaseModel):

@@ -67,7 +67,7 @@ async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),
     limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
     offset: int = Query(0, description="Number of detections to skip", ge=0),
-    desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
+    desc: bool = Query(True, description="Whether to order the detections by recorded_at in descending order"),
     with_crop: bool = Query(
         False,
         description="If true, presign and include crop_url for detections that have a crop. Defaults to false to skip the extra S3 head requests when crops are not needed.",
@@ -87,7 +87,7 @@ async def fetch_sequence_detections(
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     fetched = await detections.fetch_all(
         filters=("sequence_id", sequence_id),
-        order_by="created_at",
+        order_by="recorded_at",
         order_desc=desc,
         limit=limit,
         offset=offset,
