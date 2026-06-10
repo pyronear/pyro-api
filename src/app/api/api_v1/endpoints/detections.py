@@ -384,7 +384,9 @@ async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bo
         # Not configured, unreachable, or breaker open: trust the risk gate already passed.
         return True, None
     if n < temporal_service.MIN_FRAMES:
-        # Too few frames to score yet.
+        # Too few frames for the model to score. By design, a sequence that never reaches
+        # MIN_FRAMES is not validated while the model is reachable (no alert) -- short/noise
+        # sequences are suppressed; only fail-open above (model unreachable) lets them through.
         return False, None
     window = frames[max(0, n - temporal_service.WINDOW) : n]
     bucket = s3_service.resolve_bucket_name(organization_id)
