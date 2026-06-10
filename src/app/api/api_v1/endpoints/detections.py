@@ -375,12 +375,16 @@ async def _temporal_verdict(frames: List[str], organization_id: int) -> Tuple[bo
     Fail-open ``(True, None)`` when the model is unavailable or the call fails; skip
     ``(False, None)`` when there are too few/many frames or the response carries no probability.
     """
+    n = len(frames)
+    if n > temporal_service.MAX_FRAMES:
+        # Window exhausted while the model stayed reachable and declined: a hard drop, never
+        # resurrected by a later fail-open (checked before availability on purpose).
+        return False, None
     if not temporal_service.is_available():
         # Not configured, unreachable, or breaker open: trust the risk gate already passed.
         return True, None
-    n = len(frames)
-    if n < temporal_service.MIN_FRAMES or n > temporal_service.MAX_FRAMES:
-        # Too few frames to score yet, or window exhausted without confirmation.
+    if n < temporal_service.MIN_FRAMES:
+        # Too few frames to score yet.
         return False, None
     window = frames[max(0, n - temporal_service.WINDOW) : n]
     bucket = s3_service.resolve_bucket_name(organization_id)
@@ -421,7 +425,20 @@ async def _notify_slack_for_sequence(
 
 
 async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
-    """Background task: run the risk + temporal validation pipeline for a sequence.
+    """Background-task entrypoint: best-effort wrapper around the validation pipeline.
+
+    Background tasks run sequentially and Starlette aborts the chain on the first that
+    raises, so any error here is caught and logged rather than starving sibling tasks
+    (other sequences' validation, webhooks, Telegram).
+    """
+    try:
+        await _run_sequence_validation(sequence_id, detection_id, organization_id)
+    except Exception as exc:  # noqa: BLE001 - one task's failure must not abort the others
+        logger.error("Sequence validation failed for sequence %s: %r", sequence_id, exc)
+
+
+async def _run_sequence_validation(sequence_id: int, detection_id: int, organization_id: int) -> None:
+    """Run the risk + temporal validation pipeline for a sequence.
 
     Split into phases so the (possibly queued) temporal call never holds a DB session:
     read + risk-gate, then call the model with no session, then persist + triangulate + notify.

@@ -80,6 +80,9 @@ class TemporalModelService:
         Records success/failure for the circuit breaker. Returns ``None`` for a successful
         call that carries no calibrated probability. Raises :class:`TemporalUnavailableError`
         when the call itself fails (network/HTTP), so callers can fail open.
+
+        No credentials are sent (unlike the risk API): this assumes the temporal API is
+        reachable only on a trusted/private network.
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         try:

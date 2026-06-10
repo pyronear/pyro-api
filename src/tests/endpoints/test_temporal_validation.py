@@ -134,6 +134,17 @@ async def test_temporal_verdict_skips_above_max_frames(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_temporal_verdict_above_max_is_hard_drop_even_when_unavailable(monkeypatch):
+    """A sequence the model already declined (past MAX_FRAMES) must not resurrect via fail-open."""
+    predict = AsyncMock(return_value=0.9)
+    monkeypatch.setattr(temporal_service, "is_available", lambda: False)  # breaker open / API down
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _temporal_verdict([f"f{i}.jpg" for i in range(11)], 1) == (False, None)
+    predict.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_temporal_verdict_below_threshold_returns_score_unvalidated(monkeypatch):
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.40))

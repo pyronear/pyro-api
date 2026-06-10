@@ -838,6 +838,40 @@ async def test_create_detection_triggers_slack_notifications(
 
 
 @pytest.mark.asyncio
+async def test_create_detection_schedules_validation_on_append(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """Appending a detection to an existing sequence must schedule its validation (main path)."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    scheduled: List[tuple] = []
+
+    async def fake_validate(sequence_id: int, detection_id: int, organization_id: int) -> None:
+        await asyncio.sleep(0)
+        scheduled.append((sequence_id, detection_id, organization_id))
+
+    monkeypatch.setattr(detections_api, "validate_sequence", fake_validate)
+
+    cam = pytest.camera_table[1]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    payload = {"pose_id": pytest.pose_table[2]["id"], "bboxes": "[(0.3,0.3,0.5,0.5,0.9)]"}
+
+    first = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert first.status_code == 201, first.text
+    sequence_id = first.json()["sequence_id"]
+    assert isinstance(sequence_id, int)
+
+    scheduled.clear()  # ignore the creation-path scheduling; assert the append path on its own
+    second = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert second.status_code == 201, second.text
+    assert second.json()["sequence_id"] == sequence_id  # appended, not a new sequence
+    assert (sequence_id, second.json()["id"], cam["organization_id"]) in scheduled
+
+
+@pytest.mark.asyncio
 async def test_create_detection_sequence_flow_direct(detection_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
