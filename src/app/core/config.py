@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     TEMPORAL_MODEL_THRESHOLD: float = float(os.environ.get("TEMPORAL_MODEL_THRESHOLD") or 0.45)
     # Generous timeout: the model infers serially, so concurrent calls queue.
     TEMPORAL_API_TIMEOUT: float = float(os.environ.get("TEMPORAL_API_TIMEOUT") or 30.0)
+    # Max in-flight temporal calls (the model infers serially); bursts queue instead of timing out.
+    TEMPORAL_API_MAX_CONCURRENCY: int = int(os.environ.get("TEMPORAL_API_MAX_CONCURRENCY") or 1)
 
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")

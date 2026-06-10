@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -88,6 +89,35 @@ async def test_breaker_opens_after_three_consecutive_failures(configured_tempora
             with pytest.raises(TemporalUnavailableError):
                 await service.predict("bucket", ["a.jpg"])
     assert service.is_available() is False  # breaker is open / paused
+
+
+@pytest.mark.asyncio
+async def test_predict_serializes_concurrent_calls(configured_temporal, monkeypatch):
+    """With concurrency 1, bursts queue: at most one call is ever in flight (none dropped)."""
+    monkeypatch.setattr(settings, "TEMPORAL_API_MAX_CONCURRENCY", 1)
+    service = TemporalModelService()
+    state = {"in_flight": 0, "max_in_flight": 0}
+
+    async def fake_post(*_args, **_kwargs):
+        state["in_flight"] += 1
+        state["max_in_flight"] = max(state["max_in_flight"], state["in_flight"])
+        await asyncio.sleep(0.02)
+        state["in_flight"] -= 1
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json = MagicMock(return_value={"probability": 0.9})
+        return resp
+
+    inner = MagicMock()
+    inner.post = fake_post
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=inner)
+    cm.__aexit__ = AsyncMock(return_value=None)
+    with patch("app.services.temporal.httpx.AsyncClient", MagicMock(return_value=cm)):
+        results = await asyncio.gather(*[service.predict("bucket", ["f.jpg"]) for _ in range(5)])
+
+    assert results == [pytest.approx(0.9)] * 5  # all five processed
+    assert state["max_in_flight"] == 1  # never more than one in flight
 
 
 def test_breaker_half_opens_after_pause_elapses(configured_temporal):

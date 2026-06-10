@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import List, Union
@@ -29,7 +30,9 @@ class TemporalModelService:
     ``WINDOW`` frames. After ``MAX_CONSECUTIVE_FAILURES`` failed calls in a row, calls
     are paused for ``PAUSE_SECONDS`` (the breaker), during which the caller fails open.
 
-    State is per-process, like the risk cache.
+    The model infers serially, so a semaphore bounds in-flight calls: bursts queue and are
+    all processed (no scores lost to timeouts) instead of overwhelming it. State is
+    per-process, like the risk cache.
     """
 
     MIN_FRAMES: int = 4
@@ -41,6 +44,7 @@ class TemporalModelService:
     def __init__(self) -> None:
         self._consecutive_failures: int = 0
         self._paused_until: Union[float, None] = None
+        self._semaphore = asyncio.Semaphore(max(1, settings.TEMPORAL_API_MAX_CONCURRENCY))
 
     @property
     def is_configured(self) -> bool:
@@ -77,7 +81,8 @@ class TemporalModelService:
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         try:
-            async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
+            # Serialize against the model's real throughput so bursts queue instead of timing out.
+            async with self._semaphore, httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
                 response = await client.post(f"{host}/predict", json={"bucket": bucket, "frames": frames})
                 response.raise_for_status()
                 data = response.json()
