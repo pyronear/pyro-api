@@ -34,20 +34,22 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         await self.session.exec(stmt)
         await self.session.commit()
 
-    async def set_validation(
-        self,
-        sequence_id: int,
-        temporal_model_score: Union[float, None] = None,
-        mark_validated: bool = False,
-    ) -> None:
-        """Persist the latest temporal score and/or flag the sequence as validated."""
-        values: dict[str, Any] = {}
-        if temporal_model_score is not None:
-            values["temporal_model_score"] = temporal_model_score
-        if mark_validated:
-            values["is_validated"] = True
-        if not values:
-            return
-        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
+    async def set_temporal_score(self, sequence_id: int, score: float) -> None:
+        """Persist the latest temporal-model score for the sequence."""
+        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(temporal_model_score=score)
         await self.session.exec(stmt)
         await self.session.commit()
+
+    async def claim_validation(self, sequence_id: int) -> bool:
+        """Atomically flip ``is_validated`` from False to True.
+
+        Returns True only for the caller that won the flip, so concurrent background tasks
+        for the same sequence don't both triangulate and notify.
+        """
+        id_col = cast(Any, Sequence.id)
+        validated_col = cast(Any, Sequence.is_validated)
+        stmt: Any = update(Sequence)
+        stmt = stmt.where(id_col == sequence_id).where(validated_col.is_(False)).values(is_validated=True)
+        result = await self.session.exec(stmt)
+        await self.session.commit()
+        return bool(getattr(result, "rowcount", 0))

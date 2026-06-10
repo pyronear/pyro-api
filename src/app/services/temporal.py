@@ -14,7 +14,11 @@ from app.core.time import utcnow
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["temporal_service"]
+__all__ = ["TemporalUnavailableError", "temporal_service"]
+
+
+class TemporalUnavailableError(Exception):
+    """Raised when a temporal API call fails (network/HTTP). Distinct from a scoreless response."""
 
 
 class TemporalModelService:
@@ -66,10 +70,11 @@ class TemporalModelService:
             logger.warning("Temporal API breaker opened for %ds after repeated failures", self.PAUSE_SECONDS)
 
     async def predict(self, bucket: str, frames: List[str]) -> Union[float, None]:
-        """Return the smoke probability for the given frames, or None on failure.
+        """Return the smoke probability for the given frames.
 
-        Records success/failure for the circuit breaker. A successful call that carries
-        no calibrated probability also returns None.
+        Records success/failure for the circuit breaker. Returns ``None`` for a successful
+        call that carries no calibrated probability. Raises :class:`TemporalUnavailableError`
+        when the call itself fails (network/HTTP), so callers can fail open.
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
         try:
@@ -80,7 +85,7 @@ class TemporalModelService:
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("Temporal API call failed (%s)", exc)
             self._record_failure()
-            return None
+            raise TemporalUnavailableError(str(exc)) from exc
         self._record_success()
         probability = data.get("probability") if isinstance(data, dict) else None
         return float(probability) if isinstance(probability, (int, float)) else None

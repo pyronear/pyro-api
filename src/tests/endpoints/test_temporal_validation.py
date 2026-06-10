@@ -20,7 +20,7 @@ from app.core.time import utcnow
 from app.crud import DetectionCRUD, SequenceCRUD
 from app.models import AlertSequence, Detection, Sequence
 from app.services.risk import risk_service
-from app.services.temporal import temporal_service
+from app.services.temporal import TemporalUnavailableError, temporal_service
 
 
 async def _seed_sequence(
@@ -182,13 +182,29 @@ async def test_temporal_validation_fails_open_when_unavailable(detection_session
 async def test_temporal_validation_fails_open_on_predict_failure(detection_session: AsyncSession, monkeypatch):
     seq = await _seed_sequence(detection_session, 5)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
-    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=None))  # call failed
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=TemporalUnavailableError("boom")))
 
     validated = await _run_temporal_validation(
         seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
     )
 
     assert validated is True
+
+
+@pytest.mark.asyncio
+async def test_temporal_validation_scoreless_response_does_not_validate(detection_session: AsyncSession, monkeypatch):
+    """A successful but scoreless (probability=None) response must not fail open."""
+    seq = await _seed_sequence(detection_session, 5)
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=None))
+
+    validated = await _run_temporal_validation(
+        seq, 1, DetectionCRUD(detection_session), SequenceCRUD(detection_session)
+    )
+
+    assert validated is False
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score is None
 
 
 # --- validate_sequence: end-to-end gating ----------------------------------
@@ -233,7 +249,7 @@ async def test_validate_sequence_marks_validated_and_triangulates(detection_sess
 @pytest.mark.asyncio
 async def test_validate_sequence_idempotent_when_already_validated(detection_session: AsyncSession, monkeypatch):
     seq = await _seed_sequence(detection_session, 5)
-    await SequenceCRUD(detection_session).set_validation(cast(int, seq.id), mark_validated=True)
+    await SequenceCRUD(detection_session).claim_validation(cast(int, seq.id))
     det = (await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id)))[0]
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
@@ -243,3 +259,14 @@ async def test_validate_sequence_idempotent_when_already_validated(detection_ses
 
     predict.assert_not_awaited()
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+
+
+@pytest.mark.asyncio
+async def test_claim_validation_is_won_once(detection_session: AsyncSession):
+    """Concurrent claims on the same sequence: exactly one wins the flip."""
+    seq = await _seed_sequence(detection_session, 5)
+    crud = SequenceCRUD(detection_session)
+    first = await crud.claim_validation(cast(int, seq.id))
+    second = await crud.claim_validation(cast(int, seq.id))
+    assert first is True
+    assert second is False

@@ -11,7 +11,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.time import utcnow
-from app.services.temporal import TemporalModelService
+from app.services.temporal import TemporalModelService, TemporalUnavailableError
 
 
 def _fake_httpx_post_client(*, json_data=None, raise_exc=None):
@@ -71,12 +71,11 @@ async def test_predict_returns_none_when_probability_missing(configured_temporal
 
 
 @pytest.mark.asyncio
-async def test_predict_records_failure_on_http_error(configured_temporal):
+async def test_predict_raises_and_records_failure_on_http_error(configured_temporal):
     service = TemporalModelService()
     factory, _ = _fake_httpx_post_client(raise_exc=httpx.ConnectError("boom"))
-    with patch("app.services.temporal.httpx.AsyncClient", factory):
-        prob = await service.predict("bucket", ["a.jpg"])
-    assert prob is None
+    with patch("app.services.temporal.httpx.AsyncClient", factory), pytest.raises(TemporalUnavailableError):
+        await service.predict("bucket", ["a.jpg"])
     assert service._consecutive_failures == 1
 
 
@@ -86,7 +85,8 @@ async def test_breaker_opens_after_three_consecutive_failures(configured_tempora
     factory, _ = _fake_httpx_post_client(raise_exc=httpx.ConnectError("boom"))
     with patch("app.services.temporal.httpx.AsyncClient", factory):
         for _ in range(TemporalModelService.MAX_CONSECUTIVE_FAILURES):
-            await service.predict("bucket", ["a.jpg"])
+            with pytest.raises(TemporalUnavailableError):
+                await service.predict("bucket", ["a.jpg"])
     assert service.is_available() is False  # breaker is open / paused
 
 

@@ -64,7 +64,7 @@ from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
-from app.services.temporal import temporal_service
+from app.services.temporal import TemporalUnavailableError, temporal_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -385,11 +385,15 @@ async def _run_temporal_validation(
         return False
     window = frames[max(0, n - temporal_service.WINDOW) : n]
     bucket = s3_service.resolve_bucket_name(organization_id)
-    probability = await temporal_service.predict(bucket, window)
-    if probability is None:
+    try:
+        probability = await temporal_service.predict(bucket, window)
+    except TemporalUnavailableError:
         # Call just failed: fail open (the breaker has counted the failure).
         return True
-    await sequences.set_validation(sequence_.id, temporal_model_score=probability)
+    if probability is None:
+        # Successful but scoreless response (uncalibrated model): cannot confirm, retry next image.
+        return False
+    await sequences.set_temporal_score(sequence_.id, probability)
     return probability > settings.TEMPORAL_MODEL_THRESHOLD
 
 
@@ -412,7 +416,10 @@ async def _notify_slack_for_sequence(
         return
     slack_payload = jsonable_encoder(det)
     slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-    await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
+    try:
+        await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
+    except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the task chain
+        logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
 
 
 async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
@@ -443,7 +450,9 @@ async def validate_sequence(sequence_id: int, detection_id: int, organization_id
         if not await _run_temporal_validation(sequence_, organization_id, detections, sequences):
             return
 
-        await sequences.set_validation(sequence_id, mark_validated=True)
+        # Atomically claim the sequence so concurrent tasks can't both triangulate/notify.
+        if not await sequences.claim_validation(sequence_id):
+            return
         sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
         alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
         await _notify_slack_for_sequence(
@@ -504,6 +513,8 @@ async def create_detection(
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     # sequence id -> latest detection id, scheduled for validation after the response.
     affected_sequences: Dict[int, int] = {}
+    # detections of newly created sequences, to notify (webhooks/telegram) after the response.
+    notify_dets: List[Detection] = []
 
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
@@ -596,25 +607,26 @@ async def create_detection(
                     if det_.id == det.id:
                         det = updated
                 affected_sequences[sequence_.id] = det.id
-
-                # Webhooks
-                whs = await webhooks.fetch_all()
-                if any(whs):
-                    for webhook in whs:
-                        background_tasks.add_task(dispatch_webhook, webhook.url, det)
-
-                # Telegram notifications
-                if telegram_client.is_enabled:
-                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.telegram_id:
-                        background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
+                notify_dets.append(det)
 
         created.append(det)
 
-    # Triangulation and Slack are gated on validation (risk + temporal model); run them
-    # after the response so the upload stays fast.
+    # Schedule validation/triangulation FIRST: Starlette aborts the chain on the first task
+    # that raises, and a failing notification must not skip the gated triangulation + Slack.
     for seq_id, latest_det_id in affected_sequences.items():
         background_tasks.add_task(validate_sequence, seq_id, latest_det_id, token_payload.organization_id)
+
+    # Best-effort notifications for newly created sequences (ungated, as before).
+    if notify_dets:
+        whs = await webhooks.fetch_all()
+        org = None
+        if telegram_client.is_enabled:
+            org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
+        for det_ in notify_dets:
+            for webhook in whs:
+                background_tasks.add_task(dispatch_webhook, webhook.url, det_)
+            if org is not None and org.telegram_id:
+                background_tasks.add_task(telegram_client.notify, org.telegram_id, det_.model_dump_json())
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())
