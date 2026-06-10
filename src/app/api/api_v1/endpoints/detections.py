@@ -402,8 +402,10 @@ async def create_detection(
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
     crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
     for idx, crop in enumerate(crops):
+        # Prefix with the bbox index so byte-identical crops in the same request still get
+        # distinct keys; each detection then owns its crop object (safe to delete independently).
         crop_bucket_keys[idx] = await upload_file(
-            crop, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+            crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
 
     created: List[Detection] = []
