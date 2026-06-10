@@ -26,14 +26,16 @@ from anyio import to_thread
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 
+from app.api.dependencies import dispatch_webhook
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
 from app.db import session_factory
 from app.models import Camera, Sequence
 from app.services.risk import risk_service
 from app.services.slack import slack_client
 from app.services.storage import s3_service
+from app.services.telegram import telegram_client
 from app.services.temporal import TemporalUnavailableError, temporal_service
 
 logger = logging.getLogger("uvicorn.error")
@@ -110,31 +112,50 @@ async def _sequence_frames_and_roi(
     return total, kept, roi
 
 
-async def _notify_slack_for_sequence(
+async def _notify_for_sequence(
     sequence_: Sequence,
     camera: Camera,
     organization_id: int,
     detections: DetectionCRUD,
     organizations: OrganizationCRUD,
+    webhooks: WebhookCRUD,
     alert_id: Optional[int],
 ) -> None:
-    """Best-effort Slack notification, carrying the sequence's latest detection."""
-    if not slack_client.is_enabled:
-        return
-    org = await organizations.get(organization_id)
-    if org is None or not org.slack_hook:
-        return
+    """Best-effort notifications (webhooks, Telegram, Slack) for a freshly validated sequence.
+
+    All channels sit behind the validation gate and fire exactly once per sequence (the
+    claim is atomic), carrying the sequence's latest detection at validation time. Each
+    channel is independent: one failing never blocks the others.
+    """
     dets = await detections.fetch_all(
         filters=("sequence_id", sequence_.id), order_by="created_at", order_desc=True, limit=1
     )
     if not dets:
         return
-    slack_payload = jsonable_encoder(dets[0])
-    slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-    try:
-        await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
-    except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the job
-        logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
+    det = dets[0]
+    org = await organizations.get(organization_id)
+
+    for webhook in await webhooks.fetch_all():
+        try:
+            await dispatch_webhook(webhook.url, det)
+        except Exception as exc:  # noqa: BLE001 - best-effort: never let a webhook failure abort the job
+            logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_.id, exc)
+
+    if telegram_client.is_enabled and org is not None and org.telegram_id:
+        try:
+            await to_thread.run_sync(telegram_client.notify, org.telegram_id, det.model_dump_json())
+        except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure abort the job
+            logger.warning("Telegram notification failed for sequence %s (%s)", sequence_.id, exc)
+
+    if slack_client.is_enabled and org is not None and org.slack_hook:
+        slack_payload = jsonable_encoder(det)
+        slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+        try:
+            await to_thread.run_sync(
+                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+            )
+        except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the job
+            logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
 
 
 async def _finish_job(sequence_id: int, frame_count: Optional[int] = None) -> None:
@@ -256,6 +277,7 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
             alerts = AlertCRUD(session)
             detections = DetectionCRUD(session)
             organizations = OrganizationCRUD(session)
+            webhooks = WebhookCRUD(session)
             sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
             camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
             alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
@@ -270,7 +292,7 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
             raise
         if validation_status is not None:
             await sequences.set_validation_status(sequence_id, validation_status)
-        await _notify_slack_for_sequence(sequence_, camera, organization_id, detections, organizations, alert_id)
+        await _notify_for_sequence(sequence_, camera, organization_id, detections, organizations, webhooks, alert_id)
         # Validated is terminal: clear the job unconditionally.
         await sequences.finish_validation_job(sequence_id)
 

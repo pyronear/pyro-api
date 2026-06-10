@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
-from fastapi import BackgroundTasks, HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -29,12 +29,14 @@ from app.api.api_v1.endpoints.detections import (
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
+from app.services import validation as validation_service
 from app.services.cones import resolve_cone
 from app.services.slack import slack_client
 from app.services.storage import s3_service
+from app.services.telegram import telegram_client
 from app.services.validation import process_next_due_validation
 
 
@@ -765,18 +767,20 @@ async def test_create_detection_triggers_telegram_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """Webhooks and Telegram fire only once the validation worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "telegram": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
     def fake_telegram_notify(channel_id: str, message: str) -> None:
         calls["telegram"].append(channel_id)
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.telegram_client, "notify", fake_telegram_notify)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", True)
+    monkeypatch.setattr(telegram_client, "notify", fake_telegram_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -795,7 +799,12 @@ async def test_create_detection_triggers_telegram_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"] == []  # gated: nothing fires at creation
+    assert calls["telegram"] == []
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    assert await process_next_due_validation() is True
+    assert calls["webhooks"] == ["http://example.com/webhook-telegram"]
     assert calls["telegram"] == ["test-channel"]
 
 
@@ -806,11 +815,12 @@ async def test_create_detection_triggers_slack_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
-    """Slack fires only once the validation worker processes the due sequence (gated path)."""
+    """All channels (webhooks + Slack here) fire only once the worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "slack": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
     def fake_slack_notify(slack_hook: str, message: str, camera_name: str, alert_id: int | None = None) -> object:
@@ -822,8 +832,8 @@ async def test_create_detection_triggers_slack_notifications(
 
         return DummyResponse()
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", False)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", False)
     monkeypatch.setattr(slack_client, "is_enabled", True)
     monkeypatch.setattr(slack_client, "notify", fake_slack_notify)
 
@@ -844,11 +854,12 @@ async def test_create_detection_triggers_slack_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]  # webhook fires at creation (ungated)
-    assert calls["slack"] == []  # Slack waits for validation
+    assert calls["webhooks"] == []  # gated: every channel waits for validation
+    assert calls["slack"] == []
 
     # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
     assert await process_next_due_validation() is True
+    assert calls["webhooks"] == ["http://example.com/webhook-slack"]
     assert calls["slack"] == ["http://example.com/slack"]
 
 
@@ -890,14 +901,12 @@ async def test_create_detection_enqueues_validation_on_append(
 @pytest.mark.asyncio
 async def test_create_detection_sequence_flow_direct(detection_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
 
     camera_id = pytest.camera_table[0]["id"]
     org_id = pytest.camera_table[0]["organization_id"]
     pose_id = pytest.pose_table[0]["id"]
 
     detections = DetectionCRUD(detection_session)
-    webhooks = WebhookCRUD(detection_session)
     organizations = OrganizationCRUD(detection_session)
     sequences = SequenceCRUD(detection_session)
     cameras = CameraCRUD(detection_session)
@@ -923,14 +932,11 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     upload = UploadFile(filename="img.png", file=io.BytesIO(b"img"))
 
     det_read = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         file=upload,
         crop_file=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
         cameras=cameras,
         poses=poses,
@@ -960,14 +966,11 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
 
     upload_again = UploadFile(filename="img-2.png", file=io.BytesIO(b"img2"))
     det_read_2 = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         file=upload_again,
         crop_file=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
         cameras=cameras,
         poses=poses,

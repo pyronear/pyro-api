@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple, cast
 import pandas as pd
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -27,19 +26,16 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
-    dispatch_webhook,
     get_camera_crud,
     get_detection_crud,
     get_jwt,
-    get_organization_crud,
     get_pose_crud,
     get_sequence_crud,
-    get_webhook_crud,
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
@@ -56,7 +52,6 @@ from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
-from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 logger = logging.getLogger("uvicorn.error")
@@ -347,7 +342,6 @@ async def _attach_sequence_to_alert(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    background_tasks: BackgroundTasks,
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
@@ -359,8 +353,6 @@ async def create_detection(
     file: UploadFile = File(..., alias="file"),
     crop_file: Optional[UploadFile] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
-    webhooks: WebhookCRUD = Depends(get_webhook_crud),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
@@ -398,8 +390,6 @@ async def create_detection(
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     # sequences touched by this request, to mark due for validation (DB-backed queue).
     affected_sequences: Set[int] = set()
-    # detections of newly created sequences, to notify (webhooks/telegram) after the response.
-    notify_dets: List[Detection] = []
 
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
@@ -492,27 +482,15 @@ async def create_detection(
                     if det_.id == det.id:
                         det = updated
                 affected_sequences.add(sequence_.id)
-                notify_dets.append(det)
 
         created.append(det)
 
     # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
     # whichever uvicorn worker received the detection). The per-process validation worker
-    # claims due sequences from the DB and runs the gated triangulation + Slack pipeline.
+    # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
+    # notification channels (webhooks, Telegram, Slack) fire only once validated.
     for seq_id in affected_sequences:
         await sequences.enqueue_validation(seq_id)
-
-    # Best-effort notifications for newly created sequences (ungated, as before).
-    if notify_dets:
-        whs = await webhooks.fetch_all()
-        org = None
-        if telegram_client.is_enabled:
-            org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-        for det_ in notify_dets:
-            for webhook in whs:
-                background_tasks.add_task(dispatch_webhook, webhook.url, det_)
-            if org is not None and org.telegram_id:
-                background_tasks.add_task(telegram_client.notify, org.telegram_id, det_.model_dump_json())
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())
