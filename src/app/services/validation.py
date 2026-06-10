@@ -256,7 +256,10 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
     elif total_frames < temporal_service.MIN_FRAMES:
         # Too few frames for the model to score; the next detection re-enqueues. By design a
         # sequence that never reaches MIN_FRAMES is not validated while the model is reachable
-        # (short/noise sequences are suppressed); only fail-open lets them through.
+        # (short/noise sequences are suppressed); only the unavailable fail-open above lets
+        # them through. Checked BEFORE staleness on purpose: a short sequence isn't waiting
+        # on the model — if its job went stale at <MIN_FRAMES, the sequence stopped emitting,
+        # and failing it open would notify on noise.
         await _finish_job(sequence_id, frame_count=total_frames)
         return
     elif due_since is not None and (utcnow() - due_since).total_seconds() > settings.TEMPORAL_VALIDATION_MAX_AGE:
@@ -315,40 +318,33 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
     """
     async with session_factory() as session:
         sequences = SequenceCRUD(session)
-        # Atomically claim the sequence so concurrent workers can't both triangulate/notify.
-        if claim and not await sequences.claim_validation(sequence_id):
+        # Atomically claim the sequence (verdict + status in one UPDATE) so concurrent
+        # workers can't both triangulate/notify. From here on the verdict is durable: any
+        # failure below propagates to the caller, which releases the lease and pushes the
+        # retry back — the job stays due and validated, so the retry resumes HERE (attach +
+        # notify) instead of re-deciding a verdict that was already reached.
+        if claim and not await sequences.claim_validation(sequence_id, validation_status):
             await sequences.finish_validation_job(sequence_id)
             return
-        try:
-            # Imported lazily to avoid a services -> endpoints import at module load.
-            from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
+        # Imported lazily to avoid a services -> endpoints import at module load.
+        from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 
-            cameras = CameraCRUD(session)
-            alerts = AlertCRUD(session)
-            detections = DetectionCRUD(session)
-            organizations = OrganizationCRUD(session)
-            webhooks = WebhookCRUD(session)
-            sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
-            camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
-            organization_id = camera.organization_id
-            # Two workers validating two sequences of the same event concurrently must not
-            # both create an alert: serialize attachment per organization.
-            async with _organization_alert_lock(organization_id):
-                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
-        except Exception:
-            # Release the claim so a retry picks the attachment back up; otherwise the
-            # sequence would stay validated-but-never-alerted forever (the is_validated guard
-            # would skip it). Fresh session: the failing one may be unusable. The job stays
-            # due (pushed back by the caller's error handling) so it retries even if the
-            # sequence sends no further detection.
-            async with session_factory() as rollback_session:
-                await SequenceCRUD(rollback_session).release_validation(sequence_id)
-            raise
+        cameras = CameraCRUD(session)
+        alerts = AlertCRUD(session)
+        detections = DetectionCRUD(session)
+        organizations = OrganizationCRUD(session)
+        webhooks = WebhookCRUD(session)
+        sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
+        camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
+        organization_id = camera.organization_id
+        # Two workers validating two sequences of the same event concurrently must not
+        # both create an alert: serialize attachment per organization.
+        async with _organization_alert_lock(organization_id):
+            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
         await _notify_for_sequence(sequence_, camera, organization_id, detections, organizations, webhooks, alert_id)
         # Validated is terminal: clear the job unconditionally. This runs LAST on purpose —
-        # the due marker is the completion record that makes the whole block resumable
-        # (a resumed run passes validation_status=None and keeps the original status).
-        await sequences.finish_validation_job(sequence_id, validation_status=validation_status)
+        # the due marker is the completion record that makes the whole block resumable.
+        await sequences.finish_validation_job(sequence_id)
 
 
 async def process_next_due_validation() -> bool:

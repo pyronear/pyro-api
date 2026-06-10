@@ -459,7 +459,7 @@ async def test_attach_failure_past_window_does_not_window_exhaust(detection_sess
 
     await detection_session.refresh(seq)
     assert seq.temporal_model_score == pytest.approx(0.90)
-    assert seq.is_validated is False  # claim released
+    assert seq.is_validated is True  # verdict kept: the retry resumes attach, not the decision
 
     monkeypatch.undo()
     monkeypatch.setattr(risk_service, "_scores", {})
@@ -518,8 +518,9 @@ async def test_process_survives_job_error_and_keeps_job_due(detection_session: A
 
 
 @pytest.mark.asyncio
-async def test_process_releases_claim_when_attach_fails(detection_session: AsyncSession, monkeypatch):
-    """A failed alert attachment must release the claim so a retry picks it back up."""
+async def test_attach_failure_keeps_verdict_and_resumes(detection_session: AsyncSession, monkeypatch):
+    """A failed alert attachment keeps the verdict (and its status label, written atomically
+    at the claim); the retry resumes the post-claim work instead of re-deciding."""
     from app.api.api_v1.endpoints import detections as detections_api
 
     seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
@@ -535,12 +536,14 @@ async def test_process_releases_claim_when_attach_fails(detection_session: Async
     assert await process_next_due_validation() is True  # error swallowed by the worker
 
     await detection_session.refresh(seq)
-    assert seq.is_validated is False  # claim released for retry
+    assert seq.is_validated is True  # verdict durable from the claim
+    assert seq.validation_status == FAIL_OPEN_UNAVAILABLE  # status written with the verdict
     assert seq.validation_due_at is not None  # job still due: the worker retries it
     assert seq.validation_due_at > utcnow()  # ... after a backoff, not in a tight loop
+    assert seq.validation_lease_until is None  # lease released
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
 
-    # A later run (attach healthy again) picks the sequence back up end-to-end.
+    # A later run (attach healthy again) resumes the post-claim work end-to-end.
     monkeypatch.undo()
     monkeypatch.setattr(risk_service, "_scores", {})
     monkeypatch.setattr(temporal_service, "is_available", lambda: False)
@@ -552,7 +555,30 @@ async def test_process_releases_claim_when_attach_fails(detection_session: Async
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True
+    assert seq.validation_due_at is None  # job completed
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_stale_below_min_frames_stays_unvalidated(detection_session: AsyncSession, monkeypatch):
+    """Deliberate: stale fail-open does NOT apply below MIN_FRAMES — a short sequence isn't
+    waiting on the model; if its job went stale, the sequence stopped emitting (noise)."""
+    seq = await _seed_sequence(detection_session, 3, max_conf=0.30)
+    crud = SequenceCRUD(detection_session)
+    seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
+    seq_db.validation_due_at = utcnow() - timedelta(seconds=600)  # queued for 10 min
+    detection_session.add(seq_db)
+    await detection_session.commit()
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.9))
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False  # no stale fail-open below MIN_FRAMES
+    assert seq.validation_status is None
+    assert seq.validation_due_at is None  # job completed; a new frame re-enqueues
 
 
 @pytest.mark.asyncio

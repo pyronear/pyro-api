@@ -43,29 +43,23 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         await self.session.exec(stmt)
         await self.session.commit()
 
-    async def claim_validation(self, sequence_id: int) -> bool:
-        """Atomically flip ``is_validated`` from False to True.
+    async def claim_validation(self, sequence_id: int, validation_status: Union[str, None] = None) -> bool:
+        """Atomically flip ``is_validated`` from False to True, recording how it concluded.
 
-        Returns True only for the caller that won the flip, so concurrent background tasks
-        for the same sequence don't both triangulate and notify.
+        Returns True only for the caller that won the flip, so concurrent workers for the
+        same sequence don't both triangulate and notify. ``validation_status`` is written in
+        the same UPDATE so the verdict and its label are durable together: post-claim work
+        (triangulation, notifications) that fails or dies is resumed without re-deciding.
         """
         id_col = cast(Any, Sequence.id)
         validated_col = cast(Any, Sequence.is_validated)
-        stmt: Any = update(Sequence)
-        stmt = stmt.where(id_col == sequence_id).where(validated_col.is_(False)).values(is_validated=True)
+        values: dict = {"is_validated": True}
+        if validation_status is not None:
+            values["validation_status"] = validation_status
+        stmt: Any = update(Sequence).where(id_col == sequence_id).where(validated_col.is_(False)).values(**values)
         result = await self.session.exec(stmt)
         await self.session.commit()
         return bool(getattr(result, "rowcount", 0))
-
-    async def release_validation(self, sequence_id: int) -> None:
-        """Flip ``is_validated`` back to False so a later detection can retry the claim.
-
-        Used when post-claim work (alert attachment) fails: without the release, the
-        sequence would stay validated-but-never-alerted forever.
-        """
-        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(is_validated=False)
-        await self.session.exec(stmt)
-        await self.session.commit()
 
     async def enqueue_validation(self, sequence_id: int) -> None:
         """Mark the sequence as due for temporal validation (the DB-backed queue).
