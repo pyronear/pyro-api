@@ -20,17 +20,19 @@ the (slow) model call never holds a DB session.
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Set, Tuple, cast
+from contextlib import asynccontextmanager
+from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy import text
 
 from app.api.dependencies import dispatch_webhook
 from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
-from app.db import session_factory
+from app.db import engine, session_factory
 from app.models import Camera, Sequence
 from app.services.risk import risk_service
 from app.services.slack import slack_client
@@ -58,6 +60,29 @@ WINDOW_EXHAUSTED = "window_exhausted"
 # Backoff before retrying a job that errored (keeps a persistently failing job from
 # spinning the worker; the job stays due so it is never lost).
 RETRY_DELAY_SECONDS = 30.0
+
+# Advisory-lock namespace (arbitrary app-wide constant) for per-organization alert attachment.
+_ALERT_LOCK_NAMESPACE = 7341
+
+
+@asynccontextmanager
+async def _organization_alert_lock(organization_id: int) -> AsyncIterator[None]:
+    """Cross-process mutex serializing alert attachment within an organization.
+
+    Uses a Postgres session-level advisory lock on a dedicated connection (the attachment
+    session commits mid-way, which would release a transaction-level lock too early). The
+    lock is released in all cases when the connection closes.
+    """
+    async with engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:ns, :key)"), {"ns": _ALERT_LOCK_NAMESPACE, "key": organization_id}
+        )
+        try:
+            yield
+        finally:
+            await conn.execute(
+                text("SELECT pg_advisory_unlock(:ns, :key)"), {"ns": _ALERT_LOCK_NAMESPACE, "key": organization_id}
+            )
 
 
 async def _sequence_frames_and_roi(
@@ -123,9 +148,10 @@ async def _notify_for_sequence(
 ) -> None:
     """Best-effort notifications (webhooks, Telegram, Slack) for a freshly validated sequence.
 
-    All channels sit behind the validation gate and fire exactly once per sequence (the
-    claim is atomic), carrying the sequence's latest detection at validation time. Each
-    channel is independent: one failing never blocks the others.
+    All channels sit behind the validation gate, carrying the sequence's latest detection
+    at validation time. Delivery is at-least-once: a worker dying between notifying and
+    completing the job resumes and may notify again (preferred over losing a fire alert).
+    Each channel is independent: one failing never blocks the others.
     """
     dets = await detections.fetch_all(
         filters=("sequence_id", sequence_.id), order_by="created_at", order_desc=True, limit=1
@@ -170,19 +196,32 @@ async def _conclude_terminal(sequence_id: int, validation_status: str) -> None:
         await sequences.finish_validation_job(sequence_id)
 
 
-async def _process_claimed_sequence(sequence_: Sequence) -> None:
+async def _process_claimed_sequence(claimed: Sequence) -> None:
     """Run the risk + temporal validation pipeline for a claimed sequence.
 
     Three phases so the (possibly slow) model call never holds a DB session: read state and
     apply the risk gate, call the model, then persist + triangulate + notify.
     """
-    sequence_id = sequence_.id
-    due_since = sequence_.validation_due_at
+    sequence_id = claimed.id
 
-    # Phase 1 — read state, risk gate, FRESH frames (short-lived session).
+    # Phase 1 — re-read state and apply the risk gate (short-lived session). The claimed row
+    # is re-read because it may already be stale: a detection can bump max_conf while the
+    # job sits in the queue, and a prior run may have persisted a score or the validated
+    # flag before dying.
     async with session_factory() as session:
+        sequences = SequenceCRUD(session)
         cameras = CameraCRUD(session)
         detections = DetectionCRUD(session)
+        sequence_ = await sequences.get(sequence_id)
+        if sequence_ is None:
+            await _finish_job(sequence_id)
+            return
+        if sequence_.is_validated:
+            # A previous run died after winning the claim but before completing the
+            # post-claim work (the due marker only clears on completion): resume it.
+            await _complete_validated_sequence(sequence_id, validation_status=None, claim=False)
+            return
+        due_since = sequence_.validation_due_at
         camera = await cameras.get(sequence_.camera_id)
         if camera is None:
             await _finish_job(sequence_id)
@@ -190,7 +229,7 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
         organization_id = camera.organization_id
         # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
         # Completing the job is fine: the next detection re-enqueues and the gate re-evaluates
-        # as max_conf grows or the risk scores refresh.
+        # with the grown max_conf.
         threshold = risk_service.min_confidence(camera.id)
         if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
             await _finish_job(sequence_id)
@@ -199,17 +238,24 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
             detections, sequence_id, last_n=temporal_service.MAX_FRAMES
         )
 
-    # Window + availability rules. A sequence past MAX_FRAMES that the model already scored
-    # (and declined, or it would be validated) is terminal: don't call the model again and
-    # never resurrect it via a later fail-open. Past MAX_FRAMES but never scored (backlog,
-    # model freshly configured): score the last MAX_FRAMES anyway — backlog must delay
-    # sequences, never silently drop them.
-    if total_frames > temporal_service.MAX_FRAMES and sequence_.temporal_model_score is not None:
+    score: Optional[float] = None
+    validation_status: Optional[str] = None
+
+    # Window rules past MAX_FRAMES, decided on the stored score. Declined (score <=
+    # threshold after its in-window chances) is terminal: don't call the model again and
+    # never resurrect via a later fail-open. Scored ABOVE threshold means a previous run
+    # validated but didn't complete (e.g. a failed alert attachment released the claim):
+    # validate from the stored score — a high score must never decay into a drop. Never
+    # scored (backlog, model freshly configured): score the last MAX_FRAMES anyway —
+    # backlog must delay sequences, never silently drop them.
+    prior_score = sequence_.temporal_model_score
+    if total_frames > temporal_service.MAX_FRAMES and prior_score is not None:
+        if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
+            await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)
+            return
         await _conclude_terminal(sequence_id, WINDOW_EXHAUSTED)
         return
 
-    score: Optional[float] = None
-    validation_status: Optional[str] = None
     if not temporal_service.is_available():
         # Not configured, unreachable, or breaker open: trust the risk gate already passed.
         validated = True
@@ -256,17 +302,28 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
             validation_status = VALIDATED_BY_MODEL if validated else None
 
     # Phase 3 — persist the score and, once validated, claim + triangulate + notify.
+    if score is not None:
+        async with session_factory() as session:
+            await SequenceCRUD(session).set_temporal_score(sequence_id, score)
+    if not validated:
+        # Below threshold: keep the score, retry when the frame set grows (the
+        # conditional finish keeps the job due if frames arrived during scoring).
+        await _finish_job(sequence_id, frame_count=total_frames)
+        return
+    await _complete_validated_sequence(sequence_id, validation_status, claim=True)
+
+
+async def _complete_validated_sequence(sequence_id: int, validation_status: Optional[str], *, claim: bool) -> None:
+    """Post-validation work: claim, triangulate, notify, complete the job.
+
+    Reached right after a verdict (``claim=True``) and when resuming a run that died after
+    winning the claim (``claim=False`` — the due marker only clears on completion, so a
+    crash mid-way is resumed by whichever worker claims the job after the lease expires).
+    """
     async with session_factory() as session:
         sequences = SequenceCRUD(session)
-        if score is not None:
-            await sequences.set_temporal_score(sequence_id, score)
-        if not validated:
-            # Below threshold: keep the score, retry when the frame set grows (the
-            # conditional finish keeps the job due if frames arrived during scoring).
-            await sequences.finish_validation_job(sequence_id, frame_count=total_frames)
-            return
         # Atomically claim the sequence so concurrent workers can't both triangulate/notify.
-        if not await sequences.claim_validation(sequence_id):
+        if claim and not await sequences.claim_validation(sequence_id):
             await sequences.finish_validation_job(sequence_id)
             return
         try:
@@ -280,7 +337,11 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
             webhooks = WebhookCRUD(session)
             sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
             camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
-            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+            organization_id = camera.organization_id
+            # Two workers validating two sequences of the same event concurrently must not
+            # both create an alert: serialize attachment per organization.
+            async with _organization_alert_lock(organization_id):
+                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
         except Exception:
             # Release the claim so a retry picks the attachment back up; otherwise the
             # sequence would stay validated-but-never-alerted forever (the is_validated guard
@@ -293,7 +354,8 @@ async def _process_claimed_sequence(sequence_: Sequence) -> None:
         if validation_status is not None:
             await sequences.set_validation_status(sequence_id, validation_status)
         await _notify_for_sequence(sequence_, camera, organization_id, detections, organizations, webhooks, alert_id)
-        # Validated is terminal: clear the job unconditionally.
+        # Validated is terminal: clear the job unconditionally. This runs LAST on purpose —
+        # the due marker is the completion record that makes the whole block resumable.
         await sequences.finish_validation_job(sequence_id)
 
 

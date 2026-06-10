@@ -93,7 +93,9 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         same row; the lease keeps them off for the duration of the model call, which runs
         long after this transaction commits. ``validation_due_at`` is intentionally NOT
         cleared here: a worker dying mid-job leaves a due row whose lease expires, so the
-        job is picked up again instead of being lost.
+        job is picked up again instead of being lost. Validated rows are NOT filtered out:
+        a still-due validated row means a worker died after winning the validation claim
+        but before triangulating/notifying, and the job must be resumed.
         """
         now = utcnow()
         due_col = cast(Any, Sequence.validation_due_at)
@@ -102,7 +104,6 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             select_model(Sequence)
             .where(due_col.is_not(None))
             .where(due_col <= now)
-            .where(cast(Any, Sequence.is_validated).is_(False))
             .where(or_(lease_col.is_(None), lease_col < now))
             .order_by(due_col)
             .limit(1)
@@ -127,6 +128,11 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         keep the job due, so the worker re-runs it with the fresh frame set instead of
         waiting for (or losing, if the sequence just ended) the next detection. The
         comparison runs inside the UPDATE so it can't race a concurrent enqueue.
+
+        Known limitation: the count is a frame-set *proxy*. A detection landing on an
+        already-seen bucket_key (changing the ROI but not the count) is not detected; the
+        next detection re-enqueues within the camera cadence, which is good enough at the
+        expected volume.
         """
         due_col = cast(Any, Sequence.validation_due_at)
         if frame_count is None:

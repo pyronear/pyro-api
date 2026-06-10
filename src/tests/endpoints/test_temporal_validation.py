@@ -23,6 +23,7 @@ from app.services.validation import (
     FAIL_OPEN_UNAVAILABLE,
     VALIDATED_BY_MODEL,
     WINDOW_EXHAUSTED,
+    _process_claimed_sequence,
     _sequence_frames_and_roi,
     process_next_due_validation,
 )
@@ -383,19 +384,117 @@ async def test_process_scoreless_response_does_not_validate(detection_session: A
 
 
 @pytest.mark.asyncio
-async def test_process_skips_already_validated(detection_session: AsyncSession, monkeypatch):
+async def test_process_resumes_post_claim_crash(detection_session: AsyncSession, monkeypatch):
+    """A worker dying after winning the claim leaves a validated-but-due row: it must be
+    resumed (triangulated + completed), not skipped forever."""
     seq = await _seed_sequence(detection_session, 5)
     crud = SequenceCRUD(detection_session)
     await _enqueue(detection_session, cast(int, seq.id))
-    await crud.claim_validation(cast(int, seq.id))  # validated after being enqueued
+    await crud.claim_validation(cast(int, seq.id))  # crash right after the claim: due survives
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is False  # claim skips validated rows
+    assert await process_next_due_validation() is True  # resumed, not skipped
 
-    predict.assert_not_awaited()
-    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+    predict.assert_not_awaited()  # resume goes straight to post-claim work
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_due_at is None  # job completed this time
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_nothing_due_for_completed_validated_sequence(detection_session: AsyncSession):
+    """A validated sequence whose job completed (due cleared) is not picked up again."""
+    seq = await _seed_sequence(detection_session, 5)
+    crud = SequenceCRUD(detection_session)
+    await _enqueue(detection_session, cast(int, seq.id))
+    await crud.claim_validation(cast(int, seq.id))
+    await crud.finish_validation_job(cast(int, seq.id))
+
+    assert await process_next_due_validation() is False
+
+
+@pytest.mark.asyncio
+async def test_process_validates_from_prior_high_score_past_window(detection_session: AsyncSession, monkeypatch):
+    """A stored above-threshold score must validate past MAX_FRAMES, never decay into
+    window_exhausted (regression: scored 0.9 -> attach failed -> retry past the window)."""
+    seq = await _seed_sequence(detection_session, 12, max_conf=0.30)
+    crud = SequenceCRUD(detection_session)
+    await crud.set_temporal_score(cast(int, seq.id), 0.90)  # scored high, never completed
+    await _enqueue(detection_session, cast(int, seq.id))
+    predict = AsyncMock(return_value=0.9)
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await process_next_due_validation() is True
+
+    predict.assert_not_awaited()  # validated from the stored score, no extra model call
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert seq.temporal_model_score == pytest.approx(0.90)
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_attach_failure_past_window_does_not_window_exhaust(detection_session: AsyncSession, monkeypatch):
+    """End-to-end regression: high score persisted, attach fails, retry past MAX_FRAMES
+    must validate from the stored score instead of dropping the sequence."""
+    from app.api.api_v1.endpoints import detections as detections_api
+
+    seq = await _seed_sequence(detection_session, 12, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.90))
+
+    async def boom(*_args, **_kwargs):
+        await asyncio.sleep(0)
+        raise RuntimeError("attach failed")
+
+    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", boom)
+    assert await process_next_due_validation() is True  # scores 0.90, then attach fails
+
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score == pytest.approx(0.90)
+    assert seq.is_validated is False  # claim released
+
+    monkeypatch.undo()
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    predict_retry = AsyncMock(return_value=0.90)
+    monkeypatch.setattr(temporal_service, "predict", predict_retry)
+    seq_db = cast(Sequence, await SequenceCRUD(detection_session).get(cast(int, seq.id), strict=True))
+    seq_db.validation_due_at = utcnow()  # fast-forward past the retry backoff
+    detection_session.add(seq_db)
+    await detection_session.commit()
+
+    assert await process_next_due_validation() is True
+
+    predict_retry.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True  # not window_exhausted
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_rereads_fresh_sequence_state(detection_session: AsyncSession, monkeypatch):
+    """The worker must risk-gate on the CURRENT max_conf, not the claim-time snapshot."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.90)  # DB: high confidence
+    stale = Sequence(**{**seq.model_dump(), "max_conf": 0.30})  # claim-time snapshot: low
+    stale.id = seq.id
+    predict = AsyncMock(return_value=0.9)
+    monkeypatch.setattr(risk_service, "_scores", {1: "very_low"})  # 0.6 threshold
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    await _process_claimed_sequence(stale)
+
+    predict.assert_awaited()  # gate evaluated on the fresh 0.90, not the stale 0.30
 
 
 @pytest.mark.asyncio
