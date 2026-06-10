@@ -41,8 +41,8 @@ from app.api.dependencies import (
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.db import session_factory
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.db import session_factory
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
@@ -63,8 +63,8 @@ from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
 from app.services.telegram import telegram_client
-from app.services.temporal import temporal_service
 from app.services.telemetry import telemetry_client
+from app.services.temporal import temporal_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -378,7 +378,7 @@ async def _run_temporal_validation(
     if not temporal_service.is_available():
         # Not configured, unreachable, or breaker open: trust the risk gate already passed.
         return True
-    frames = await _sequence_frames(detections, cast(int, sequence_.id))
+    frames = await _sequence_frames(detections, sequence_.id)
     n = len(frames)
     if n < temporal_service.MIN_FRAMES or n > temporal_service.MAX_FRAMES:
         # Too few frames to score yet, or window exhausted without confirmation.
@@ -389,7 +389,7 @@ async def _run_temporal_validation(
     if probability is None:
         # Call just failed: fail open (the breaker has counted the failure).
         return True
-    await sequences.set_validation(cast(int, sequence_.id), temporal_model_score=probability)
+    await sequences.set_validation(sequence_.id, temporal_model_score=probability)
     return probability > settings.TEMPORAL_MODEL_THRESHOLD
 
 
@@ -412,9 +412,7 @@ async def _notify_slack_for_sequence(
         return
     slack_payload = jsonable_encoder(det)
     slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-    await to_thread.run_sync(
-        slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-    )
+    await to_thread.run_sync(slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id)
 
 
 async def validate_sequence(sequence_id: int, detection_id: int, organization_id: int) -> None:
@@ -597,7 +595,7 @@ async def create_detection(
                     updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
                     if det_.id == det.id:
                         det = updated
-                affected_sequences[cast(int, sequence_.id)] = det.id
+                affected_sequences[sequence_.id] = det.id
 
                 # Webhooks
                 whs = await webhooks.fetch_all()
