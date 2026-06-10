@@ -37,9 +37,9 @@ class TemporalModelService:
     in a row, calls are paused with exponential backoff — ``BASE_PAUSE_SECONDS`` doubled on
     each re-trip up to ``MAX_PAUSE_SECONDS``, with jitter. Once the pause elapses the breaker
     is half-open: the next call is a probe; success closes the breaker, failure re-opens it
-    immediately at the next backoff tier (no need for 3 more failures). 4xx responses are
-    treated as call failures (callers fail open) but do NOT trip the breaker: they signal a
-    config/input problem, not an outage. State is per-process, like the risk cache: with N
+    immediately at the next backoff tier (no need for 3 more failures). 4xx responses fail
+    the call (callers fail open) but CLOSE the breaker: the API answered, so it's reachable —
+    a config/input problem, not an outage. State is per-process, like the risk cache: with N
     uvicorn workers each process keeps its own breaker.
     """
 
@@ -101,10 +101,10 @@ class TemporalModelService:
         ``roi_xyxyn`` (normalized [x_min, y_min, x_max, y_max] corners) scopes the verdict
         to the sequence's region so unrelated activity in the frame can't pollute it.
 
-        Records success/failure for the circuit breaker (4xx fails the call without counting
-        toward the breaker). Returns ``None`` for a successful call that carries no calibrated
-        probability. Raises :class:`TemporalUnavailableError` when the call itself fails, so
-        callers can fail open.
+        Records success/failure for the circuit breaker (4xx fails the call but closes the
+        breaker — the API answered). Returns ``None`` for a successful call that carries no
+        calibrated probability. Raises :class:`TemporalUnavailableError` when the call itself
+        fails, so callers can fail open.
 
         Sends ``Authorization: Bearer`` when ``TEMPORAL_API_TOKEN`` is set (the temporal API
         guards /predict with a shared token); unset matches a server with auth disabled.
@@ -122,9 +122,10 @@ class TemporalModelService:
         except httpx.HTTPStatusError as exc:
             logger.warning("Temporal API call failed: %r", exc)
             if exc.response.status_code < 500:
-                # Config/input problem (auth, bad payload), not an outage: fail the call
-                # so the caller fails open, but don't pause a healthy API.
-                self._half_open = False
+                # Config/input problem (auth, bad payload), not an outage: the API answered,
+                # so it's reachable — close the breaker, but fail the call so the caller
+                # fails open.
+                self._record_success()
             else:
                 self._record_failure()
             raise TemporalUnavailableError(str(exc)) from exc

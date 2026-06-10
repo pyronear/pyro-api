@@ -184,30 +184,23 @@ async def _notify_for_sequence(
             logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
 
 
-async def _finish_job(sequence_id: int, frame_count: Optional[int] = None) -> None:
+async def _finish_job(
+    sequence_id: int, frame_count: Optional[int] = None, validation_status: Optional[str] = None
+) -> None:
     async with session_factory() as session:
-        await SequenceCRUD(session).finish_validation_job(sequence_id, frame_count)
+        await SequenceCRUD(session).finish_validation_job(sequence_id, frame_count, validation_status)
 
 
-async def _conclude_terminal(sequence_id: int, validation_status: str) -> None:
-    async with session_factory() as session:
-        sequences = SequenceCRUD(session)
-        await sequences.set_validation_status(sequence_id, validation_status)
-        await sequences.finish_validation_job(sequence_id)
-
-
-async def _process_claimed_sequence(claimed: Sequence) -> None:
+async def _process_claimed_sequence(sequence_id: int) -> None:
     """Run the risk + temporal validation pipeline for a claimed sequence.
 
-    Three phases so the (possibly slow) model call never holds a DB session: read state and
-    apply the risk gate, call the model, then persist + triangulate + notify.
+    Takes only the id on purpose: ALL state is read fresh from the DB (a detection can bump
+    max_conf while the job sits in the queue, and a prior run may have persisted a score or
+    the validated flag before dying — a claim-time snapshot would be stale). Three phases so
+    the (possibly slow) model call never holds a DB session: read state and apply the risk
+    gate, call the model, then persist + triangulate + notify.
     """
-    sequence_id = claimed.id
-
-    # Phase 1 — re-read state and apply the risk gate (short-lived session). The claimed row
-    # is re-read because it may already be stale: a detection can bump max_conf while the
-    # job sits in the queue, and a prior run may have persisted a score or the validated
-    # flag before dying.
+    # Phase 1 — read state and apply the risk gate (short-lived session).
     async with session_factory() as session:
         sequences = SequenceCRUD(session)
         cameras = CameraCRUD(session)
@@ -253,7 +246,7 @@ async def _process_claimed_sequence(claimed: Sequence) -> None:
         if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
             await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)
             return
-        await _conclude_terminal(sequence_id, WINDOW_EXHAUSTED)
+        await _finish_job(sequence_id, validation_status=WINDOW_EXHAUSTED)
         return
 
     if not temporal_service.is_available():
@@ -351,12 +344,11 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
             async with session_factory() as rollback_session:
                 await SequenceCRUD(rollback_session).release_validation(sequence_id)
             raise
-        if validation_status is not None:
-            await sequences.set_validation_status(sequence_id, validation_status)
         await _notify_for_sequence(sequence_, camera, organization_id, detections, organizations, webhooks, alert_id)
         # Validated is terminal: clear the job unconditionally. This runs LAST on purpose —
-        # the due marker is the completion record that makes the whole block resumable.
-        await sequences.finish_validation_job(sequence_id)
+        # the due marker is the completion record that makes the whole block resumable
+        # (a resumed run passes validation_status=None and keeps the original status).
+        await sequences.finish_validation_job(sequence_id, validation_status=validation_status)
 
 
 async def process_next_due_validation() -> bool:
@@ -369,12 +361,13 @@ async def process_next_due_validation() -> bool:
         sequence_ = await SequenceCRUD(session).claim_due_validation(settings.TEMPORAL_VALIDATION_LEASE_SECONDS)
     if sequence_ is None:
         return False
+    sequence_id = sequence_.id
     try:
-        await _process_claimed_sequence(sequence_)
+        await _process_claimed_sequence(sequence_id)
     except Exception:
-        logger.exception("Sequence validation failed for sequence %s; will retry", sequence_.id)
+        logger.exception("Sequence validation failed for sequence %s; will retry", sequence_id)
         async with session_factory() as session:
-            await SequenceCRUD(session).release_validation_lease(sequence_.id, retry_in_seconds=RETRY_DELAY_SECONDS)
+            await SequenceCRUD(session).release_validation_lease(sequence_id, retry_in_seconds=RETRY_DELAY_SECONDS)
     return True
 
 

@@ -80,7 +80,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             update(Sequence)
             .where(cast(Any, Sequence.id) == sequence_id)
             .where(cast(Any, Sequence.is_validated).is_(False))
-            .where(or_(status_col.is_(None), status_col != "window_exhausted"))
+            .where(status_col.is_distinct_from("window_exhausted"))
             .values(validation_due_at=func.coalesce(due_col, utcnow()))
         )
         await self.session.exec(stmt)
@@ -120,7 +120,12 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         await self.session.refresh(sequence_)
         return sequence_
 
-    async def finish_validation_job(self, sequence_id: int, frame_count: Union[int, None] = None) -> None:
+    async def finish_validation_job(
+        self,
+        sequence_id: int,
+        frame_count: Union[int, None] = None,
+        validation_status: Union[str, None] = None,
+    ) -> None:
         """Release the lease and clear the due marker, completing the job.
 
         With ``frame_count`` set, the due marker is only cleared if the sequence still has
@@ -128,6 +133,8 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         keep the job due, so the worker re-runs it with the fresh frame set instead of
         waiting for (or losing, if the sequence just ended) the next detection. The
         comparison runs inside the UPDATE so it can't race a concurrent enqueue.
+        ``validation_status`` records how validation concluded (observability, incl.
+        explicit fail-open reasons) in the same UPDATE.
 
         Known limitation: the count is a frame-set *proxy*. A detection landing on an
         already-seen bucket_key (changing the ROI but not the count) is not detected; the
@@ -143,11 +150,10 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             )
             count_sq = count_select.scalar_subquery()
             new_due = cast(Any, case)((count_sq == frame_count, null()), else_=due_col)
-        stmt: Any = (
-            update(Sequence)
-            .where(cast(Any, Sequence.id) == sequence_id)
-            .values(validation_due_at=new_due, validation_lease_until=None)
-        )
+        values: dict = {"validation_due_at": new_due, "validation_lease_until": None}
+        if validation_status is not None:
+            values["validation_status"] = validation_status
+        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
         await self.session.exec(stmt)
         await self.session.commit()
 
@@ -161,13 +167,5 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         if retry_in_seconds is not None:
             values["validation_due_at"] = utcnow() + timedelta(seconds=retry_in_seconds)
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
-        await self.session.exec(stmt)
-        await self.session.commit()
-
-    async def set_validation_status(self, sequence_id: int, validation_status: str) -> None:
-        """Record how validation concluded (observability, incl. explicit fail-open reasons)."""
-        stmt: Any = (
-            update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(validation_status=validation_status)
-        )
         await self.session.exec(stmt)
         await self.session.commit()

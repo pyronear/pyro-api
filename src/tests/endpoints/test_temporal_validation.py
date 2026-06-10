@@ -23,7 +23,6 @@ from app.services.validation import (
     FAIL_OPEN_UNAVAILABLE,
     VALIDATED_BY_MODEL,
     WINDOW_EXHAUSTED,
-    _process_claimed_sequence,
     _sequence_frames_and_roi,
     process_next_due_validation,
 )
@@ -146,7 +145,7 @@ async def test_enqueue_skips_validated_and_window_exhausted(detection_session: A
     assert seq.validation_due_at is None  # validated: nothing to do
 
     seq2 = await _seed_sequence(detection_session, 5)
-    await crud.set_validation_status(cast(int, seq2.id), WINDOW_EXHAUSTED)
+    await crud.finish_validation_job(cast(int, seq2.id), validation_status=WINDOW_EXHAUSTED)
     await crud.enqueue_validation(cast(int, seq2.id))
     await detection_session.refresh(seq2)
     assert seq2.validation_due_at is None  # terminal: never resurrected
@@ -482,19 +481,23 @@ async def test_attach_failure_past_window_does_not_window_exhaust(detection_sess
 
 
 @pytest.mark.asyncio
-async def test_process_rereads_fresh_sequence_state(detection_session: AsyncSession, monkeypatch):
-    """The worker must risk-gate on the CURRENT max_conf, not the claim-time snapshot."""
-    seq = await _seed_sequence(detection_session, 5, max_conf=0.90)  # DB: high confidence
-    stale = Sequence(**{**seq.model_dump(), "max_conf": 0.30})  # claim-time snapshot: low
-    stale.id = seq.id
+async def test_process_risk_gates_on_current_max_conf(detection_session: AsyncSession, monkeypatch):
+    """The worker risk-gates on the CURRENT max_conf: a bump while the job was queued counts
+    (the pipeline takes only the sequence id and reads all state fresh from the DB)."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)  # below the 0.6 gate
+    await _enqueue(detection_session, cast(int, seq.id))
+    seq_db = cast(Sequence, await SequenceCRUD(detection_session).get(cast(int, seq.id), strict=True))
+    seq_db.max_conf = 0.90  # bumped by a detection while the job sat in the queue
+    detection_session.add(seq_db)
+    await detection_session.commit()
     predict = AsyncMock(return_value=0.9)
     monkeypatch.setattr(risk_service, "_scores", {1: "very_low"})  # 0.6 threshold
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    await _process_claimed_sequence(stale)
+    assert await process_next_due_validation() is True
 
-    predict.assert_awaited()  # gate evaluated on the fresh 0.90, not the stale 0.30
+    predict.assert_awaited()  # gate evaluated on the fresh 0.90, not the enqueue-time 0.30
 
 
 @pytest.mark.asyncio
