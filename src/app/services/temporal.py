@@ -81,10 +81,11 @@ class TemporalModelService:
         call that carries no calibrated probability. Raises :class:`TemporalUnavailableError`
         when the call itself fails (network/HTTP), so callers can fail open.
 
-        No credentials are sent (unlike the risk API): this assumes the temporal API is
-        reachable only on a trusted/private network.
+        Sends ``Authorization: Bearer`` when ``TEMPORAL_API_TOKEN`` is set (the temporal API
+        guards /predict with a shared token); unset matches a server with auth disabled.
         """
         host = (settings.TEMPORAL_API_URL or "").rstrip("/")
+        headers = {"Authorization": f"Bearer {settings.TEMPORAL_API_TOKEN}"} if settings.TEMPORAL_API_TOKEN else None
         try:
             # Serialize against the model's real throughput so bursts queue instead of timing out.
             async with self._semaphore:
@@ -92,7 +93,9 @@ class TemporalModelService:
                 if not self.is_available():
                     raise TemporalUnavailableError("breaker open")
                 async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
-                    response = await client.post(f"{host}/predict", json={"bucket": bucket, "frames": frames})
+                    response = await client.post(
+                        f"{host}/predict", json={"bucket": bucket, "frames": frames}, headers=headers
+                    )
                     response.raise_for_status()
                     data = response.json()
         except (httpx.HTTPError, ValueError) as exc:

@@ -58,6 +58,18 @@ async def test_predict_returns_probability_and_resets_breaker(configured_tempora
     args, kwargs = inner.post.await_args
     assert args[0].endswith("/predict")
     assert kwargs["json"] == {"bucket": "bucket-2", "frames": ["a.jpg", "b.jpg"]}
+    assert kwargs["headers"] is None  # no token configured -> no Authorization header
+
+
+@pytest.mark.asyncio
+async def test_predict_sends_bearer_token_when_configured(configured_temporal, monkeypatch):
+    monkeypatch.setattr(settings, "TEMPORAL_API_TOKEN", "s3cret")
+    service = TemporalModelService()
+    factory, inner = _fake_httpx_post_client(json_data={"probability": 0.5})
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        await service.predict("bucket", ["a.jpg"])
+    _, kwargs = inner.post.await_args
+    assert kwargs["headers"] == {"Authorization": "Bearer s3cret"}
 
 
 @pytest.mark.asyncio
