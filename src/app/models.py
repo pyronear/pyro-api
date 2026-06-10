@@ -91,6 +91,11 @@ class Detection(SQLModel, table=True):
     bbox: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH_SINGLE, nullable=False)
     others_bboxes: Union[str, None] = Field(default=None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS, nullable=True)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    recorded_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        description="UTC timestamp of when the image was captured on-device. Defaults to created_at when unknown.",
+    )
 
 
 class Sequence(SQLModel, table=True):
