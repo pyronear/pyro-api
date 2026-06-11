@@ -243,16 +243,17 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
             await _finish_job(sequence_id)
             return
         organization_id = camera.organization_id
-        # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
-        # Completing the job is fine: the next detection re-enqueues and the gate re-evaluates
-        # with the grown max_conf.
-        threshold = risk_service.min_confidence(camera.id)
-        if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
-            await _finish_job(sequence_id)
-            return
         total_frames, frames, roi_xyxyn = await _sequence_frames_and_roi(
             detections, sequence_id, last_n=temporal_service.MAX_FRAMES
         )
+        # Risk pre-gate: in low fire-risk weather, low-confidence sequences are filtered out.
+        # The finish is conditional on the frame count (read BEFORE the gate) so a detection
+        # bumping max_conf mid-job keeps the job due and the gate re-evaluates immediately,
+        # instead of the bump being lost until the next detection.
+        threshold = risk_service.min_confidence(camera.id)
+        if threshold is not None and (sequence_.max_conf is None or sequence_.max_conf < threshold):
+            await _finish_job(sequence_id, frame_count=total_frames)
+            return
 
     score: Optional[float] = None
     validation_status: Optional[str] = None
@@ -325,7 +326,13 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
         async with session_factory() as session:
             await SequenceCRUD(session).set_temporal_score(sequence_id, score)
     if not validated:
-        # Below threshold: keep the score, retry when the frame set grows (the
+        if total_frames > temporal_service.MAX_FRAMES:
+            # The model just had its LAST chance (first scoring past the window, on the
+            # last MAX_FRAMES) and declined: terminal right away, consistent with the
+            # stored-score-below-threshold rule above.
+            await _finish_job(sequence_id, validation_status=WINDOW_EXHAUSTED)
+            return
+        # Below threshold in-window: keep the score, retry when the frame set grows (the
         # conditional finish keeps the job due if frames arrived during scoring).
         await _finish_job(sequence_id, frame_count=total_frames)
         return
@@ -347,7 +354,11 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
         # retry back — the job stays due and validated, so the retry resumes HERE
         # instead of re-deciding a verdict that was already reached.
         if claim and not await sequences.claim_validation(sequence_id, validation_status):
-            await sequences.finish_validation_job(sequence_id)
+            # Lost the claim: someone else validated (e.g. our lease expired mid-model-call
+            # and a sibling reprocessed the job). Do NOT complete the job — we can't know
+            # whether the winner finished its post-claim work or died right after the flip.
+            # Leaving the row due is always safe: if the winner finished, it already cleared
+            # the due marker; if it died, the lease expiry resumes attach/notify here.
             return
         # Imported lazily to avoid a services -> endpoints import at module load.
         from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert

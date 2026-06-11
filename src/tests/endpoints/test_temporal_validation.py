@@ -804,16 +804,17 @@ async def test_process_fails_open_when_predict_raises_in_flight(detection_sessio
 
 
 @pytest.mark.asyncio
-async def test_process_lost_claim_completes_without_side_effects(detection_session: AsyncSession, monkeypatch):
-    """If another actor validates between the verdict and the claim, the loser just
-    completes its job without triangulating or notifying twice."""
+async def test_process_lost_claim_leaves_job_due_for_resume(detection_session: AsyncSession, monkeypatch):
+    """A loser of the validation claim must NOT complete the job: the winner may have died
+    right after the flip, and the due marker is the only thing that resumes its work."""
     seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
     await _enqueue(detection_session, cast(int, seq.id))
     monkeypatch.setattr(risk_service, "_scores", {})
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
 
     async def predict_and_steal_claim(*_args, **_kwargs):
-        # Simulate a concurrent actor winning the claim while the model call is in flight.
+        # Simulate a sibling winning the claim while the model call is in flight (our lease
+        # expired mid-call, the sibling reprocessed the job and died right after the flip).
         async with session_factory() as session:
             await SequenceCRUD(session).claim_validation(cast(int, seq.id))
         return 0.9
@@ -824,8 +825,68 @@ async def test_process_lost_claim_completes_without_side_effects(detection_sessi
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True  # the concurrent claim stands
-    assert seq.validation_due_at is None  # loser completed its job
+    assert seq.validation_due_at is not None  # job NOT completed: the winner's work may be pending
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is False  # no double attach
+
+    # Once the loser's lease expires, the resume path completes the winner's pending work.
+    crud = SequenceCRUD(detection_session)
+    seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
+    seq_db.validation_lease_until = utcnow() - timedelta(seconds=1)
+    detection_session.add(seq_db)
+    await detection_session.commit()
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is None  # resumed and completed
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_first_score_past_window_below_threshold_is_terminal(detection_session: AsyncSession, monkeypatch):
+    """A never-scored sequence past MAX_FRAMES whose first (truncated) score declines must
+    land in window_exhausted right away, not linger unlabeled."""
+    seq = await _seed_sequence(detection_session, 12, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.40))  # declined
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False
+    assert seq.validation_status == WINDOW_EXHAUSTED  # the model had its last chance
+    assert seq.validation_due_at is None
+    assert seq.temporal_model_score == pytest.approx(0.40)
+
+    # Terminal: a later enqueue can't resurrect it.
+    await SequenceCRUD(detection_session).enqueue_validation(cast(int, seq.id))
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is None
+
+
+@pytest.mark.asyncio
+async def test_risk_gate_finish_keeps_due_when_frames_changed(detection_session: AsyncSession, monkeypatch):
+    """A max_conf bump landing mid-job (it always comes with a new detection) must keep the
+    risk-gated job due so the gate re-evaluates immediately instead of losing the bump."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {1: "very_low"})  # 0.6 threshold: gate blocks
+    # Simulate a detection arriving after the frame read: the worker saw 4 frames, DB has 5.
+    real_frames = validation_service._sequence_frames_and_roi
+
+    async def stale_frames(detections, sequence_id, last_n=None):
+        total, frames, roi = await real_frames(detections, sequence_id, last_n)
+        return total - 1, frames[:-1], roi
+
+    monkeypatch.setattr(validation_service, "_sequence_frames_and_roi", stale_frames)
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False
+    assert seq.validation_due_at is not None  # job kept due: the gate re-evaluates next claim
 
 
 @pytest.mark.asyncio
