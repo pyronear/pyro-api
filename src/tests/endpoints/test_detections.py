@@ -1370,11 +1370,11 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     assert seqs_in_a == {seq_cam7.id, seq_cam5.id}
 
 
-async def _make_nemours_moret_cameras(detection_session: AsyncSession) -> Tuple[Camera, Camera]:
+async def _make_crossing_cameras(detection_session: AsyncSession) -> Tuple[Camera, Camera]:
     now = utcnow()
-    cam_nemours = Camera(
+    cam1 = Camera(
         organization_id=1,
-        name="nemours-01",
+        name="cam-merge-1",
         angle_of_view=54.2,
         elevation=110.0,
         lat=48.2605,
@@ -1384,9 +1384,9 @@ async def _make_nemours_moret_cameras(detection_session: AsyncSession) -> Tuple[
         last_image=None,
         created_at=now,
     )
-    cam_moret = Camera(
+    cam2 = Camera(
         organization_id=1,
-        name="moret-01",
+        name="cam-merge-2",
         angle_of_view=54.2,
         elevation=110.0,
         lat=48.3792,
@@ -1396,68 +1396,71 @@ async def _make_nemours_moret_cameras(detection_session: AsyncSession) -> Tuple[
         last_image=None,
         created_at=now,
     )
-    detection_session.add_all([cam_nemours, cam_moret])
+    detection_session.add_all([cam1, cam2])
     await detection_session.commit()
-    await detection_session.refresh(cam_nemours)
-    await detection_session.refresh(cam_moret)
-    return cam_nemours, cam_moret
+    await detection_session.refresh(cam1)
+    await detection_session.refresh(cam2)
+    return cam1, cam2
 
 
-async def _setup_singleton_alerts_then_converge(
+async def _setup_time_disjoint_singleton_alerts(
     detection_session: AsyncSession,
     seq_crud: SequenceCRUD,
     alert_crud: AlertCRUD,
     cam_crud: CameraCRUD,
 ) -> Tuple[Sequence, Sequence, int, int]:
-    """Two sequences each holding a singleton alert, then the second azimuth converges.
+    """Two cone-crossing sequences each holding a singleton alert, then their windows rejoin.
 
-    Replays the production scenario behind orphan alerts: a sequence's azimuth is estimated
-    from its first detections, so two cameras seeing the same smoke can briefly miss each
-    other's cone and each get their own singleton alert; the azimuth then refines and the
-    next attachment recomputes a triangulated group spanning both alerts.
+    Replays the production scenario behind orphan alerts: sequence azimuths are fixed at
+    creation, but two sequences only pair up when their time windows overlap within the
+    triangulation relaxation. Here the cam2 sequence starts too long after the cam1 one
+    was last seen, so each gets its own singleton alert; the cam1 camera then sees the
+    smoke again (its ``last_seen_at`` extends) and the next attachment recomputes a
+    triangulated group spanning both alerts.
     """
     now = utcnow()
-    cam_nemours, cam_moret = await _make_nemours_moret_cameras(detection_session)
+    cam1, cam2 = await _make_crossing_cameras(detection_session)
 
-    seq_nemours = Sequence(
-        camera_id=cam_nemours.id,
+    seq_cam1 = Sequence(
+        camera_id=cam1.id,
         pose_id=1,
         camera_azimuth=0.0,
         sequence_azimuth=-17.5,
         cone_angle=1.4,
         is_wildfire=None,
-        started_at=now - timedelta(seconds=30),
-        last_seen_at=now - timedelta(seconds=20),
+        started_at=now - timedelta(minutes=70),
+        last_seen_at=now - timedelta(minutes=50),
     )
-    # Initial azimuth estimate points east, away from the nemours cone: no overlap yet.
-    seq_moret = Sequence(
-        camera_id=cam_moret.id,
+    # Starts 40 minutes after the cam1 sequence was last seen: outside the triangulation
+    # relaxation window, so the cones cross but the sequences are not concurrent yet.
+    seq_cam2 = Sequence(
+        camera_id=cam2.id,
         pose_id=2,
         camera_azimuth=280.0,
-        sequence_azimuth=96.5,
+        sequence_azimuth=276.5,
         cone_angle=3.0,
         is_wildfire=None,
-        started_at=now - timedelta(seconds=25),
-        last_seen_at=now - timedelta(seconds=15),
+        started_at=now - timedelta(minutes=10),
+        last_seen_at=now - timedelta(minutes=5),
     )
-    detection_session.add_all([seq_nemours, seq_moret])
+    detection_session.add_all([seq_cam1, seq_cam2])
     await detection_session.commit()
-    await detection_session.refresh(seq_nemours)
-    await detection_session.refresh(seq_moret)
+    await detection_session.refresh(seq_cam1)
+    await detection_session.refresh(seq_cam2)
 
-    first_alert_id = await _attach_sequence_to_alert(seq_nemours, cam_nemours, cam_crud, seq_crud, alert_crud)
+    first_alert_id = await _attach_sequence_to_alert(seq_cam1, cam1, cam_crud, seq_crud, alert_crud)
     assert first_alert_id is not None
-    orphan_alert_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+    orphan_alert_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
     assert orphan_alert_id is not None
     assert orphan_alert_id != first_alert_id
 
-    # The azimuth refines with later detections and now crosses the nemours cone.
-    seq_moret.sequence_azimuth = 276.5
-    detection_session.add(seq_moret)
+    # The cam1 camera sees the smoke again: the time windows now overlap.
+    seq_cam1.last_seen_at = now
+    detection_session.add(seq_cam1)
     await detection_session.commit()
-    await detection_session.refresh(seq_moret)
+    await detection_session.refresh(seq_cam1)
 
-    return seq_nemours, seq_moret, first_alert_id, orphan_alert_id
+    return seq_cam1, seq_cam2, first_alert_id, orphan_alert_id
 
 
 @pytest.mark.asyncio
@@ -1466,12 +1469,12 @@ async def test_attach_merge_deletes_superseded_singleton_alert(detection_session
     alert_crud = AlertCRUD(detection_session)
     cam_crud = CameraCRUD(detection_session)
 
-    seq_nemours, seq_moret, first_alert_id, orphan_alert_id = await _setup_singleton_alerts_then_converge(
+    seq_cam1, seq_cam2, first_alert_id, orphan_alert_id = await _setup_time_disjoint_singleton_alerts(
         detection_session, seq_crud, alert_crud, cam_crud
     )
 
-    cam_moret = await cam_crud.get(seq_moret.camera_id, strict=True)
-    target_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+    cam2 = await cam_crud.get(seq_cam2.camera_id, strict=True)
+    target_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
 
     # Both sequences merge into the oldest alert, now triangulated.
     assert target_id == first_alert_id
@@ -1479,7 +1482,7 @@ async def test_attach_merge_deletes_superseded_singleton_alert(detection_session
     assert merged.lat is not None
     assert merged.lon is not None
     links_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == first_alert_id))
-    assert {link.sequence_id for link in links_res.all()} == {seq_nemours.id, seq_moret.id}
+    assert {link.sequence_id for link in links_res.all()} == {seq_cam1.id, seq_cam2.id}
 
     # The superseded singleton alert is unlinked and deleted, leaving no orphan duplicate.
     assert await alert_crud.get(orphan_alert_id) is None
@@ -1496,13 +1499,13 @@ async def test_attach_merge_keeps_superseded_alert_with_other_sequences(detectio
     cam_crud = CameraCRUD(detection_session)
     now = utcnow()
 
-    _seq_nemours, seq_moret, first_alert_id, orphan_alert_id = await _setup_singleton_alerts_then_converge(
+    _seq_cam1, seq_cam2, first_alert_id, orphan_alert_id = await _setup_time_disjoint_singleton_alerts(
         detection_session, seq_crud, alert_crud, cam_crud
     )
 
     # The superseded alert also holds an old sequence outside the recent grouping window.
     old_seq = Sequence(
-        camera_id=seq_moret.camera_id,
+        camera_id=seq_cam2.camera_id,
         pose_id=3,
         camera_azimuth=280.0,
         sequence_azimuth=96.5,
@@ -1517,8 +1520,8 @@ async def test_attach_merge_keeps_superseded_alert_with_other_sequences(detectio
     detection_session.add(AlertSequence(alert_id=orphan_alert_id, sequence_id=old_seq.id))
     await detection_session.commit()
 
-    cam_moret = await cam_crud.get(seq_moret.camera_id, strict=True)
-    target_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+    cam2 = await cam_crud.get(seq_cam2.camera_id, strict=True)
+    target_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
     assert target_id == first_alert_id
 
     # The merged sequences are unlinked from the superseded alert, but the alert survives
