@@ -129,6 +129,21 @@ class Sequence(SQLModel, table=True):
         nullable=True,
         description="Latest temporal-model smoke probability for this sequence, or None if never scored.",
     )
+    # Provenance of temporal_model_score, written in the same UPDATE: lets stored scores be
+    # evaluated per model release / serving image (e.g. against is_wildfire annotations)
+    # long after redeploys. None when never scored, or when the serving build is unstamped.
+    temporal_model_version: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        description="Model release that produced temporal_model_score (manifest version, e.g. '0.1.0').",
+    )
+    temporal_api_version: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        description="Temporal API serving-code version (Docker image tag) that produced temporal_model_score.",
+    )
     is_validated: bool = Field(
         default=False,
         nullable=False,

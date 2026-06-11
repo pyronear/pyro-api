@@ -40,9 +40,28 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         await self.session.exec(stmt)
         await self.session.commit()
 
-    async def set_temporal_score(self, sequence_id: int, score: float) -> None:
-        """Persist the latest temporal-model score for the sequence."""
-        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(temporal_model_score=score)
+    async def set_temporal_score(
+        self,
+        sequence_id: int,
+        score: float,
+        model_version: Union[str, None] = None,
+        api_version: Union[str, None] = None,
+    ) -> None:
+        """Persist the latest temporal-model score with its provenance.
+
+        The versions are written unconditionally in the same UPDATE: they describe the
+        stored score, so the triple always moves together (a re-score by a newer release
+        overwrites all three).
+        """
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .values(
+                temporal_model_score=score,
+                temporal_model_version=model_version,
+                temporal_api_version=api_version,
+            )
+        )
         await self.session.exec(stmt)
         await self.session.commit()
 

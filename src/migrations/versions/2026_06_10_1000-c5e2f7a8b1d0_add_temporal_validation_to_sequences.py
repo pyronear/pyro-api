@@ -23,6 +23,10 @@ logger = logging.getLogger("alembic.runtime.migration")
 
 def upgrade() -> None:
     op.add_column("sequences", sa.Column("temporal_model_score", sa.Float(), nullable=True))
+    # Provenance of the score (model release + serving image tag), for per-version
+    # offline evaluation; written alongside the score, NULL when never scored.
+    op.add_column("sequences", sa.Column("temporal_model_version", sa.String(length=32), nullable=True))
+    op.add_column("sequences", sa.Column("temporal_api_version", sa.String(length=32), nullable=True))
     op.add_column(
         "sequences",
         sa.Column("is_validated", sa.Boolean(), nullable=False, server_default=sa.false()),
@@ -66,4 +70,6 @@ def downgrade() -> None:
     op.drop_column("sequences", "validation_lease_until")
     op.drop_column("sequences", "validation_due_at")
     op.drop_column("sequences", "is_validated")
+    op.drop_column("sequences", "temporal_api_version")
+    op.drop_column("sequences", "temporal_model_version")
     op.drop_column("sequences", "temporal_model_score")

@@ -205,6 +205,8 @@ SEQ_TABLE = [
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
         "max_conf": None,
         "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
         "is_validated": True,
     },
     {
@@ -219,6 +221,8 @@ SEQ_TABLE = [
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "max_conf": None,
         "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
         "is_validated": True,
     },
 ]

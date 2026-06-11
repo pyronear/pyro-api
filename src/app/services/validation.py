@@ -46,7 +46,7 @@ from app.services.risk import risk_service
 from app.services.slack import slack_client
 from app.services.storage import s3_service
 from app.services.telegram import telegram_client
-from app.services.temporal import TemporalUnavailableError, temporal_service
+from app.services.temporal import TemporalPrediction, TemporalUnavailableError, temporal_service
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -255,7 +255,7 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
             await _finish_job(sequence_id, frame_count=total_frames)
             return
 
-    score: Optional[float] = None
+    prediction: Optional[TemporalPrediction] = None
     validation_status: Optional[str] = None
 
     # Window rules past MAX_FRAMES, decided on the stored score. Declined (score <=
@@ -308,23 +308,29 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
         # Phase 2 — model call, with NO DB session held.
         bucket = s3_service.resolve_bucket_name(organization_id)
         try:
-            score = await temporal_service.predict(bucket, frames, roi_xyxyn=roi_xyxyn)
+            prediction = await temporal_service.predict(bucket, frames, roi_xyxyn=roi_xyxyn)
         except TemporalUnavailableError:
             validated = True
             validation_status = FAIL_OPEN_UNAVAILABLE
         else:
-            if score is None:
+            if prediction.probability is None:
                 # Successful but scoreless response (uncalibrated model): cannot confirm,
                 # retry on the next frame set.
                 await _finish_job(sequence_id, frame_count=total_frames)
                 return
-            validated = score > settings.TEMPORAL_MODEL_THRESHOLD
+            validated = prediction.probability > settings.TEMPORAL_MODEL_THRESHOLD
             validation_status = VALIDATED_BY_MODEL if validated else None
 
-    # Phase 3 — persist the score and, once validated, claim + triangulate + notify.
-    if score is not None:
+    # Phase 3 — persist the score (with its version provenance) and, once validated,
+    # claim + triangulate + notify.
+    if prediction is not None and prediction.probability is not None:
         async with session_factory() as session:
-            await SequenceCRUD(session).set_temporal_score(sequence_id, score)
+            await SequenceCRUD(session).set_temporal_score(
+                sequence_id,
+                prediction.probability,
+                model_version=prediction.model_version,
+                api_version=prediction.api_version,
+            )
     if not validated:
         if total_frames > temporal_service.MAX_FRAMES:
             # The model just had its LAST chance (first scoring past the window, on the

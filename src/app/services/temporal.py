@@ -6,7 +6,7 @@
 import logging
 import random
 from datetime import timedelta
-from typing import List, Union
+from typing import List, NamedTuple, Union
 
 import httpx
 
@@ -15,11 +15,25 @@ from app.core.time import utcnow
 
 logger = logging.getLogger("uvicorn.error")
 
-__all__ = ["TemporalUnavailableError", "temporal_service"]
+__all__ = ["TemporalPrediction", "TemporalUnavailableError", "temporal_service"]
 
 
 class TemporalUnavailableError(Exception):
     """Raised when a temporal API call fails (network/HTTP). Distinct from a scoreless response."""
+
+
+class TemporalPrediction(NamedTuple):
+    """A /predict result: the score plus the model/code versions that produced it.
+
+    ``probability`` is None for a successful but scoreless (uncalibrated) response. The
+    versions are persisted next to the score so every stored score stays attributable to
+    the exact model release and serving-code image after redeploys (offline evaluation
+    against the ``is_wildfire`` ground truth, per-version threshold tuning).
+    """
+
+    probability: Union[float, None]
+    model_version: Union[str, None] = None
+    api_version: Union[str, None] = None
 
 
 class TemporalModelService:
@@ -95,16 +109,17 @@ class TemporalModelService:
 
     async def predict(
         self, bucket: str, frames: List[str], roi_xyxyn: Union[List[float], None] = None
-    ) -> Union[float, None]:
-        """Return the smoke probability for the given frames.
+    ) -> TemporalPrediction:
+        """Return the smoke probability for the given frames, with version provenance.
 
         ``roi_xyxyn`` (normalized [x_min, y_min, x_max, y_max] corners) scopes the verdict
         to the sequence's region so unrelated activity in the frame can't pollute it.
 
         Records success/failure for the circuit breaker (4xx fails the call but closes the
-        breaker — the API answered). Returns ``None`` for a successful call that carries no
-        calibrated probability. Raises :class:`TemporalUnavailableError` when the call itself
-        fails, so callers can fail open.
+        breaker — the API answered). The returned probability is ``None`` for a successful
+        call that carries no calibrated probability. Raises
+        :class:`TemporalUnavailableError` when the call itself fails, so callers can fail
+        open.
 
         Sends ``Authorization: Bearer`` when ``TEMPORAL_API_TOKEN`` is set (the temporal API
         guards /predict with a shared token); unset matches a server with auth disabled.
@@ -135,7 +150,16 @@ class TemporalModelService:
             raise TemporalUnavailableError(str(exc)) from exc
         self._record_success()
         probability = data.get("probability") if isinstance(data, dict) else None
-        return float(probability) if isinstance(probability, (int, float)) else None
+        # The response's "version" block ({"api": ..., "model": ...}) carries the serving
+        # image tag and the packaged model release; absent on older servers, values null on
+        # non-release builds.
+        version = data.get("version") if isinstance(data, dict) else None
+        version = version if isinstance(version, dict) else {}
+        return TemporalPrediction(
+            probability=float(probability) if isinstance(probability, (int, float)) else None,
+            model_version=str(version["model"]) if version.get("model") is not None else None,
+            api_version=str(version["api"]) if version.get("api") is not None else None,
+        )
 
 
 temporal_service = TemporalModelService()

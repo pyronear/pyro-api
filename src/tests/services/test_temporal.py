@@ -49,15 +49,37 @@ def test_is_available_true_when_configured(configured_temporal):
 async def test_predict_returns_probability_and_resets_breaker(configured_temporal):
     service = TemporalModelService()
     service._consecutive_failures = 2
-    factory, inner = _fake_httpx_post_client(json_data={"is_smoke": True, "probability": 0.73, "model": "m"})
+    factory, inner = _fake_httpx_post_client(
+        json_data={"is_smoke": True, "probability": 0.73, "version": {"api": "1.4.0", "model": "0.1.0"}}
+    )
     with patch("app.services.temporal.httpx.AsyncClient", factory):
-        prob = await service.predict("bucket-2", ["a.jpg", "b.jpg"])
-    assert prob == pytest.approx(0.73)
+        prediction = await service.predict("bucket-2", ["a.jpg", "b.jpg"])
+    assert prediction.probability == pytest.approx(0.73)
+    # Version provenance is parsed so callers can persist it next to the score.
+    assert prediction.model_version == "0.1.0"
+    assert prediction.api_version == "1.4.0"
     assert service._consecutive_failures == 0
     args, kwargs = inner.post.await_args
     assert args[0].endswith("/predict")
     assert kwargs["json"] == {"bucket": "bucket-2", "frames": ["a.jpg", "b.jpg"]}  # no roi key when unset
     assert kwargs["headers"] is None  # no token configured -> no Authorization header
+
+
+@pytest.mark.asyncio
+async def test_predict_tolerates_missing_or_null_version(configured_temporal):
+    """Older servers omit the version block; non-release builds report null values."""
+    service = TemporalModelService()
+    factory, _ = _fake_httpx_post_client(json_data={"probability": 0.5, "version": {"api": None, "model": "0.1.0"}})
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        prediction = await service.predict("bucket", ["a.jpg"])
+    assert prediction.api_version is None
+    assert prediction.model_version == "0.1.0"
+
+    factory, _ = _fake_httpx_post_client(json_data={"probability": 0.5})  # no version key at all
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        prediction = await service.predict("bucket", ["a.jpg"])
+    assert prediction.api_version is None
+    assert prediction.model_version is None
 
 
 @pytest.mark.asyncio
@@ -87,8 +109,8 @@ async def test_predict_returns_none_when_probability_missing(configured_temporal
     service = TemporalModelService()
     factory, _ = _fake_httpx_post_client(json_data={"is_smoke": False, "probability": None})
     with patch("app.services.temporal.httpx.AsyncClient", factory):
-        prob = await service.predict("bucket", ["a.jpg"])
-    assert prob is None
+        prediction = await service.predict("bucket", ["a.jpg"])
+    assert prediction.probability is None
     assert service._consecutive_failures == 0  # success, breaker untouched
 
 
@@ -147,7 +169,7 @@ async def test_breaker_probe_success_closes(configured_temporal):
     service._half_open = True
     factory, _ = _fake_httpx_post_client(json_data={"probability": 0.5})
     with patch("app.services.temporal.httpx.AsyncClient", factory):
-        assert await service.predict("bucket", ["a.jpg"]) == pytest.approx(0.5)
+        assert (await service.predict("bucket", ["a.jpg"])).probability == pytest.approx(0.5)
     assert service._half_open is False
     assert service._open_count == 0  # fully closed: a future outage backs off from the base again
     assert service.is_available() is True
