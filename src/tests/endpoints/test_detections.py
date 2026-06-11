@@ -1522,12 +1522,15 @@ async def test_attach_merge_keeps_superseded_alert_with_other_sequences(detectio
     assert target_id == first_alert_id
 
     # The merged sequences are unlinked from the superseded alert, but the alert survives
-    # with its remaining sequence.
-    assert await alert_crud.get(orphan_alert_id) is not None
+    # with its remaining sequence and its bounds are refreshed from it.
+    survivor = await alert_crud.get(orphan_alert_id)
+    assert survivor is not None
     orphan_links_res = await detection_session.exec(
         select(AlertSequence).where(AlertSequence.alert_id == orphan_alert_id)
     )
     assert {link.sequence_id for link in orphan_links_res.all()} == {old_seq.id}
+    assert survivor.started_at == old_seq.started_at
+    assert survivor.last_seen_at == old_seq.last_seen_at
 
 
 @pytest.mark.asyncio

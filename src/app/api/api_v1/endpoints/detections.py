@@ -25,7 +25,7 @@ from fastapi import (
     status,
 )
 from fastapi.encoders import jsonable_encoder
-from sqlmodel import delete, func, select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
@@ -55,6 +55,7 @@ from app.schemas.detections import (
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
+from app.services.alerts import refresh_alert_state
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
 from app.services.risk import risk_service
@@ -304,7 +305,8 @@ async def _cleanup_superseded_alerts(
     Only candidates that passed the merge-distance filter ever land here, so alerts further
     than ``ALERT_MERGE_MAX_DISTANCE_KM`` (a sequence can legitimately belong to several
     distant location hypotheses) are never touched. ``kept_pairs`` protects links chosen as
-    targets by another group in the same pass. An alert left without any sequence is deleted.
+    targets by another group in the same pass. Each touched alert is then refreshed from its
+    remaining sequences, or deleted when none are left.
     """
     for aid, group in superseded:
         sids = [int(sid) for sid in group if (aid, int(sid)) not in kept_pairs]
@@ -318,9 +320,7 @@ async def _cleanup_superseded_alerts(
         await session.exec(delete_stmt)
     await session.commit()
     for aid in {aid for aid, _ in superseded}:
-        count_stmt: Any = select(func.count()).select_from(AlertSequence).where(AlertSequence.alert_id == aid)
-        if int((await session.exec(count_stmt)).one()) == 0:
-            await alerts.delete(aid)
+        await refresh_alert_state(aid, session, alerts)
 
 
 async def _attach_sequence_to_alert(
