@@ -3,7 +3,7 @@ import io
 from ast import literal_eval
 from collections import Counter
 from datetime import timedelta
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import pytest  # type: ignore
 from fastapi import BackgroundTasks, HTTPException, UploadFile
@@ -594,8 +594,9 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
     await detection_session.commit()
     await detection_session.refresh(distant)
 
+    candidates = await _filter_candidate_alert_ids({distant.id}, SMOKE_LOCATION, alert_crud)
     target_id = await _get_or_create_alert_id(
-        {distant.id},
+        candidates,
         SMOKE_LOCATION,
         1,
         now - timedelta(seconds=10),
@@ -632,8 +633,9 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
     await detection_session.refresh(nearby)
 
     # Even though `distant` may have a smaller id, it must be filtered out by the distance gate.
+    candidates = await _filter_candidate_alert_ids({distant.id, nearby.id}, SMOKE_LOCATION, alert_crud)
     target_id = await _get_or_create_alert_id(
-        {distant.id, nearby.id},
+        candidates,
         SMOKE_LOCATION,
         1,
         now - timedelta(seconds=10),
@@ -1361,6 +1363,171 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+    # The smoke-A alert is a distant location hypothesis, not a duplicate: the superseded-alert
+    # cleanup must leave it fully intact even though it shares seq_cam7 with the new alert.
+    assert await alert_crud.get(smoke_a_alert_id) is not None
+    assert seqs_in_a == {seq_cam7.id, seq_cam5.id}
+
+
+async def _make_nemours_moret_cameras(detection_session: AsyncSession) -> Tuple[Camera, Camera]:
+    now = utcnow()
+    cam_nemours = Camera(
+        organization_id=1,
+        name="nemours-01",
+        angle_of_view=54.2,
+        elevation=110.0,
+        lat=48.2605,
+        lon=2.7064,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    cam_moret = Camera(
+        organization_id=1,
+        name="moret-01",
+        angle_of_view=54.2,
+        elevation=110.0,
+        lat=48.3792,
+        lon=2.8208,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    detection_session.add_all([cam_nemours, cam_moret])
+    await detection_session.commit()
+    await detection_session.refresh(cam_nemours)
+    await detection_session.refresh(cam_moret)
+    return cam_nemours, cam_moret
+
+
+async def _setup_singleton_alerts_then_converge(
+    detection_session: AsyncSession,
+    seq_crud: SequenceCRUD,
+    alert_crud: AlertCRUD,
+    cam_crud: CameraCRUD,
+) -> Tuple[Sequence, Sequence, int, int]:
+    """Two sequences each holding a singleton alert, then the second azimuth converges.
+
+    Replays the production scenario behind orphan alerts: a sequence's azimuth is estimated
+    from its first detections, so two cameras seeing the same smoke can briefly miss each
+    other's cone and each get their own singleton alert; the azimuth then refines and the
+    next attachment recomputes a triangulated group spanning both alerts.
+    """
+    now = utcnow()
+    cam_nemours, cam_moret = await _make_nemours_moret_cameras(detection_session)
+
+    seq_nemours = Sequence(
+        camera_id=cam_nemours.id,
+        pose_id=1,
+        camera_azimuth=0.0,
+        sequence_azimuth=-17.5,
+        cone_angle=1.4,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=30),
+        last_seen_at=now - timedelta(seconds=20),
+    )
+    # Initial azimuth estimate points east, away from the nemours cone: no overlap yet.
+    seq_moret = Sequence(
+        camera_id=cam_moret.id,
+        pose_id=2,
+        camera_azimuth=280.0,
+        sequence_azimuth=96.5,
+        cone_angle=3.0,
+        is_wildfire=None,
+        started_at=now - timedelta(seconds=25),
+        last_seen_at=now - timedelta(seconds=15),
+    )
+    detection_session.add_all([seq_nemours, seq_moret])
+    await detection_session.commit()
+    await detection_session.refresh(seq_nemours)
+    await detection_session.refresh(seq_moret)
+
+    first_alert_id = await _attach_sequence_to_alert(seq_nemours, cam_nemours, cam_crud, seq_crud, alert_crud)
+    assert first_alert_id is not None
+    orphan_alert_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+    assert orphan_alert_id is not None
+    assert orphan_alert_id != first_alert_id
+
+    # The azimuth refines with later detections and now crosses the nemours cone.
+    seq_moret.sequence_azimuth = 276.5
+    detection_session.add(seq_moret)
+    await detection_session.commit()
+    await detection_session.refresh(seq_moret)
+
+    return seq_nemours, seq_moret, first_alert_id, orphan_alert_id
+
+
+@pytest.mark.asyncio
+async def test_attach_merge_deletes_superseded_singleton_alert(detection_session: AsyncSession):
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+
+    seq_nemours, seq_moret, first_alert_id, orphan_alert_id = await _setup_singleton_alerts_then_converge(
+        detection_session, seq_crud, alert_crud, cam_crud
+    )
+
+    cam_moret = await cam_crud.get(seq_moret.camera_id, strict=True)
+    target_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+
+    # Both sequences merge into the oldest alert, now triangulated.
+    assert target_id == first_alert_id
+    merged = await alert_crud.get(first_alert_id, strict=True)
+    assert merged.lat is not None
+    assert merged.lon is not None
+    links_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == first_alert_id))
+    assert {link.sequence_id for link in links_res.all()} == {seq_nemours.id, seq_moret.id}
+
+    # The superseded singleton alert is unlinked and deleted, leaving no orphan duplicate.
+    assert await alert_crud.get(orphan_alert_id) is None
+    orphan_links_res = await detection_session.exec(
+        select(AlertSequence).where(AlertSequence.alert_id == orphan_alert_id)
+    )
+    assert orphan_links_res.all() == []
+
+
+@pytest.mark.asyncio
+async def test_attach_merge_keeps_superseded_alert_with_other_sequences(detection_session: AsyncSession):
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = utcnow()
+
+    _seq_nemours, seq_moret, first_alert_id, orphan_alert_id = await _setup_singleton_alerts_then_converge(
+        detection_session, seq_crud, alert_crud, cam_crud
+    )
+
+    # The superseded alert also holds an old sequence outside the recent grouping window.
+    old_seq = Sequence(
+        camera_id=seq_moret.camera_id,
+        pose_id=3,
+        camera_azimuth=280.0,
+        sequence_azimuth=96.5,
+        cone_angle=3.0,
+        is_wildfire=None,
+        started_at=now - timedelta(hours=4),
+        last_seen_at=now - timedelta(hours=3),
+    )
+    detection_session.add(old_seq)
+    await detection_session.commit()
+    await detection_session.refresh(old_seq)
+    detection_session.add(AlertSequence(alert_id=orphan_alert_id, sequence_id=old_seq.id))
+    await detection_session.commit()
+
+    cam_moret = await cam_crud.get(seq_moret.camera_id, strict=True)
+    target_id = await _attach_sequence_to_alert(seq_moret, cam_moret, cam_crud, seq_crud, alert_crud)
+    assert target_id == first_alert_id
+
+    # The merged sequences are unlinked from the superseded alert, but the alert survives
+    # with its remaining sequence.
+    assert await alert_crud.get(orphan_alert_id) is not None
+    orphan_links_res = await detection_session.exec(
+        select(AlertSequence).where(AlertSequence.alert_id == orphan_alert_id)
+    )
+    assert {link.sequence_id for link in orphan_links_res.all()} == {old_seq.id}
 
 
 @pytest.mark.asyncio

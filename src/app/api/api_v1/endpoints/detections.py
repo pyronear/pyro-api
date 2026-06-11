@@ -25,7 +25,7 @@ from fastapi import (
     status,
 )
 from fastapi.encoders import jsonable_encoder
-from sqlmodel import select
+from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
@@ -254,14 +254,13 @@ async def _filter_candidate_alert_ids(
 
 
 async def _get_or_create_alert_id(
-    existing_alert_ids: Set[int],
+    candidates: Set[int],
     location: Optional[Tuple[float, float]],
     organization_id: int,
     start_at: datetime,
     last_seen_at: datetime,
     alerts: AlertCRUD,
 ) -> int:
-    candidates = await _filter_candidate_alert_ids(existing_alert_ids, location, alerts)
     if candidates:
         target_alert_id = min(candidates)
         if isinstance(location, tuple):
@@ -294,6 +293,36 @@ def _build_links_for_group(
     return links
 
 
+async def _cleanup_superseded_alerts(
+    session: AsyncSession,
+    superseded: List[Tuple[int, Tuple[int, ...]]],
+    kept_pairs: Set[Tuple[int, int]],
+    alerts: AlertCRUD,
+) -> None:
+    """Unlink merged groups' sequences from the duplicate alerts they superseded.
+
+    Only candidates that passed the merge-distance filter ever land here, so alerts further
+    than ``ALERT_MERGE_MAX_DISTANCE_KM`` (a sequence can legitimately belong to several
+    distant location hypotheses) are never touched. ``kept_pairs`` protects links chosen as
+    targets by another group in the same pass. An alert left without any sequence is deleted.
+    """
+    for aid, group in superseded:
+        sids = [int(sid) for sid in group if (aid, int(sid)) not in kept_pairs]
+        if not sids:
+            continue
+        delete_stmt: Any = (
+            delete(AlertSequence)
+            .where(cast(Any, AlertSequence.alert_id) == aid)
+            .where(cast(Any, AlertSequence.sequence_id).in_(sids))
+        )
+        await session.exec(delete_stmt)
+    await session.commit()
+    for aid in {aid for aid, _ in superseded}:
+        count_stmt: Any = select(func.count()).select_from(AlertSequence).where(AlertSequence.alert_id == aid)
+        if int((await session.exec(count_stmt)).one()) == 0:
+            await alerts.delete(aid)
+
+
 async def _attach_sequence_to_alert(
     sequence_: Sequence,
     camera: Camera,
@@ -323,13 +352,16 @@ async def _attach_sequence_to_alert(
 
     to_link: List[AlertSequence] = []
     alert_id: Optional[int] = None
+    superseded: List[Tuple[int, Tuple[int, ...]]] = []
+    kept_pairs: Set[Tuple[int, int]] = set()
 
     for g in groups:
         location = group_locations.get(g)
         start_at, last_seen_at = _group_time_bounds(g, seq_by_id)
         existing_alert_ids = _collect_existing_alert_ids(g, mapping)
+        candidates = await _filter_candidate_alert_ids(existing_alert_ids, location, alerts)
         target_alert_id = await _get_or_create_alert_id(
-            existing_alert_ids,
+            candidates,
             location,
             camera.organization_id,
             start_at,
@@ -339,10 +371,18 @@ async def _attach_sequence_to_alert(
         if int(sequence_.id) in g:
             alert_id = target_alert_id
         to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
+        kept_pairs.update((target_alert_id, int(sid)) for sid in g)
+        # Without a triangulated location the candidate set is unfiltered, so non-target
+        # candidates may be distant location hypotheses rather than duplicates: don't clean.
+        if location is not None:
+            superseded.extend((aid, g) for aid in candidates - {target_alert_id})
 
     if to_link:
         session.add_all(to_link)
         await session.commit()
+
+    if superseded:
+        await _cleanup_superseded_alerts(session, superseded, kept_pairs, alerts)
 
     return alert_id
 
