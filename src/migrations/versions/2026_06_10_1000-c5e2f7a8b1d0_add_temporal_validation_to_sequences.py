@@ -27,10 +27,22 @@ def upgrade() -> None:
         "sequences",
         sa.Column("is_validated", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
-    # Validation job state: due marker (the queue), worker lease, and final outcome.
+    # Validation job state: due marker (the queue), worker lease, final outcome, and
+    # consecutive-error counter (dead-letter cap).
     op.add_column("sequences", sa.Column("validation_due_at", sa.DateTime(), nullable=True))
     op.add_column("sequences", sa.Column("validation_lease_until", sa.DateTime(), nullable=True))
     op.add_column("sequences", sa.Column("validation_status", sa.String(length=32), nullable=True))
+    op.add_column(
+        "sequences",
+        sa.Column("validation_attempts", sa.Integer(), nullable=False, server_default="0"),
+    )
+    # Enforce the status value set in the DB (single source of truth lives in app.models;
+    # NULL rows pass a CHECK by definition).
+    op.create_check_constraint(
+        "ck_sequences_validation_status",
+        "sequences",
+        "validation_status IN ('model', 'fail_open_unavailable', 'fail_open_stale', 'window_exhausted', 'failed')",
+    )
     # The worker polls for due rows; keep that scan off the table with a partial index
     # (almost every row has validation_due_at IS NULL).
     op.create_index(
@@ -48,6 +60,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_sequences_validation_due_at", table_name="sequences")
+    op.drop_constraint("ck_sequences_validation_status", "sequences", type_="check")
+    op.drop_column("sequences", "validation_attempts")
     op.drop_column("sequences", "validation_status")
     op.drop_column("sequences", "validation_lease_until")
     op.drop_column("sequences", "validation_due_at")

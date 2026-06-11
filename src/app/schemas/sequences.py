@@ -29,3 +29,4 @@ class SequenceRead(Sequence):
     validation_due_at: Union[datetime, None] = Field(None, exclude=True)
     validation_lease_until: Union[datetime, None] = Field(None, exclude=True)
     validation_status: Union[str, None] = Field(None, exclude=True)
+    validation_attempts: int = Field(0, exclude=True)

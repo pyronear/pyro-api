@@ -94,6 +94,17 @@ class Detection(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
 
+# sequences.validation_status values — the single source of truth (enforced by a DB CHECK
+# constraint; the worker and the CRUD queue guards both import from here).
+VALIDATED_BY_MODEL = "model"
+FAIL_OPEN_UNAVAILABLE = "fail_open_unavailable"
+FAIL_OPEN_STALE = "fail_open_stale"
+WINDOW_EXHAUSTED = "window_exhausted"
+VALIDATION_FAILED = "failed"
+# Terminal states: the queue must never resurrect these.
+TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
+
+
 class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
     id: int = Field(None, primary_key=True)
@@ -156,8 +167,19 @@ class Sequence(SQLModel, table=True):
         description=(
             "How validation concluded: 'model' (temporal model confirmed), 'fail_open_unavailable' "
             "(model unreachable/breaker open), 'fail_open_stale' (queued past the max age), "
-            "'window_exhausted' (scored but never confirmed within the frame window; terminal). "
-            "NULL while pending or for pre-gate sequences."
+            "'window_exhausted' (scored but never confirmed within the frame window; terminal), "
+            "'failed' (gave up after repeated job errors; terminal). NULL while pending or for "
+            "pre-gate sequences. Allowed values are enforced by a DB CHECK constraint."
+        ),
+    )
+    validation_attempts: int = Field(
+        default=0,
+        nullable=False,
+        exclude=True,
+        description=(
+            "Consecutive errored validation runs for this sequence (reset on every completed "
+            "job). At MAX_VALIDATION_ATTEMPTS the job dead-letters as validation_status='failed' "
+            "instead of retrying forever."
         ),
     )
 

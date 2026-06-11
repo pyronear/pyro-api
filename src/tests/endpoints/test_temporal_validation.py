@@ -519,6 +519,67 @@ async def test_process_survives_job_error_and_keeps_job_due(detection_session: A
     assert seq.is_validated is False
     assert seq.validation_due_at is not None  # still due
     assert seq.validation_lease_until is None  # lease released for retry
+    assert seq.validation_attempts == 1  # consecutive-error counter ticking
+
+
+@pytest.mark.asyncio
+async def test_poison_job_dead_letters_after_max_attempts(detection_session: AsyncSession, monkeypatch):
+    """A persistently failing job dead-letters as 'failed' instead of retrying forever."""
+    from app.services.validation import MAX_VALIDATION_ATTEMPTS
+
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=RuntimeError("poison")))
+    crud = SequenceCRUD(detection_session)
+
+    for attempt in range(MAX_VALIDATION_ATTEMPTS):
+        if attempt:  # fast-forward past the retry backoff
+            seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
+            seq_db.validation_due_at = utcnow()
+            detection_session.add(seq_db)
+            await detection_session.commit()
+        assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.validation_attempts == MAX_VALIDATION_ATTEMPTS
+    assert seq.validation_status == validation_service.VALIDATION_FAILED
+    assert seq.validation_due_at is None  # dead-lettered: no more retries
+    assert seq.is_validated is False
+
+    # Terminal: new detections can't resurrect it, the worker sees nothing due.
+    await crud.enqueue_validation(cast(int, seq.id))
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is None
+    assert await process_next_due_validation() is False
+
+
+@pytest.mark.asyncio
+async def test_attempts_reset_on_completed_job(detection_session: AsyncSession, monkeypatch):
+    """The dead-letter cap counts CONSECUTIVE failures: a completed job resets the counter."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=RuntimeError("blip")))
+
+    assert await process_next_due_validation() is True  # one transient error
+    await detection_session.refresh(seq)
+    assert seq.validation_attempts == 1
+
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=0.9))  # recovered
+    crud = SequenceCRUD(detection_session)
+    seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
+    seq_db.validation_due_at = utcnow()  # fast-forward past the retry backoff
+    detection_session.add(seq_db)
+    await detection_session.commit()
+
+    assert await process_next_due_validation() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_attempts == 0  # reset on completion
 
 
 @pytest.mark.asyncio
@@ -641,28 +702,34 @@ async def test_sequence_frames_degenerate_roi_is_dropped(detection_session: Asyn
     assert roi is None
 
 
+async def _drain_notifications() -> None:
+    """Await the detached notification tasks fired by completed validations."""
+    pending = list(validation_service._pending_notifications)
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
 @pytest.mark.asyncio
 async def test_notify_without_detections_is_a_noop(detection_session: AsyncSession, monkeypatch):
     """A sequence with no detections (deleted meanwhile) notifies nothing and doesn't crash."""
-    from app.crud import CameraCRUD, OrganizationCRUD, WebhookCRUD
-
     seq = await _seed_sequence(detection_session, 0)
-    camera = await CameraCRUD(detection_session).get(1, strict=True)
     slack_notify = AsyncMock()
     monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
     monkeypatch.setattr(validation_service.slack_client, "notify", slack_notify)
 
-    await _notify_for_sequence(
-        seq,
-        camera,
-        1,
-        DetectionCRUD(detection_session),
-        OrganizationCRUD(detection_session),
-        WebhookCRUD(detection_session),
-        alert_id=None,
-    )
+    await _notify_for_sequence(cast(int, seq.id), 1, alert_id=None)
+    await _notify_for_sequence(999_999, 1, alert_id=None)  # vanished sequence: same no-op
 
     slack_notify.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_notify_swallows_unexpected_errors(detection_session: AsyncSession, monkeypatch):
+    """The detached notification task never leaks an exception (it would go unobserved)."""
+    seq = await _seed_sequence(detection_session, 5)
+    monkeypatch.setattr(DetectionCRUD, "fetch_all", AsyncMock(side_effect=RuntimeError("db hiccup")))
+
+    await _notify_for_sequence(cast(int, seq.id), 1, alert_id=None)  # must not raise
 
 
 @pytest.mark.asyncio
@@ -692,6 +759,7 @@ async def test_notification_channel_failures_never_abort_the_job(detection_sessi
     monkeypatch.setattr(validation_service.slack_client, "notify", sync_boom)
 
     assert await process_next_due_validation() is True
+    await _drain_notifications()  # notifications run detached, off the worker's critical path
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True

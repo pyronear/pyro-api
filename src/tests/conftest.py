@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 from datetime import datetime
@@ -244,6 +245,17 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         timeout=5,
     ) as client:
         yield client
+
+
+@pytest_asyncio.fixture(autouse=True, loop_scope="session")
+async def _drain_detached_notifications():
+    """Detached notification tasks must finish inside the test's event loop."""
+    from app.services import validation as validation_service
+
+    yield
+    pending = list(validation_service._pending_notifications)
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")

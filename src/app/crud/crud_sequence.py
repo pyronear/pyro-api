@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import logging
 from datetime import timedelta
 from typing import Any, Union, cast
 
@@ -13,10 +14,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.time import utcnow
 from app.crud.base import BaseCRUD
-from app.models import Detection, Sequence
+from app.models import TERMINAL_VALIDATION_STATUSES, VALIDATION_FAILED, Detection, Sequence
 from app.schemas.sequences import SequenceLabel, SequenceUpdate
 
 __all__ = ["SequenceCRUD"]
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLabel]]):
@@ -66,7 +69,8 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
 
         Idempotent and FIFO-preserving: ``COALESCE`` keeps the oldest due timestamp, so a
         sequence already queued is NOT re-queued (one entry per sequence, whichever worker
-        receives the detection). No-op for validated or window-exhausted sequences.
+        receives the detection). No-op for validated sequences and terminal states
+        (window-exhausted, failed).
         """
         status_col = cast(Any, Sequence.validation_status)
         due_col = cast(Any, Sequence.validation_due_at)
@@ -74,7 +78,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             update(Sequence)
             .where(cast(Any, Sequence.id) == sequence_id)
             .where(cast(Any, Sequence.is_validated).is_(False))
-            .where(status_col.is_distinct_from("window_exhausted"))
+            .where(or_(status_col.is_(None), status_col.not_in(TERMINAL_VALIDATION_STATUSES)))
             .values(validation_due_at=func.coalesce(due_col, utcnow()))
         )
         await self.session.exec(stmt)
@@ -144,21 +148,33 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             )
             count_sq = count_select.scalar_subquery()
             new_due = cast(Any, case)((count_sq == frame_count, null()), else_=due_col)
-        values: dict = {"validation_due_at": new_due, "validation_lease_until": None}
+        # Completing a job also resets the consecutive-error counter, so the dead-letter
+        # cap counts consecutive failures, not lifetime ones.
+        values: dict = {"validation_due_at": new_due, "validation_lease_until": None, "validation_attempts": 0}
         if validation_status is not None:
             values["validation_status"] = validation_status
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
         await self.session.exec(stmt)
         await self.session.commit()
 
-    async def release_validation_lease(self, sequence_id: int, retry_in_seconds: Union[float, None] = None) -> None:
-        """Release the lease but keep the job due (error path: the job will be retried).
+    async def fail_or_retry_validation(self, sequence_id: int, *, max_attempts: int, retry_in_seconds: float) -> None:
+        """Error path: release the lease and either back off the retry or dead-letter.
 
-        With ``retry_in_seconds``, the due time is pushed into the future so a persistently
-        failing job is retried with a backoff instead of spinning the worker.
+        Increments the consecutive-error counter; below ``max_attempts`` the job stays due,
+        pushed ``retry_in_seconds`` into the future (no tight retry loop). At the cap the
+        job dead-letters: terminal ``validation_status='failed'``, due cleared, never
+        retried nor re-enqueued — a poison job must not starve the serial worker forever.
+        Note the staleness fail-open can't bound this (each retry refreshes the due time),
+        hence the explicit attempts cap.
         """
-        values: dict = {"validation_lease_until": None}
-        if retry_in_seconds is not None:
+        sequence_ = cast(Sequence, await self.get(sequence_id, strict=True))
+        attempts = (sequence_.validation_attempts or 0) + 1
+        values: dict = {"validation_attempts": attempts, "validation_lease_until": None}
+        if attempts >= max_attempts:
+            values["validation_status"] = VALIDATION_FAILED
+            values["validation_due_at"] = None
+            logger.error("Sequence %s failed validation %d times; giving up", sequence_id, attempts)
+        else:
             values["validation_due_at"] = utcnow() + timedelta(seconds=retry_in_seconds)
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
         await self.session.exec(stmt)

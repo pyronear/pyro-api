@@ -803,7 +803,9 @@ async def test_create_detection_triggers_telegram_notifications(
     assert calls["telegram"] == []
 
     # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
     assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
     assert calls["webhooks"] == ["http://example.com/webhook-telegram"]
     assert calls["telegram"] == ["test-channel"]
 
@@ -858,7 +860,9 @@ async def test_create_detection_triggers_slack_notifications(
     assert calls["slack"] == []
 
     # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
     assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
     assert calls["webhooks"] == ["http://example.com/webhook-slack"]
     assert calls["slack"] == ["http://example.com/slack"]
 

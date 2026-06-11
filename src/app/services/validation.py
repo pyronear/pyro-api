@@ -33,7 +33,15 @@ from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, WebhookCRUD
 from app.db import engine, session_factory
-from app.models import Camera, Sequence
+from app.models import (
+    FAIL_OPEN_STALE,
+    FAIL_OPEN_UNAVAILABLE,
+    VALIDATED_BY_MODEL,
+    VALIDATION_FAILED,
+    WINDOW_EXHAUSTED,
+    Camera,
+    Sequence,
+)
 from app.services.risk import risk_service
 from app.services.slack import slack_client
 from app.services.storage import s3_service
@@ -46,20 +54,23 @@ __all__ = [
     "FAIL_OPEN_STALE",
     "FAIL_OPEN_UNAVAILABLE",
     "VALIDATED_BY_MODEL",
+    "VALIDATION_FAILED",
     "WINDOW_EXHAUSTED",
     "process_next_due_validation",
     "validation_worker_loop",
 ]
 
-# sequences.validation_status values
-VALIDATED_BY_MODEL = "model"
-FAIL_OPEN_UNAVAILABLE = "fail_open_unavailable"
-FAIL_OPEN_STALE = "fail_open_stale"
-WINDOW_EXHAUSTED = "window_exhausted"
-
 # Backoff before retrying a job that errored (keeps a persistently failing job from
-# spinning the worker; the job stays due so it is never lost).
+# spinning the worker; the job stays due so it is never lost prematurely).
 RETRY_DELAY_SECONDS = 30.0
+# Consecutive errors before a job dead-letters as validation_status='failed': a poison job
+# must not starve the serial worker forever (the staleness fail-open can't bound this, as
+# each retry refreshes the due time).
+MAX_VALIDATION_ATTEMPTS = 5
+
+# Detached notification tasks (fired after job completion, off the worker's critical path).
+# Strong references so the tasks aren't garbage-collected mid-flight.
+_pending_notifications: set = set()
 
 # Advisory-lock namespace (arbitrary app-wide constant) for per-organization alert attachment.
 _ALERT_LOCK_NAMESPACE = 7341
@@ -137,51 +148,63 @@ async def _sequence_frames_and_roi(
     return total, kept, roi
 
 
-async def _notify_for_sequence(
-    sequence_: Sequence,
-    camera: Camera,
-    organization_id: int,
-    detections: DetectionCRUD,
-    organizations: OrganizationCRUD,
-    webhooks: WebhookCRUD,
-    alert_id: Optional[int],
-) -> None:
+async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id: Optional[int]) -> None:
     """Best-effort notifications (webhooks, Telegram, Slack) for a freshly validated sequence.
 
-    All channels sit behind the validation gate, carrying the sequence's latest detection
-    at validation time. Delivery is at-least-once: a worker dying between notifying and
-    completing the job resumes and may notify again (preferred over losing a fire alert).
-    Each channel is independent: one failing never blocks the others.
+    All channels sit behind the validation gate, carrying the sequence's latest detection.
+    Runs as a detached task AFTER job completion, off the worker's critical path: a slow or
+    hanging channel must never delay the next sequence's scoring. The flip side (accepted):
+    a crash between completion and delivery loses the notification — consistent with the
+    channels being best-effort (errors swallowed, no retries), while the durable artifact
+    is the alert row created by triangulation. Each channel is independent: one failing
+    never blocks the others. Owns its session so it can outlive the worker's.
     """
-    dets = await detections.fetch_all(
-        filters=("sequence_id", sequence_.id), order_by="created_at", order_desc=True, limit=1
-    )
-    if not dets:
-        return
-    det = dets[0]
-    org = await organizations.get(organization_id)
-
-    for webhook in await webhooks.fetch_all():
-        try:
-            await dispatch_webhook(webhook.url, det)
-        except Exception as exc:  # noqa: BLE001 - best-effort: never let a webhook failure abort the job
-            logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_.id, exc)
-
-    if telegram_client.is_enabled and org is not None and org.telegram_id:
-        try:
-            await to_thread.run_sync(telegram_client.notify, org.telegram_id, det.model_dump_json())
-        except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure abort the job
-            logger.warning("Telegram notification failed for sequence %s (%s)", sequence_.id, exc)
-
-    if slack_client.is_enabled and org is not None and org.slack_hook:
-        slack_payload = jsonable_encoder(det)
-        slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-        try:
-            await to_thread.run_sync(
-                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+    try:
+        async with session_factory() as session:
+            sequences = SequenceCRUD(session)
+            detections = DetectionCRUD(session)
+            sequence_ = await sequences.get(sequence_id)
+            if sequence_ is None:
+                return
+            camera = await CameraCRUD(session).get(sequence_.camera_id)
+            dets = await detections.fetch_all(
+                filters=("sequence_id", sequence_id), order_by="created_at", order_desc=True, limit=1
             )
-        except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure abort the job
-            logger.warning("Slack notification failed for sequence %s (%s)", sequence_.id, exc)
+            if camera is None or not dets:
+                return
+            det = dets[0]
+            org = await OrganizationCRUD(session).get(organization_id)
+
+            for webhook in await WebhookCRUD(session).fetch_all():
+                try:
+                    await dispatch_webhook(webhook.url, det)
+                except Exception as exc:  # noqa: BLE001 - best-effort: never let a webhook failure block the rest
+                    logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_id, exc)
+
+            if telegram_client.is_enabled and org is not None and org.telegram_id:
+                try:
+                    await to_thread.run_sync(telegram_client.notify, org.telegram_id, det.model_dump_json())
+                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure block the rest
+                    logger.warning("Telegram notification failed for sequence %s (%s)", sequence_id, exc)
+
+            if slack_client.is_enabled and org is not None and org.slack_hook:
+                slack_payload = jsonable_encoder(det)
+                slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
+                try:
+                    await to_thread.run_sync(
+                        slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
+                    )
+                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure block the rest
+                    logger.warning("Slack notification failed for sequence %s (%s)", sequence_id, exc)
+    except Exception:
+        logger.exception("Notification dispatch failed for sequence %s", sequence_id)
+
+
+def _dispatch_notifications(sequence_id: int, organization_id: int, alert_id: Optional[int]) -> None:
+    """Fire notifications as a detached task, keeping a strong reference until done."""
+    task = asyncio.create_task(_notify_for_sequence(sequence_id, organization_id, alert_id))
+    _pending_notifications.add(task)
+    task.add_done_callback(_pending_notifications.discard)
 
 
 async def _finish_job(
@@ -310,7 +333,7 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
 
 
 async def _complete_validated_sequence(sequence_id: int, validation_status: Optional[str], *, claim: bool) -> None:
-    """Post-validation work: claim, triangulate, notify, complete the job.
+    """Post-validation work: claim, triangulate, complete the job, then notify (detached).
 
     Reached right after a verdict (``claim=True``) and when resuming a run that died after
     winning the claim (``claim=False`` — the due marker only clears on completion, so a
@@ -321,8 +344,8 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
         # Atomically claim the sequence (verdict + status in one UPDATE) so concurrent
         # workers can't both triangulate/notify. From here on the verdict is durable: any
         # failure below propagates to the caller, which releases the lease and pushes the
-        # retry back — the job stays due and validated, so the retry resumes HERE (attach +
-        # notify) instead of re-deciding a verdict that was already reached.
+        # retry back — the job stays due and validated, so the retry resumes HERE
+        # instead of re-deciding a verdict that was already reached.
         if claim and not await sequences.claim_validation(sequence_id, validation_status):
             await sequences.finish_validation_job(sequence_id)
             return
@@ -331,9 +354,6 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
 
         cameras = CameraCRUD(session)
         alerts = AlertCRUD(session)
-        detections = DetectionCRUD(session)
-        organizations = OrganizationCRUD(session)
-        webhooks = WebhookCRUD(session)
         sequence_ = cast(Sequence, await sequences.get(sequence_id, strict=True))
         camera = cast(Camera, await cameras.get(sequence_.camera_id, strict=True))
         organization_id = camera.organization_id
@@ -341,17 +361,19 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
         # both create an alert: serialize attachment per organization.
         async with _organization_alert_lock(organization_id):
             alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
-        await _notify_for_sequence(sequence_, camera, organization_id, detections, organizations, webhooks, alert_id)
-        # Validated is terminal: clear the job unconditionally. This runs LAST on purpose —
-        # the due marker is the completion record that makes the whole block resumable.
+        # Validated is terminal: complete the job (the due marker is the completion record
+        # that makes this block resumable), THEN notify off the critical path — a slow
+        # channel must never delay the next sequence's scoring.
         await sequences.finish_validation_job(sequence_id)
+    _dispatch_notifications(sequence_id, organization_id, alert_id)
 
 
 async def process_next_due_validation() -> bool:
     """Claim and process one due sequence. Returns True when a job was claimed.
 
-    Any error releases the lease but keeps the job due, so it is retried (by this worker or
-    a sibling process) instead of being lost.
+    An error releases the lease and backs the retry off; after MAX_VALIDATION_ATTEMPTS
+    consecutive errors the job dead-letters (validation_status='failed') so a poison job
+    can't starve the serial worker.
     """
     async with session_factory() as session:
         sequence_ = await SequenceCRUD(session).claim_due_validation(settings.TEMPORAL_VALIDATION_LEASE_SECONDS)
@@ -361,9 +383,11 @@ async def process_next_due_validation() -> bool:
     try:
         await _process_claimed_sequence(sequence_id)
     except Exception:
-        logger.exception("Sequence validation failed for sequence %s; will retry", sequence_id)
+        logger.exception("Sequence validation failed for sequence %s", sequence_id)
         async with session_factory() as session:
-            await SequenceCRUD(session).release_validation_lease(sequence_id, retry_in_seconds=RETRY_DELAY_SECONDS)
+            await SequenceCRUD(session).fail_or_retry_validation(
+                sequence_id, max_attempts=MAX_VALIDATION_ATTEMPTS, retry_in_seconds=RETRY_DELAY_SECONDS
+            )
     return True
 
 
