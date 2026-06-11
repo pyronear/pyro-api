@@ -1,3 +1,4 @@
+import asyncio
 import io
 import os
 from datetime import datetime
@@ -203,6 +204,10 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
+        "is_validated": True,
     },
     {
         "id": 2,
@@ -215,6 +220,10 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
+        "is_validated": True,
     },
 ]
 
@@ -240,6 +249,17 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         timeout=5,
     ) as client:
         yield client
+
+
+@pytest_asyncio.fixture(autouse=True, loop_scope="session")
+async def _drain_detached_notifications():
+    """Detached notification tasks must finish inside the test's event loop."""
+    from app.services import validation as validation_service
+
+    yield
+    pending = list(validation_service._pending_notifications)
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
 
 
 @pytest_asyncio.fixture(scope="function", loop_scope="session")

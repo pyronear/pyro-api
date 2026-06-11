@@ -24,6 +24,7 @@ from app.api.api_v1.router import api_router
 from app.core.config import settings
 from app.schemas.base import Status
 from app.services.risk import risk_service
+from app.services.validation import validation_worker_loop
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -69,17 +70,22 @@ async def _risk_refresh_loop() -> None:
 async def lifespan(_: FastAPI):
     if risk_service.is_configured:
         await risk_service.refresh()
-        task = asyncio.create_task(_risk_refresh_loop())
+        risk_task = asyncio.create_task(_risk_refresh_loop())
     else:
-        task = None
+        risk_task = None
         logger.info("Risk API not configured; skipping daily refresh")
+    # One validation worker per uvicorn process; coordination happens in the DB, so any
+    # number of processes is safe. Runs even without the temporal API configured: the
+    # pipeline then validates on the risk gate alone (fail-open).
+    validation_task = asyncio.create_task(validation_worker_loop())
     try:
         yield
     finally:
-        if task is not None:
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+        for task in (risk_task, validation_task):
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
 
 app = FastAPI(
