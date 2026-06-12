@@ -213,21 +213,158 @@ async def test_create_detection_rejects_inverted_bbox(
 
 
 @pytest.mark.asyncio
-async def test_create_detection_rejects_empty_bbox_strings(
-    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+async def test_create_detection_empty_bboxes_without_active_sequence_stores_nothing(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
 ):
-    monkeypatch.setattr(detections_api, "_extract_bbox_strings", lambda _: [])
     auth = pytest.get_token(
         pytest.camera_table[0]["id"],
         ["camera"],
         pytest.camera_table[0]["organization_id"],
     )
-    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[]"}
+    # Empty frames must never seed a sequence (no phantom sequences from no-detection frames)
+    for _ in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+        )
+        assert response.status_code == 204, print(response.__dict__)
+    detection_session.expire_all()
+    dets = (await detection_session.exec(select(Detection))).all()
+    assert len(dets) == len(pytest.detection_table)
+    seqs = (await detection_session.exec(select(Sequence))).all()
+    assert len(seqs) == len(pytest.sequence_table)
+
+
+@pytest.mark.asyncio
+async def test_create_detection_empty_bboxes_rejects_crops(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[("file", ("logo.png", mock_img, "image/png")), ("crop", ("crop.png", mock_img, "image/png"))],
+        headers=auth,
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Number of crops must match the number of bboxes."
+
+
+@pytest.mark.asyncio
+async def test_create_detection_empty_bboxes_extends_active_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    for _ in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+        )
+        assert response.status_code == 201, print(response.__dict__)
+    sequence_id = response.json()["sequence_id"]
+    assert isinstance(sequence_id, int)
+    detection_session.expire_all()
+    sequence = await detection_session.get(Sequence, sequence_id)
+    last_seen_before = sequence.last_seen_at
+    # Clear the queue marker to observe the re-enqueue triggered by the continuity row
+    sequence.validation_due_at = None
+    detection_session.add(sequence)
+    await detection_session.commit()
+
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, print(response.__dict__)
+    data = response.json()
+    assert data["bbox"] == "[]"
+    assert data["sequence_id"] == sequence_id
+
+    detection_session.expire_all()
+    sequence = await detection_session.get(Sequence, sequence_id)
+    # A continuity row is not real evidence: the sequence lifetime is untouched...
+    assert sequence.last_seen_at == last_seen_before
+    # ...but the frame set changed, so validation is due again
+    assert sequence.validation_due_at is not None
+
+    # Spatial matching must survive the continuity row (compare against the last REAL bbox)
     response = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Invalid bbox format."
+    assert response.status_code == 201, print(response.__dict__)
+    assert response.json()["sequence_id"] == sequence_id
+
+
+@pytest.mark.asyncio
+async def test_create_detection_continuity_row_for_unmatched_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    # Two disjoint objects on the same pose -> two sequences. Each frame gets distinct bytes:
+    # bucket keys are content+second based, so identical uploads would collide on one key.
+    both = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.1,0.1,0.2,0.2,0.8)]"}
+    for idx in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections",
+            data=both,
+            files={"file": ("logo.png", mock_img + bytes([idx]), "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, print(response.__dict__)
+    detection_session.expire_all()
+    new_seqs = (
+        await detection_session.exec(
+            select(Sequence).where(Sequence.id > max(entry["id"] for entry in pytest.sequence_table))
+        )
+    ).all()
+    assert len(new_seqs) == 2
+
+    # Only the first object is detected on the next frame
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={"file": ("logo.png", mock_img + b"-final-frame", "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, print(response.__dict__)
+    matched_seq_id = response.json()["sequence_id"]
+    assert isinstance(matched_seq_id, int)
+    (unmatched_seq,) = [seq for seq in new_seqs if seq.id != matched_seq_id]
+    unmatched_seq_id = unmatched_seq.id
+    unmatched_last_seen = unmatched_seq.last_seen_at
+
+    # The unmatched sequence still gets the frame, as a continuity row sharing the bucket_key
+    bucket_key = response.json()["bucket_key"]
+    detection_session.expire_all()
+    rows = (
+        await detection_session.exec(
+            select(Detection).where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        )
+    ).all()
+    assert len(rows) == 2
+    by_seq = {row.sequence_id: row for row in rows}
+    assert by_seq[matched_seq_id].bbox == "[(0.6,0.6,0.7,0.7,0.6)]"
+    assert by_seq[unmatched_seq_id].bbox == "[]"
+    # No duplicate attach: the matched sequence got the real row only
+    assert len(by_seq) == 2
+
+    unmatched_after = await detection_session.get(Sequence, unmatched_seq_id)
+    assert unmatched_after.last_seen_at == unmatched_last_seen
 
 
 @pytest.mark.asyncio
@@ -341,6 +478,53 @@ async def test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox(detectio
 
     last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
     assert last_bbox is None
+
+
+@pytest.mark.asyncio
+async def test_get_last_bbox_for_sequence_skips_continuity_rows(detection_session: AsyncSession):
+    detections = DetectionCRUD(detection_session)
+    now = utcnow()
+    camera_id = pytest.camera_table[0]["id"]
+    pose = Pose(camera_id=camera_id, azimuth=80.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    sequence = Sequence(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        camera_azimuth=80.0,
+        sequence_azimuth=80.0,
+        cone_angle=10.0,
+        started_at=now - timedelta(seconds=10),
+        last_seen_at=now,
+    )
+    detection_session.add(sequence)
+    await detection_session.commit()
+    await detection_session.refresh(sequence)
+
+    real_det = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-real",
+        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
+        created_at=now - timedelta(seconds=5),
+    )
+    continuity_det = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-continuity",
+        bbox="[]",
+        created_at=now,
+    )
+    detection_session.add(real_det)
+    detection_session.add(continuity_det)
+    await detection_session.commit()
+
+    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
+    assert last_bbox == (0.1, 0.1, 0.2, 0.2, 0.9)
 
 
 @pytest.mark.asyncio
@@ -742,7 +926,9 @@ async def test_detection_counts_split_sequences_and_alerts(
     )
     assert resp3.status_code == 201, resp3.text
     await drain_validation_queue()
-    assert await count(Detection) == base_det + 3
+    # +2: the real detection (new sequence) plus a continuity row attaching the frame to the
+    # still-active first sequence, whose object was not detected on it.
+    assert await count(Detection) == base_det + 4
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
     assert await count(AlertSequence) == base_map + 2
@@ -755,7 +941,8 @@ async def test_detection_counts_split_sequences_and_alerts(
     )
     assert resp4.status_code == 201, resp4.text
     await drain_validation_queue()
-    assert await count(Detection) == base_det + 5
+    # +2 real detections (one per bbox, both sequences matched -> no continuity row)
+    assert await count(Detection) == base_det + 6
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
     assert await count(AlertSequence) == base_map + 2

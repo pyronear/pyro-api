@@ -8,7 +8,7 @@ import logging
 import re
 from ast import literal_eval
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import pandas as pd
 from fastapi import (
@@ -18,6 +18,7 @@ from fastapi import (
     Form,
     HTTPException,
     Path,
+    Response,
     Security,
     UploadFile,
     status,
@@ -40,7 +41,7 @@ from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
     BOXES_PATTERN,
-    COMPILED_BOXES_PATTERN,
+    EMPTY_BBOXES,
     DetectionCreate,
     DetectionRead,
     DetectionSequence,
@@ -92,18 +93,50 @@ async def _get_last_bbox_for_sequence(
     detections: DetectionCRUD,
     sequence_id: int,
 ) -> Optional[Tuple[float, float, float, float, float]]:
-    dets = await detections.fetch_all(
-        filters=("sequence_id", sequence_id),
-        order_by="created_at",
-        order_desc=True,
-        limit=1,
-    )
-    if not dets:
+    # Continuity rows (empty bbox) are skipped: spatial matching must compare against the
+    # last real evidence, not against a frame where nothing was detected.
+    det = await detections.get_latest_with_bbox(sequence_id)
+    if det is None:
         return None
-    bbox_strs = _extract_bbox_strings(dets[0].bbox)
+    bbox_strs = _extract_bbox_strings(det.bbox)
     if not bbox_strs:
         return None
     return _parse_bbox(bbox_strs[0])
+
+
+async def _get_continuity_sequences(
+    sequences: SequenceCRUD,
+    camera_id: int,
+    pose_id: int,
+) -> List[Sequence]:
+    """Sequences of the pose seen recently enough for an unmatched frame to be attached to them."""
+    return await sequences.fetch_all(
+        filters=[("camera_id", camera_id), ("pose_id", pose_id)],
+        inequality_pair=(
+            "last_seen_at",
+            ">",
+            utcnow() - timedelta(seconds=settings.SEQUENCE_CONTINUITY_SECONDS),
+        ),
+    )
+
+
+async def _create_continuity_detection(
+    detections: DetectionCRUD,
+    camera_id: int,
+    pose_id: int,
+    bucket_key: str,
+    sequence_id: int,
+) -> Detection:
+    """Attach a frame to a sequence whose object was not detected on it (empty bbox).
+
+    Continuity rows keep the sequence's frame timeline gapless for the temporal model.
+    They never refresh last_seen_at nor max_conf: the sequence's lifetime and confidence
+    track real evidence only.
+    """
+    det = await detections.create(
+        DetectionCreate(camera_id=camera_id, pose_id=pose_id, bucket_key=bucket_key, bbox=EMPTY_BBOXES)
+    )
+    return await detections.update(det.id, DetectionSequence(sequence_id=sequence_id))
 
 
 async def _get_camera_by_id(
@@ -340,7 +373,14 @@ async def _attach_sequence_to_alert(
     return alert_id
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new wildfire detection",
+    # The return annotation is not a valid response-model type (a 204 Response is returned
+    # for an empty frame extending no sequence), so the model is declared explicitly.
+    response_model=DetectionRead,
+)
 async def create_detection(
     bboxes: str = Form(
         ...,
@@ -357,11 +397,13 @@ async def create_detection(
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
-) -> Detection:
+) -> Union[Detection, Response]:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
 
-    # Throw an error if the format is invalid and can't be captured by the regex
-    if any(box[0] >= box[2] or box[1] >= box[3] for box in COMPILED_BOXES_PATTERN.findall(bboxes)):
+    # The Form regex already constrains the format; parse to validate coordinate ordering on
+    # every box (an empty list parses to no box at all and is a valid frame with no detection).
+    bbox_strings = _extract_bbox_strings(bboxes)
+    if any(box[0] >= box[2] or box[1] >= box[3] for box in map(_parse_bbox, bbox_strings)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
@@ -374,10 +416,6 @@ async def create_detection(
     if not pose.active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
 
-    bbox_strings = _extract_bbox_strings(bboxes)
-    if not bbox_strings:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
-
     # Validate crop/bbox alignment before any S3 upload to avoid orphan objects.
     # Each crop frames a single object, so there must be exactly one crop per bbox (or none at all).
     crops = crop_files or []
@@ -386,6 +424,22 @@ async def create_detection(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Number of crops must match the number of bboxes.",
         )
+
+    # Frame with no detection: it only matters as continuity for recently-seen sequences of
+    # the pose. Without one, store nothing at all — empty frames must never seed a sequence
+    # (the historical placeholder bboxes did, creating phantom sequences).
+    if not bbox_strings:
+        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.sub, pose_id)
+        if not continuity_sequences:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+        continuity_dets: List[Detection] = []
+        for seq in continuity_sequences:
+            continuity_dets.append(
+                await _create_continuity_detection(detections, token_payload.sub, pose_id, bucket_key, seq.id)
+            )
+            await sequences.enqueue_validation(seq.id)
+        return DetectionRead(**continuity_dets[0].model_dump())
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
@@ -496,6 +550,15 @@ async def create_detection(
 
         created.append(det)
 
+    # Continuity pass: a recently-seen sequence of this pose whose object was not detected on
+    # this frame (no bbox matched it, e.g. one of two smokes faded) still gets the frame,
+    # attached with an empty bbox, so its frame timeline stays gapless for the temporal model.
+    for seq in await _get_continuity_sequences(sequences, token_payload.sub, pose_id):
+        if seq.id in affected_sequences:
+            continue
+        await _create_continuity_detection(detections, token_payload.sub, pose_id, bucket_key, seq.id)
+        affected_sequences.add(seq.id)
+
     # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
     # whichever uvicorn worker received the detection). The per-process validation worker
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
@@ -576,7 +639,11 @@ async def delete_detection(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    bucket.delete_file(detection.bucket_key)
+    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
+    # continuity rows): only delete it once no other row references it. Crops are per-row.
+    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key))
+    if all(d.id == detection_id for d in sharing):
+        bucket.delete_file(detection.bucket_key)
     if detection.crop_bucket_key:
         bucket.delete_file(detection.crop_bucket_key)
     await detections.delete(detection_id)

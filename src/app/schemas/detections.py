@@ -21,8 +21,12 @@ class DetectionLabel(BaseModel):
 # Regex for a float between 0 and 1, with a maximum of 3 decimals
 FLOAT_PATTERN = r"(0?\.[0-9]{1,3}|0|1)"
 BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
-BOXES_PATTERN = rf"^\[{BOX_PATTERN}(,{BOX_PATTERN})*\]$"
+# An empty list is valid: a frame with no detection (kept for sequence continuity).
+BOXES_PATTERN = rf"^\[({BOX_PATTERN}(,{BOX_PATTERN})*)?\]$"
 COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
+
+# Stored bbox of a continuity detection: a frame attached to a sequence with no detection on it.
+EMPTY_BBOXES = "[]"
 
 
 class DetectionCreate(BaseModel):
