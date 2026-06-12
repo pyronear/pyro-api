@@ -167,12 +167,10 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
             if sequence_ is None:
                 return
             camera = await CameraCRUD(session).get(sequence_.camera_id)
-            dets = await detections.fetch_all(
-                filters=("sequence_id", sequence_id), order_by="created_at", order_desc=True, limit=1
-            )
-            if camera is None or not dets:
+            # Latest real detection: continuity rows (empty bbox) must never reach a channel.
+            det = await detections.get_latest_with_bbox(sequence_id)
+            if camera is None or det is None:
                 return
-            det = dets[0]
             org = await OrganizationCRUD(session).get(organization_id)
 
             for webhook in await WebhookCRUD(session).fetch_all():
