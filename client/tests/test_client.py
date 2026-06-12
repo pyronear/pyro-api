@@ -162,4 +162,7 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert len(response.json()) == 1
     response = user_client.fetch_sequences_detections(response.json()[0]["id"])
     assert response.status_code == 200, response.__dict__
-    assert len(response.json()) == 4
+    # 4 real detections + the continuity row added by the empty frame in test_cam_workflow
+    detections = response.json()
+    assert len(detections) == 5
+    assert sum(det["bbox"] == "[]" for det in detections) == 1
