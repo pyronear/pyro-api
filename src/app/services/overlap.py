@@ -301,10 +301,10 @@ def _find_overlapping_pairs(
     if has_pose:
         cols = [*cols, "pose_id"]
     rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
-    # `_attach_sequence_to_alert` runs once at sequence creation, when the new sequence's
-    # window is a single instant and prior sequences' windows haven't been bumped yet.
-    # Treat any pair within `time_relaxation_seconds` of each other as concurrent so we
-    # don't drop them before the spatial test.
+    # `_attach_sequence_to_alert` runs when the validation worker validates a sequence,
+    # which can be early in its life (a few frames in) while prior sequences' windows
+    # haven't been bumped yet. Treat any pair within `time_relaxation_seconds` of each
+    # other as concurrent so we don't drop them before the spatial test.
     tolerance = timedelta(seconds=time_relaxation_seconds)
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):

@@ -1,7 +1,7 @@
 """add recorded_at column to detections and backfill from created_at
 
 Revision ID: c4e9f1a2b3d5
-Revises: 7f1c4d2a9b3e
+Revises: c5e2f7a8b1d0
 Create Date: 2026-05-27 10:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c4e9f1a2b3d5"
-down_revision: Union[str, None] = "7f1c4d2a9b3e"
+down_revision: Union[str, None] = "c5e2f7a8b1d0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

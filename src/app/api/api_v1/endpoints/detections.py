@@ -4,7 +4,6 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-import json
 import logging
 import re
 from ast import literal_eval
@@ -14,7 +13,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple, cast
 import pandas as pd
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -24,25 +22,20 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.encoders import jsonable_encoder
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
-    dispatch_webhook,
-    get_alert_crud,
     get_camera_crud,
     get_detection_crud,
     get_jwt,
-    get_organization_crud,
     get_pose_crud,
     get_sequence_crud,
-    get_webhook_crud,
 )
 from app.core.config import settings
 from app.core.time import to_utc_naive, utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
@@ -57,11 +50,8 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
-from app.services.risk import risk_service
 from app.services.sequence_confidence import max_conf_from_bboxes
-from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
-from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 logger = logging.getLogger("uvicorn.error")
@@ -154,6 +144,9 @@ def _build_overlap_records(
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
+            continue
+        # Only validated sequences are eligible for triangulation (as target or partner).
+        if not seq.is_validated:
             continue
         records.append({
             "id": int(seq.id),
@@ -349,7 +342,6 @@ async def _attach_sequence_to_alert(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
 async def create_detection(
-    background_tasks: BackgroundTasks,
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
@@ -366,12 +358,9 @@ async def create_detection(
         ),
     ),
     file: UploadFile = File(..., alias="file"),
-    crop_file: Optional[UploadFile] = File(None, alias="crop"),
+    crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
-    webhooks: WebhookCRUD = Depends(get_webhook_crud),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
@@ -396,16 +385,29 @@ async def create_detection(
     if not bbox_strings:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
 
+    # Validate crop/bbox alignment before any S3 upload to avoid orphan objects.
+    # Each crop frames a single object, so there must be exactly one crop per bbox (or none at all).
+    crops = crop_files or []
+    if crops and len(crops) != len(bbox_strings):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Number of crops must match the number of bboxes.",
+        )
+
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    crop_bucket_key: Optional[str] = None
-    if crop_file is not None:
-        crop_bucket_key = await upload_file(
-            crop_file, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+    crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
+    for idx, crop in enumerate(crops):
+        # Prefix with the bbox index so byte-identical crops in the same request still get
+        # distinct keys; each detection then owns its crop object (safe to delete independently).
+        crop_bucket_keys[idx] = await upload_file(
+            crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    # sequences touched by this request, to mark due for validation (DB-backed queue).
+    affected_sequences: Set[int] = set()
 
     # The engine may report when the image was actually captured; fall back to now when it doesn't.
     # Aware timestamps are normalized to UTC (naive timestamps are assumed to already be UTC) so
@@ -422,7 +424,7 @@ async def create_detection(
                 camera_id=token_payload.sub,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
-                crop_bucket_key=crop_bucket_key,
+                crop_bucket_key=crop_bucket_keys[idx],
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
                 recorded_at=effective_recorded_at,
@@ -458,6 +460,7 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -503,42 +506,16 @@ async def create_detection(
                     updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
                     if det_.id == det.id:
                         det = updated
-
-                alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
-
-                # Webhooks
-                whs = await webhooks.fetch_all()
-                if any(whs):
-                    for webhook in await webhooks.fetch_all():
-                        background_tasks.add_task(dispatch_webhook, webhook.url, det)
-
-                org = None
-                # Telegram notifications
-                if telegram_client.is_enabled:
-                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.telegram_id:
-                        background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
-
-                if slack_client.is_enabled:
-                    if org is None:
-                        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.slack_hook:
-                        min_conf = risk_service.min_confidence(camera.id)
-                        if min_conf is None or sequence_.max_conf is None or sequence_.max_conf >= min_conf:
-                            slack_payload = jsonable_encoder(det)
-                            slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-                            background_tasks.add_task(
-                                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                            )
-                        else:
-                            logger.info(
-                                "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
-                                camera.name,
-                                sequence_.max_conf,
-                                min_conf,
-                            )
+                affected_sequences.add(sequence_.id)
 
         created.append(det)
+
+    # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
+    # whichever uvicorn worker received the detection). The per-process validation worker
+    # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
+    # notification channels (webhooks, Telegram, Slack) fire only once validated.
+    for seq_id in affected_sequences:
+        await sequences.enqueue_validation(seq_id)
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())

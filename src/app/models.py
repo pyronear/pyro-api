@@ -99,6 +99,17 @@ class Detection(SQLModel, table=True):
     )
 
 
+# sequences.validation_status values — the single source of truth (enforced by a DB CHECK
+# constraint; the worker and the CRUD queue guards both import from here).
+VALIDATED_BY_MODEL = "model"
+FAIL_OPEN_UNAVAILABLE = "fail_open_unavailable"
+FAIL_OPEN_STALE = "fail_open_stale"
+WINDOW_EXHAUSTED = "window_exhausted"
+VALIDATION_FAILED = "failed"
+# Terminal states: the queue must never resurrect these.
+TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
+
+
 class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
     id: int = Field(None, primary_key=True)
@@ -116,6 +127,79 @@ class Sequence(SQLModel, table=True):
         description=(
             "Highest detection confidence ever attached to this sequence. "
             "Monotonic: not recomputed downward when detections are deleted or reassigned."
+        ),
+    )
+    temporal_model_score: Union[float, None] = Field(
+        None,
+        nullable=True,
+        description="Latest temporal-model smoke probability for this sequence, or None if never scored.",
+    )
+    # Provenance of temporal_model_score, written in the same UPDATE: lets stored scores be
+    # evaluated per model release / serving image (e.g. against is_wildfire annotations)
+    # long after redeploys. None when never scored, or when the serving build is unstamped.
+    temporal_model_version: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        description="Model release that produced temporal_model_score (manifest version, e.g. '0.1.0').",
+    )
+    temporal_api_version: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        description="Temporal API serving-code version (Docker image tag) that produced temporal_model_score.",
+    )
+    is_validated: bool = Field(
+        default=False,
+        nullable=False,
+        description=(
+            "Whether the sequence passed validation (risk gate + temporal model, or fail-open). "
+            "Only validated sequences are triangulated and notified."
+        ),
+    )
+    # The three validation-job fields below are internal plumbing (the DB-backed queue);
+    # they are excluded from API serialization.
+    validation_due_at: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description=(
+            "When set, the sequence is queued for temporal validation (set on each new detection, "
+            "kept at its oldest value while queued so ordering is FIFO). Cleared once the worker "
+            "reaches a verdict for the current frame set or a terminal state."
+        ),
+    )
+    validation_lease_until: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description=(
+            "Lease claimed by the validation worker processing this sequence; other workers skip "
+            "the row until it expires. An expired lease with validation_due_at still set means the "
+            "worker died mid-job and the job is up for grabs again."
+        ),
+    )
+    validation_status: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=32,
+        exclude=True,
+        description=(
+            "How validation concluded: 'model' (temporal model confirmed), 'fail_open_unavailable' "
+            "(model unreachable/breaker open), 'fail_open_stale' (queued past the max age), "
+            "'window_exhausted' (scored but never confirmed within the frame window; terminal), "
+            "'failed' (gave up after repeated job errors; terminal). NULL while pending or for "
+            "pre-gate sequences. Allowed values are enforced by a DB CHECK constraint."
+        ),
+    )
+    validation_attempts: int = Field(
+        default=0,
+        nullable=False,
+        exclude=True,
+        description=(
+            "Consecutive errored validation runs for this sequence (reset on every completed "
+            "job). At MAX_VALIDATION_ATTEMPTS the job dead-letters as validation_status='failed' "
+            "instead of retrying forever."
         ),
     )
 

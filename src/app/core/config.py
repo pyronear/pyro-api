@@ -77,6 +77,24 @@ class Settings(BaseSettings):
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
     PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
 
+    # Temporal model API (validates sequences from their frames)
+    TEMPORAL_API_URL: Union[str, None] = os.environ.get("TEMPORAL_API_URL")
+    # Shared bearer token for /predict; empty = server has auth disabled, send no header.
+    TEMPORAL_API_TOKEN: Union[str, None] = os.environ.get("TEMPORAL_API_TOKEN") or None
+    TEMPORAL_MODEL_THRESHOLD: float = float(os.environ.get("TEMPORAL_MODEL_THRESHOLD") or 0.45)
+    # Generous timeout: the temporal API serializes inference server-side, so with N uvicorn
+    # workers a call can wait behind N-1 others; keep N * model latency under this value.
+    TEMPORAL_API_TIMEOUT: float = float(os.environ.get("TEMPORAL_API_TIMEOUT") or 30.0)
+    # Validation worker (one loop per uvicorn process, coordinated through the DB):
+    # idle poll interval for due sequences,
+    TEMPORAL_VALIDATION_POLL_SECONDS: float = float(os.environ.get("TEMPORAL_VALIDATION_POLL_SECONDS") or 2.0)
+    # max time a sequence may wait in the queue before failing open on the risk gate alone
+    # (bounds validation latency under a backlog; traced as validation_status=fail_open_stale),
+    TEMPORAL_VALIDATION_MAX_AGE: float = float(os.environ.get("TEMPORAL_VALIDATION_MAX_AGE") or 300.0)
+    # and how long a claimed job is leased before a sibling worker may retry it (must exceed
+    # TEMPORAL_API_TIMEOUT plus the DB phases).
+    TEMPORAL_VALIDATION_LEASE_SECONDS: float = float(os.environ.get("TEMPORAL_VALIDATION_LEASE_SECONDS") or 120.0)
+
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")
     RISK_API_LOGIN: Union[str, None] = os.environ.get("RISK_API_LOGIN")

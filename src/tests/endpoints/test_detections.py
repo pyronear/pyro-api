@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import io
 from ast import literal_eval
 from collections import Counter
@@ -6,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
-from fastapi import BackgroundTasks, HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -29,11 +30,15 @@ from app.api.api_v1.endpoints.detections import (
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
+from app.services import validation as validation_service
 from app.services.cones import resolve_cone
+from app.services.slack import slack_client
 from app.services.storage import s3_service
+from app.services.telegram import telegram_client
+from app.services.validation import process_next_due_validation
 
 
 @pytest.mark.parametrize(
@@ -693,6 +698,11 @@ async def test_detection_counts_split_sequences_and_alerts(
         res = await detection_session.exec(select(model))
         return len(res.all())
 
+    async def drain_validation_queue():
+        # The worker loop is not running in tests: process due sequences synchronously.
+        while await process_next_due_validation():
+            pass
+
     base_det = await count(Detection)
     base_seq = await count(Sequence)
     base_alert = await count(Alert)
@@ -705,6 +715,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp1.status_code == 201, resp1.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 1
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -717,6 +728,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp2.status_code == 201, resp2.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 2
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -729,6 +741,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp3.status_code == 201, resp3.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 3
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
@@ -741,6 +754,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp4.status_code == 201, resp4.text
+    await drain_validation_queue()
     assert await count(Detection) == base_det + 5
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
@@ -754,19 +768,20 @@ async def test_create_detection_triggers_telegram_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """Webhooks and Telegram fire only once the validation worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "telegram": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
     def fake_telegram_notify(channel_id: str, message: str) -> None:
         calls["telegram"].append(channel_id)
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.telegram_client, "notify", fake_telegram_notify)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", False)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", True)
+    monkeypatch.setattr(telegram_client, "notify", fake_telegram_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -785,7 +800,14 @@ async def test_create_detection_triggers_telegram_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"] == []  # gated: nothing fires at creation
+    assert calls["telegram"] == []
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
+    assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
+    assert calls["webhooks"] == ["http://example.com/webhook-telegram"]
     assert calls["telegram"] == ["test-channel"]
 
 
@@ -796,10 +818,12 @@ async def test_create_detection_triggers_slack_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """All channels (webhooks + Slack here) fire only once the worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "slack": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
     def fake_slack_notify(slack_hook: str, message: str, camera_name: str, alert_id: int | None = None) -> object:
@@ -811,10 +835,10 @@ async def test_create_detection_triggers_slack_notifications(
 
         return DummyResponse()
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", False)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "notify", fake_slack_notify)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", False)
+    monkeypatch.setattr(slack_client, "is_enabled", True)
+    monkeypatch.setattr(slack_client, "notify", fake_slack_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -833,25 +857,63 @@ async def test_create_detection_triggers_slack_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"] == []  # gated: every channel waits for validation
+    assert calls["slack"] == []
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
+    assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
+    assert calls["webhooks"] == ["http://example.com/webhook-slack"]
     assert calls["slack"] == ["http://example.com/slack"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_enqueues_validation_on_append(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """Appending a detection to an existing sequence must mark it due for validation (main path)."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+
+    cam = pytest.camera_table[1]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    payload = {"pose_id": pytest.pose_table[2]["id"], "bboxes": "[(0.3,0.3,0.5,0.5,0.9)]"}
+
+    first = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert first.status_code == 201, first.text
+    sequence_id = first.json()["sequence_id"]
+    assert isinstance(sequence_id, int)
+    seq = await detection_session.get(Sequence, sequence_id)
+    assert seq is not None
+    assert seq.validation_due_at is not None  # creation path enqueues
+
+    # Reset the queue marker to assert the append path on its own.
+    seq.validation_due_at = None
+    detection_session.add(seq)
+    await detection_session.commit()
+
+    second = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert second.status_code == 201, second.text
+    assert second.json()["sequence_id"] == sequence_id  # appended, not a new sequence
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is not None  # append path re-enqueues
 
 
 @pytest.mark.asyncio
 async def test_create_detection_sequence_flow_direct(detection_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
 
     camera_id = pytest.camera_table[0]["id"]
     org_id = pytest.camera_table[0]["organization_id"]
     pose_id = pytest.pose_table[0]["id"]
 
     detections = DetectionCRUD(detection_session)
-    webhooks = WebhookCRUD(detection_session)
     organizations = OrganizationCRUD(detection_session)
     sequences = SequenceCRUD(detection_session)
-    alerts = AlertCRUD(detection_session)
     cameras = CameraCRUD(detection_session)
     poses = PoseCRUD(detection_session)
     org = await organizations.get(org_id, strict=True)
@@ -875,17 +937,13 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     upload = UploadFile(filename="img.png", file=io.BytesIO(b"img"))
 
     det_read = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
         file=upload,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
@@ -914,17 +972,13 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
 
     upload_again = UploadFile(filename="img-2.png", file=io.BytesIO(b"img2"))
     det_read_2 = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
         file=upload_again,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
@@ -1211,6 +1265,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=0.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1221,6 +1276,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=5.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=10),
     )
@@ -1313,6 +1369,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=-17.5,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1323,6 +1380,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=276.5,
         cone_angle=3.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=15),
     )
@@ -1346,6 +1404,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=75.2,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=5),
         last_seen_at=now,
     )
@@ -1564,6 +1623,85 @@ async def test_create_detection_persists_crop_bucket_key(
     det = await detection_session.get(Detection, data["id"])
     assert det is not None
     assert det.crop_bucket_key == data["crop_bucket_key"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_assigns_distinct_crop_per_bbox(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    # Each crop frames a different object, so the two crops carry distinct bytes.
+    crop_0 = mock_img + b"crop-0"
+    crop_1 = mock_img + b"crop-1"
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", crop_0, "image/jpeg")),
+            ("crop", ("crop-1.jpg", crop_1, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    bucket_key = response.json()["bucket_key"]
+
+    dets_res = await detection_session.exec(
+        select(Detection)
+        .where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        .order_by(Detection.id)  # type: ignore[attr-defined]
+    )
+    dets = dets_res.all()
+    assert len(dets) == 2
+    crop_keys = [det.crop_bucket_key for det in dets]
+    # Every detection gets its own crop, and crops are not shared across detections.
+    assert all(isinstance(key, str) and key.startswith("crop_") for key in crop_keys)
+    assert len(set(crop_keys)) == 2
+    assert all(key != bucket_key for key in crop_keys)
+    # The first bbox maps to the first crop, the second bbox to the second crop.
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # noqa: S324
+    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # noqa: S324
+
+
+@pytest.mark.asyncio
+async def test_create_detection_rejects_crop_bbox_count_mismatch(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(  # noqa: RUF029
+        file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
+    ) -> str:
+        upload_calls.append(file.filename or "")
+        return f"{key_prefix}should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", mock_img, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == "Number of crops must match the number of bboxes."
+    # Validation runs before any upload, so no orphan S3 objects are created.
+    assert upload_calls == []
 
 
 @pytest.mark.asyncio
