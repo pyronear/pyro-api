@@ -494,6 +494,27 @@ async def test_maybe_update_alert_updates_fields(detection_session: AsyncSession
 
 
 @pytest.mark.asyncio
+async def test_maybe_update_alert_widens_bounds_without_location(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    alert = Alert(organization_id=1, lat=5.0, lon=6.0, started_at=now, last_seen_at=now)
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+
+    # A location-less group (e.g. same-mast only) must still extend the time bounds
+    # without erasing the existing location.
+    start_at = now - timedelta(seconds=60)
+    last_seen_at = now + timedelta(seconds=60)
+    await _maybe_update_alert(alert_crud, alert.id, None, start_at, last_seen_at)
+
+    updated = await alert_crud.get(alert.id, strict=True)
+    assert (updated.lat, updated.lon) == (5.0, 6.0)
+    assert updated.started_at == start_at
+    assert updated.last_seen_at == last_seen_at
+
+
+@pytest.mark.asyncio
 async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
     now = utcnow()
