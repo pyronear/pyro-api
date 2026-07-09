@@ -736,6 +736,71 @@ async def test_merge_alerts_absorbs_duplicates(detection_session: AsyncSession):
 
 
 @pytest.mark.asyncio
+async def test_get_or_create_alert_id_does_not_merge_distant_alerts_without_location(
+    detection_session: AsyncSession,
+):
+    """A location-less group bridging two located alerts far apart (e.g. two same-mast
+    cameras each watching a different fire along the same bearing) must not merge them."""
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    fire_a = Alert(organization_id=1, lat=SMOKE_LOCATION[0], lon=SMOKE_LOCATION[1], started_at=now, last_seen_at=now)
+    fire_b = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1], started_at=now, last_seen_at=now
+    )
+    detection_session.add_all([fire_a, fire_b])
+    await detection_session.commit()
+    await detection_session.refresh(fire_a)
+    await detection_session.refresh(fire_b)
+
+    target_id, absorbed_ids = await _get_or_create_alert_id(
+        {fire_a.id, fire_b.id},
+        None,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    assert target_id == min(fire_a.id, fire_b.id)
+    assert absorbed_ids == set()
+    assert await alert_crud.get(fire_a.id) is not None
+    assert await alert_crud.get(fire_b.id) is not None
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_alert_id_merges_close_alerts_without_location(detection_session: AsyncSession):
+    """A location-less group may still merge alerts that are themselves colocated (or unlocated)."""
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    located = Alert(organization_id=1, lat=SMOKE_LOCATION[0], lon=SMOKE_LOCATION[1], started_at=now, last_seen_at=now)
+    nearby = Alert(
+        organization_id=1,
+        lat=SMOKE_LOCATION[0] + 0.005,
+        lon=SMOKE_LOCATION[1] + 0.005,
+        started_at=now,
+        last_seen_at=now,
+    )
+    unlocated = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
+    detection_session.add_all([located, nearby, unlocated])
+    await detection_session.commit()
+    for obj in (located, nearby, unlocated):
+        await detection_session.refresh(obj)
+
+    target_id, absorbed_ids = await _get_or_create_alert_id(
+        {located.id, nearby.id, unlocated.id},
+        None,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    all_ids = {located.id, nearby.id, unlocated.id}
+    assert target_id == min(all_ids)
+    assert absorbed_ids == all_ids - {target_id}
+    for aid in absorbed_ids:
+        assert await alert_crud.get(aid) is None
+
+
+@pytest.mark.asyncio
 async def test_attach_sequence_to_alert_returns_without_overlap_records(detection_session: AsyncSession):
     seq_crud = SequenceCRUD(detection_session)
     alert_crud = AlertCRUD(detection_session)

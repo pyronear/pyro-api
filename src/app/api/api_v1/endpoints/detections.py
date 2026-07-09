@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import itertools
 import logging
 import re
 from ast import literal_eval
@@ -321,6 +322,23 @@ def _rewrite_after_merge(
             alert_ids.add(target_alert_id)
 
 
+async def _candidates_are_one_event(candidates: Set[int], alerts: AlertCRUD) -> bool:
+    """Whether every located candidate sits within the merge radius of the others.
+
+    A location-less group passes the distance filter against every candidate, so on its
+    own it says nothing about which distant alerts are the same event — e.g. two cameras
+    on one mast can each watch a different fire along the same bearing."""
+    located = []
+    for aid in candidates:
+        alert = cast(Alert, await alerts.get(aid, strict=True))
+        if alert.lat is not None and alert.lon is not None:
+            located.append((alert.lat, alert.lon))
+    return all(
+        haversine_km(lat1, lon1, lat2, lon2) <= settings.ALERT_MERGE_MAX_DISTANCE_KM
+        for (lat1, lon1), (lat2, lon2) in itertools.combinations(located, 2)
+    )
+
+
 async def _get_or_create_alert_id(
     existing_alert_ids: Set[int],
     location: Optional[Tuple[float, float]],
@@ -336,6 +354,10 @@ async def _get_or_create_alert_id(
     if candidates:
         target_alert_id = min(candidates)
         absorbed_ids = set(candidates) - {target_alert_id}
+        if absorbed_ids and location is None and not await _candidates_are_one_event(candidates, alerts):
+            # Without a triangulated location, a group bridging distant alerts is not
+            # merge evidence: link to the oldest one and leave the others alive.
+            absorbed_ids = set()
         if absorbed_ids:
             await _merge_alerts(target_alert_id, absorbed_ids, alerts, queued_links)
         await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
