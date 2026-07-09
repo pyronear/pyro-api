@@ -25,6 +25,7 @@ from app.api.api_v1.endpoints.detections import (
     _get_or_create_alert_id,
     _get_recent_sequences,
     _maybe_update_alert,
+    _merge_alerts,
     _parse_bbox,
     _resolve_groups_and_locations,
     create_detection,
@@ -505,7 +506,7 @@ async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: A
     await detection_session.refresh(alert2)
 
     location = (1.5, 2.5)
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {alert2.id, alert1.id},
         location,
         1,
@@ -514,6 +515,7 @@ async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: A
         alert_crud,
     )
     assert target_id == min(alert1.id, alert2.id)
+    assert absorbed_ids == {max(alert1.id, alert2.id)}
 
     updated = await alert_crud.get(target_id, strict=True)
     assert updated.lat == location[0]
@@ -620,7 +622,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
     await detection_session.commit()
     await detection_session.refresh(distant)
 
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {distant.id},
         SMOKE_LOCATION,
         1,
@@ -629,6 +631,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
         alert_crud,
     )
     assert target_id != distant.id
+    assert absorbed_ids == set()
     new_alert = await alert_crud.get(target_id, strict=True)
     assert (new_alert.lat, new_alert.lon) == SMOKE_LOCATION
 
@@ -658,7 +661,7 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
     await detection_session.refresh(nearby)
 
     # Even though `distant` may have a smaller id, it must be filtered out by the distance gate.
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {distant.id, nearby.id},
         SMOKE_LOCATION,
         1,
@@ -667,6 +670,48 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
         alert_crud,
     )
     assert target_id == nearby.id
+    assert absorbed_ids == set()
+
+
+@pytest.mark.asyncio
+async def test_merge_alerts_absorbs_duplicates(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    cam = await detection_session.get(Camera, pytest.camera_table[0]["id"])
+    assert cam is not None
+    seq1 = Sequence(camera_id=cam.id, camera_azimuth=0.0, started_at=now, last_seen_at=now)
+    seq2 = Sequence(camera_id=cam.id, camera_azimuth=0.0, started_at=now, last_seen_at=now)
+    target = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now - timedelta(seconds=30))
+    duplicate = Alert(
+        organization_id=1,
+        lat=SMOKE_LOCATION[0],
+        lon=SMOKE_LOCATION[1],
+        started_at=now - timedelta(seconds=60),
+        last_seen_at=now,
+    )
+    detection_session.add_all([seq1, seq2, target, duplicate])
+    await detection_session.commit()
+    for obj in (seq1, seq2, target, duplicate):
+        await detection_session.refresh(obj)
+    detection_session.add_all([
+        AlertSequence(alert_id=target.id, sequence_id=seq1.id),
+        AlertSequence(alert_id=duplicate.id, sequence_id=seq1.id),
+        AlertSequence(alert_id=duplicate.id, sequence_id=seq2.id),
+    ])
+    await detection_session.commit()
+
+    await _merge_alerts(target.id, {duplicate.id}, alert_crud)
+
+    merged = await alert_crud.get(target.id, strict=True)
+    # Bounds widened and location inherited from the absorbed alert
+    assert merged.started_at == duplicate.started_at
+    assert merged.last_seen_at == duplicate.last_seen_at
+    assert (merged.lat, merged.lon) == SMOKE_LOCATION
+    # Sequences relinked without duplicating the shared one
+    links_res = await detection_session.exec(select(AlertSequence))
+    links = {(link.alert_id, link.sequence_id) for link in links_res.all()}
+    assert links == {(target.id, seq1.id), (target.id, seq2.id)}
+    assert await alert_crud.get(duplicate.id) is None
 
 
 @pytest.mark.asyncio
@@ -1441,6 +1486,101 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+
+@pytest.mark.asyncio
+async def test_attach_sequence_merges_same_event_alerts(detection_session: AsyncSession):
+    """
+    Regression guard for the duplicate-alert bug (prod alerts 49341/49342/49343).
+
+    Two masts see the same fire, each mast carrying two cameras. The same-mast pairs
+    must group into ONE alert per mast without a location, and once a cross-mast
+    triangulation bridges the two events, the alerts must be merged into a single one.
+    """
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = utcnow()
+
+    def make_camera(name: str, lat: float, lon: float) -> Camera:
+        return Camera(
+            organization_id=1,
+            name=name,
+            angle_of_view=54.2,
+            elevation=110.0,
+            lat=lat,
+            lon=lon,
+            is_trustable=True,
+            last_active_at=now,
+            last_image=None,
+            created_at=now,
+        )
+
+    # Two cameras per mast: mast A (croix-augas-like) and mast B (nemours-like)
+    cam_a1 = make_camera("mast-a-01", 48.4267, 2.7109)
+    cam_a2 = make_camera("mast-a-02", 48.4267, 2.7109)
+    cam_b1 = make_camera("mast-b-01", 48.2605, 2.7064)
+    cam_b2 = make_camera("mast-b-02", 48.2605, 2.7064)
+    detection_session.add_all([cam_a1, cam_a2, cam_b1, cam_b2])
+    await detection_session.commit()
+    for cam in (cam_a1, cam_a2, cam_b1, cam_b2):
+        await detection_session.refresh(cam)
+
+    def make_sequence(camera_id: int, azimuth: float, cone_angle: float, is_validated: bool) -> Sequence:
+        return Sequence(
+            camera_id=camera_id,
+            pose_id=None,
+            camera_azimuth=azimuth,
+            sequence_azimuth=azimuth,
+            cone_angle=cone_angle,
+            is_wildfire=None,
+            is_validated=is_validated,
+            started_at=now - timedelta(seconds=30),
+            last_seen_at=now,
+        )
+
+    # Mast B sequences are not validated yet: only mast A is visible to the first attaches.
+    seq_a1 = make_sequence(cam_a1.id, 163.4, 1.0, is_validated=True)
+    seq_a2 = make_sequence(cam_a2.id, 164.0, 2.0, is_validated=True)
+    seq_b1 = make_sequence(cam_b1.id, 8.3, 0.8, is_validated=False)
+    seq_b2 = make_sequence(cam_b2.id, 9.0, 0.8, is_validated=False)
+    detection_session.add_all([seq_a1, seq_a2, seq_b1, seq_b2])
+    await detection_session.commit()
+    for seq in (seq_a1, seq_a2, seq_b1, seq_b2):
+        await detection_session.refresh(seq)
+
+    # Mast A sequences validate first: one alert, no location (same-apex, no triangulation).
+    await _attach_sequence_to_alert(seq_a1, cam_a1, cam_crud, seq_crud, alert_crud)
+    mast_a_alert_id = await _attach_sequence_to_alert(seq_a2, cam_a2, cam_crud, seq_crud, alert_crud)
+    assert mast_a_alert_id is not None
+    mast_a_alert = await alert_crud.get(mast_a_alert_id, strict=True)
+    assert mast_a_alert.lat is None
+
+    # Mast B got its own alert earlier (e.g. attached before its cones crossed mast A's).
+    mast_b_alert = Alert(
+        organization_id=1, lat=None, lon=None, started_at=now - timedelta(seconds=20), last_seen_at=now
+    )
+    seq_b1.is_validated = True
+    seq_b2.is_validated = True
+    detection_session.add_all([mast_b_alert, seq_b1, seq_b2])
+    await detection_session.commit()
+    await detection_session.refresh(mast_b_alert)
+    detection_session.add(AlertSequence(alert_id=mast_b_alert.id, sequence_id=seq_b1.id))
+    await detection_session.commit()
+
+    # seq_b2 validates: the cross-mast group covers both alerts, which must merge into one.
+    target_id = await _attach_sequence_to_alert(seq_b2, cam_b2, cam_crud, seq_crud, alert_crud)
+    assert target_id == mast_a_alert_id
+
+    alerts = await alert_crud.fetch_all()
+    assert [a.id for a in alerts] == [mast_a_alert_id]
+    merged = alerts[0]
+    assert merged.lat is not None
+    assert merged.lon is not None
+
+    links_res = await detection_session.exec(select(AlertSequence))
+    links = {(link.alert_id, link.sequence_id) for link in links_res.all()}
+    assert links == {(mast_a_alert_id, seq.id) for seq in (seq_a1, seq_a2, seq_b1, seq_b2)}
 
 
 @pytest.mark.asyncio

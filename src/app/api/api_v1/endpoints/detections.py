@@ -22,7 +22,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
@@ -249,6 +249,68 @@ async def _filter_candidate_alert_ids(
     return kept
 
 
+async def _merge_alerts(target_alert_id: int, absorbed_ids: Set[int], alerts: AlertCRUD) -> None:
+    """Absorb duplicate alerts into the target: relink their sequences, widen the target's
+    time bounds, inherit a location if the target has none, then delete the absorbed rows."""
+    session = alerts.session
+    target = cast(Alert, await alerts.get(target_alert_id, strict=True))
+    absorbed = sorted(await alerts.get_in(list(absorbed_ids), "id"), key=lambda a: a.id)
+
+    links_stmt: Any = select(AlertSequence).where(
+        AlertSequence.alert_id.in_([target_alert_id, *absorbed_ids])  # type: ignore[attr-defined]
+    )
+    links = (await session.exec(links_stmt)).all()
+    target_seq_ids = {link.sequence_id for link in links if link.alert_id == target_alert_id}
+    for link in links:
+        if link.alert_id == target_alert_id or link.sequence_id in target_seq_ids:
+            continue
+        target_seq_ids.add(link.sequence_id)
+        session.add(AlertSequence(alert_id=target_alert_id, sequence_id=link.sequence_id))
+
+    target.started_at = min([target.started_at, *[a.started_at for a in absorbed]])
+    target.last_seen_at = max([target.last_seen_at, *[a.last_seen_at for a in absorbed]])
+    if target.lat is None or target.lon is None:
+        located = next((a for a in absorbed if a.lat is not None and a.lon is not None), None)
+        if located is not None:
+            target.lat = located.lat
+            target.lon = located.lon
+    session.add(target)
+
+    delete_links_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(list(absorbed_ids)))
+    await session.exec(delete_links_stmt)
+    delete_alerts_stmt: Any = delete(Alert).where(cast(Any, Alert.id).in_(list(absorbed_ids)))
+    await session.exec(delete_alerts_stmt)
+    await session.commit()
+
+
+def _rewrite_after_merge(
+    mapping: Dict[int, Set[int]],
+    to_link: List[AlertSequence],
+    absorbed_ids: Set[int],
+    target_alert_id: int,
+) -> None:
+    """Point in-memory attach state at the merge survivor so later groups neither reference
+    deleted alerts nor duplicate links the merge already created."""
+    kept: List[AlertSequence] = []
+    seen: Set[Tuple[int, int]] = set()
+    for link in to_link:
+        if link.alert_id in absorbed_ids:
+            if target_alert_id in mapping.get(link.sequence_id, set()):
+                # The merge relinked this sequence (or a link is already queued): drop it.
+                continue
+            link.alert_id = target_alert_id
+        pair = (link.alert_id, link.sequence_id)
+        if pair in seen:
+            continue
+        seen.add(pair)
+        kept.append(link)
+    to_link[:] = kept
+    for alert_ids in mapping.values():
+        if alert_ids & absorbed_ids:
+            alert_ids -= absorbed_ids
+            alert_ids.add(target_alert_id)
+
+
 async def _get_or_create_alert_id(
     existing_alert_ids: Set[int],
     location: Optional[Tuple[float, float]],
@@ -256,13 +318,18 @@ async def _get_or_create_alert_id(
     start_at: datetime,
     last_seen_at: datetime,
     alerts: AlertCRUD,
-) -> int:
+) -> Tuple[int, Set[int]]:
+    """Pick the alert a group belongs to, merging duplicates when the group's sequences
+    span several compatible alerts. Returns the target alert id and the absorbed ids."""
     candidates = await _filter_candidate_alert_ids(existing_alert_ids, location, alerts)
     if candidates:
         target_alert_id = min(candidates)
+        absorbed_ids = set(candidates) - {target_alert_id}
+        if absorbed_ids:
+            await _merge_alerts(target_alert_id, absorbed_ids, alerts)
         if isinstance(location, tuple):
             await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
-        return target_alert_id
+        return target_alert_id, absorbed_ids
     alert = await alerts.create(
         AlertCreate(
             organization_id=organization_id,
@@ -272,7 +339,7 @@ async def _get_or_create_alert_id(
             last_seen_at=last_seen_at,
         )
     )
-    return alert.id
+    return alert.id, set()
 
 
 def _build_links_for_group(
@@ -324,7 +391,7 @@ async def _attach_sequence_to_alert(
         location = group_locations.get(g)
         start_at, last_seen_at = _group_time_bounds(g, seq_by_id)
         existing_alert_ids = _collect_existing_alert_ids(g, mapping)
-        target_alert_id = await _get_or_create_alert_id(
+        target_alert_id, absorbed_ids = await _get_or_create_alert_id(
             existing_alert_ids,
             location,
             camera.organization_id,
@@ -332,6 +399,8 @@ async def _attach_sequence_to_alert(
             last_seen_at,
             alerts,
         )
+        if absorbed_ids:
+            _rewrite_after_merge(mapping, to_link, absorbed_ids, target_alert_id)
         if int(sequence_.id) in g:
             alert_id = target_alert_id
         to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
