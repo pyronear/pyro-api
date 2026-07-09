@@ -80,12 +80,15 @@ def _parse_bbox(bbox_str: str) -> Tuple[float, float, float, float, float]:
 def _bboxes_overlap(
     left: Tuple[float, float, float, float, float],
     right: Tuple[float, float, float, float, float],
+    tolerance: float = 0.0,
 ) -> bool:
+    # A negative intersection is a gap: allow up to `tolerance` (relative coords) per axis
+    # so a plume whose bbox drifts between frames still matches its sequence.
     lx_min, ly_min, lx_max, ly_max, _ = left
     rx_min, ry_min, rx_max, ry_max, _ = right
     inter_w = min(lx_max, rx_max) - max(lx_min, rx_min)
     inter_h = min(ly_max, ry_max) - max(ly_min, ry_min)
-    return inter_w > 0 and inter_h > 0
+    return inter_w > -tolerance and inter_h > -tolerance
 
 
 async def _get_last_bbox_for_sequence(
@@ -435,7 +438,7 @@ async def create_detection(
             if seq.id is None:
                 continue
             last_bbox = await _get_last_bbox_for_sequence(detections, seq.id)
-            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox):
+            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
                 matched_sequence = seq
                 break
 
@@ -469,7 +472,7 @@ async def create_detection(
                 if not cand_bbox_strs:
                     continue
                 cand_bbox = _parse_bbox(cand_bbox_strs[0])
-                if _bboxes_overlap(cand_bbox, det_bbox):
+                if _bboxes_overlap(cand_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
                     overlapping_dets.append(cand)
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:

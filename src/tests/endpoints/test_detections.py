@@ -15,6 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints import detections as detections_api
 from app.api.api_v1.endpoints.detections import (
     _attach_sequence_to_alert,
+    _bboxes_overlap,
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
@@ -424,6 +425,26 @@ def test_resolve_groups_and_locations_no_match_returns_none():
         }
     ]
     assert _resolve_groups_and_locations(records, 999) is None
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "tolerance", "expected"),
+    [
+        # Overlapping boxes always match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.2, 0.2, 0.4, 0.4, 0.9), 0.0, True),
+        # Disjoint boxes with zero tolerance never match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.1, 0.5, 0.3, 0.9), 0.0, False),
+        # Gap smaller than the tolerance matches
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.1, 0.5, 0.3, 0.9), 0.05, True),
+        # Gap larger than the tolerance does not match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.4, 0.1, 0.5, 0.3, 0.9), 0.05, False),
+        # Tolerance applies per axis
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.32, 0.5, 0.5, 0.9), 0.05, True),
+    ],
+)
+def test_bboxes_overlap_tolerance(left, right, tolerance, expected):
+    assert _bboxes_overlap(left, right, tolerance) is expected
+    assert _bboxes_overlap(right, left, tolerance) is expected
 
 
 @pytest.mark.asyncio
