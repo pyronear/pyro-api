@@ -261,8 +261,7 @@ async def test_update_telegram_id(
         )
 
     response = await async_client.patch(f"/organizations/{organization_id}", json=payload, headers=auth)
-    print(response.text)
-    assert response.status_code == status_code, print(response.__dict__)
+    assert response.status_code == status_code, response.text
 
     if isinstance(status_detail, str):
         assert str(response.json()["detail"]) == status_detail
