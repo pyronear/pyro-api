@@ -63,7 +63,7 @@ class SlackClient:
         text_body = (
             f":date: {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
             f"\n Nom du site concerné : {camera_name}"
-            f"\n Azimuth de détection : {azimuth}°"
+            f"\n Azimuth de détection : {azimuth:.1f}°"
             f"\n <{platform_url}|Visualiser l'alerte en détail sur la plateforme Pyronear>"
         )
 
