@@ -22,6 +22,7 @@ import json
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, cast
+from zoneinfo import ZoneInfo
 
 from anyio import to_thread
 from fastapi import HTTPException
@@ -182,8 +183,18 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
                     logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_id, exc)
 
             if telegram_client.is_enabled and org is not None and org.telegram_id:
+                paris_dt = det.created_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Europe/Paris"))
+                base_url = settings.PLATFORM_URL.rstrip("/")
+                platform_url = f"{base_url}/alert/{alert_id}" if alert_id is not None else f"{base_url}/"
+                telegram_message = (
+                    "Un feu a été détecté !"
+                    f"\n📅 {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+                    f"\nNom du site concerné : {camera.name}"
+                    f"\nAzimuth de détection : {sequence_.sequence_azimuth}°"
+                    f"\nVisualiser l'alerte en détail sur la plateforme Pyronear : {platform_url}"
+                )
                 try:
-                    await to_thread.run_sync(telegram_client.notify, org.telegram_id, det.model_dump_json())
+                    await to_thread.run_sync(telegram_client.notify, org.telegram_id, telegram_message)
                 except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure block the rest
                     logger.warning("Telegram notification failed for sequence %s (%s)", sequence_id, exc)
 
