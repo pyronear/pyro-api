@@ -223,3 +223,46 @@ async def test_update_slack_hook(
 
     if isinstance(status_detail, str):
         assert str(response.json()["detail"]) == status_detail
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "organization_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 1, {"telegram_id": "@pyronearchannel"}, 401, "Not authenticated"),
+        (0, 1, {"telegram_id": "not a channel!"}, 422, None),
+        (0, 1, {"telegram_id": "@"}, 422, None),
+        (0, 1, {"telegram_id": "12-34"}, 422, None),
+        # valid formats pass validation, then hit the disabled-telegram guard (no TELEGRAM_TOKEN in test env)
+        (0, 1, {"telegram_id": "@pyronearchannel"}, 503, "Telegram notifications are not enabled"),
+        (0, 1, {"telegram_id": "-5441557990"}, 503, "Telegram notifications are not enabled"),
+        (0, 1, {"telegram_id": "12345"}, 503, "Telegram notifications are not enabled"),
+        (0, 1, {"telegram_id": None}, 200, None),
+        (1, 2, {"telegram_id": "@pyronearchannel"}, 403, "Incompatible token scope."),
+        (2, 2, {"telegram_id": "@pyronearchannel"}, 403, "Incompatible token scope."),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_telegram_id(
+    async_client: AsyncClient,
+    organization_session: AsyncSession,
+    user_idx: Union[int, None],
+    organization_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    organization_id_from_table = pytest.user_table[user_idx]["organization_id"] if user_idx is not None else None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            organization_id_from_table,
+        )
+
+    response = await async_client.patch(f"/organizations/{organization_id}", json=payload, headers=auth)
+    print(response.text)
+    assert response.status_code == status_code, print(response.__dict__)
+
+    if isinstance(status_detail, str):
+        assert str(response.json()["detail"]) == status_detail
