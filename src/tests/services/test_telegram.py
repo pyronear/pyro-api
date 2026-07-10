@@ -18,7 +18,8 @@ def test_telegram_client():
 
     if isinstance(settings.TELEGRAM_TOKEN, str):
         assert not client.has_channel_access("invalid-channel-id")
-        assert client.notify("invalid-channel-id", "test").status_code == 404
+        # Telegram answers 400 (chat not found) with a valid token, 404 with an invalid one
+        assert client.notify("invalid-channel-id", "test").status_code in {400, 404}
     else:
         with pytest.raises(AssertionError, match="Telegram notifications are not enabled"):
             client.has_channel_access("invalid-channel-id")
