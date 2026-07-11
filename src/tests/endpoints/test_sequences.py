@@ -235,7 +235,17 @@ async def test_label_sequence(
         # datetime != date, weird, but works
         (0, "2018-06-06T00:00:00", 200, None, []),
         (0, "2018-06-06", 200, None, []),
-        (0, "2023-11-07", 200, None, [{**pytest.sequence_table[0], "detections_count": 3}]),
+        # Admins see every organization's sequences
+        (
+            0,
+            "2023-11-07",
+            200,
+            None,
+            [
+                {**pytest.sequence_table[1], "detections_count": 1},
+                {**pytest.sequence_table[0], "detections_count": 3},
+            ],
+        ),
         (1, "2023-11-07", 200, None, [{**pytest.sequence_table[0], "detections_count": 3}]),
         (2, "2023-11-07", 200, None, [{**pytest.sequence_table[1], "detections_count": 1}]),
     ],
@@ -362,6 +372,42 @@ async def test_latest_sequences_include_detections_count(async_client: AsyncClie
     counts_by_sequence_id = {item["id"]: item["detections_count"] for item in returned}
     assert counts_by_sequence_id[sequence_with_detections.id] == 2
     assert counts_by_sequence_id[sequence_without_detections.id] == 0
+
+
+@pytest.mark.asyncio
+async def test_latest_sequences_admin_sees_all_organizations(
+    async_client: AsyncClient, detection_session: AsyncSession
+):
+    now = utcnow()
+    org2_sequence = Sequence(
+        camera_id=pytest.camera_table[1]["id"],  # camera of organization 2
+        pose_id=None,
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=15),
+        last_seen_at=now - timedelta(minutes=5),
+    )
+    detection_session.add(org2_sequence)
+    await detection_session.commit()
+    await detection_session.refresh(org2_sequence)
+
+    # Admin of organization 1 sees the sequence of organization 2
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.get("/sequences/unlabeled/latest", headers=admin_auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert org2_sequence.id in {item["id"] for item in response.json()}
+
+    # Agent of organization 1 does not
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    response = await async_client.get("/sequences/unlabeled/latest", headers=agent_auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert org2_sequence.id not in {item["id"] for item in response.json()}
 
 
 @pytest.mark.asyncio

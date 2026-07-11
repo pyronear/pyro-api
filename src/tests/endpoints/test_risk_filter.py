@@ -62,15 +62,37 @@ async def test_unlabeled_latest_drops_low_conf_when_camera_is_low_risk(
     risk_service._scores = {camera_id: "low"}
 
     auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[1]["id"],
+        pytest.user_table[1]["role"].split(),
+        pytest.user_table[1]["organization_id"],
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
     returned_ids = {item["id"] for item in response.json()}
     assert low_seq.id not in returned_ids
     assert high_seq.id in returned_ids
+
+
+@pytest.mark.asyncio
+async def test_unlabeled_latest_admin_bypasses_risk_filter(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """Admins skip the risk filter entirely; the ``risk_score`` override is ignored for them."""
+    camera_id = pytest.camera_table[0]["id"]
+    pose_id = pytest.pose_table[0]["id"]
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.40, minutes_ago=30)
+
+    risk_service._scores = {camera_id: "low"}  # 0.45 threshold would drop the sequence
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    for url in ("/sequences/unlabeled/latest", "/sequences/unlabeled/latest?risk_score=low"):
+        response = await async_client.get(url, headers=auth)
+        assert response.status_code == 200, print(response.__dict__)
+        assert low_seq.id in {item["id"] for item in response.json()}
 
 
 @pytest.mark.asyncio
@@ -85,9 +107,9 @@ async def test_unlabeled_latest_drops_below_very_low_threshold(
     risk_service._scores = {camera_id: "very_low"}
 
     auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[1]["id"],
+        pytest.user_table[1]["role"].split(),
+        pytest.user_table[1]["organization_id"],
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
@@ -107,9 +129,9 @@ async def test_unlabeled_latest_keeps_all_when_class_is_moderate_or_above(
     risk_service._scores = {camera_id: fwi_class}
 
     auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[1]["id"],
+        pytest.user_table[1]["role"].split(),
+        pytest.user_table[1]["organization_id"],
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
@@ -128,9 +150,9 @@ async def test_unlabeled_latest_keeps_seq_with_null_max_conf_under_filter(
     risk_service._scores = {camera_id: "low"}  # 0.45 threshold, would normally drop
 
     auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[1]["id"],
+        pytest.user_table[1]["role"].split(),
+        pytest.user_table[1]["organization_id"],
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=auth)
     assert response.status_code == 200, print(response.__dict__)
@@ -156,9 +178,9 @@ async def test_unlabeled_latest_keeps_seq_for_camera_unknown_to_risk_api(
 
     # known_cam belongs to org 1; unknown_cam belongs to org 2 -> query both orgs.
     auth_org1 = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
+        pytest.user_table[1]["id"],
+        pytest.user_table[1]["role"].split(),
+        pytest.user_table[1]["organization_id"],
     )
     auth_org2 = pytest.get_token(
         pytest.user_table[2]["id"],
