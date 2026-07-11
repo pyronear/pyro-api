@@ -222,11 +222,13 @@ async def export_alerts_csv(
 
     stmt: Any = (
         select(Alert)
-        .where(Alert.organization_id == token_payload.organization_id)
         .where(Alert.started_at >= start_dt)
         .where(Alert.started_at <= end_dt)
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
+    # Admins export every organization's alerts
+    if UserRole.ADMIN not in token_payload.scopes:
+        stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
     alerts = list((await session.exec(stmt)).all())
     seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
     camera_names_by_id = await _fetch_camera_names_by_ids(
@@ -292,17 +294,22 @@ async def fetch_latest_unlabeled_alerts(
     limit: Union[int, None] = Query(15, ge=1, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
+    is_admin = UserRole.ADMIN in token_payload.scopes
 
-    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
-        session, token_payload.organization_id, override_class=risk_score
-    )
-    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
+    # Admins see every organization's alerts without risk-score filtering
+    seq_filter = None
+    if not is_admin:
+        fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
+            session, token_payload.organization_id, override_class=risk_score
+        )
+        seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
     seq_match: Any = cast(
         Any,
@@ -314,9 +321,11 @@ async def fetch_latest_unlabeled_alerts(
     if seq_filter is not None:
         seq_match = seq_match.where(seq_filter)
 
-    alerts_stmt: Any = (
-        select(Alert)
-        .where(Alert.organization_id == token_payload.organization_id)
+    alerts_stmt: Any = select(Alert)
+    if not is_admin:
+        alerts_stmt = alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
+    alerts_stmt = (
+        alerts_stmt
         .where(cast(Any, Alert.id).in_(seq_match))
         .order_by(Alert.started_at.desc())  # type: ignore[attr-defined]
         .limit(limit)
@@ -338,23 +347,26 @@ async def fetch_alerts_from_date(
     limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
+    is_admin = UserRole.ADMIN in token_payload.scopes
 
-    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
-        session, token_payload.organization_id, target_date=from_date, override_class=risk_score
-    )
-    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
+    # Admins see every organization's alerts without risk-score filtering
+    seq_filter = None
+    if not is_admin:
+        fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
+            session, token_payload.organization_id, target_date=from_date, override_class=risk_score
+        )
+        seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
-    alerts_stmt: Any = (
-        select(Alert)
-        .where(Alert.organization_id == token_payload.organization_id)
-        .where(func.date(Alert.started_at) == from_date)
-    )
+    alerts_stmt: Any = select(Alert).where(func.date(Alert.started_at) == from_date)
+    if not is_admin:
+        alerts_stmt = alerts_stmt.where(Alert.organization_id == token_payload.organization_id)
     if seq_filter is not None:
         seq_match: Any = select(AlertSequence.alert_id).join(
             Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
