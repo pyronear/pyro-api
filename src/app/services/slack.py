@@ -5,12 +5,8 @@
 
 import json
 import logging
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import requests
-
-from app.core.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -36,39 +32,11 @@ class SlackClient:
 
         return response.status_code == 200
 
-    def notify(
-        self,
-        slack_hook: str,
-        message_detection: str,
-        camera_name: str,
-        alert_id: int | None = None,
-    ) -> requests.Response:
+    def notify(self, slack_hook: str, title: str, text_body: str) -> requests.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
-
-        try:
-            detection_data = json.loads(message_detection)
-        except json.JSONDecodeError as e:
-            raise ValueError("Invalid JSON format for message_detection") from e
-
-        azimuth = detection_data.get("sequence_azimuth", "")
-        created_at_str = detection_data.get("created_at", "Inconnu")
-        utc_dt = datetime.fromisoformat(created_at_str)
-        utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))
-        paris_dt = utc_dt.astimezone(ZoneInfo("Europe/Paris"))
-
-        base_url = settings.PLATFORM_URL.rstrip("/")
-        platform_url = f"{base_url}/alert/{alert_id}" if alert_id is not None else f"{base_url}/"
-
-        text_body = (
-            f":date: {paris_dt.strftime('%Y-%m-%d %H:%M:%S')}"
-            f"\n Nom du site concerné : {camera_name}"
-            f"\n Azimuth de détection : {azimuth:.1f}°"
-            f"\n <{platform_url}|Visualiser l'alerte en détail sur la plateforme Pyronear>"
-        )
-
         message = {
-            "text": "Un feu a été détecté !",
+            "text": title,
             "blocks": [
                 {
                     "type": "section",
