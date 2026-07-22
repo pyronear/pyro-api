@@ -296,7 +296,10 @@ async def drain_validation_queue(timeout_seconds: float = 30.0) -> None:
                     (seq.id, seq.validation_due_at, seq.validation_lease_until, seq.validation_attempts)
                     for seq in res.all()
                 ]
-            pytest.fail(f"Validation queue not drained after {timeout_seconds}s; still pending: {pending}")
+            # The last claim may have emptied the queue right as the deadline passed:
+            # only fail when jobs actually remain, else let the next claim confirm.
+            if pending:
+                pytest.fail(f"Validation queue not drained after {timeout_seconds}s; still pending: {pending}")
 
 
 @pytest_asyncio.fixture(loop_scope="session")
