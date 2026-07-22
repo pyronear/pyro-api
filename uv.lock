@@ -1418,15 +1418,15 @@ wheels = [
 
 [[package]]
 name = "prometheus-fastapi-instrumentator"
-version = "6.1.0"
+version = "8.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "fastapi" },
     { name = "prometheus-client" },
+    { name = "starlette" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/51/a1a81fe6996c6386885ec96a3027693f1ca5632f9de2dc61690de11273ce/prometheus_fastapi_instrumentator-6.1.0.tar.gz", hash = "sha256:1820d7a90389ce100f7d1285495ead388818ae0882e761c1f3e6e62a410bdf13", size = 21116, upload-time = "2023-07-15T09:40:09.03Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/e9/2065686d1dfa62296fdc158b6e8fd25b0cb3dca09b0632cabeb5ae81fe4d/prometheus_fastapi_instrumentator-8.0.2.tar.gz", hash = "sha256:3c252e748151768a7aefd66824a04a870144f71de48a67aed211749a9ca2a548", size = 21342, upload-time = "2026-06-23T09:39:31.611Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/1a/8e862d92ff2aea3442a3ba5b796f3f40f14c6d0618d25ddf3c267ef41336/prometheus_fastapi_instrumentator-6.1.0-py3-none-any.whl", hash = "sha256:2279ac1cf5b9566a4c3a07f78c9c5ee19648ed90976ab87d73d672abc1bfa017", size = 18596, upload-time = "2023-07-15T09:40:07.447Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/c7/fa2b3f469a2e6001b829e0d6bc8680755349aa1329a87bf48731e9d5d30a/prometheus_fastapi_instrumentator-8.0.2-py3-none-any.whl", hash = "sha256:746002ec1e2c58b93f61444e1d104de959a9463a6a3f1c8909ac3757e16c3866", size = 20549, upload-time = "2026-06-23T09:39:32.616Z" },
 ]
 
 [[package]]
@@ -1750,7 +1750,7 @@ server = [
     { name = "numpy", specifier = ">=2.4.6,<3.0.0" },
     { name = "pandas", specifier = ">=2.2.0,<3.0.0" },
     { name = "posthog", specifier = ">=3.0.0,<4.0.0" },
-    { name = "prometheus-fastapi-instrumentator", specifier = ">=6.1.0,<7.0.0" },
+    { name = "prometheus-fastapi-instrumentator", specifier = ">=8.0.2,<9.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.0,<3.0.0" },
