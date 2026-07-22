@@ -3,7 +3,6 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-import re
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
@@ -11,7 +10,7 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import AnnotationType, Detection
 
-__all__ = ["DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
+__all__ = ["EMPTY_BBOXES", "DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
 
 
 class DetectionLabel(BaseModel):
@@ -23,7 +22,6 @@ FLOAT_PATTERN = r"(0?\.[0-9]{1,3}|0|1)"
 BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
 # An empty list is valid: a frame with no detection (kept for sequence continuity).
 BOXES_PATTERN = rf"^\[({BOX_PATTERN}(,{BOX_PATTERN})*)?\]$"
-COMPILED_BOXES_PATTERN = re.compile(BOXES_PATTERN)
 
 # Stored bbox of a continuity detection: a frame attached to a sequence with no detection on it.
 EMPTY_BBOXES = "[]"

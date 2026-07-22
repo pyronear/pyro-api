@@ -229,7 +229,7 @@ async def test_create_detection_empty_bboxes_without_active_sequence_stores_noth
         response = await async_client.post(
             "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
         )
-        assert response.status_code == 204, print(response.__dict__)
+        assert response.status_code == 204, response.__dict__
     detection_session.expire_all()
     dets = (await detection_session.exec(select(Detection))).all()
     assert len(dets) == len(pytest.detection_table)
@@ -271,7 +271,7 @@ async def test_create_detection_empty_bboxes_extends_active_sequence(
         response = await async_client.post(
             "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
         )
-        assert response.status_code == 201, print(response.__dict__)
+        assert response.status_code == 201, response.__dict__
     sequence_id = response.json()["sequence_id"]
     assert isinstance(sequence_id, int)
     detection_session.expire_all()
@@ -288,7 +288,7 @@ async def test_create_detection_empty_bboxes_extends_active_sequence(
         files={"file": ("logo.png", mock_img, "image/png")},
         headers=auth,
     )
-    assert response.status_code == 201, print(response.__dict__)
+    assert response.status_code == 201, response.__dict__
     data = response.json()
     assert data["bbox"] == "[]"
     assert data["sequence_id"] == sequence_id
@@ -304,7 +304,7 @@ async def test_create_detection_empty_bboxes_extends_active_sequence(
     response = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
-    assert response.status_code == 201, print(response.__dict__)
+    assert response.status_code == 201, response.__dict__
     assert response.json()["sequence_id"] == sequence_id
 
 
@@ -327,7 +327,7 @@ async def test_create_detection_continuity_row_for_unmatched_sequence(
             files={"file": ("logo.png", mock_img + bytes([idx]), "image/png")},
             headers=auth,
         )
-        assert response.status_code == 201, print(response.__dict__)
+        assert response.status_code == 201, response.__dict__
     detection_session.expire_all()
     new_seqs = (
         await detection_session.exec(
@@ -343,7 +343,7 @@ async def test_create_detection_continuity_row_for_unmatched_sequence(
         files={"file": ("logo.png", mock_img + b"-final-frame", "image/png")},
         headers=auth,
     )
-    assert response.status_code == 201, print(response.__dict__)
+    assert response.status_code == 201, response.__dict__
     matched_seq_id = response.json()["sequence_id"]
     assert isinstance(matched_seq_id, int)
     (unmatched_seq,) = [seq for seq in new_seqs if seq.id != matched_seq_id]
