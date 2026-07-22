@@ -362,7 +362,10 @@ class Client:
 
         Args:
             media: byte data of the picture
-            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf.
+                An empty list reports a frame with no detection: the API attaches it to recently
+                seen sequences of the pose (keeping their frame timeline continuous) and stores
+                nothing otherwise (204).
             pose_id: pose_id of the detection
             crops: optional list of cropped pictures, one per bbox (must align with `bboxes`).
                 Each crop frames a single object, so its length must equal that of `bboxes`.
@@ -370,8 +373,8 @@ class Client:
         Returns:
             HTTP response
         """
-        if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
-            raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
+        if not isinstance(bboxes, (list, tuple)) or len(bboxes) > 5:
+            raise ValueError("bboxes must be a list of tuples with a maximum of 5 boxes")
         if crops is not None and len(crops) != len(bboxes):
             raise ValueError("crops must have the same length as bboxes")
         data: Dict[str, str] = {

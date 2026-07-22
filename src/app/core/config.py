@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     SEQUENCE_RELAXATION_SECONDS: int = int(os.environ.get("SEQUENCE_RELAXATION_SECONDS") or 120 * 60)
     SEQUENCE_MIN_INTERVAL_DETS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_DETS") or 3)
     SEQUENCE_MIN_INTERVAL_SECONDS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_SECONDS") or 5 * 60)
+    # Window after a sequence's last real detection during which a frame with no matching bbox
+    # is still attached to it (with an empty bbox) to keep the frame timeline continuous.
+    SEQUENCE_CONTINUITY_SECONDS: int = int(os.environ.get("SEQUENCE_CONTINUITY_SECONDS") or 2 * 60)
     # Max gap (relative image coords) between two bboxes still considered the same smoke plume.
     SEQUENCE_BBOX_TOLERANCE: float = float(os.environ.get("SEQUENCE_BBOX_TOLERANCE") or 0.05)
     TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
