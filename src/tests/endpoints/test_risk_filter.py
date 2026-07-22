@@ -256,6 +256,43 @@ async def test_alerts_unlabeled_latest_risk_score_override(
 
 
 @pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_count_matches_list_under_risk_filter(
+    async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache
+):
+    """The count endpoint must apply the same risk_score filter as the list, so the two stay in sync."""
+    camera_id = pytest.camera_table[1]["id"]
+    pose_id = pytest.pose_table[2]["id"]
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=15)
+    await _seed_alert_with_sequence(detection_session, organization_id=2, seq=low_seq)
+    kept_alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=high_seq)
+
+    risk_service._scores = {camera_id: "moderate"}  # no filter from the cache; override drives the filter
+
+    auth = pytest.get_token(
+        pytest.user_table[2]["id"],
+        pytest.user_table[2]["role"].split(),
+        pytest.user_table[2]["organization_id"],
+    )
+
+    # low threshold (0.45) drops the 0.30 alert but keeps the 0.55 one.
+    count_resp = await async_client.get("/alerts/unlabeled/latest/count?risk_score=low", headers=auth)
+    assert count_resp.status_code == 200, print(count_resp.__dict__)
+    assert count_resp.json() == {"count": 1}
+
+    list_resp = await async_client.get("/alerts/unlabeled/latest?risk_score=low&limit=100", headers=auth)
+    assert list_resp.status_code == 200, print(list_resp.__dict__)
+    list_ids = [item["id"] for item in list_resp.json()]
+    assert list_ids == [kept_alert.id]
+    assert count_resp.json()["count"] == len(list_ids)
+
+    # Without the override the cache class is moderate (no filter): both alerts count.
+    count_resp = await async_client.get("/alerts/unlabeled/latest/count", headers=auth)
+    assert count_resp.status_code == 200, print(count_resp.__dict__)
+    assert count_resp.json() == {"count": 2}
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("fwi_class", ["moderate", "high", "very_high", "extreme"])
 async def test_alerts_unlabeled_latest_risk_score_moderate_or_above_keeps_everything(
     fwi_class: str, async_client: AsyncClient, detection_session: AsyncSession, reset_risk_cache

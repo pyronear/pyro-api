@@ -244,6 +244,85 @@ async def test_alerts_admin_sees_all_organizations(async_client: AsyncClient, de
     assert org1_alert.id in returned_ids
     assert org2_alert.id not in returned_ids
 
+    # Count endpoints follow the same cross-organization scoping
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 1}
+
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 1}
+
+
+@pytest.mark.asyncio
+async def test_alerts_unlabeled_latest_count(async_client: AsyncClient, detection_session: AsyncSession):
+    await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
+    await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.1, lon=2.1)
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get("/alerts/unlabeled/latest?limit=100&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()) == 2
+
+    other_org_auth = pytest.get_token(
+        pytest.user_table[2]["id"], pytest.user_table[2]["role"].split(), pytest.user_table[2]["organization_id"]
+    )
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=other_org_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 0}
+
+
+@pytest.mark.asyncio
+async def test_alerts_from_date_count(async_client: AsyncClient, detection_session: AsyncSession):
+    alert, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
+    await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.1, lon=2.1)
+    date_str = alert.started_at.date().isoformat()
+
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get(f"/alerts/all/fromdate?from_date={date_str}&limit=100&offset=0", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()) == 2
+
+    resp = await async_client.get("/alerts/all/fromdate/count?from_date=2019-01-01", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 0}
+
+    other_org_auth = pytest.get_token(
+        pytest.user_table[2]["id"], pytest.user_table[2]["role"].split(), pytest.user_table[2]["organization_id"]
+    )
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=other_org_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 0}
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_unauthenticated(async_client: AsyncClient):
+    resp = await async_client.get("/alerts/unlabeled/latest/count")
+    assert resp.status_code == 401, resp.text
+
+    resp = await async_client.get("/alerts/all/fromdate/count?from_date=2019-01-01")
+    assert resp.status_code == 401, resp.text
+
 
 @pytest.mark.asyncio
 async def test_triangulation_creates_single_alert(
