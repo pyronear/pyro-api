@@ -36,14 +36,7 @@ def test_alert_message_renderings():
     mrkdwn = message.as_mrkdwn()
     assert "<https://platform.pyronear.org/alert/1|" in mrkdwn
 
+
 def test_alert_message_rounds_azimuth():
-    message = build_alert_message(
-        43.3,
-        5.4,
-        DT,
-        "station-01",
-        4.6000000001,
-        "https://platform.pyronear.org/alert/1"
-        )
-    text = message.as_text()
+    message = build_alert_message(43.3, 5.4, DT, "station-01", 4.6000000001, "https://platform.pyronear.org/alert/1")
     assert "4.6°" in message.azimuth_line

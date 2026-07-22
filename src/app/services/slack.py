@@ -35,6 +35,7 @@ class SlackClient:
     def notify(self, slack_hook: str, title: str, text_body: str) -> requests.Response:
         if not self.is_enabled:
             raise AssertionError("Slack notifications are not enabled")
+
         message = {
             "text": title,
             "blocks": [
