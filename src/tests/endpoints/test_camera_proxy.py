@@ -29,7 +29,7 @@ FAKE_JPEG = b"\xff\xd8\xff" + b"\x00" * 64
 _PROXY_MODULE = "app.api.api_v1.endpoints.camera_proxy"
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture
 async def configured_camera_session(camera_session: AsyncSession):
     """camera_session extended with one camera that has device_ip / camera_ip set."""
     camera_session.add(Camera(**CONFIGURED_CAM))
