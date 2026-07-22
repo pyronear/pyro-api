@@ -647,8 +647,10 @@ async def get_detection_url(
     if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    crop_url = bucket.get_public_url(detection.crop_bucket_key) if detection.crop_bucket_key else None
-    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key), crop_url=crop_url)
+    crop_url = (
+        bucket.get_public_url(detection.crop_bucket_key, verify_exists=False) if detection.crop_bucket_key else None
+    )
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key, verify_exists=False), crop_url=crop_url)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")

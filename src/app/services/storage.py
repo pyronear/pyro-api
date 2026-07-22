@@ -67,9 +67,22 @@ class S3Bucket:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.name, Key=bucket_key)
 
-    def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
-        """Generate a temporary public URL for a bucket file"""
-        if not self.check_file_existence(bucket_key):
+    def get_public_url(
+        self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION, verify_exists: bool = True
+    ) -> str:
+        """Generate a temporary public URL for a bucket file
+
+        Args:
+            bucket_key: the key of the file on the bucket
+            url_expiration: how long the presigned URL stays valid, in seconds
+            verify_exists: when True (default), raise a 404 if the object is missing on the
+                bucket. Presigning itself is a local signature computation with no network
+                I/O, whereas this check adds one blocking S3 ``head_object`` round-trip per
+                file. Set it to False on hot paths where the object is expected to always
+                exist (e.g. sequence detections): the client then gets a 403/404 from S3
+                when loading the URL instead of an upfront error.
+        """
+        if verify_exists and not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
             )
