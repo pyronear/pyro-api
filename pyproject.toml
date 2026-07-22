@@ -52,7 +52,7 @@ quality = [
     "sqlalchemy-stubs>=0.4,<0.5",
 ]
 test = [
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-cov>=7.1.0,<8.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
