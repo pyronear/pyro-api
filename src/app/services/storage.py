@@ -31,7 +31,7 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # noqa: ANN001
+    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # ruff:ignore[missing-type-function-argument]
         self._s3 = s3_client
         try:
             self._s3.head_bucket(Bucket=bucket_name)
@@ -161,7 +161,7 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int, ke
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
     await file.seek(0)
     # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
     await file.seek(0)
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""

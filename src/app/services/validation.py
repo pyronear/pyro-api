@@ -177,7 +177,7 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
             for webhook in await WebhookCRUD(session).fetch_all():
                 try:
                     await dispatch_webhook(webhook.url, det)
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a webhook failure block the rest
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a webhook failure block the rest
                     logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_id, exc)
 
             base_url = settings.PLATFORM_URL.rstrip("/")
@@ -189,13 +189,13 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
             if telegram_client.is_enabled and org is not None and org.telegram_id:
                 try:
                     await to_thread.run_sync(telegram_client.notify, org.telegram_id, message.as_text())
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure block the rest
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a Telegram failure block the rest
                     logger.warning("Telegram notification failed for sequence %s (%s)", sequence_id, exc)
 
             if slack_client.is_enabled and org is not None and org.slack_hook:
                 try:
                     await to_thread.run_sync(slack_client.notify, org.slack_hook, message.title, message.as_mrkdwn())
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure block the rest
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a Slack failure block the rest
                     logger.warning("Slack notification failed for sequence %s (%s)", sequence_id, exc)
     except Exception:
         logger.exception("Notification dispatch failed for sequence %s", sequence_id)

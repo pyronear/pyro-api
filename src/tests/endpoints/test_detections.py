@@ -1739,8 +1739,8 @@ async def test_create_detection_assigns_distinct_crop_per_bbox(
     assert all(key != bucket_key for key in crop_keys)
     # The first bbox maps to the first crop, the second bbox to the second crop.
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
-    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # noqa: S324
-    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # noqa: S324
+    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
 
 
 @pytest.mark.asyncio
@@ -1749,7 +1749,7 @@ async def test_create_detection_rejects_crop_bbox_count_mismatch(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(  # noqa: RUF029
+    async def fake_upload_file(  # ruff:ignore[unused-async]
         file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
     ) -> str:
         upload_calls.append(file.filename or "")
@@ -1874,7 +1874,7 @@ async def test_create_detection_authorizes_pose_before_uploading(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # noqa: RUF029
+    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # ruff:ignore[unused-async]
         upload_calls.append(file.filename or "")
         return "should-never-persist"
 
