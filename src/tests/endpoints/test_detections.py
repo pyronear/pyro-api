@@ -850,11 +850,6 @@ async def test_detection_counts_split_sequences_and_alerts(
         res = await detection_session.exec(select(model))
         return len(res.all())
 
-    async def drain_validation_queue():
-        # The worker loop is not running in tests: process due sequences synchronously.
-        while await process_next_due_validation():
-            pass
-
     base_det = await count(Detection)
     base_seq = await count(Sequence)
     base_alert = await count(Alert)
@@ -867,7 +862,8 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp1.status_code == 201, resp1.text
-    await drain_validation_queue()
+    # The worker loop is not running in tests: process due sequences synchronously.
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 1
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -880,7 +876,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp2.status_code == 201, resp2.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 2
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -893,7 +889,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp3.status_code == 201, resp3.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 3
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
@@ -906,7 +902,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp4.status_code == 201, resp4.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 5
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2

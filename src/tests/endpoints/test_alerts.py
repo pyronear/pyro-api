@@ -19,7 +19,6 @@ from app.core.config import settings
 from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
-from app.services.validation import process_next_due_validation
 
 
 async def _create_alert_with_sequences(
@@ -344,8 +343,7 @@ async def test_triangulation_creates_single_alert(
 
     # The worker loop is not running in tests: drain the due sequences synchronously
     # (temporal unconfigured -> fail-open validates, then triangulation runs).
-    while await process_next_due_validation():
-        pass
+    await pytest.drain_validation_queue()
 
     camera_ids = [camera.id for camera in cameras]
     seqs_res = await detection_session.exec(
@@ -353,6 +351,10 @@ async def test_triangulation_creates_single_alert(
     )
     sequences = sorted(seqs_res.all(), key=lambda seq: seq.id)
     assert len(sequences) == len(cameras)
+    # Pinpoint a validation miss before the triangulation asserts below.
+    assert all(seq.is_validated for seq in sequences), [
+        (seq.id, seq.is_validated, seq.validation_status, seq.validation_due_at) for seq in sequences
+    ]
 
     seq_ids = {seq.id for seq in sequences}
     mappings_res = await detection_session.exec(
