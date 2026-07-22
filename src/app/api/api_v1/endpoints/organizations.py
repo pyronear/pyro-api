@@ -90,6 +90,10 @@ async def update_telegram_id(
         token_payload.sub, event="organizations-update-telegram-id", properties={"organization_id": organization_id}
     )
     # Check if the telegram channel ID is valid
+    if payload.telegram_id and not telegram_client.is_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Telegram notifications are not enabled"
+        )
     if payload.telegram_id and not telegram_client.has_channel_access(payload.telegram_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unable to access Telegram channel")
     return await organizations.update(organization_id, payload)

@@ -19,7 +19,7 @@ server = [
     "fastapi>=0.136.3,<1.0.0",
     "sqlmodel>=0.0.38,<0.0.39",
     "pydantic>=2.0.0,<3.0.0",
-    "pydantic-settings>=2.0.0,<3.0.0",
+    "pydantic-settings>=2.14.2,<3.0.0",
     "requests>=2.32.0,<3.0.0",
     "PyJWT>=2.12.0,<3.0.0",
     "bcrypt==5.0.0",
@@ -28,8 +28,8 @@ server = [
     "alembic>=1.8.1,<2.0.0",
     "sentry-sdk[fastapi]>=2.61.1,<3.0.0",
     "posthog>=3.0.0,<4.0.0",
-    "prometheus-fastapi-instrumentator>=6.1.0,<7.0.0",
-    "python-multipart==0.0.29",
+    "prometheus-fastapi-instrumentator>=8.0.2,<9.0.0",
+    "python-multipart==0.0.32",
     "python-magic>=0.4.17,<0.5.0",
     "boto3>=1.43.9,<1.44.0", # https://github.com/boto/boto3/issues/4435
     "httpx>=0.24.0,<1.0.0",
@@ -40,18 +40,20 @@ server = [
     "pandas>=2.2.0,<3.0.0",
     "pyproj>=3.6.0,<4.0.0",
     "shapely>=2.0.0,<3.0.0",
+    "timezonefinder>=8.0.0,<9.0.0",
+    "pytz>=2024.1",
 ]
 quality = [
-    "ruff==0.15.15",
-    "ty==0.0.42",
-    "prek==0.4.3",
-    "types-requests>=2.33.0.20260518",
-    "types-python-dateutil>=2.9.0.20260518,<3.0.0",
+    "ruff==0.15.21",
+    "ty==0.0.59",
+    "prek==0.4.9",
+    "types-requests>=2.33.0.20260712",
+    "types-python-dateutil>=2.9.0.20260716,<3.0.0",
     "sqlalchemy-stubs>=0.4,<0.5",
 ]
 test = [
     "pytest==9.0.3",
-    "pytest-asyncio==1.3.0",
+    "pytest-asyncio==1.4.0",
     "pytest-cov>=7.1.0,<8.0.0",
     "pytest-pretty>=1.0.0,<2.0.0",
     "httpx>=0.23.0",
@@ -68,7 +70,7 @@ client-test = [
     "pyroclient[test]",
     # Required by [tool.coverage.run] concurrency = ["greenlet"]; the client
     # group doesn't pull greenlet in transitively the way the backend does.
-    "greenlet>=3.0.0,<4.0.0",
+    "greenlet>=3.5.3,<4.0.0",
 ]
 client-docs = [
     "pyroclient[docs]",

@@ -73,7 +73,11 @@ class Settings(BaseSettings):
     # Window after a sequence's last real detection during which a frame with no matching bbox
     # is still attached to it (with an empty bbox) to keep the frame timeline continuous.
     SEQUENCE_CONTINUITY_SECONDS: int = int(os.environ.get("SEQUENCE_CONTINUITY_SECONDS") or 2 * 60)
+    # Max gap (relative image coords) between two bboxes still considered the same smoke plume.
+    SEQUENCE_BBOX_TOLERANCE: float = float(os.environ.get("SEQUENCE_BBOX_TOLERANCE") or 0.05)
     TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
+    # Cameras closer than this share an apex: their cone intersection cannot localize smoke.
+    TRIANGULATION_MIN_APEX_DISTANCE_KM: float = float(os.environ.get("TRIANGULATION_MIN_APEX_DISTANCE_KM") or 0.1)
     ALERT_MERGE_MAX_DISTANCE_KM: float = float(os.environ.get("ALERT_MERGE_MAX_DISTANCE_KM") or 2.0)
 
     # Notifications
