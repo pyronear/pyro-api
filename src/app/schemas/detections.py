@@ -40,6 +40,9 @@ class DetectionCreate(BaseModel):
         json_schema_extra={"examples": ["[(0.1, 0.1, 0.9, 0.9, 0.5)]"]},
     )
     others_bboxes: Optional[str] = Field(None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS)
+    # Only set when the sequence is known at creation time (continuity rows); real detections
+    # are matched to a sequence after creation.
+    sequence_id: Optional[int] = Field(None, gt=0)
 
 
 class DetectionUrl(BaseModel):

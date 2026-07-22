@@ -9,7 +9,7 @@ import logging
 import re
 from ast import literal_eval
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import AbstractSet, Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import pandas as pd
 from fastapi import (
@@ -137,10 +137,34 @@ async def _create_continuity_detection(
     They never refresh last_seen_at nor max_conf: the sequence's lifetime and confidence
     track real evidence only.
     """
-    det = await detections.create(
-        DetectionCreate(camera_id=camera_id, pose_id=pose_id, bucket_key=bucket_key, bbox=EMPTY_BBOXES)
+    return await detections.create(
+        DetectionCreate(
+            camera_id=camera_id, pose_id=pose_id, bucket_key=bucket_key, bbox=EMPTY_BBOXES, sequence_id=sequence_id
+        )
     )
-    return await detections.update(det.id, DetectionSequence(sequence_id=sequence_id))
+
+
+async def _attach_continuity_detections(
+    detections: DetectionCRUD,
+    sequences: SequenceCRUD,
+    continuity_sequences: List[Sequence],
+    camera_id: int,
+    pose_id: int,
+    bucket_key: str,
+    skip_sequence_ids: AbstractSet[int] = frozenset(),
+) -> List[Detection]:
+    """Attach the frame as a continuity row to every given sequence not already covered.
+
+    Each touched sequence is re-enqueued for validation: its frame set changed even though
+    no real evidence was added.
+    """
+    created: List[Detection] = []
+    for seq in continuity_sequences:
+        if seq.id in skip_sequence_ids:
+            continue
+        created.append(await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id))
+        await sequences.enqueue_validation(seq.id)
+    return created
 
 
 async def _get_camera_by_id(
@@ -538,12 +562,9 @@ async def create_detection(
         if not continuity_sequences:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-        continuity_dets: List[Detection] = []
-        for seq in continuity_sequences:
-            continuity_dets.append(
-                await _create_continuity_detection(detections, token_payload.sub, pose_id, bucket_key, seq.id)
-            )
-            await sequences.enqueue_validation(seq.id)
+        continuity_dets = await _attach_continuity_detections(
+            detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key
+        )
         return DetectionRead(**continuity_dets[0].model_dump())
 
     # Upload media
@@ -658,11 +679,16 @@ async def create_detection(
     # Continuity pass: a recently-seen sequence of this pose whose object was not detected on
     # this frame (no bbox matched it, e.g. one of two smokes faded) still gets the frame,
     # attached with an empty bbox, so its frame timeline stays gapless for the temporal model.
-    for seq in await _get_continuity_sequences(sequences, token_payload.sub, pose_id):
-        if seq.id in affected_sequences:
-            continue
-        await _create_continuity_detection(detections, token_payload.sub, pose_id, bucket_key, seq.id)
-        affected_sequences.add(seq.id)
+    # The helper enqueues validation itself, so these sequences stay out of affected_sequences.
+    await _attach_continuity_detections(
+        detections,
+        sequences,
+        await _get_continuity_sequences(sequences, token_payload.sub, pose_id),
+        token_payload.sub,
+        pose_id,
+        bucket_key,
+        skip_sequence_ids=affected_sequences,
+    )
 
     # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
     # whichever uvicorn worker received the detection). The per-process validation worker
