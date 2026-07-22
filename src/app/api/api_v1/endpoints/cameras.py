@@ -95,7 +95,7 @@ async def fetch_cameras(
     if UserRole.ADMIN in token_payload.scopes:
         cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=trustable_filter)]
 
-        async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029
+        async def get_url_for_cam(cam: Camera) -> str | None:  # ruff:ignore[unused-async]
             if cam.last_image:
                 bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
                 try:
@@ -112,7 +112,7 @@ async def fetch_cameras(
             org_filters.append(("is_trustable", True))
         cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=org_filters)]
 
-        async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # noqa: RUF029
+        async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # ruff:ignore[unused-async]
             if cam.last_image:
                 try:
                     return bucket.get_public_url(cam.last_image)
@@ -172,7 +172,7 @@ async def create_camera_token(
     # create access token using user user_id/user_scopes
     token_data = {"sub": str(camera_id), "scopes": ["camera"], "organization_id": camera.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
-    return Token(access_token=token, token_type="bearer")  # noqa S106
+    return Token(access_token=token, token_type="bearer")  # ruff:ignore[hardcoded-password-func-arg]
 
 
 @router.patch("/{camera_id}/location", status_code=status.HTTP_200_OK, summary="Update the location of a camera")
