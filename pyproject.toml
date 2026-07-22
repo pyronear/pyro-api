@@ -44,9 +44,9 @@ server = [
     "pytz>=2024.1",
 ]
 quality = [
-    "ruff==0.15.21",
-    "ty==0.0.59",
-    "prek==0.4.9",
+    "ruff==0.15.22",
+    "ty==0.0.62",
+    "prek==0.4.10",
     "types-requests>=2.33.0.20260712",
     "types-python-dateutil>=2.9.0.20260716,<3.0.0",
     "sqlalchemy-stubs>=0.4,<0.5",
