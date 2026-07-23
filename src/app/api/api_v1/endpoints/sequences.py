@@ -53,7 +53,7 @@ async def get_sequence(
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
@@ -80,7 +80,7 @@ async def fetch_sequence_detections(
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     # Get the bucket of the camera's organization
@@ -116,7 +116,7 @@ async def fetch_latest_unlabeled_sequences(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
 
     stmt: Any = (
         select(Sequence)
@@ -155,7 +155,7 @@ async def fetch_sequences_from_date(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
 
     stmt: Any = select(Sequence).where(func.date(Sequence.started_at) == from_date)
     # Admins see every organization's sequences without risk-score filtering
@@ -222,7 +222,7 @@ async def label_sequence(
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     updated = await sequences.update(sequence_id, payload)

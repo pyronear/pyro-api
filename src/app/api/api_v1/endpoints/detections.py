@@ -622,7 +622,7 @@ async def get_detection(
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return detection
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
@@ -644,7 +644,7 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     crop_url = bucket.get_public_url(detection.crop_bucket_key) if detection.crop_bucket_key else None
@@ -658,7 +658,7 @@ async def fetch_detections(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))

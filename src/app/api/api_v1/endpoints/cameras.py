@@ -41,7 +41,7 @@ async def register_camera(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-create", properties={"device_login": payload.name})
-    if token_payload.organization_id != payload.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != payload.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     camera = await cameras.create(payload)
     return CameraOut(**camera.model_dump())
@@ -61,7 +61,7 @@ async def get_camera(
 ) -> CameraRead:
     telemetry_client.capture(token_payload.sub, event="cameras-get", properties={"camera_id": camera_id})
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     cam_poses = await poses.fetch_all(
@@ -92,7 +92,7 @@ async def fetch_cameras(
 ) -> List[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
     trustable_filter: list[tuple[str, Any]] | None = None if include_non_trustable else [("is_trustable", True)]
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=trustable_filter)]
 
         async def get_url_for_cam(cam: Camera) -> str | None:  # noqa: RUF029

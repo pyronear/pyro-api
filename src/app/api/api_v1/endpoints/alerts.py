@@ -297,7 +297,7 @@ async def export_alerts_csv(
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
     # Admins export every organization's alerts
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
     alerts = list((await session.exec(stmt)).all())
     seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
@@ -318,7 +318,7 @@ async def get_alert(
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id])
@@ -341,7 +341,7 @@ async def fetch_alert_sequences(
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     order_clause: Any = desc(cast(Any, Sequence.last_seen_at)) if order_desc else asc(cast(Any, Sequence.last_seen_at))
@@ -371,7 +371,7 @@ async def fetch_latest_unlabeled_alerts(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
 
     alerts_stmt, seq_filter = await _build_unlabeled_alerts_stmt(
         session, token_payload.organization_id, risk_score, is_admin=is_admin
@@ -394,7 +394,7 @@ async def count_latest_unlabeled_alerts(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> AlertCount:
     telemetry_client.capture(token_payload.sub, event="alerts-count-latest")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
     alerts_stmt, _ = await _build_unlabeled_alerts_stmt(
         session, token_payload.organization_id, risk_score, is_admin=is_admin
     )
@@ -415,7 +415,7 @@ async def fetch_alerts_from_date(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
 
     alerts_stmt, seq_filter = await _build_alerts_from_date_stmt(
         session, token_payload.organization_id, from_date, risk_score, is_admin=is_admin
@@ -439,7 +439,7 @@ async def count_alerts_from_date(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> AlertCount:
     telemetry_client.capture(token_payload.sub, event="alerts-count-from-date")
-    is_admin = UserRole.ADMIN in token_payload.scopes
+    is_admin = token_payload.is_admin
     alerts_stmt, _ = await _build_alerts_from_date_stmt(
         session, token_payload.organization_id, from_date, risk_score, is_admin=is_admin
     )
@@ -467,7 +467,7 @@ async def unmatch_alert_sequence(
         properties={"alert_id": alert_id, "sequence_id": sequence_id},
     )
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     link_stmt: Any = select(AlertSequence).where(

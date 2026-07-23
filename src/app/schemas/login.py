@@ -26,3 +26,7 @@ class TokenPayload(BaseModel):
     sub: int = Field(..., gt=0)
     scopes: List[Role] = Field([], description="scopes of the token")
     organization_id: int = Field(..., gt=0)
+
+    @property
+    def is_admin(self) -> bool:
+        return Role.ADMIN in self.scopes
