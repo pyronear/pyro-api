@@ -1,25 +1,29 @@
 import asyncio
 import io
 import os
-from datetime import datetime
-from typing import AsyncGenerator, Dict
+import time
+from datetime import datetime, timedelta
+from typing import Any, AsyncGenerator, Dict, cast
 
 import pytest
 import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import update
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, text
+from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import login, users
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.db import engine
+from app.core.time import utcnow
+from app.db import engine, session_factory
 from app.main import app
 from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
 from app.services.storage import s3_service
+from app.services.validation import process_next_due_validation
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
 
@@ -262,6 +266,42 @@ async def _drain_detached_notifications():
         await asyncio.gather(*pending, return_exceptions=True)
 
 
+async def drain_validation_queue(timeout_seconds: float = 30.0) -> None:
+    """Synchronously drain the validation queue (the worker loop is not running in tests).
+
+    A bare claim-until-empty loop is racy under CI load: the claim query only picks rows
+    with ``validation_due_at <= utcnow()`` and no active lease, so a retry backoff, a
+    leftover lease, or a clock step on the runner can hide a still-pending job and end
+    the drain while a sequence is left unprocessed. Each round therefore backdates every
+    pending due time (and clears leases) before claiming, so the loop only stops once the
+    queue is provably empty. The deadline guards against a job that keeps re-queueing.
+    """
+    due_col = cast(Any, Sequence.validation_due_at)
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        async with session_factory() as session:
+            stmt: Any = (
+                update(Sequence)
+                .where(due_col.is_not(None))
+                .values(validation_due_at=utcnow() - timedelta(seconds=60), validation_lease_until=None)
+            )
+            await session.exec(stmt)
+            await session.commit()
+        if not await process_next_due_validation():
+            return
+        if time.monotonic() > deadline:
+            async with session_factory() as session:
+                res = await session.exec(select(Sequence).where(due_col.is_not(None)))
+                pending = [
+                    (seq.id, seq.validation_due_at, seq.validation_lease_until, seq.validation_attempts)
+                    for seq in res.all()
+                ]
+            # The last claim may have emptied the queue right as the deadline passed:
+            # only fail when jobs actually remain, else let the next claim confirm.
+            if pending:
+                pytest.fail(f"Validation queue not drained after {timeout_seconds}s; still pending: {pending}")
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def async_session() -> AsyncSession:
     async with engine.begin() as conn:
@@ -440,6 +480,7 @@ def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str
 def pytest_configure():
     # api.security patching
     pytest.get_token = get_token
+    pytest.drain_validation_queue = drain_validation_queue
     # Table
     pytest.organization_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
