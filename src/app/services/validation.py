@@ -18,14 +18,12 @@ the (slow) model call never holds a DB session.
 """
 
 import asyncio
-import json
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy import text
 
 from app.api.dependencies import dispatch_webhook
@@ -42,6 +40,7 @@ from app.models import (
     Camera,
     Sequence,
 )
+from app.services.i18n import build_alert_message
 from app.services.risk import risk_service
 from app.services.slack import slack_client
 from app.services.storage import s3_service
@@ -178,23 +177,25 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
             for webhook in await WebhookCRUD(session).fetch_all():
                 try:
                     await dispatch_webhook(webhook.url, det)
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a webhook failure block the rest
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a webhook failure block the rest
                     logger.warning("Webhook dispatch to %s failed for sequence %s (%s)", webhook.url, sequence_id, exc)
+
+            base_url = settings.PLATFORM_URL.rstrip("/")
+            platform_url = f"{base_url}/alert/{alert_id}" if alert_id is not None else f"{base_url}/"
+            message = build_alert_message(
+                camera.lat, camera.lon, det.created_at, camera.name, sequence_.sequence_azimuth, platform_url
+            )
 
             if telegram_client.is_enabled and org is not None and org.telegram_id:
                 try:
-                    await to_thread.run_sync(telegram_client.notify, org.telegram_id, det.model_dump_json())
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Telegram failure block the rest
+                    await to_thread.run_sync(telegram_client.notify, org.telegram_id, message.as_text())
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a Telegram failure block the rest
                     logger.warning("Telegram notification failed for sequence %s (%s)", sequence_id, exc)
 
             if slack_client.is_enabled and org is not None and org.slack_hook:
-                slack_payload = jsonable_encoder(det)
-                slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
                 try:
-                    await to_thread.run_sync(
-                        slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                    )
-                except Exception as exc:  # noqa: BLE001 - best-effort: never let a Slack failure block the rest
+                    await to_thread.run_sync(slack_client.notify, org.slack_hook, message.title, message.as_mrkdwn())
+                except Exception as exc:  # ruff:ignore[blind-except] - best-effort: never let a Slack failure block the rest
                     logger.warning("Slack notification failed for sequence %s (%s)", sequence_id, exc)
     except Exception:
         logger.exception("Notification dispatch failed for sequence %s", sequence_id)

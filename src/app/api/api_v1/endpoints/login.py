@@ -37,7 +37,7 @@ async def login_with_creds(
     token_data = {"sub": str(user.id), "scopes": user.role.split(), "organization_id": user.organization_id}
     token = create_access_token(token_data, settings.JWT_UNLIMITED)
 
-    return Token(access_token=token, token_type="bearer")  # noqa S106
+    return Token(access_token=token, token_type="bearer")  # ruff:ignore[hardcoded-password-func-arg]
 
 
 @router.get("/validate", status_code=status.HTTP_200_OK, summary="Check token validity")

@@ -76,10 +76,10 @@ def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
     assert df_relaxed[df_relaxed["id"] == 21].iloc[0]["event_groups"] == [(20, 21)]
 
 
-def test_compute_overlap_skips_same_pose_pair() -> None:
+def test_compute_overlap_groups_same_pose_pair_without_location() -> None:
     now = utcnow()
-    # Two sequences from the exact same pose with time and angular overlap
-    # share the same apex, so they must not be triangulated together.
+    # Two sequences from the exact same pose with time and angular overlap see the same
+    # event, so they group together — but a shared apex cannot triangulate a location.
     seqs = [
         _make_sequence(
             10, 48.3792, 2.8208, 180.0, 10.0, now - timedelta(seconds=9), now - timedelta(seconds=1), pose_id=42
@@ -92,5 +92,41 @@ def test_compute_overlap_skips_same_pose_pair() -> None:
 
     row10 = df[df["id"] == 10].iloc[0]
     row11 = df[df["id"] == 11].iloc[0]
-    assert row10["event_groups"] == [(10,)]
-    assert row11["event_groups"] == [(11,)]
+    assert row10["event_groups"] == [(10, 11)]
+    assert row11["event_groups"] == [(10, 11)]
+    assert row10["event_smoke_locations"] == [None]
+    assert row11["event_smoke_locations"] == [None]
+
+
+def test_compute_overlap_groups_same_mast_pair_without_location() -> None:
+    now = utcnow()
+    # Two cameras on the same mast (distinct poses, ~same coordinates) with overlapping
+    # cones: same event, but no range information, so the group has no location.
+    seqs = [
+        _make_sequence(30, 48.4267, 2.7109, 100.0, 2.0, now - timedelta(seconds=9), now - timedelta(seconds=1)),
+        _make_sequence(31, 48.4268, 2.7110, 101.0, 2.0, now - timedelta(seconds=8), now - timedelta(seconds=2)),
+    ]
+    df = compute_overlap(pd.DataFrame.from_records(seqs))
+
+    row30 = df[df["id"] == 30].iloc[0]
+    assert row30["event_groups"] == [(30, 31)]
+    assert row30["event_smoke_locations"] == [None]
+
+
+def test_compute_overlap_mixed_group_locates_from_triangulable_pairs_only() -> None:
+    now = utcnow()
+    # A same-mast pair plus a distant camera: all three group together, and the location
+    # must come from the cross-site intersections only, not the degenerate near-apex pair.
+    seqs = [
+        _make_sequence(40, 48.4267, 2.7109, 163.4, 1.0, now - timedelta(seconds=9), now - timedelta(seconds=1)),
+        _make_sequence(41, 48.4267, 2.7109, 163.4, 1.0, now - timedelta(seconds=8), now - timedelta(seconds=2)),
+        _make_sequence(42, 48.2605, 2.7064, 8.3, 0.8, now - timedelta(seconds=7), now - timedelta(seconds=3)),
+    ]
+    df = compute_overlap(pd.DataFrame.from_records(seqs))
+
+    row40 = df[df["id"] == 40].iloc[0]
+    assert row40["event_groups"] == [(40, 41, 42)]
+    location = row40["event_smoke_locations"][0]
+    assert location is not None
+    # The triangulated point sits between the two sites, close to neither apex
+    assert 48.26 < location[0] < 48.43

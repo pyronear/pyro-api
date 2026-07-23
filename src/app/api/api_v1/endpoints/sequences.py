@@ -95,8 +95,12 @@ async def fetch_sequence_detections(
     return [
         DetectionWithUrl(
             **DetectionRead(**elt.model_dump()).model_dump(),
-            url=bucket.get_public_url(elt.bucket_key),
-            crop_url=(bucket.get_public_url(elt.crop_bucket_key) if with_crop and elt.crop_bucket_key else None),
+            url=bucket.get_public_url(elt.bucket_key, verify_exists=False),
+            crop_url=(
+                bucket.get_public_url(elt.crop_bucket_key, verify_exists=False)
+                if with_crop and elt.crop_bucket_key
+                else None
+            ),
         )
         for elt in fetched
     ]

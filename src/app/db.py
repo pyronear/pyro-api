@@ -27,7 +27,8 @@ session_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with session_factory() as session:
-        yield session
+        # FastAPI runs dependency generators to completion, so cleanup is guaranteed
+        yield session  # ruff:ignore[yield-in-context-manager-in-async-generator]
 
 
 async def init_db() -> None:
