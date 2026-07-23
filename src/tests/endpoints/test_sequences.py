@@ -398,7 +398,7 @@ async def test_latest_sequences_admin_sees_all_organizations(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=admin_auth)
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.__dict__
     assert org2_sequence.id in {item["id"] for item in response.json()}
 
     # Agent of organization 1 does not
@@ -406,7 +406,7 @@ async def test_latest_sequences_admin_sees_all_organizations(
         pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
     )
     response = await async_client.get("/sequences/unlabeled/latest", headers=agent_auth)
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.__dict__
     assert org2_sequence.id not in {item["id"] for item in response.json()}
 
 

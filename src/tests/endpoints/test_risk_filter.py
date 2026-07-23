@@ -91,7 +91,7 @@ async def test_unlabeled_latest_admin_bypasses_risk_filter(
     )
     for url in ("/sequences/unlabeled/latest", "/sequences/unlabeled/latest?risk_score=low"):
         response = await async_client.get(url, headers=auth)
-        assert response.status_code == 200, print(response.__dict__)
+        assert response.status_code == 200, response.__dict__
         assert low_seq.id in {item["id"] for item in response.json()}
 
 
