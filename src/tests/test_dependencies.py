@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 from fastapi import HTTPException
 from fastapi.security import SecurityScopes
+from httpx import ConnectError
 from pydantic import BaseModel
 
 from app.api.dependencies import dispatch_webhook, get_jwt
@@ -81,3 +82,17 @@ async def test_dispatch_webhook_sends_json_object(monkeypatch):
 
     # The body must be a JSON object, not a double-encoded JSON string
     assert captured["json"] == {"id": 1, "created_at": "2026-06-11T15:38:06"}
+
+
+@pytest.mark.asyncio
+async def test_dispatch_webhook_swallows_request_errors(monkeypatch):
+    async def _post(self, url, json=None):  # ruff:ignore[unused-async] - must match AsyncClient.post's async signature
+        raise ConnectError("connection refused")
+
+    monkeypatch.setattr("app.api.dependencies.AsyncClient.post", _post)
+
+    class _Payload(BaseModel):
+        id: int
+
+    # Best-effort dispatch: a network failure is logged, never raised to the caller
+    await dispatch_webhook("https://example.com/hook", _Payload(id=1))
