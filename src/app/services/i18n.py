@@ -110,7 +110,7 @@ def build_alert_message(
         title=strings["title"],
         local_time=local_dt.strftime("%Y-%m-%d %H:%M:%S"),
         site_line=f"{strings['site']} : {camera_name}",
-        azimuth_line=f"{strings['azimuth']} : {azimuth}°",
+        azimuth_line=f"{strings['azimuth']} : {azimuth:.1f}°",
         link_label=strings["link"],
         url=url,
     )

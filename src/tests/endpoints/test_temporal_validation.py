@@ -9,6 +9,7 @@ from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -77,6 +78,29 @@ async def _seed_sequence(
 
 async def _enqueue(session: AsyncSession, sequence_id: int) -> None:
     await SequenceCRUD(session).enqueue_validation(sequence_id)
+
+
+async def _backdate_due(seconds: float = 60.0) -> None:
+    """Shift every pending due time into the past so the next claim can't miss it.
+
+    The claim only picks rows with ``validation_due_at <= utcnow()``, and ``utcnow`` is
+    the wall clock: a clock step on the CI runner between enqueue and claim can leave a
+    just-queued row a few ms in the future and hide it from the claim. The shift is
+    relative, so FIFO order and staleness verdicts are preserved.
+    """
+    due_col = cast(Any, Sequence.validation_due_at)
+    async with session_factory() as session:
+        stmt: Any = (
+            update(Sequence).where(due_col.is_not(None)).values(validation_due_at=due_col - timedelta(seconds=seconds))
+        )
+        await session.exec(stmt)
+        await session.commit()
+
+
+async def _process_one_due() -> bool:
+    """``process_next_due_validation`` with the claim made immune to runner clock steps."""
+    await _backdate_due()
+    return await process_next_due_validation()
 
 
 async def _has_alert_link(session: AsyncSession, sequence_id: int) -> bool:
@@ -165,6 +189,7 @@ async def test_claim_leases_and_blocks_concurrent_workers(detection_session: Asy
     """Cross-worker dedup: a claimed job is invisible to other workers until the lease expires."""
     seq = await _seed_sequence(detection_session, 5)
     await _enqueue(detection_session, cast(int, seq.id))
+    await _backdate_due()
 
     async with session_factory() as worker_a, session_factory() as worker_b:
         claimed = await SequenceCRUD(worker_a).claim_due_validation(lease_seconds=60)
@@ -174,7 +199,8 @@ async def test_claim_leases_and_blocks_concurrent_workers(detection_session: Asy
         assert await SequenceCRUD(worker_b).claim_due_validation(lease_seconds=60) is None  # leased
 
     # An expired lease (worker died mid-job) makes the job claimable again: nothing is lost.
-    stale_lease = utcnow() - timedelta(seconds=1)
+    # 60s in the past, not 1s: a runner clock step must not make the lease look alive again.
+    stale_lease = utcnow() - timedelta(seconds=60)
     crud = SequenceCRUD(detection_session)
     seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
     seq_db.validation_lease_until = stale_lease
@@ -208,7 +234,7 @@ async def test_finish_job_keeps_due_when_frames_changed_during_scoring(detection
 
 @pytest.mark.asyncio
 async def test_process_returns_false_when_nothing_due(detection_session: AsyncSession):
-    assert await process_next_due_validation() is False
+    assert await _process_one_due() is False
 
 
 @pytest.mark.asyncio
@@ -220,7 +246,7 @@ async def test_process_risk_gate_blocks_low_conf(detection_session: AsyncSession
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_not_awaited()  # blocked before temporal
     await detection_session.refresh(seq)
@@ -236,7 +262,7 @@ async def test_process_validates_and_triangulates_on_fail_open(detection_session
     monkeypatch.setattr(risk_service, "_scores", {})  # no threshold -> gate open
     monkeypatch.setattr(temporal_service, "is_available", lambda: False)  # fail open
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True
@@ -254,7 +280,7 @@ async def test_process_scores_with_fresh_frames_and_roi(detection_session: Async
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     assert predict.await_args.args[1] == [f"frame-{i}.jpg" for i in range(5)]  # frames read at call time
     # The bbox-union ROI is forwarded so the verdict is scoped to the sequence's region.
@@ -282,7 +308,7 @@ async def test_process_persists_score_below_threshold_without_validating(detecti
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=_prediction(0.40)))  # below 0.45
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.temporal_model_score == pytest.approx(0.40)  # latest score persisted
@@ -301,7 +327,7 @@ async def test_process_skips_below_min_frames(detection_session: AsyncSession, m
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_not_awaited()
     await detection_session.refresh(seq)
@@ -319,7 +345,7 @@ async def test_process_truncates_never_scored_sequence_past_max_frames(detection
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     assert predict.await_args.args[1] == [f"frame-{i}.jpg" for i in range(2, 12)]  # last 10
     await detection_session.refresh(seq)
@@ -339,7 +365,7 @@ async def test_process_window_exhausted_when_scored_and_past_max_frames(detectio
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_not_awaited()  # don't call the model again
     await detection_session.refresh(seq)
@@ -368,7 +394,7 @@ async def test_process_stale_job_fails_open_explicitly(detection_session: AsyncS
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_not_awaited()  # too late to be useful: don't burn model time
     await detection_session.refresh(seq)
@@ -386,7 +412,7 @@ async def test_process_scoreless_response_does_not_validate(detection_session: A
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=_prediction(None)))
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False
@@ -406,7 +432,7 @@ async def test_process_resumes_post_claim_crash(detection_session: AsyncSession,
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True  # resumed, not skipped
+    assert await _process_one_due() is True  # resumed, not skipped
 
     predict.assert_not_awaited()  # resume goes straight to post-claim work
     await detection_session.refresh(seq)
@@ -424,7 +450,7 @@ async def test_process_nothing_due_for_completed_validated_sequence(detection_se
     await crud.claim_validation(cast(int, seq.id))
     await crud.finish_validation_job(cast(int, seq.id))
 
-    assert await process_next_due_validation() is False
+    assert await _process_one_due() is False
 
 
 @pytest.mark.asyncio
@@ -440,7 +466,7 @@ async def test_process_validates_from_prior_high_score_past_window(detection_ses
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_not_awaited()  # validated from the stored score, no extra model call
     await detection_session.refresh(seq)
@@ -467,7 +493,7 @@ async def test_attach_failure_past_window_does_not_window_exhaust(detection_sess
         raise RuntimeError("attach failed")
 
     monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", boom)
-    assert await process_next_due_validation() is True  # scores 0.90, then attach fails
+    assert await _process_one_due() is True  # scores 0.90, then attach fails
 
     await detection_session.refresh(seq)
     assert seq.temporal_model_score == pytest.approx(0.90)
@@ -483,7 +509,7 @@ async def test_attach_failure_past_window_does_not_window_exhaust(detection_sess
     detection_session.add(seq_db)
     await detection_session.commit()
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict_retry.assert_not_awaited()
     await detection_session.refresh(seq)
@@ -507,7 +533,7 @@ async def test_process_risk_gates_on_current_max_conf(detection_session: AsyncSe
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     predict.assert_awaited()  # gate evaluated on the fresh 0.90, not the enqueue-time 0.30
 
@@ -521,7 +547,7 @@ async def test_process_survives_job_error_and_keeps_job_due(detection_session: A
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=RuntimeError("boom")))
 
-    assert await process_next_due_validation() is True  # error swallowed, loop survives
+    assert await _process_one_due() is True  # error swallowed, loop survives
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False
@@ -548,7 +574,7 @@ async def test_poison_job_dead_letters_after_max_attempts(detection_session: Asy
             seq_db.validation_due_at = utcnow()
             detection_session.add(seq_db)
             await detection_session.commit()
-        assert await process_next_due_validation() is True
+        assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.validation_attempts == MAX_VALIDATION_ATTEMPTS
@@ -560,7 +586,7 @@ async def test_poison_job_dead_letters_after_max_attempts(detection_session: Asy
     await crud.enqueue_validation(cast(int, seq.id))
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None
-    assert await process_next_due_validation() is False
+    assert await _process_one_due() is False
 
 
 @pytest.mark.asyncio
@@ -572,7 +598,7 @@ async def test_attempts_reset_on_completed_job(detection_session: AsyncSession, 
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=RuntimeError("blip")))
 
-    assert await process_next_due_validation() is True  # one transient error
+    assert await _process_one_due() is True  # one transient error
     await detection_session.refresh(seq)
     assert seq.validation_attempts == 1
 
@@ -583,7 +609,7 @@ async def test_attempts_reset_on_completed_job(detection_session: AsyncSession, 
     detection_session.add(seq_db)
     await detection_session.commit()
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True
@@ -606,7 +632,7 @@ async def test_attach_failure_keeps_verdict_and_resumes(detection_session: Async
         raise RuntimeError("attach failed")
 
     monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", boom)
-    assert await process_next_due_validation() is True  # error swallowed by the worker
+    assert await _process_one_due() is True  # error swallowed by the worker
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True  # verdict durable from the claim
@@ -624,7 +650,7 @@ async def test_attach_failure_keeps_verdict_and_resumes(detection_session: Async
     seq_db.validation_due_at = utcnow()  # fast-forward past the retry backoff
     detection_session.add(seq_db)
     await detection_session.commit()
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True
@@ -646,7 +672,7 @@ async def test_process_stale_below_min_frames_stays_unvalidated(detection_sessio
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=_prediction(0.9)))
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False  # no stale fail-open below MIN_FRAMES
@@ -766,7 +792,7 @@ async def test_notification_channel_failures_never_abort_the_job(detection_sessi
     monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
     monkeypatch.setattr(validation_service.slack_client, "notify", sync_boom)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
     await _drain_notifications()  # notifications run detached, off the worker's critical path
 
     await detection_session.refresh(seq)
@@ -786,7 +812,7 @@ async def test_process_handles_vanished_sequence_and_camera(detection_session: A
     await _enqueue(detection_session, cast(int, seq.id))
     monkeypatch.setattr(CameraCRUD, "get", AsyncMock(return_value=None))  # vanished camera
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False
@@ -804,7 +830,7 @@ async def test_process_fails_open_when_predict_raises_in_flight(detection_sessio
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=TemporalUnavailableError("boom")))
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True
@@ -829,7 +855,7 @@ async def test_process_lost_claim_leaves_job_due_for_resume(detection_session: A
 
     monkeypatch.setattr(temporal_service, "predict", predict_and_steal_claim)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is True  # the concurrent claim stands
@@ -839,11 +865,11 @@ async def test_process_lost_claim_leaves_job_due_for_resume(detection_session: A
     # Once the loser's lease expires, the resume path completes the winner's pending work.
     crud = SequenceCRUD(detection_session)
     seq_db = cast(Sequence, await crud.get(cast(int, seq.id), strict=True))
-    seq_db.validation_lease_until = utcnow() - timedelta(seconds=1)
+    seq_db.validation_lease_until = utcnow() - timedelta(seconds=60)  # expired, clock-step proof
     detection_session.add(seq_db)
     await detection_session.commit()
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None  # resumed and completed
@@ -860,7 +886,7 @@ async def test_first_score_past_window_below_threshold_is_terminal(detection_ses
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", AsyncMock(return_value=_prediction(0.40)))  # declined
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False
@@ -890,7 +916,7 @@ async def test_risk_gate_finish_keeps_due_when_frames_changed(detection_session:
 
     monkeypatch.setattr(validation_service, "_sequence_frames_and_roi", stale_frames)
 
-    assert await process_next_due_validation() is True
+    assert await _process_one_due() is True
 
     await detection_session.refresh(seq)
     assert seq.is_validated is False
