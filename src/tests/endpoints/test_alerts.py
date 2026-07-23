@@ -209,6 +209,59 @@ async def test_alerts_from_date(async_client: AsyncClient, detection_session: As
 
 
 @pytest.mark.asyncio
+async def test_alerts_admin_sees_all_organizations(async_client: AsyncClient, detection_session: AsyncSession):
+    org1_alert, _, _ = await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
+    org2_alert, _, _ = await _create_alert_with_sequences(detection_session, org_id=2, camera_id=2, lat=44.0, lon=5.0)
+
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+
+    # Admin of organization 1 sees both organizations' alerts
+    resp = await async_client.get("/alerts/unlabeled/latest", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert {org1_alert.id, org2_alert.id}.issubset({item["id"] for item in resp.json()})
+
+    date_str = org1_alert.started_at.date().isoformat()
+    resp = await async_client.get(f"/alerts/all/fromdate?from_date={date_str}", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert {org1_alert.id, org2_alert.id}.issubset({item["id"] for item in resp.json()})
+
+    # Agent of organization 1 only sees its own organization's alerts
+    resp = await async_client.get("/alerts/unlabeled/latest", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    returned_ids = {item["id"] for item in resp.json()}
+    assert org1_alert.id in returned_ids
+    assert org2_alert.id not in returned_ids
+
+    resp = await async_client.get(f"/alerts/all/fromdate?from_date={date_str}", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    returned_ids = {item["id"] for item in resp.json()}
+    assert org1_alert.id in returned_ids
+    assert org2_alert.id not in returned_ids
+
+    # Count endpoints follow the same cross-organization scoping
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get("/alerts/unlabeled/latest/count", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 1}
+
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=admin_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 2}
+
+    resp = await async_client.get(f"/alerts/all/fromdate/count?from_date={date_str}", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"count": 1}
+
+
+@pytest.mark.asyncio
 async def test_alerts_unlabeled_latest_count(async_client: AsyncClient, detection_session: AsyncSession):
     await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.0, lon=2.0)
     await _create_alert_with_sequences(detection_session, org_id=1, camera_id=1, lat=48.1, lon=2.1)
@@ -892,6 +945,23 @@ async def test_alerts_export_org_isolation(
     returned_ids = {int(r["alert_id"]) for r in rows}
     assert org1_alert.id in returned_ids
     assert org2_alert.id not in returned_ids
+
+
+@pytest.mark.asyncio
+async def test_alerts_export_admin_sees_all_organizations(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    export_base_dt: datetime,
+    org1_admin_auth: Dict[str, str],
+):
+    org1_alert = await _create_alert(detection_session, 1, export_base_dt, export_base_dt + timedelta(minutes=5))
+    await _attach_sequence(detection_session, org1_alert, camera_id=1)
+    org2_alert = await _create_alert(detection_session, 2, export_base_dt, export_base_dt + timedelta(minutes=5))
+    await _attach_sequence(detection_session, org2_alert, camera_id=2)
+
+    _, rows = await _get_export(async_client, org1_admin_auth, "2026-04-10", "2026-04-10")
+    returned_ids = {int(r["alert_id"]) for r in rows}
+    assert {org1_alert.id, org2_alert.id}.issubset(returned_ids)
 
 
 @pytest.mark.asyncio

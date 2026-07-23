@@ -53,7 +53,7 @@ async def get_sequence(
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
@@ -80,7 +80,7 @@ async def fetch_sequence_detections(
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     # Get the bucket of the camera's organization
@@ -113,28 +113,32 @@ async def fetch_sequence_detections(
 )
 async def fetch_latest_unlabeled_sequences(
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
-    camera_ids = (
-        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-    ).all()
-    classes: dict[int, Union[str, None]] = (
-        dict.fromkeys(camera_ids, risk_score) if risk_score is not None else dict(risk_service.scores())
-    )
+    is_admin = token_payload.is_admin
 
     stmt: Any = (
         select(Sequence)
         .where(Sequence.started_at > utcnow() - timedelta(hours=24))
-        .where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     )
-    seq_filter = max_conf_filter_clause(classes)
-    if seq_filter is not None:
-        stmt = stmt.where(seq_filter)
+    # Admins see every organization's sequences without risk-score filtering
+    if not is_admin:
+        camera_ids = (
+            await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
+        ).all()
+        classes: dict[int, Union[str, None]] = (
+            dict.fromkeys(camera_ids, risk_score) if risk_score is not None else dict(risk_service.scores())
+        )
+        stmt = stmt.where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        seq_filter = max_conf_filter_clause(classes)
+        if seq_filter is not None:
+            stmt = stmt.where(seq_filter)
     stmt = stmt.order_by(Sequence.started_at.desc()).limit(15)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
@@ -148,29 +152,33 @@ async def fetch_sequences_from_date(
     limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
     offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
-    # Limit to cameras in the same organization
-    camera_ids = (
-        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-    ).all()
-    classes: dict[int, str | None]
-    if risk_score is not None:
-        classes = dict.fromkeys(camera_ids, risk_score)
-    else:
-        scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
-        classes = dict(scores)
+    is_admin = token_payload.is_admin
 
-    stmt: Any = (
-        select(Sequence).where(func.date(Sequence.started_at) == from_date).where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
-    )
-    seq_filter = max_conf_filter_clause(classes)
-    if seq_filter is not None:
-        stmt = stmt.where(seq_filter)
+    stmt: Any = select(Sequence).where(func.date(Sequence.started_at) == from_date)
+    # Admins see every organization's sequences without risk-score filtering
+    if not is_admin:
+        # Limit to cameras in the same organization
+        camera_ids = (
+            await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
+        ).all()
+        classes: dict[int, str | None]
+        if risk_score is not None:
+            classes = dict.fromkeys(camera_ids, risk_score)
+        else:
+            scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
+            classes = dict(scores)
+
+        stmt = stmt.where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        seq_filter = max_conf_filter_clause(classes)
+        if seq_filter is not None:
+            stmt = stmt.where(seq_filter)
     stmt = stmt.order_by(Sequence.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
@@ -218,7 +226,7 @@ async def label_sequence(
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     updated = await sequences.update(sequence_id, payload)
