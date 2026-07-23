@@ -67,7 +67,7 @@ async def test_dispatch_webhook_sends_json_object(monkeypatch):
         def raise_for_status(self):
             return None
 
-    async def _post(self, url, json=None):  # noqa: RUF029 - must match AsyncClient.post's async signature
+    async def _post(self, url, json=None):  # ruff:ignore[unused-async] - must match AsyncClient.post's async signature
         captured["json"] = json
         return _Response()
 
