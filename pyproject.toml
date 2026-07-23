@@ -70,7 +70,7 @@ client-test = [
     "pyroclient[test]",
     # Required by [tool.coverage.run] concurrency = ["greenlet"]; the client
     # group doesn't pull greenlet in transitively the way the backend does.
-    "greenlet>=3.5.3,<4.0.0",
+    "greenlet>=3.5.4,<4.0.0",
 ]
 client-docs = [
     "pyroclient[docs]",
