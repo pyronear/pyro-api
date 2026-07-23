@@ -160,6 +160,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
     {
         "id": 2,
@@ -171,6 +172,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
         "id": 3,
@@ -182,6 +184,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
         "id": 4,
@@ -193,6 +196,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 

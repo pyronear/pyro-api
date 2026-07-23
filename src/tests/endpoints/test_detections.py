@@ -3,7 +3,7 @@ import hashlib
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
@@ -1087,6 +1087,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     det_read = await create_detection(
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload,
         crop_files=None,
         detections=detections,
@@ -1121,6 +1122,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     det_read_2 = await create_detection(
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload_again,
         crop_files=None,
         detections=detections,
@@ -1568,6 +1570,79 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+
+@pytest.mark.asyncio
+async def test_create_detection_uses_payload_recorded_at(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    recorded_at = datetime(2024, 1, 15, 10, 30, 0, 123456)
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": recorded_at.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == recorded_at
+
+
+@pytest.mark.asyncio
+async def test_create_detection_converts_aware_recorded_at_to_utc(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    # A France-local (UTC+2) capture time must be stored as the equivalent naive-UTC instant.
+    aware = datetime(2024, 7, 1, 10, 30, 0, 123456, tzinfo=timezone(timedelta(hours=2)))
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": aware.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == datetime(2024, 7, 1, 8, 30, 0, 123456)
+    assert det.recorded_at.tzinfo is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_defaults_recorded_at_to_now(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    # When the engine omits recorded_at it falls back to the server clock, lining up with created_at.
+    assert abs((det.recorded_at - det.created_at).total_seconds()) < 5
 
 
 @pytest.mark.asyncio
