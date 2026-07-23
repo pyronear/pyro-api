@@ -148,7 +148,7 @@ def main(args):
     # Check that a sequence has been created
     sequence = api_request("get", f"{args.endpoint}/sequences/1", agent_auth)
     assert sequence["camera_id"] == cam_id
-    assert sequence["started_at"] == response.json()["recorded_at"]
+    assert sequence["started_at"] == response.json()["created_at"]
     assert sequence["last_seen_at"] > sequence["started_at"]
     assert sequence["camera_azimuth"] == pose_azimuth
     # Fetch the latest sequence

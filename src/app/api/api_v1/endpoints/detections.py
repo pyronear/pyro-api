@@ -98,7 +98,7 @@ async def _get_last_bbox_for_sequence(
 ) -> Optional[Tuple[float, float, float, float, float]]:
     dets = await detections.fetch_all(
         filters=("sequence_id", sequence_id),
-        order_by="recorded_at",
+        order_by="created_at",
         order_desc=True,
         limit=1,
     )
@@ -515,9 +515,9 @@ async def create_detection(
     affected_sequences: Set[int] = set()
 
     # The engine may report when the image was actually captured; fall back to now when it doesn't.
-    # Aware timestamps are normalized to UTC (naive timestamps are assumed to already be UTC) so
-    # the value matches the DB columns and the time-window comparisons below.
-    # All bboxes from a single upload share the same capture time.
+    # Stored for display and as a camera-lag signal (created_at - recorded_at); sequence linking still
+    # keys on created_at (the monotonic server clock). Aware timestamps are normalized to UTC, naive
+    # ones are assumed UTC, and all bboxes from a single upload share the same capture time.
     effective_recorded_at = to_utc_naive(recorded_at) if recorded_at is not None else utcnow()
 
     for idx, bbox_str in enumerate(bbox_strings):
@@ -544,7 +544,7 @@ async def create_detection(
             inequality_pair=(
                 "last_seen_at",
                 ">",
-                effective_recorded_at - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+                utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
             ),
             order_by="last_seen_at",
             order_desc=True,
@@ -559,7 +559,7 @@ async def create_detection(
                 break
 
         if matched_sequence is not None:
-            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.recorded_at))
+            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
             det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
             # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
             det_max_conf = max_conf_from_bboxes(det.bbox)
@@ -575,11 +575,11 @@ async def create_detection(
             dets_ = await detections.fetch_all(
                 filters=det_filters,
                 inequality_pair=(
-                    "recorded_at",
+                    "created_at",
                     ">",
-                    effective_recorded_at - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
+                    utcnow() - timedelta(seconds=settings.SEQUENCE_MIN_INTERVAL_SECONDS),
                 ),
-                order_by="recorded_at",
+                order_by="created_at",
                 order_desc=False,
             )
             overlapping_dets: List[Detection] = []
@@ -592,7 +592,7 @@ async def create_detection(
                     overlapping_dets.append(cand)
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-                first_det = min(overlapping_dets, key=lambda item: item.recorded_at)
+                first_det = min(overlapping_dets, key=lambda item: item.created_at)
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
                 seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
@@ -602,8 +602,8 @@ async def create_detection(
                         camera_azimuth=pose.azimuth,
                         sequence_azimuth=cone_azimuth,
                         cone_angle=cone_angle,
-                        started_at=first_det.recorded_at,
-                        last_seen_at=det.recorded_at,
+                        started_at=first_det.created_at,
+                        last_seen_at=det.created_at,
                         max_conf=seq_max_conf,
                     )
                 )
