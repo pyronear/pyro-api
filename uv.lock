@@ -1796,7 +1796,7 @@ server = [
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.66.0,<3.0.0" },
     { name = "shapely", specifier = ">=2.0.0,<3.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.38,<0.0.39" },
-    { name = "timezonefinder", specifier = ">=8.0.0,<9.0.0" },
+    { name = "timezonefinder", specifier = ">=8.2.5,<9.0.0" },
     { name = "uvicorn", specifier = ">=0.11.1,<1.0.0" },
 ]
 test = [
@@ -2341,7 +2341,7 @@ wheels = [
 
 [[package]]
 name = "timezonefinder"
-version = "8.2.4"
+version = "8.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cffi" },
@@ -2349,11 +2349,11 @@ dependencies = [
     { name = "h3" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/67/f2/77f407fac773a72e18e91657896fdec9b61ed4e31b35adf7270d8f5f71b0/timezonefinder-8.2.4.tar.gz", hash = "sha256:d80fae37adf1497729cc3e69826c22f3b2fec16db07932bf389b6ae545400b42", size = 54286323, upload-time = "2026-05-01T12:47:22.142Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/6d/54439b6e76289c9d2527c8243e7e4ca5f4c1c1700a7e8a21ad27c6618822/timezonefinder-8.2.5.tar.gz", hash = "sha256:cca1aebf11c8034f0fe4c442fc068232dc2f355038cf61ffa67653caf90ae3e9", size = 55005939, upload-time = "2026-07-13T02:11:44.465Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/7b/422744a1ac2a5a2bec21f0d17f927a5324ed3e0c442c64337d265a266a0f/timezonefinder-8.2.4-cp311-abi3-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:c824271053f0e3ad0700a2c504d609317c8c288655d8e48e1f382d0da094e94c", size = 54286013, upload-time = "2026-05-01T12:47:09.99Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/e4/9b5c948bc657420fa7d0a86acc1489f977e4d459b088a957c0e046b2897f/timezonefinder-8.2.4-cp311-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:97e9336391be6e10ca85f2ccdd36491c2aa2611e5265561de0f2e3b1652c2a68", size = 54285876, upload-time = "2026-05-01T12:47:13.93Z" },
-    { url = "https://files.pythonhosted.org/packages/c5/8a/4fc4538471cc34ca5aab758d0e372afedb93428170c18da1e5706a9e1119/timezonefinder-8.2.4-cp311-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:54f3a8cae6715bf2f6a4c1a31189dc709d2fbabc5671147d5cb461455d6c6f39", size = 54287989, upload-time = "2026-05-01T12:47:17.903Z" },
+    { url = "https://files.pythonhosted.org/packages/70/d7/05e8022491e1b9f4b81041383bcc1b70d764dbf6c8c6bfd81f012ff1dae2/timezonefinder-8.2.5-cp311-abi3-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:447fd33a39d3ae60a0b7ca2e2b9b3538b941e434a3673300659aa79996a0ae9c", size = 55014167, upload-time = "2026-07-13T02:11:31.45Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/d7/f165f143a46ab6e8951f8cb543b341a51e6ba71d67309dea8b865a331ad2/timezonefinder-8.2.5-cp311-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:976230555eb9943f3651fa00fe587854a5c1b6d0aa9c7c714296d0934dccf406", size = 55014023, upload-time = "2026-07-13T02:11:35.865Z" },
+    { url = "https://files.pythonhosted.org/packages/44/b0/a74a357c5aa24d593611ad704e2a43222aa6212d0290954d644464fc42d4/timezonefinder-8.2.5-cp311-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:b588e86dbe9a4487f43ce114b8ff0c488a84755a09db4fc67d3f04dacbcfdd77", size = 55016151, upload-time = "2026-07-13T02:11:40.29Z" },
 ]
 
 [[package]]
