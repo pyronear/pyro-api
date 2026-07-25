@@ -12,7 +12,7 @@ from app.core.security import hash_password
 from app.crud import UserCRUD
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
-from app.schemas.users import Cred, CredHash, UserCreate
+from app.schemas.users import Cred, CredHash, RoleUpdate, UserCreate
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -83,6 +83,33 @@ async def update_user_password(
     telemetry_client.capture(token_payload.sub, event="user-pwd", properties={"user_id": user_id})
     pwd = hash_password(payload.password)
     return await users.update(user_id, CredHash(hashed_password=pwd))
+
+
+@router.patch("/{user_id}/role", status_code=status.HTTP_200_OK, summary="Updates a user's role")
+async def update_user_role(
+    payload: RoleUpdate,
+    user_id: int = Path(..., gt=0),
+    users: UserCRUD = Depends(get_user_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> User:
+    """Promote or demote a user between the `agent` role and the `user` role.
+    Admins are out of scope: neither the requester nor the target user can have their admin role changed here.
+
+    Beware that the role is baked into the access tokens that were already issued, and those are long-lived
+    (see `JWT_EXPIRE_MINUTES`). The new role only applies to tokens minted afterwards, so the user has to log in
+    again for the change to take effect.
+    """
+    telemetry_client.capture(
+        token_payload.sub, event="user-role", properties={"user_id": user_id, "role": payload.role}
+    )
+    if user_id == token_payload.sub:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admins cannot change their own role : it can lead to deadlock")
+
+    user = cast(User, await users.get(user_id, strict=True))
+    if user.role == UserRole.ADMIN:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot change an admin's role")
+
+    return await users.update(user_id, payload)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK, summary="Delete a user")
