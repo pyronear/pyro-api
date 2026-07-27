@@ -352,6 +352,7 @@ class Client:
         bboxes: List[Tuple[float, float, float, float, float]],
         pose_id: int,
         crops: List[bytes] | None = None,
+        recorded_at: str | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -366,6 +367,8 @@ class Client:
             pose_id: pose_id of the detection
             crops: optional list of cropped pictures, one per bbox (must align with `bboxes`).
                 Each crop frames a single object, so its length must equal that of `bboxes`.
+            recorded_at: optional ISO 8601 timestamp of when the image was captured on-device.
+                Timezone-aware values are converted to UTC server-side; defaults to server now if omitted.
 
         Returns:
             HTTP response
@@ -378,6 +381,8 @@ class Client:
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
+        if recorded_at is not None:
+            data["recorded_at"] = recorded_at
         # Use a list of tuples (not a dict) so the repeated "crop" key is preserved per bbox.
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", ("frame.jpg", media, "image/jpeg"))]
         if crops is not None:

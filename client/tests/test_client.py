@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+import requests
 from requests.exceptions import ConnectionError as ConnError
 from requests.exceptions import ReadTimeout
 
@@ -23,6 +24,36 @@ def test_client_constructor(token, host, timeout, expected_error):
     else:
         with pytest.raises(expected_error):
             Client(token, host, timeout=timeout)
+
+
+def test_create_detection_forwards_recorded_at(monkeypatch):
+    """The client forwards recorded_at as form data; when omitted the field is absent so the API defaults it."""
+
+    class _Resp:
+        status_code = 200
+        text = "ok"
+
+    captured: dict = {}
+
+    def fake_post(url, headers=None, data=None, timeout=None, files=None):
+        captured["data"] = data
+        resp = _Resp()
+        resp.status_code = 201
+        return resp
+
+    # Stub the constructor's token-validation GET and the create_detection POST (no network / DB).
+    monkeypatch.setattr(requests, "get", lambda *_args, **_kwargs: _Resp())
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    api_client = Client("tok", "http://testserver", timeout=1)
+
+    ts = "2026-07-21T14:30:00.123456+02:00"
+    api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, recorded_at=ts)
+    assert captured["data"]["recorded_at"] == ts
+
+    captured.clear()
+    api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1)
+    assert "recorded_at" not in captured["data"]
 
 
 def test_get_current_poses_camera(cam_token, cam_pose_id):

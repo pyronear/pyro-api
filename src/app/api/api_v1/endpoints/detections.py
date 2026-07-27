@@ -34,7 +34,7 @@ from app.api.dependencies import (
     get_sequence_crud,
 )
 from app.core.config import settings
-from app.core.time import utcnow
+from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
@@ -455,6 +455,13 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
+    recorded_at: Optional[datetime] = Form(
+        None,
+        description=(
+            "Timestamp of when the image was captured by the engine. Timezone-aware values are "
+            "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -507,6 +514,12 @@ async def create_detection(
     # sequences touched by this request, to mark due for validation (DB-backed queue).
     affected_sequences: Set[int] = set()
 
+    # The engine may report when the image was actually captured; fall back to now when it doesn't.
+    # Stored for display and as a camera-lag signal (created_at - recorded_at); sequence linking still
+    # keys on created_at (the monotonic server clock). Aware timestamps are normalized to UTC, naive
+    # ones are assumed UTC, and all bboxes from a single upload share the same capture time.
+    effective_recorded_at = to_utc_naive(recorded_at) if recorded_at is not None else utcnow()
+
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
         other_bbox_strings = bbox_strings[:idx] + bbox_strings[idx + 1 :]
@@ -519,6 +532,7 @@ async def create_detection(
                 crop_bucket_key=crop_bucket_keys[idx],
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
+                recorded_at=effective_recorded_at,
             )
         )
 
