@@ -556,6 +556,7 @@
         <span class="n">bboxes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
         <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">crops</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">recorded_at</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Notify the detection of a wildfire on the picture taken by a camera.</span>
 
@@ -570,6 +571,8 @@
 <span class="sd">            pose_id: pose_id of the detection</span>
 <span class="sd">            crops: optional list of cropped pictures, one per bbox (must align with `bboxes`).</span>
 <span class="sd">                Each crop frames a single object, so its length must equal that of `bboxes`.</span>
+<span class="sd">            recorded_at: optional ISO 8601 timestamp of when the image was captured on-device.</span>
+<span class="sd">                Timezone-aware values are converted to UTC server-side; defaults to server now if omitted.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
@@ -582,6 +585,8 @@
             <span class="s2">&quot;bboxes&quot;</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="n">data</span><span class="p">[</span><span class="s2">&quot;pose_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pose_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">recorded_at</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;recorded_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">recorded_at</span>
         <span class="c1"># Use a list of tuples (not a dict) so the repeated &quot;crop&quot; key is preserved per bbox.</span>
         <span class="n">files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;frame.jpg&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">))]</span>
         <span class="k">if</span> <span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
