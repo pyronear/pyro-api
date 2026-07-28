@@ -55,14 +55,6 @@ class ClickToMoveRequest(BaseModel):
     click_y: float = Field(..., ge=0.0, le=1.0, description="Normalized y coordinate in [0, 1]")
 
 
-class MoveToAzimuthRequest(BaseModel):
-    azimuth: float = Field(..., ge=0.0, lt=360.0, description="Target real-world azimuth in degrees")
-    speed: int | None = Field(
-        default=None,
-        description="Movement speed; omit to let the device auto-pick the best calibrated level (preferred)",
-    )
-
-
 DEVICE_PORT = 8081
 TIMEOUT = 10.0
 
@@ -310,24 +302,6 @@ async def proxy_click_to_move(
 async def proxy_get_azimuth(camera: Camera = Depends(_require_read)) -> Any:
     device_ip, camera_ip = _device_config(camera)
     return await _run_sync(_make_client(device_ip).get_azimuth, camera_ip)
-
-
-@router.post(
-    "/{camera_id}/control/move_to_azimuth",
-    status_code=status.HTTP_200_OK,
-    summary="Move to an absolute real-world azimuth",
-)
-async def proxy_move_to_azimuth(
-    payload: MoveToAzimuthRequest,
-    camera: Camera = Depends(_require_write),
-) -> Any:
-    device_ip, camera_ip = _device_config(camera)
-    return await _run_sync(
-        _make_client(device_ip).move_to_azimuth,
-        camera_ip,
-        payload.azimuth,
-        payload.speed,
-    )
 
 
 @router.get(
