@@ -499,6 +499,8 @@ class Client:
         limit: int = 10,
         desc: bool = True,
         with_crop: bool = True,
+        sampling: int = 1,
+        offset: int = 0,
     ) -> Response:
         """List the detections of a sequence
 
@@ -511,6 +513,9 @@ class Client:
             limit: maximum number of detections to fetch
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
+            sampling: keep one detection every N (1 = all, max 10000); the kept frames are picked
+                chronologically and do not depend on desc
+            offset: number of detections to skip, within the sampled set
 
         Returns:
             HTTP response
@@ -518,7 +523,13 @@ class Client:
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
-            params={"limit": limit, "desc": desc, "with_crop": with_crop},
+            params={
+                "limit": limit,
+                "desc": desc,
+                "with_crop": with_crop,
+                "sampling": sampling,
+                "offset": offset,
+            },
             timeout=self.timeout,
         )
 

@@ -899,6 +899,266 @@ async def test_fetch_sequence_detections_offset_validation(
     assert response.status_code == 422
 
 
+async def _seed_sampling_sequence(session: AsyncSession, count: int = 10) -> tuple[int, List[int]]:
+    """Create a sequence with `count` detections one minute apart, oldest first.
+
+    Sequence 1 in the fixtures only has 3 detections, which is too few to tell an interval
+    apart from a limit. Returns the sequence id and the detection ids in chronological order.
+    """
+    now = utcnow()
+    sequence = Sequence(
+        camera_id=pytest.camera_table[0]["id"],
+        pose_id=pytest.pose_table[0]["id"],
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=count),
+        last_seen_at=now,
+    )
+    session.add(sequence)
+    await session.commit()
+    await session.refresh(sequence)
+
+    detections = [
+        Detection(
+            camera_id=sequence.camera_id,
+            pose_id=pytest.pose_table[0]["id"],
+            sequence_id=sequence.id,
+            bucket_key=f"sampling-{sequence.id}-{idx}.jpg",
+            bbox="[(.1,.1,.7,.8,.9)]",
+            others_bboxes=None,
+            created_at=now - timedelta(minutes=count - idx),
+        )
+        for idx in range(count)
+    ]
+    for detection in detections:
+        session.add(detection)
+    await session.commit()
+    for detection in detections:
+        await session.refresh(detection)
+
+    return sequence.id, [detection.id for detection in detections]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_set_is_independent_of_desc(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """The sampled frame set must not depend on `desc`: same ids, reversed order.
+
+    This is the whole point of numbering rows ascending regardless of the output order. If it
+    regresses, the player shows different frames depending on scroll direction.
+    """
+    sequence_id, _ = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    asc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=auth)
+    desc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=10", headers=auth)
+    assert asc.status_code == 200, asc.text
+    assert desc.status_code == 200, desc.text
+
+    asc_ids = [det["id"] for det in asc.json()]
+    desc_ids = [det["id"] for det in desc.json()]
+    assert asc_ids == list(reversed(desc_ids))
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_one_matches_default(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    pinned_url_window: None,
+):
+    """sampling=1 must be indistinguishable from not passing it at all, urls included."""
+    sequence_id, _ = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    default = await async_client.get(f"/sequences/{sequence_id}/detections?limit=10&desc=false", headers=auth)
+    sampled = await async_client.get(
+        f"/sequences/{sequence_id}/detections?limit=10&desc=false&sampling=1", headers=auth
+    )
+    assert default.status_code == 200, default.text
+    assert sampled.status_code == 200, sampled.text
+    # Full equality, urls included. The fixture pins the presign window so a rollover between
+    # the two requests can't make the urls differ for reasons unrelated to sampling; that the
+    # cache is actually used is covered by
+    # test_fetch_sequence_detections_reuses_presigned_urls_across_requests.
+    assert default.json() == sampled.json()
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_interval(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """sampling=2 over 10 detections keeps chronological positions 1, 3, 5, 7, 9."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[::2]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_larger_than_count(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """A sampling interval above the detection count still returns the first detection."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=100&desc=false&limit=10", headers=auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[0]]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_offset_applies_to_sampled_set(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """offset skips sampled rows, not raw rows: positions 5 and 7, not 3 and 4."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=2", headers=auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[4], chronological_ids[6]]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_offset_desc_paging(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """`desc=true` only reverses the OUTPUT order of the sampled set, offset then skips
+    from the front of that reversed list.
+
+    The sampled set is chosen by ascending created_at: positions 1,3,5,7,9, i.e.
+    chronological_ids[::2] = [c0, c2, c4, c6, c8]. Reversing for desc=true gives
+    [c8, c6, c4, c2, c0]; offset=1, limit=2 then skips c8 and returns [c6, c4].
+    """
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=2&offset=1", headers=auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[6], chronological_ids[4]]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "status_code"),
+    [
+        ("sampling=0", 422),
+        ("sampling=-1", 422),
+        ("sampling=1", 200),
+        ("sampling=10000", 200),
+        ("sampling=10001", 422),
+        # asyncpg can't encode this into int8, so without an upper bound this reached the
+        # database and came back as a 500 instead of a validation error.
+        ("sampling=9223372036854775808", 422),
+        ("limit=500", 200),
+        ("limit=501", 422),
+    ],
+)
+async def test_fetch_sequence_detections_sampling_validation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    query: str,
+    status_code: int,
+):
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    response = await async_client.get(f"/sequences/1/detections?{query}", headers=auth)
+    assert response.status_code == status_code, response.text
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_reuses_presigned_urls_across_requests(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    pinned_url_window: None,
+):
+    """A repeat request must serve cached urls instead of re-signing every key.
+
+    boto3 stamps the current clock into every signature, so without the presign cache the
+    browser's cache key changes on every poll and the player re-downloads every frame. Asserting
+    the urls merely match is not enough: two signatures taken in the same wall-clock second are
+    identical anyway, so the presign calls are counted instead.
+    """
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    presign_calls: List[str] = []
+    original_presign = bucket._presign
+
+    def counting_presign(bucket_key: str, url_expiration: int) -> str:
+        presign_calls.append(bucket_key)
+        return original_presign(bucket_key, url_expiration)
+
+    bucket._presign = counting_presign  # type: ignore[method-assign]
+    try:
+        first = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=auth)
+        signed_once = len(presign_calls)
+        second = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=auth)
+    finally:
+        del bucket._presign
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+
+    first_urls = {det["id"]: det["url"] for det in first.json()}
+    assert first_urls
+    assert {det["id"]: det["url"] for det in second.json()} == first_urls
+    # One presign per distinct key: the fixture detections of sequence 1 all share a bucket_key,
+    # so the cache already collapses them within a single request.
+    assert signed_once == len(set(first_urls.values()))
+    # The second request signed nothing at all.
+    assert len(presign_calls) == signed_once
+
+
 @pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
