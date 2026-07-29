@@ -5,7 +5,8 @@ import pytest
 from fastapi import HTTPException
 
 from app.core.config import settings
-from app.services.storage import S3Bucket, S3Service
+from app.services import storage
+from app.services.storage import S3Bucket, S3Service, _url_cache_window
 
 
 @pytest.mark.parametrize(
@@ -92,6 +93,9 @@ async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
         bucket.upload_file(bucket_key, io.BytesIO(mock_img))
         assert bucket.check_file_existence(bucket_key)
         assert isinstance(bucket.get_file_metadata(bucket_key), dict)
+        # Cache-Control is what makes the stable presigned urls from get_public_url actually
+        # cacheable browser-side; without it the upload path could silently stop setting it.
+        assert bucket.get_file_metadata(bucket_key)["CacheControl"] == f"private, max-age={settings.S3_URL_EXPIRATION}"
         assert bucket.get_public_url(bucket_key).startswith("http://")
         # Delete file
         bucket.delete_file(bucket_key)
@@ -106,3 +110,115 @@ async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
     else:
         with pytest.raises(expected_error):
             S3Bucket(s3, bucket_name, proxy_url)
+
+
+@pytest.mark.parametrize("url_expiration", [1, 4, 20, 60, 300, 3600, 24 * 3600])
+def test_url_cache_window_leaves_most_of_the_lifetime(url_expiration):
+    """A cached url must always be handed out with the bulk of its lifetime left, and the window
+    must never exceed the expiration itself: a sub-minute expiration must not serve urls that are
+    already expired."""
+    window = _url_cache_window(url_expiration)
+    assert 1 <= window <= 3600
+    assert window <= max(1, url_expiration // 4)
+    assert window <= url_expiration
+
+
+def test_s3_bucket_presigned_urls_are_stable_within_a_window(monkeypatch):
+    """The same key presigns once per window, and is re-signed once the slot advances.
+
+    boto3 stamps the current clock into every signature, so without this cache the browser's
+    cache key changes on every request and clients re-download unchanged objects. Both halves
+    count presign calls rather than comparing url strings: two signatures taken in the same
+    wall-clock second are identical, so a string comparison would assert on the clock instead of
+    on the cache. The clock is faked, rather than waited out or mutated on the instance (the
+    window slot now lives in the cache key, not on a `bucket._url_window` attribute), so the
+    slot advance is deterministic instead of racing a real monotonic boundary.
+    """
+    session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
+    s3 = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
+    bucket_name = "dummy-bucket-url-cache"
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": settings.S3_REGION})
+    try:
+        bucket = S3Bucket(s3, bucket_name, settings.S3_PROXY_URL)
+        presign_calls = []
+        original_presign = bucket._presign
+
+        def counting_presign(bucket_key, url_expiration):
+            presign_calls.append(bucket_key)
+            return original_presign(bucket_key, url_expiration)
+
+        bucket._presign = counting_presign
+
+        fake_clock = [0.0]
+        monkeypatch.setattr(storage.time, "monotonic", lambda: fake_clock[0])
+
+        first = bucket.get_public_url("stable.png", verify_exists=False)
+        assert bucket.get_public_url("stable.png", verify_exists=False) == first
+        assert len(presign_calls) == 1
+
+        # Advance the clock past the window instead of waiting one out: the slot changes, so the
+        # key changes, so the lookup misses and the url is re-signed.
+        fake_clock[0] += _url_cache_window(settings.S3_URL_EXPIRATION)
+        bucket.get_public_url("stable.png", verify_exists=False)
+        assert len(presign_calls) == 2
+        # Nothing clears on rollover anymore: the previous window's entry is still there,
+        # aging out through the size-bound eviction rather than being dropped outright.
+        assert set(bucket._url_cache) == {
+            ("stable.png", settings.S3_URL_EXPIRATION, 0),
+            ("stable.png", settings.S3_URL_EXPIRATION, 1),
+        }
+    finally:
+        s3.delete_bucket(Bucket=bucket_name)
+
+
+def test_s3_bucket_url_cache_evicts_coldest_entry_only(monkeypatch):
+    """The size bound evicts only the least-recently-used entry; it must never clear the whole
+    cache, since one dict is shared by every viewer of an organization and clearing it would
+    re-sign (and so change) every url in flight exactly when the cache is under load.
+    """
+    session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
+    s3 = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
+    bucket_name = "dummy-bucket-url-cache-eviction"
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": settings.S3_REGION})
+    try:
+        bucket = S3Bucket(s3, bucket_name, settings.S3_PROXY_URL)
+        # Pin the window so the three calls below can't straddle a real rollover and pick up
+        # differing slot components in their cache keys.
+        monkeypatch.setattr(storage, "_url_cache_window", lambda _url_expiration: 10**9)
+        monkeypatch.setattr(storage, "_URL_CACHE_MAXSIZE", 2)
+
+        bucket.get_public_url("k1.png", verify_exists=False)
+        bucket.get_public_url("k2.png", verify_exists=False)
+        # Touch k1 again: it becomes most-recently-used, leaving k2 as the coldest entry.
+        bucket.get_public_url("k1.png", verify_exists=False)
+        # Inserting a third key over the bound of 2 must evict k2 only, never clear the dict.
+        bucket.get_public_url("k3.png", verify_exists=False)
+
+        cached_bucket_keys = {key[0] for key in bucket._url_cache}
+        assert cached_bucket_keys == {"k1.png", "k3.png"}
+        assert len(bucket._url_cache) == 2
+    finally:
+        s3.delete_bucket(Bucket=bucket_name)
+
+
+@pytest.mark.asyncio
+async def test_s3_service_caches_bucket_instances():
+    """get_bucket must reuse instances (its __init__ does a blocking head_bucket) and evict
+    the entry once the bucket is deleted."""
+    service = S3Service(
+        settings.S3_REGION,
+        settings.S3_ENDPOINT_URL,
+        settings.S3_ACCESS_KEY,
+        settings.S3_SECRET_KEY,
+        settings.S3_PROXY_URL,
+    )
+    bucket_name = "dummy-bucket-instance-cache"
+    service.create_bucket(bucket_name)
+    assert service.get_bucket(bucket_name) is service.get_bucket(bucket_name)
+
+    assert await service.delete_bucket(bucket_name)
+    assert bucket_name not in service._buckets
+
+    # A missing bucket is never cached, so it keeps raising.
+    with pytest.raises(ValueError, match="unable to access bucket"):
+        service.get_bucket("dummy-bucket-does-not-exist")

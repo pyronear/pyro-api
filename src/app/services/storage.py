@@ -5,8 +5,10 @@
 
 import hashlib
 import logging
+import time
+from collections import OrderedDict
 from mimetypes import guess_extension
-from typing import Any, BinaryIO, Dict, Union
+from typing import Any, BinaryIO, Dict, Tuple, Union
 
 import boto3
 import magic
@@ -20,6 +22,21 @@ __all__ = ["s3_service", "upload_file"]
 
 
 logger = logging.getLogger("uvicorn.warning")
+
+# Presigned URLs run 600-900 bytes, so ~1 KB per entry => ~8 MB hard ceiling per bucket.
+_URL_CACHE_MAXSIZE = 8192
+
+
+def _url_cache_window(url_expiration: int) -> int:
+    """How long a single presigned URL string keeps being handed out, in seconds.
+
+    Derived from the expiration rather than hardcoded, so lowering S3_URL_EXPIRATION can never
+    start serving already-expired URLs: the window never exceeds the lifetime, whatever the
+    input (the floor is 1, not 60, so a sub-minute expiration degrades to near-no-caching instead
+    of outliving the URL). At the 24h default the cap binds instead and the window is 1h, so a
+    handed-out URL always has >= 23h left.
+    """
+    return min(3600, max(1, url_expiration // 4))
 
 
 class S3Bucket:
@@ -41,6 +58,9 @@ class S3Bucket:
             raise ValueError(f"unable to access bucket {bucket_name}")
         self.name = bucket_name
         self.proxy_url = proxy_url
+        # (bucket_key, url_expiration, window slot) -> presigned URL. Scoped to the instance
+        # because proxy_url and the signing credentials are fixed per bucket.
+        self._url_cache: OrderedDict[Tuple[str, int, int], str] = OrderedDict()
 
     def get_file_metadata(self, bucket_key: str) -> Dict[str, Any]:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.head_object
@@ -59,7 +79,16 @@ class S3Bucket:
     def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        self._s3.upload_fileobj(file_binary, self.name, bucket_key)
+        # Cache-Control is what turns the stable presigned URLs from get_public_url into actual
+        # browser cache hits: without it browsers only cache heuristically, so the player
+        # re-downloads frames it already has. Objects are immutable once written (the key
+        # embeds a content hash), so max-age can match the URL lifetime.
+        self._s3.upload_fileobj(
+            file_binary,
+            self.name,
+            bucket_key,
+            ExtraArgs={"CacheControl": f"private, max-age={settings.S3_URL_EXPIRATION}"},
+        )
         return True
 
     def delete_file(self, bucket_key: str) -> None:
@@ -82,18 +111,60 @@ class S3Bucket:
                 exist (e.g. sequence detections): the client then gets a 403/404 from S3
                 when loading the URL instead of an upfront error.
         """
+        # Checked before the cache lookup on purpose: a cache hit must not skip the existence
+        # check callers opted into.
         if verify_exists and not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
             )
 
-        # Generate a public URL for it using boto3 presign URL generation\
+        return self._stable_presign(bucket_key, url_expiration)
+
+    def _presign(self, bucket_key: str, url_expiration: int) -> str:
+        # Generate a public URL for it using boto3 presign URL generation
         presigned_url = self._s3.generate_presigned_url(
             "get_object", Params={"Bucket": self.name, "Key": bucket_key}, ExpiresIn=url_expiration
         )
         if self.proxy_url:
             return presigned_url.replace(self._s3.meta.endpoint_url, self.proxy_url)
         return presigned_url
+
+    def _stable_presign(self, bucket_key: str, url_expiration: int) -> str:
+        """Return the same URL string for a whole window, so the browser can cache frames.
+
+        boto3 stamps the current clock into every signature (``X-Amz-Date`` under SigV4,
+        ``Expires`` under SigV2), so re-presigning the same key yields a different string and
+        busts the client cache on each poll. The browser keys its cache on the full URL.
+
+        The window slot is part of the cache key, so a lookup against the current slot can never
+        return a previous window's entry: no explicit rollover clear is needed, and stale entries
+        simply age out through the size-bound eviction below.
+
+        Stability is per-process: the cache lives on this instance, so it only dedupes URLs
+        within one worker. Running N uvicorn workers means a polling client can see up to N
+        distinct URLs per key per window, one per worker that happened to answer. The repo
+        currently runs a single worker (docker-compose.yml passes no ``--workers`` to uvicorn),
+        so this does not bite today. Making it cross-process would also require a shared
+        signing timestamp, and SigV4's ``X-Amz-Date`` is derived from the wall clock at signing
+        time rather than being a ``generate_presigned_url`` parameter, so it is not achievable
+        without patching boto3's clock.
+        """
+        window = _url_cache_window(url_expiration)
+        # monotonic: only the window length matters, and it is immune to NTP steps.
+        slot = int(time.monotonic()) // window
+        cache_key = (bucket_key, url_expiration, slot)
+        url = self._url_cache.get(cache_key)
+        if url is not None:
+            self._url_cache.move_to_end(cache_key)
+            return url
+        url = self._presign(bucket_key, url_expiration)
+        if len(self._url_cache) >= _URL_CACHE_MAXSIZE:
+            # Evict the coldest entry, never clear: one dict is shared by every viewer of an
+            # organization, so clearing here would re-presign (and so change) every URL in
+            # flight exactly when the cache is under load and stability matters most.
+            self._url_cache.popitem(last=False)
+        self._url_cache[cache_key] = url
+        return url
 
     async def delete_items(self) -> None:
         """Delete all items in the bucket"""
@@ -131,6 +202,10 @@ class S3Service:
             raise ValueError("unable to access S3")
         logger.info(f"S3 connected on {endpoint_url}")
         self.proxy_url = proxy_url
+        # bucket_name -> S3Bucket. S3Bucket.__init__ does a blocking head_bucket round-trip on
+        # the event loop; the bucket set is one per organization and effectively static, so
+        # build each one once. Caching the instance is also what lets its URL cache ever hit.
+        self._buckets: Dict[str, S3Bucket] = {}
 
     def create_bucket(self, bucket_name: str) -> bool:
         """Create a new bucket in S3 storage"""
@@ -173,19 +248,31 @@ class S3Service:
         )
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage"""
-        return S3Bucket(self._s3, bucket_name, self.proxy_url)
+        """Get an existing bucket in S3 storage (cached instance)
+
+        Only successful lookups are cached, so a missing bucket still raises ValueError. Once
+        cached, a bucket deleted out-of-band keeps answering and the failure surfaces at the S3
+        call rather than here.
+        """
+        bucket = self._buckets.get(bucket_name)
+        if bucket is None:
+            bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+            self._buckets[bucket_name] = bucket
+        return bucket
 
     async def delete_bucket(self, bucket_name: str) -> bool:
         """Delete an existing bucket in S3 storage"""
-        bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+        bucket = self.get_bucket(bucket_name)
         try:
             await bucket.delete_items()
             self._s3.delete_bucket(Bucket=bucket_name)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        # Evict only once the bucket is really gone, so the cache stays coherent with the
+        # organization-deletion path.
+        self._buckets.pop(bucket_name, None)
+        return True
 
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
