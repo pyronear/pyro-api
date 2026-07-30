@@ -26,6 +26,19 @@ updates:
     schedule:
       interval: "daily"
       time: "08:00"
+    # Keep in sync with group patterns below; this list gates version updates.
+    allow:
+      - dependency-name: "PyJWT"
+      - dependency-name: "passlib"
+      - dependency-name: "bcrypt"
+      - dependency-name: "ruff"
+      - dependency-name: "ty"
+      - dependency-name: "prek"
+      - dependency-name: "types-*"
+      - dependency-name: "sqlalchemy-stubs"
+      - dependency-name: "posthog"
+      - dependency-name: "sentry-sdk"
+      - dependency-name: "prometheus-fastapi-instrumentator"
     groups:
       security:
         patterns:
@@ -39,6 +52,11 @@ updates:
           - "prek"
           - "types-*"
           - "sqlalchemy-stubs"
+      observability:
+        patterns:
+          - "posthog"
+          - "sentry-sdk"
+          - "prometheus-fastapi-instrumentator"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
