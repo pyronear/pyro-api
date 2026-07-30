@@ -38,7 +38,7 @@ async def create_pose(
     if Role.CAMERA in token_payload.scopes:
         if payload.camera_id != token_payload.sub:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     db_pose = await poses.create(payload)
@@ -67,7 +67,7 @@ async def get_pose(
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     if pose.image is None:
@@ -91,7 +91,7 @@ async def update_pose(
     if Role.CAMERA in token_payload.scopes:
         if pose.camera_id != token_payload.sub:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     db_pose = await poses.update(pose_id, payload)
@@ -115,7 +115,7 @@ async def update_pose_image(
     if Role.CAMERA in token_payload.scopes:
         if pose.camera_id != token_payload.sub:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
-    elif token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     # Upload the file using the camera_id (poses belong to cameras)
@@ -157,7 +157,7 @@ async def list_pose_masks(
     pose = cast(Pose, await poses.get(pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     rows = await masks.get_by_pose(pose_id)

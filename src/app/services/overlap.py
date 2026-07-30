@@ -317,7 +317,7 @@ def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float)
         sid = int(row["id"])
         try:
             projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # ruff:ignore[blind-except]
             logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
     return projected_cones
 
@@ -397,7 +397,7 @@ def _group_smoke_location(
             for p in polys[1:]:
                 merged = merged.union(p)
             return get_centroid_latlon(merged)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # ruff:ignore[blind-except]
             logger.warning("Failed fallback centroid for group %s: %s", seq_tuple, exc)
             return None
     lats, lons = zip(*pts, strict=False)

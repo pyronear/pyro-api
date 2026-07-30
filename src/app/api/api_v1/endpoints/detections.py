@@ -35,7 +35,7 @@ from app.api.dependencies import (
     get_sequence_crud,
 )
 from app.core.config import settings
-from app.core.time import utcnow
+from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
@@ -130,6 +130,7 @@ async def _create_continuity_detection(
     pose_id: int,
     bucket_key: str,
     sequence_id: int,
+    recorded_at: datetime,
 ) -> Detection:
     """Attach a frame to a sequence whose object was not detected on it (empty bbox).
 
@@ -139,7 +140,12 @@ async def _create_continuity_detection(
     """
     return await detections.create(
         DetectionCreate(
-            camera_id=camera_id, pose_id=pose_id, bucket_key=bucket_key, bbox=EMPTY_BBOXES, sequence_id=sequence_id
+            camera_id=camera_id,
+            pose_id=pose_id,
+            bucket_key=bucket_key,
+            bbox=EMPTY_BBOXES,
+            sequence_id=sequence_id,
+            recorded_at=recorded_at,
         )
     )
 
@@ -151,6 +157,7 @@ async def _attach_continuity_detections(
     camera_id: int,
     pose_id: int,
     bucket_key: str,
+    recorded_at: datetime,
     skip_sequence_ids: AbstractSet[int] = frozenset(),
 ) -> List[Detection]:
     """Attach the frame as a continuity row to every given sequence not already covered.
@@ -162,7 +169,9 @@ async def _attach_continuity_detections(
     for seq in continuity_sequences:
         if seq.id in skip_sequence_ids:
             continue
-        created.append(await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id))
+        created.append(
+            await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id, recorded_at)
+        )
         await sequences.enqueue_validation(seq.id)
     return created
 
@@ -519,6 +528,13 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
+    recorded_at: Optional[datetime] = Form(
+        None,
+        description=(
+            "Timestamp of when the image was captured by the engine. Timezone-aware values are "
+            "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -554,6 +570,12 @@ async def create_detection(
             detail="Number of crops must match the number of bboxes.",
         )
 
+    # The engine may report when the image was actually captured; fall back to now when it doesn't.
+    # Stored for display and as a camera-lag signal (created_at - recorded_at); sequence linking still
+    # keys on created_at (the monotonic server clock). Aware timestamps are normalized to UTC, naive
+    # ones are assumed UTC, and all rows from a single upload share the same capture time.
+    effective_recorded_at = to_utc_naive(recorded_at) if recorded_at is not None else utcnow()
+
     # Frame with no detection: it only matters as continuity for recently-seen sequences of
     # the pose. Without one, store nothing at all — empty frames must never seed a sequence
     # (the historical placeholder bboxes did, creating phantom sequences).
@@ -563,7 +585,7 @@ async def create_detection(
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
         continuity_dets = await _attach_continuity_detections(
-            detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key
+            detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key, effective_recorded_at
         )
         return DetectionRead(**continuity_dets[0].model_dump())
 
@@ -594,6 +616,7 @@ async def create_detection(
                 crop_bucket_key=crop_bucket_keys[idx],
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
+                recorded_at=effective_recorded_at,
             )
         )
 
@@ -687,6 +710,7 @@ async def create_detection(
         token_payload.sub,
         pose_id,
         bucket_key,
+        effective_recorded_at,
         skip_sequence_ids=affected_sequences,
     )
 
@@ -711,7 +735,7 @@ async def get_detection(
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return detection
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
@@ -733,11 +757,13 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    crop_url = bucket.get_public_url(detection.crop_bucket_key) if detection.crop_bucket_key else None
-    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key), crop_url=crop_url)
+    crop_url = (
+        bucket.get_public_url(detection.crop_bucket_key, verify_exists=False) if detection.crop_bucket_key else None
+    )
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key, verify_exists=False), crop_url=crop_url)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -747,7 +773,7 @@ async def fetch_detections(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))

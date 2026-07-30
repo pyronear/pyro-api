@@ -97,7 +97,7 @@ class TemporalModelService:
     def _open(self) -> None:
         self._open_count += 1
         pause = min(self.BASE_PAUSE_SECONDS * 2 ** (self._open_count - 1), self.MAX_PAUSE_SECONDS)
-        pause *= 1 + random.uniform(-self.JITTER_RATIO, self.JITTER_RATIO)  # noqa: S311 - jitter, not crypto
+        pause *= 1 + random.uniform(-self.JITTER_RATIO, self.JITTER_RATIO)  # ruff:ignore[suspicious-non-cryptographic-random-usage] - jitter, not crypto
         self._paused_until = (utcnow() + timedelta(seconds=pause)).timestamp()
         self._half_open = False
         logger.warning("Temporal API breaker opened for %.0fs (trip #%d)", pause, self._open_count)

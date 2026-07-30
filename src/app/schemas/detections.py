@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from datetime import datetime
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
@@ -43,6 +44,9 @@ class DetectionCreate(BaseModel):
     # Only set when the sequence is known at creation time (continuity rows); real detections
     # are matched to a sequence after creation.
     sequence_id: Optional[int] = Field(None, gt=0)
+    recorded_at: Optional[datetime] = Field(
+        None, description="UTC timestamp of when the image was captured on-device. Defaults to server now if omitted."
+    )
 
 
 class DetectionUrl(BaseModel):

@@ -2,6 +2,7 @@ import io
 
 import boto3
 import pytest
+from fastapi import HTTPException
 
 from app.core.config import settings
 from app.services.storage import S3Bucket, S3Service
@@ -77,6 +78,11 @@ async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
         bucket_key = "logo.png"
         # Create file
         assert not bucket.check_file_existence(bucket_key)
+        # By default get_public_url verifies existence and raises a 404 when the object is missing
+        with pytest.raises(HTTPException):
+            bucket.get_public_url(bucket_key)
+        # With verify_exists=False it skips the check and presigns a URL even when the object is missing
+        assert bucket.get_public_url(bucket_key, verify_exists=False).startswith("http://")
         bucket.upload_file(bucket_key, io.BytesIO(mock_img))
         assert bucket.check_file_existence(bucket_key)
         assert isinstance(bucket.get_file_metadata(bucket_key), dict)

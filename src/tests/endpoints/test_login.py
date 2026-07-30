@@ -28,6 +28,6 @@ async def test_login_with_creds(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         response_json = response.json()
-        assert response_json["token_type"] == "bearer"  # noqa: S105
+        assert response_json["token_type"] == "bearer"  # ruff:ignore[hardcoded-password-string]
         assert isinstance(response_json["access_token"], str)
         assert len(response_json["access_token"]) == 171

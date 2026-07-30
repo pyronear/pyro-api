@@ -3,7 +3,7 @@ import hashlib
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
@@ -1034,11 +1034,6 @@ async def test_detection_counts_split_sequences_and_alerts(
         res = await detection_session.exec(select(model))
         return len(res.all())
 
-    async def drain_validation_queue():
-        # The worker loop is not running in tests: process due sequences synchronously.
-        while await process_next_due_validation():
-            pass
-
     base_det = await count(Detection)
     base_seq = await count(Sequence)
     base_alert = await count(Alert)
@@ -1051,7 +1046,8 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp1.status_code == 201, resp1.text
-    await drain_validation_queue()
+    # The worker loop is not running in tests: process due sequences synchronously.
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 1
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -1064,7 +1060,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp2.status_code == 201, resp2.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 2
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -1077,7 +1073,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp3.status_code == 201, resp3.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     # +2: the real detection (new sequence) plus a continuity row attaching the frame to the
     # still-active first sequence, whose object was not detected on it.
     assert await count(Detection) == base_det + 4
@@ -1092,7 +1088,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp4.status_code == 201, resp4.text
-    await drain_validation_queue()
+    await pytest.drain_validation_queue()
     # +2 real detections (one per bbox, both sequences matched -> no continuity row)
     assert await count(Detection) == base_det + 6
     assert await count(Sequence) == base_seq + 2
@@ -1278,6 +1274,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     det_read = await create_detection(
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload,
         crop_files=None,
         detections=detections,
@@ -1312,6 +1309,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     det_read_2 = await create_detection(
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload_again,
         crop_files=None,
         detections=detections,
@@ -1762,6 +1760,79 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
 
 
 @pytest.mark.asyncio
+async def test_create_detection_uses_payload_recorded_at(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    recorded_at = datetime(2024, 1, 15, 10, 30, 0, 123456)
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": recorded_at.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == recorded_at
+
+
+@pytest.mark.asyncio
+async def test_create_detection_converts_aware_recorded_at_to_utc(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    # A France-local (UTC+2) capture time must be stored as the equivalent naive-UTC instant.
+    aware = datetime(2024, 7, 1, 10, 30, 0, 123456, tzinfo=timezone(timedelta(hours=2)))
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": aware.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == datetime(2024, 7, 1, 8, 30, 0, 123456)
+    assert det.recorded_at.tzinfo is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_defaults_recorded_at_to_now(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    # When the engine omits recorded_at it falls back to the server clock, lining up with created_at.
+    assert abs((det.recorded_at - det.created_at).total_seconds()) < 5
+
+
+@pytest.mark.asyncio
 async def test_attach_sequence_merges_same_event_alerts(detection_session: AsyncSession):
     """
     Regression guard for the duplicate-alert bug (prod alerts 49341/49342/49343).
@@ -1926,8 +1997,8 @@ async def test_create_detection_assigns_distinct_crop_per_bbox(
     assert all(key != bucket_key for key in crop_keys)
     # The first bbox maps to the first crop, the second bbox to the second crop.
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
-    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # noqa: S324
-    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # noqa: S324
+    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
 
 
 @pytest.mark.asyncio
@@ -1936,7 +2007,7 @@ async def test_create_detection_rejects_crop_bbox_count_mismatch(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(  # noqa: RUF029
+    async def fake_upload_file(  # ruff:ignore[unused-async]
         file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
     ) -> str:
         upload_calls.append(file.filename or "")
@@ -2061,7 +2132,7 @@ async def test_create_detection_authorizes_pose_before_uploading(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # noqa: RUF029
+    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # ruff:ignore[unused-async]
         upload_calls.append(file.filename or "")
         return "should-never-persist"
 

@@ -93,7 +93,7 @@ async def _require_read(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 
@@ -104,7 +104,7 @@ async def _require_write(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 

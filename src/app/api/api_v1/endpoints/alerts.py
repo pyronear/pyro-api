@@ -81,9 +81,13 @@ async def _build_unlabeled_alerts_stmt(
     session: AsyncSession,
     organization_id: int,
     risk_score: Union[FwiClass, None],
+    is_admin: bool = False,
 ) -> Tuple[Any, Union[ColumnElement[bool], None]]:
-    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(session, organization_id, override_class=risk_score)
-    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
+    # Admins see every organization's alerts without risk-score filtering
+    seq_filter: Union[ColumnElement[bool], None] = None
+    if not is_admin:
+        fwi_classes_by_camera = await _resolve_fwi_class_per_camera(session, organization_id, override_class=risk_score)
+        seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
     seq_match: Any = cast(
         Any,
@@ -95,9 +99,10 @@ async def _build_unlabeled_alerts_stmt(
     if seq_filter is not None:
         seq_match = seq_match.where(seq_filter)
 
-    alerts_stmt: Any = (
-        select(Alert).where(Alert.organization_id == organization_id).where(cast(Any, Alert.id).in_(seq_match))
-    )
+    alerts_stmt: Any = select(Alert)
+    if not is_admin:
+        alerts_stmt = alerts_stmt.where(Alert.organization_id == organization_id)
+    alerts_stmt = alerts_stmt.where(cast(Any, Alert.id).in_(seq_match))
     return alerts_stmt, seq_filter
 
 
@@ -106,15 +111,19 @@ async def _build_alerts_from_date_stmt(
     organization_id: int,
     from_date: date,
     risk_score: Union[FwiClass, None],
+    is_admin: bool = False,
 ) -> Tuple[Any, Union[ColumnElement[bool], None]]:
-    fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
-        session, organization_id, target_date=from_date, override_class=risk_score
-    )
-    seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
+    # Admins see every organization's alerts without risk-score filtering
+    seq_filter: Union[ColumnElement[bool], None] = None
+    if not is_admin:
+        fwi_classes_by_camera = await _resolve_fwi_class_per_camera(
+            session, organization_id, target_date=from_date, override_class=risk_score
+        )
+        seq_filter = max_conf_filter_clause(fwi_classes_by_camera)
 
-    alerts_stmt: Any = (
-        select(Alert).where(Alert.organization_id == organization_id).where(func.date(Alert.started_at) == from_date)
-    )
+    alerts_stmt: Any = select(Alert).where(func.date(Alert.started_at) == from_date)
+    if not is_admin:
+        alerts_stmt = alerts_stmt.where(Alert.organization_id == organization_id)
     if seq_filter is not None:
         seq_match: Any = select(AlertSequence.alert_id).join(
             Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
@@ -283,11 +292,13 @@ async def export_alerts_csv(
 
     stmt: Any = (
         select(Alert)
-        .where(Alert.organization_id == token_payload.organization_id)
         .where(Alert.started_at >= start_dt)
         .where(Alert.started_at <= end_dt)
         .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
     )
+    # Admins export every organization's alerts
+    if not token_payload.is_admin:
+        stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
     alerts = list((await session.exec(stmt)).all())
     seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
     camera_names_by_id = await _fetch_camera_names_by_ids(
@@ -307,7 +318,7 @@ async def get_alert(
     telemetry_client.capture(token_payload.sub, event="alerts-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id])
@@ -330,7 +341,7 @@ async def fetch_alert_sequences(
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="alerts-sequences-get", properties={"alert_id": alert_id})
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     order_clause: Any = desc(cast(Any, Sequence.last_seen_at)) if order_desc else asc(cast(Any, Sequence.last_seen_at))
@@ -353,14 +364,18 @@ async def fetch_latest_unlabeled_alerts(
     limit: Union[int, None] = Query(15, ge=1, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-latest")
+    is_admin = token_payload.is_admin
 
-    alerts_stmt, seq_filter = await _build_unlabeled_alerts_stmt(session, token_payload.organization_id, risk_score)
+    alerts_stmt, seq_filter = await _build_unlabeled_alerts_stmt(
+        session, token_payload.organization_id, risk_score, is_admin=is_admin
+    )
     alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
     return await _serialize_alerts_page(session, alerts_stmt, seq_filter)
 
@@ -372,13 +387,17 @@ async def fetch_latest_unlabeled_alerts(
 )
 async def count_latest_unlabeled_alerts(
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> AlertCount:
     telemetry_client.capture(token_payload.sub, event="alerts-count-latest")
-    alerts_stmt, _ = await _build_unlabeled_alerts_stmt(session, token_payload.organization_id, risk_score)
+    is_admin = token_payload.is_admin
+    alerts_stmt, _ = await _build_unlabeled_alerts_stmt(
+        session, token_payload.organization_id, risk_score, is_admin=is_admin
+    )
     count_stmt: Any = select(func.count()).select_from(alerts_stmt.subquery())
     return AlertCount(count=int((await session.exec(count_stmt)).one()))
 
@@ -389,15 +408,17 @@ async def fetch_alerts_from_date(
     limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
     offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertReadWithSequences]:
     telemetry_client.capture(token_payload.sub, event="alerts-fetch-from-date")
+    is_admin = token_payload.is_admin
 
     alerts_stmt, seq_filter = await _build_alerts_from_date_stmt(
-        session, token_payload.organization_id, from_date, risk_score
+        session, token_payload.organization_id, from_date, risk_score, is_admin=is_admin
     )
     alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
     return await _serialize_alerts_page(session, alerts_stmt, seq_filter)
@@ -411,13 +432,17 @@ async def fetch_alerts_from_date(
 async def count_alerts_from_date(
     from_date: date = Query(),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> AlertCount:
     telemetry_client.capture(token_payload.sub, event="alerts-count-from-date")
-    alerts_stmt, _ = await _build_alerts_from_date_stmt(session, token_payload.organization_id, from_date, risk_score)
+    is_admin = token_payload.is_admin
+    alerts_stmt, _ = await _build_alerts_from_date_stmt(
+        session, token_payload.organization_id, from_date, risk_score, is_admin=is_admin
+    )
     count_stmt: Any = select(func.count()).select_from(alerts_stmt.subquery())
     return AlertCount(count=int((await session.exec(count_stmt)).one()))
 
@@ -442,7 +467,7 @@ async def unmatch_alert_sequence(
         properties={"alert_id": alert_id, "sequence_id": sequence_id},
     )
     alert = cast(Alert, await alerts.get(alert_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         verify_org_rights(token_payload.organization_id, alert)
 
     link_stmt: Any = select(AlertSequence).where(
