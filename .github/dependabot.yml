@@ -26,6 +26,7 @@ updates:
     schedule:
       interval: "daily"
       time: "08:00"
+    # Keep in sync with group patterns below; this list gates version updates.
     allow:
       - dependency-name: "PyJWT"
       - dependency-name: "passlib"
