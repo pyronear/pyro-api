@@ -51,6 +51,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage-src.xml
+          flags: backend
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
@@ -81,6 +82,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
+          flags: client
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
