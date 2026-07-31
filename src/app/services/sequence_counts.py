@@ -16,6 +16,8 @@ async def get_detection_counts_by_sequence_ids(session: AsyncSession, sequence_i
     if not sequence_ids:
         return {}
 
+    # Continuity rows (empty bbox) are counted: this count sizes what GET /sequences/{id}/detections
+    # returns, which includes them. A "real detections only" count would need a separate field.
     stmt: Any = (
         select(cast(Any, Detection.sequence_id), func.count(cast(Any, Detection.id)))
         .where(cast(Any, Detection.sequence_id).in_(sequence_ids))

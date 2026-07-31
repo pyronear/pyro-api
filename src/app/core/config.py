@@ -3,15 +3,18 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import logging
 import os
 import secrets
 import socket
 from typing import Union
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["settings"]
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class Settings(BaseSettings):
@@ -66,16 +69,44 @@ class Settings(BaseSettings):
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
 
-    # Sequence handling
+    # Sequence handling: three windows gate sequence behaviour, each on its own timescale.
+    # All three are tuned against the cameras' frame interval (time between two frames of the
+    # same pose, patrol period included), not against each other.
+    # Max gap between two real detections still matched to the same sequence; above it a new
+    # sequence starts. Spans camera downtime, so it is much larger than the frame interval.
     SEQUENCE_RELAXATION_SECONDS: int = int(os.environ.get("SEQUENCE_RELAXATION_SECONDS") or 120 * 60)
+    # A sequence is confirmed once it holds MIN_INTERVAL_DETS detections within
+    # MIN_INTERVAL_SECONDS: the ratio implies an expected frame cadence, so the window must
+    # cover at least MIN_INTERVAL_DETS frame intervals or sequences never confirm.
     SEQUENCE_MIN_INTERVAL_DETS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_DETS") or 3)
     SEQUENCE_MIN_INTERVAL_SECONDS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_SECONDS") or 5 * 60)
+    # Window after a sequence's last real detection during which a frame with no matching bbox
+    # is still attached to it (with an empty bbox) to keep the frame timeline continuous.
+    # Must span a few frame intervals to ever fire; kept short so long-faded sequences stop
+    # collecting frames well before RELAXATION lets them match a new bbox again.
+    SEQUENCE_CONTINUITY_SECONDS: int = int(os.environ.get("SEQUENCE_CONTINUITY_SECONDS") or 2 * 60)
     # Max gap (relative image coords) between two bboxes still considered the same smoke plume.
     SEQUENCE_BBOX_TOLERANCE: float = float(os.environ.get("SEQUENCE_BBOX_TOLERANCE") or 0.05)
     TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
     # Cameras closer than this share an apex: their cone intersection cannot localize smoke.
     TRIANGULATION_MIN_APEX_DISTANCE_KM: float = float(os.environ.get("TRIANGULATION_MIN_APEX_DISTANCE_KM") or 0.1)
     ALERT_MERGE_MAX_DISTANCE_KM: float = float(os.environ.get("ALERT_MERGE_MAX_DISTANCE_KM") or 2.0)
+
+    @model_validator(mode="after")
+    def check_sequence_windows(self) -> "Settings":
+        for name in ("SEQUENCE_RELAXATION_SECONDS", "SEQUENCE_MIN_INTERVAL_SECONDS", "SEQUENCE_CONTINUITY_SECONDS"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be > 0")
+        # Not a hard error: the windows are not monotonic by design, but continuity frames
+        # attaching past the matchable window is almost certainly a misconfiguration.
+        if self.SEQUENCE_CONTINUITY_SECONDS > self.SEQUENCE_RELAXATION_SECONDS:
+            logger.warning(
+                "SEQUENCE_CONTINUITY_SECONDS (%s) > SEQUENCE_RELAXATION_SECONDS (%s): "
+                "continuity frames attach past the matchable window.",
+                self.SEQUENCE_CONTINUITY_SECONDS,
+                self.SEQUENCE_RELAXATION_SECONDS,
+            )
+        return self
 
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
