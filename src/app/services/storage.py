@@ -141,13 +141,16 @@ class S3Bucket:
         simply age out through the size-bound eviction below.
 
         Stability is per-process: the cache lives on this instance, so it only dedupes URLs
-        within one worker. Running N uvicorn workers means a polling client can see up to N
-        distinct URLs per key per window, one per worker that happened to answer. The repo
-        currently runs a single worker (docker-compose.yml passes no ``--workers`` to uvicorn),
-        so this does not bite today. Making it cross-process would also require a shared
-        signing timestamp, and SigV4's ``X-Amz-Date`` is derived from the wall clock at signing
-        time rather than being a ``generate_presigned_url`` parameter, so it is not achievable
-        without patching boto3's clock.
+        within one worker. With W workers a polling client sees up to W distinct URLs per key
+        per window, one per worker that happened to answer, so a frame is fetched up to W times
+        instead of once. That is still far better than re-signing on every poll (which bust the
+        cache unconditionally), just divided by W. Production runs several workers, so this
+        applies there; the worker count is not visible from this repo, which only carries dev
+        compose files. See #671.
+
+        Making it cross-process is not achievable without patching boto3's clock: SigV4 derives
+        ``X-Amz-Date`` from the wall clock at signing time rather than taking it as a
+        ``generate_presigned_url`` parameter, so a shared cache would be the way in.
         """
         window = _url_cache_window(url_expiration)
         # monotonic: only the window length matters, and it is immune to NTP steps.

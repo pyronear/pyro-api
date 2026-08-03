@@ -514,7 +514,10 @@ class Client:
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
             sampling: keep one detection every N (1 = all, max 10000); the kept frames are picked
-                chronologically and do not depend on desc
+                chronologically and do not depend on desc. Independent of limit: to span the whole
+                sequence in one call pass limit >= ceil(detections_count / sampling), otherwise
+                limit still caps how many sampled frames come back (with the desc=True and
+                limit=10 defaults, sampling=10 returns the 10 most recent sampled frames)
             offset: number of detections to skip, within the sampled set
 
         Returns:

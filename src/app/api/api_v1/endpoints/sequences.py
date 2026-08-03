@@ -82,7 +82,13 @@ async def fetch_sequence_detections(
             "chronologically from the start of the sequence, so the set does not depend on `desc` "
             "and does not shift as the sequence grows; the first detection is always kept. "
             "`limit` and `offset` then page that sampled set. Note that with `desc=true` a newly "
-            "recorded detection shifts page boundaries, since it lands at the front."
+            "recorded detection shifts page boundaries, since it lands at the front. "
+            "**`sampling` and `limit` are independent: sampling thins the set, `limit` still caps "
+            "how many of it you get back.** To span the whole sequence in one call, pass "
+            "`limit >= ceil(detections_count / sampling)` (and since `limit` caps at 500, that "
+            "means `sampling >= detections_count / 500`); `detections_count` is on the sequence "
+            "object. `?sampling=10` on its own, with the `desc=true` and `limit=10` defaults, "
+            "returns the 10 most recent sampled frames rather than a spread across the sequence."
         ),
         ge=1,
         le=10_000,
