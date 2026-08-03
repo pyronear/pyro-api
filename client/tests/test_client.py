@@ -191,9 +191,20 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert len(response.json()) == 0  # Sequence was labeled by agent
     response = user_client.fetch_sequences_from_date(datetime.utcnow().date().isoformat())
     assert len(response.json()) == 1
-    response = user_client.fetch_sequences_detections(response.json()[0]["id"])
+    sequence_id = response.json()[0]["id"]
+    response = user_client.fetch_sequences_detections(sequence_id)
     assert response.status_code == 200, response.__dict__
     # 4 real detections + the continuity row added by the empty frame in test_cam_workflow
     detections = response.json()
     assert len(detections) == 5
     assert sum(det["bbox"] == "[]" for det in detections) == 1
+    # An explicit limit is forwarded, an omitted one is left to the API.
+    response = user_client.fetch_sequences_detections(sequence_id, limit=2)
+    assert response.status_code == 200, response.__dict__
+    assert len(response.json()) == 2
+    # With sampling and no limit, the API sizes the response to span the sampled set.
+    response = user_client.fetch_sequences_detections(sequence_id, sampling=2)
+    assert response.status_code == 200, response.__dict__
+    assert len(response.json()) == 3  # ceil(5 / 2)
+    assert response.headers["x-sampled-total"] == "3"
+    assert response.headers["x-sampled-truncated"] == "false"
