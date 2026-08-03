@@ -61,7 +61,14 @@ async def get_sequence(
 
 
 @router.get(
-    "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
+    "/{sequence_id}/detections",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch the detections of a specific sequence",
+    description=(
+        "Returns the sequence's detections, including continuity rows: frames attached with "
+        'bbox="[]" where the tracked object was not detected, kept so the frame timeline stays '
+        "gapless. Filter on bbox if only real detections are wanted."
+    ),
 )
 async def fetch_sequence_detections(
     sequence_id: int = Path(..., gt=0),

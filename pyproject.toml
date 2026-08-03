@@ -27,8 +27,8 @@ server = [
     "asyncpg>=0.25.0,<1.0.0",
     "alembic>=1.18.5,<2.0.0",
     "sentry-sdk[fastapi]>=2.66.0,<3.0.0",
-    "posthog>=3.0.0,<4.0.0",
-    "prometheus-fastapi-instrumentator>=8.0.2,<9.0.0",
+    "posthog>=7.34.0,<8.0.0",
+    "prometheus-fastapi-instrumentator>=8.1.0,<9.0.0",
     "python-multipart==0.0.32",
     "python-magic>=0.4.17,<0.5.0",
     "boto3>=1.43.9,<1.44.0", # https://github.com/boto/boto3/issues/4435
@@ -44,9 +44,9 @@ server = [
     "pytz>=2024.1",
 ]
 quality = [
-    "ruff==0.15.22",
-    "ty==0.0.62",
-    "prek==0.4.10",
+    "ruff==0.16.0",
+    "ty==0.0.65",
+    "prek==0.4.11",
     "types-requests>=2.33.0.20260712",
     "types-python-dateutil>=2.9.0.20260716,<3.0.0",
     "sqlalchemy-stubs>=0.4,<0.5",
