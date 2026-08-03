@@ -1016,6 +1016,101 @@ async def test_fetch_sequence_detections_sampling_interval(
 
 
 @pytest.mark.asyncio
+async def test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Without an explicit limit, sampling must return the whole span, not its tail.
+
+    This is the guardrail: with the historical limit=10 default, `?sampling=2` on a 30-detection
+    sequence would silently return the 10 most recent sampled frames while looking like a spread.
+    """
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false", headers=auth)
+    assert response.status_code == 200, response.text
+    # ceil(30 / 2) = 15 frames, spanning the sequence rather than stopping at 10.
+    assert [det["id"] for det in response.json()] == chronological_ids[::2]
+    assert len(response.json()) == 15
+    assert response.headers["x-sampled-total"] == "15"
+    assert response.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """An explicit limit is honoured, and the headers say the span was cut short."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4", headers=auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[::2][:4]
+    assert response.headers["x-sampled-total"] == "15"
+    assert response.headers["x-sampled-truncated"] == "true"
+
+    # Paging to the end of the sampled set is not truncation.
+    tail = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=11", headers=auth
+    )
+    assert tail.status_code == 200, tail.text
+    assert tail.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_unsampled_default_limit_unchanged(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """sampling=1 keeps the historical limit=10 default and skips the extra count entirely."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?desc=false", headers=auth)
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[:10]
+    # The headers describe a sampled set, so they are absent when nothing was sampled.
+    assert "x-sampled-total" not in response.headers
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """A sampling interval past the detection count still yields one row, not zero."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=10)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=500", headers=auth)
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[0]]
+    assert response.headers["x-sampled-total"] == "1"
+    assert response.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
 async def test_fetch_sequence_detections_sampling_larger_than_count(
     async_client: AsyncClient,
     detection_session: AsyncSession,
