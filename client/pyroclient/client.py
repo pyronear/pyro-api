@@ -496,7 +496,7 @@ class Client:
     def fetch_sequences_detections(
         self,
         sequence_id: int,
-        limit: int = 10,
+        limit: Union[int, None] = None,
         desc: bool = True,
         with_crop: bool = True,
         sampling: int = 1,
@@ -510,29 +510,33 @@ class Client:
 
         Args:
             sequence_id: ID of the associated sequence entry
-            limit: maximum number of detections to fetch
+            limit: maximum number of detections to fetch. Left unset (the default) the API picks
+                10, or with sampling the size of the whole sampled span capped at 500
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
             sampling: keep one detection every N (1 = all, max 10000); the kept frames are picked
-                chronologically and do not depend on desc. Independent of limit: to span the whole
-                sequence in one call pass limit >= ceil(detections_count / sampling), otherwise
-                limit still caps how many sampled frames come back (with the desc=True and
-                limit=10 defaults, sampling=10 returns the 10 most recent sampled frames)
+                chronologically and do not depend on desc. Pair it with limit unset to span the
+                sequence, since an explicit limit below ceil(detections_count / sampling) returns
+                only part of the span. The X-Sampled-Total and X-Sampled-Truncated response
+                headers say whether what came back covers the sequence
             offset: number of detections to skip, within the sampled set
 
         Returns:
             HTTP response
         """
+        params: Dict[str, Any] = {
+            "desc": desc,
+            "with_crop": with_crop,
+            "sampling": sampling,
+            "offset": offset,
+        }
+        # Omitted rather than defaulted client-side, so the API can size it from the sampled set.
+        if limit is not None:
+            params["limit"] = limit
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
-            params={
-                "limit": limit,
-                "desc": desc,
-                "with_crop": with_crop,
-                "sampling": sampling,
-                "offset": offset,
-            },
+            params=params,
             timeout=self.timeout,
         )
 

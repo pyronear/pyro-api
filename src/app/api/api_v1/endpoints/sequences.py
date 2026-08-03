@@ -7,7 +7,7 @@
 from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -28,6 +28,11 @@ from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+
+# Historical default, kept for sampling=1 so unsampled callers see no change.
+DEFAULT_DETECTION_LIMIT = 10
+# Ceiling on one response, mirrored in the limit Query constraint.
+MAX_DETECTION_LIMIT = 500
 
 
 async def verify_org_rights(
@@ -71,8 +76,18 @@ async def get_sequence(
     ),
 )
 async def fetch_sequence_detections(
+    response: Response,
     sequence_id: int = Path(..., gt=0),
-    limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=500),
+    limit: Union[int, None] = Query(
+        None,
+        description=(
+            "Maximum number of detections to fetch. Defaults to 10, except when `sampling` is set "
+            "and `limit` is omitted: it then defaults to whatever spans the whole sampled set "
+            "(capped at 500), so `?sampling=10` returns a spread instead of a truncated tail."
+        ),
+        ge=1,
+        le=500,
+    ),
     offset: int = Query(0, description="Number of detections to skip, within the sampled set", ge=0),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
     sampling: int = Query(
@@ -83,12 +98,12 @@ async def fetch_sequence_detections(
             "and does not shift as the sequence grows; the first detection is always kept. "
             "`limit` and `offset` then page that sampled set. Note that with `desc=true` a newly "
             "recorded detection shifts page boundaries, since it lands at the front. "
-            "**`sampling` and `limit` are independent: sampling thins the set, `limit` still caps "
-            "how many of it you get back.** To span the whole sequence in one call, pass "
-            "`limit >= ceil(detections_count / sampling)` (and since `limit` caps at 500, that "
-            "means `sampling >= detections_count / 500`); `detections_count` is on the sequence "
-            "object. `?sampling=10` on its own, with the `desc=true` and `limit=10` defaults, "
-            "returns the 10 most recent sampled frames rather than a spread across the sequence."
+            "`sampling` thins the set and `limit` caps how much of it comes back, so an explicit "
+            "`limit` below `ceil(detections_count / sampling)` returns only part of the span (the "
+            "most recent part when `desc=true`). Omit `limit` to get the whole span, and read the "
+            "`X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether what you "
+            "got covers the sequence. Since `limit` caps at 500, spanning a sequence in one call "
+            "needs `sampling >= detections_count / 500`."
         ),
         ge=1,
         le=10_000,
@@ -100,6 +115,7 @@ async def fetch_sequence_detections(
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
@@ -108,10 +124,24 @@ async def fetch_sequence_detections(
     if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
+    effective_limit = DEFAULT_DETECTION_LIMIT if limit is None else limit
+    if sampling > 1:
+        # Sampling thins the set but limit still truncates it, and truncation is invisible in the
+        # response: you get frames that look like a spread but are only its tail. So size the
+        # sampled set once (the same count the endpoint returns, continuity rows included), use it
+        # to fill in an omitted limit, and report it either way so a caller passing an explicit
+        # limit can still tell whether it covered the sequence.
+        counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
+        sampled_total = -(-counts.get(sequence_id, 0) // sampling)  # ceil division
+        if limit is None:
+            effective_limit = max(1, min(MAX_DETECTION_LIMIT, sampled_total))
+        response.headers["X-Sampled-Total"] = str(sampled_total)
+        response.headers["X-Sampled-Truncated"] = str(offset + effective_limit < sampled_total).lower()
+
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     fetched = await detections.fetch_by_sequence(
-        sequence_id, sampling=sampling, order_desc=desc, limit=limit, offset=offset
+        sequence_id, sampling=sampling, order_desc=desc, limit=effective_limit, offset=offset
     )
     return [
         DetectionWithUrl(
