@@ -105,6 +105,16 @@ Let's install the different libraries:
 make venv
 ```
 
+#### Dependency boundary
+
+The `server` dependency group is for database, storage, and web API code. CPU-heavy or native geospatial dependencies belong to the `inference` group and `src/inference`; the inference container must not receive database, storage, or JWT credentials or join the database network.
+
+Run inference tests independently with:
+
+```shell
+PYTHONPATH=src uv run --group inference --group test pytest inference/tests
+```
+
 #### Pre-commit hooks
 Let's make your life easier by formatting & fixing lint on each commit:
 ```shell

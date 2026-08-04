@@ -11,7 +11,6 @@ from ast import literal_eval
 from datetime import datetime, timedelta
 from typing import AbstractSet, Any, Dict, List, Optional, Set, Tuple, Union, cast
 
-import pandas as pd
 from fastapi import (
     APIRouter,
     Depends,
@@ -50,8 +49,8 @@ from app.schemas.detections import (
 )
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
-from app.services.cones import resolve_cone
-from app.services.overlap import compute_overlap, haversine_km
+from app.services.cones import haversine_km, resolve_cone
+from app.services.inference import inference_service
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -232,21 +231,18 @@ def _build_overlap_records(
     return records
 
 
-def _resolve_groups_and_locations(
+async def _resolve_groups_and_locations(
     records: List[Dict[str, Any]],
     sequence_id: int,
 ) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
         return None
-    df = compute_overlap(pd.DataFrame.from_records(records))
-    row = df[df["id"] == int(sequence_id)]
-    if row.empty:
+    inferred = await inference_service.triangulate(records)
+    matched = [group for group in inferred if sequence_id in group.sequence_ids]
+    if not matched:
         return None
-    groups = [tuple(g) for g in row.iloc[0]["event_groups"]]
-    locations = row.iloc[0].get("event_smoke_locations", [])
-    group_locations: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {}
-    for idx, group in enumerate(groups):
-        group_locations[group] = locations[idx] if idx < len(locations) else None
+    groups = [group.sequence_ids for group in matched]
+    group_locations = {group.sequence_ids: group.smoke_location for group in matched}
     return groups, group_locations
 
 
@@ -468,9 +464,9 @@ async def _attach_sequence_to_alert(
     # Fetch recent sequences for the organization based on recency of last_seen_at
     recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_)
 
-    # Build DataFrame for overlap computation
+    # Build inference payload for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
-    resolved = _resolve_groups_and_locations(records, int(sequence_.id))
+    resolved = await _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:
         return None
     groups, group_locations = resolved

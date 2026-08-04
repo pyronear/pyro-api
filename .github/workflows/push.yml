@@ -7,6 +7,7 @@ on:
 
 env:
   BACKEND_IMAGE_NAME: alert-api
+  INFERENCE_IMAGE_NAME: alert-api-inference
   DOCKERHUB_USER: ${{ secrets.DOCKERHUB_LOGIN }}
   PYTHON_VERSION: "3.11"
   UV_VERSION: "0.11.14"
@@ -31,14 +32,18 @@ jobs:
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
           fi
       - name: Build docker
-        run: docker build -f src/Dockerfile . -t $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
+        run: |
+          docker build -f src/Dockerfile . -t $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
+          docker build -f src/Dockerfile.inference . -t $DOCKERHUB_USER/$INFERENCE_IMAGE_NAME:$IMAGE_TAG
       - name: Login to DockerHub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_LOGIN }}
           password: ${{ secrets.DOCKERHUB_PW }}
       - name: Push to hub
-        run: docker push $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
+        run: |
+          docker push $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG
+          docker push $DOCKERHUB_USER/$INFERENCE_IMAGE_NAME:$IMAGE_TAG
       - name: Login to GHCR
         uses: docker/login-action@v4
         with:
@@ -47,29 +52,57 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push to container registry
         run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$BACKEND_IMAGE_NAME
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          docker tag $DOCKERHUB_USER/$BACKEND_IMAGE_NAME:$IMAGE_TAG $IMAGE_ID:$IMAGE_TAG
-          docker push $IMAGE_ID:$IMAGE_TAG
+          for IMAGE_NAME in $BACKEND_IMAGE_NAME $INFERENCE_IMAGE_NAME; do
+            IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+            IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+            docker tag $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG $IMAGE_ID:$IMAGE_TAG
+            docker push $IMAGE_ID:$IMAGE_TAG
+          done
 
   deploy-dev:
     if: github.ref == 'refs/heads/main'
     needs: docker
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1.2.5
+      - uses: actions/checkout@v7
+      - name: Verify inference deployment secret
+        env:
+          INFERENCE_API_TOKEN: ${{ secrets.INFERENCE_API_TOKEN }}
+        run: test -n "$INFERENCE_API_TOKEN"
+      - name: Upload Compose definition
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_DEV_HOST }}
           username: ${{ secrets.SSH_DEV_USERNAME }}
           key: ${{ secrets.SSH_DEPLOY_DEV }}
+          source: docker-compose.yml
+          target: "."
+          overwrite: true
+      - name: Deploy inference, then backend
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          INFERENCE_API_TOKEN: ${{ secrets.INFERENCE_API_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_DEV_HOST }}
+          username: ${{ secrets.SSH_DEV_USERNAME }}
+          key: ${{ secrets.SSH_DEPLOY_DEV }}
+          envs: INFERENCE_API_TOKEN
           script: |
+            touch .env
+            grep -v '^INFERENCE_API_TOKEN=' .env > .env.next || true
+            printf 'INFERENCE_API_TOKEN=%s\n' "$INFERENCE_API_TOKEN" >> .env.next
+            chmod 600 .env.next
+            mv .env.next .env
+            docker compose config -q
             # Ensure we have max disk space
             docker rmi -f $(docker images -f "dangling=true" -q)
             docker volume rm -f $(docker volume ls -f "dangling=true" -q)
             # Update the service
-            docker compose pull backend
-            docker compose stop backend && docker compose up -d --wait
+            docker compose pull inference backend
+            docker compose up -d --wait inference
+            docker compose stop backend && docker compose up -d --wait backend
             # Check update
+            docker inspect -f '{{ .Created }}' $(docker compose images -q inference)
             docker inspect -f '{{ .Created }}' $(docker compose images -q backend)
             # Clean up
             docker rmi -f $(docker images -f "dangling=true" -q)

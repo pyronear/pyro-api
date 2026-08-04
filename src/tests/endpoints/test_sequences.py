@@ -10,6 +10,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.sequences import (
+    delete_sequence,
     fetch_latest_unlabeled_sequences,
     fetch_sequences_from_date,
     label_sequence,
@@ -18,6 +19,7 @@ from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Pose, Sequence, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel
+from app.services.inference import InferenceUnavailableError
 from app.services.storage import s3_service
 
 
@@ -696,9 +698,11 @@ async def test_delete_sequence_refreshes_alert(async_client: AsyncClient, detect
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.apply_alert_refresh", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.plan_alert_refresh", new_callable=AsyncMock)
 async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
-    mock_refresh_alert_state: AsyncMock,
+    mock_plan_alert_refresh: AsyncMock,
+    mock_apply_alert_refresh: AsyncMock,
 ):
     """Verify that labeling a sequence as non-wildfire smoke removes it from an existing alert,
     refreshes that alert, and creates a new alert for the sequence."""
@@ -728,6 +732,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
     mock_alerts_crud = AsyncMock()
     mock_alerts_crud.create.return_value = MagicMock(id=99)  # New alert created
+    refresh = MagicMock()
+    mock_plan_alert_refresh.return_value = refresh
 
     # Mock for session.exec to return an alert_id, then a sibling sequence id, then delete
     mock_session = AsyncMock()
@@ -757,7 +763,8 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
     # Three session.exec calls: alert_ids lookup, siblings probe, delete links
     assert mock_session.exec.call_count == 3
-    mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud)
+    mock_plan_alert_refresh.assert_awaited_once_with(101, mock_session, 1)
+    mock_apply_alert_refresh.assert_awaited_once_with(refresh, mock_alerts_crud)
 
     # Verify a new alert was created for this sequence
     mock_alerts_crud.create.assert_called_once()
@@ -768,9 +775,9 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
 
 @pytest.mark.asyncio
-@patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
+@patch("app.api.api_v1.endpoints.sequences.plan_alert_refresh", new_callable=AsyncMock)
 async def test_unit_label_sequence_solo_alert_keeps_alert(
-    mock_refresh_alert_state: AsyncMock,
+    mock_plan_alert_refresh: AsyncMock,
 ):
     """Labeling a sequence as non-wildfire when it is alone in its alert must not
     detach it, refresh the alert, or create a replacement — the alert id must stay stable."""
@@ -813,7 +820,7 @@ async def test_unit_label_sequence_solo_alert_keeps_alert(
     )
 
     assert mock_session.exec.call_count == 2
-    mock_refresh_alert_state.assert_not_called()
+    mock_plan_alert_refresh.assert_not_awaited()
     mock_alerts_crud.create.assert_not_called()
     mock_session.add.assert_not_called()
     assert updated_sequence.is_wildfire == AnnotationType.OTHER_SMOKE
@@ -850,6 +857,69 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
     mock_sequences_crud.update.assert_called_once_with(1, payload)
     mock_session.exec.assert_not_called()
     mock_alerts_crud.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch(
+    "app.api.api_v1.endpoints.sequences.plan_alert_refresh",
+    new_callable=AsyncMock,
+    side_effect=InferenceUnavailableError("offline"),
+)
+async def test_delete_sequence_preflights_before_mutation(mock_plan_alert_refresh: AsyncMock):
+    result = MagicMock()
+    result.all.return_value = [101]
+    session = AsyncMock()
+    session.exec.return_value = result
+    sequences = AsyncMock()
+    detections = AsyncMock()
+
+    with pytest.raises(InferenceUnavailableError):
+        await delete_sequence(
+            sequence_id=1,
+            sequences=sequences,
+            detections=detections,
+            alerts=AsyncMock(),
+            session=session,
+            token_payload=TokenPayload(sub=1, scopes=[UserRole.ADMIN], organization_id=1),
+        )
+
+    mock_plan_alert_refresh.assert_awaited_once_with(101, session, 1)
+    detections.update.assert_not_awaited()
+    sequences.delete.assert_not_awaited()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch(
+    "app.api.api_v1.endpoints.sequences.plan_alert_refresh",
+    new_callable=AsyncMock,
+    side_effect=InferenceUnavailableError("offline"),
+)
+async def test_label_sequence_preflights_before_mutation(mock_plan_alert_refresh: AsyncMock):
+    sequence = Sequence(id=1, camera_id=1, started_at=utcnow(), last_seen_at=utcnow())
+    sequences = AsyncMock()
+    sequences.get.return_value = sequence
+    alert_ids = MagicMock()
+    alert_ids.all.return_value = [101]
+    siblings = MagicMock()
+    siblings.first.return_value = 2
+    session = AsyncMock()
+    session.exec.side_effect = [alert_ids, siblings]
+
+    with pytest.raises(InferenceUnavailableError):
+        await label_sequence(
+            payload=SequenceLabel(is_wildfire=AnnotationType.OTHER_SMOKE),
+            sequence_id=1,
+            cameras=AsyncMock(),
+            sequences=sequences,
+            alerts=AsyncMock(),
+            session=session,
+            token_payload=TokenPayload(sub=1, scopes=[UserRole.ADMIN], organization_id=1),
+        )
+
+    mock_plan_alert_refresh.assert_awaited_once_with(101, session, 1)
+    sequences.update.assert_not_awaited()
+    session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -30,6 +30,7 @@ jobs:
           POSTGRES_USER: dummy_pg_user
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
+          INFERENCE_API_TOKEN: dummy-inference-token
         run: |
           docker compose up -d --build --wait
           docker compose logs

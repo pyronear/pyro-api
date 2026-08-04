@@ -7,8 +7,8 @@ import csv
 import io
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple, cast
+from unittest.mock import AsyncMock
 
-import pandas as pd
 import pytest  # type: ignore
 from httpx import AsyncClient
 from sqlmodel import select
@@ -18,7 +18,7 @@ from app.api.api_v1.endpoints.alerts import _ALERT_EXPORT_COLUMNS, _iter_alerts_
 from app.core.config import settings
 from app.core.time import utcnow
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
-from app.services.overlap import compute_overlap
+from app.services.inference import InferenceGroup, InferenceUnavailableError
 
 
 async def _create_alert_with_sequences(
@@ -325,8 +325,15 @@ async def test_alerts_count_unauthenticated(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_triangulation_creates_single_alert(
-    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
 ):
+    expected_loc = (48.35, 2.75)
+
+    def triangulate(records):
+        sequence_ids = tuple(sorted(record["id"] for record in records))
+        return [InferenceGroup(sequence_ids, expected_loc if len(sequence_ids) >= 2 else None)]
+
+    monkeypatch.setattr("app.services.inference.inference_service.triangulate", AsyncMock(side_effect=triangulate))
     organization = await detection_session.get(Organization, 1)
     assert organization is not None
     organization.name = "sdis-77"
@@ -424,33 +431,6 @@ async def test_triangulation_creates_single_alert(
     alert = alert_res.one()
     assert alert.organization_id == organization.id
 
-    camera_by_id = {camera.id: camera for camera in cameras}
-    records = [
-        {
-            "id": seq.id,
-            "pose_id": seq.pose_id,
-            "lat": camera_by_id[seq.camera_id].lat,
-            "lon": camera_by_id[seq.camera_id].lon,
-            "sequence_azimuth": seq.sequence_azimuth,
-            "cone_angle": seq.cone_angle,
-            "is_wildfire": seq.is_wildfire,
-            "started_at": seq.started_at,
-            "last_seen_at": seq.last_seen_at,
-        }
-        for seq in sequences
-    ]
-    df = compute_overlap(pd.DataFrame.from_records(records))
-    expected_loc = None
-    for groups, locations in zip(df["event_groups"], df["event_smoke_locations"], strict=False):
-        for idx, group in enumerate(groups):
-            if set(group) == seq_ids:
-                if idx < len(locations):
-                    expected_loc = locations[idx]
-                break
-        if expected_loc is not None:
-            break
-
-    assert expected_loc is not None
     assert alert.lat == pytest.approx(expected_loc[0])
     assert alert.lon == pytest.approx(expected_loc[1])
 
@@ -568,6 +548,36 @@ async def test_unmatch_keeps_sequence_when_already_linked_elsewhere(
     )
     alert_ids_for_seq = {aid for aid, _ in mappings_res.all()}
     assert alert_ids_for_seq == {other_alert.id}
+
+
+@pytest.mark.asyncio
+async def test_unmatch_returns_503_without_mutation_when_inference_fails(
+    async_client: AsyncClient, detection_session: AsyncSession, monkeypatch
+):
+    alert, seq_ids, _ = await _create_alert_with_sequences(
+        detection_session, org_id=1, camera_id=1, lat=48.3856355, lon=2.7323256
+    )
+    triangulate = AsyncMock(side_effect=InferenceUnavailableError("offline"))
+    monkeypatch.setattr("app.services.inference.inference_service.triangulate", triangulate)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+
+    response = await async_client.post(f"/alerts/{alert.id}/sequences/{seq_ids[0]}/unmatch", headers=auth)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Inference service unavailable"}
+    mappings = (
+        await detection_session.exec(
+            select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.alert_id == alert.id)
+        )
+    ).all()
+    assert {(alert_id, sequence_id) for alert_id, sequence_id in mappings} == {
+        (alert.id, sequence_id) for sequence_id in seq_ids
+    }
+    stored_alert = await detection_session.get(Alert, alert.id)
+    assert stored_alert is not None
+    assert (stored_alert.lat, stored_alert.lon) == (alert.lat, alert.lon)
 
 
 @pytest.mark.asyncio

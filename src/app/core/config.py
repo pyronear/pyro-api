@@ -87,9 +87,6 @@ class Settings(BaseSettings):
     SEQUENCE_CONTINUITY_SECONDS: int = int(os.environ.get("SEQUENCE_CONTINUITY_SECONDS") or 2 * 60)
     # Max gap (relative image coords) between two bboxes still considered the same smoke plume.
     SEQUENCE_BBOX_TOLERANCE: float = float(os.environ.get("SEQUENCE_BBOX_TOLERANCE") or 0.05)
-    TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
-    # Cameras closer than this share an apex: their cone intersection cannot localize smoke.
-    TRIANGULATION_MIN_APEX_DISTANCE_KM: float = float(os.environ.get("TRIANGULATION_MIN_APEX_DISTANCE_KM") or 0.1)
     ALERT_MERGE_MAX_DISTANCE_KM: float = float(os.environ.get("ALERT_MERGE_MAX_DISTANCE_KM") or 2.0)
 
     @model_validator(mode="after")
@@ -129,6 +126,11 @@ class Settings(BaseSettings):
     # and how long a claimed job is leased before a sibling worker may retry it (must exceed
     # TEMPORAL_API_TIMEOUT plus the DB phases).
     TEMPORAL_VALIDATION_LEASE_SECONDS: float = float(os.environ.get("TEMPORAL_VALIDATION_LEASE_SECONDS") or 120.0)
+
+    # Internal inference API (triangulation and coordinate-to-timezone lookup)
+    INFERENCE_API_URL: Union[str, None] = os.environ.get("INFERENCE_API_URL")
+    INFERENCE_API_TOKEN: Union[str, None] = os.environ.get("INFERENCE_API_TOKEN") or None
+    INFERENCE_API_TIMEOUT: float = float(os.environ.get("INFERENCE_API_TIMEOUT") or 10.0)
 
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")

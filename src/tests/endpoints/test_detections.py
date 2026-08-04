@@ -5,6 +5,7 @@ from ast import literal_eval
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
+from unittest.mock import AsyncMock
 
 import pytest  # type: ignore
 from fastapi import HTTPException, UploadFile
@@ -37,6 +38,7 @@ from app.models import Alert, AlertSequence, Camera, Detection, Organization, Po
 from app.schemas.login import TokenPayload
 from app.services import validation as validation_service
 from app.services.cones import resolve_cone
+from app.services.inference import InferenceGroup
 from app.services.slack import slack_client
 from app.services.storage import s3_service
 from app.services.telegram import telegram_client
@@ -591,11 +593,13 @@ async def test_build_overlap_records_skips_missing_cone_data(detection_session: 
     assert records == []
 
 
-def test_resolve_groups_and_locations_empty_records_returns_none():
-    assert _resolve_groups_and_locations([], 1) is None
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_empty_records_returns_none():
+    assert await _resolve_groups_and_locations([], 1) is None
 
 
-def test_resolve_groups_and_locations_no_match_returns_none():
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_no_match_returns_none(monkeypatch):
     now = utcnow()
     records = [
         {
@@ -609,7 +613,10 @@ def test_resolve_groups_and_locations_no_match_returns_none():
             "last_seen_at": now,
         }
     ]
-    assert _resolve_groups_and_locations(records, 999) is None
+    triangulate = AsyncMock(return_value=[InferenceGroup((1,), None)])
+    monkeypatch.setattr(detections_api.inference_service, "triangulate", triangulate)
+    assert await _resolve_groups_and_locations(records, 999) is None
+    triangulate.assert_awaited_once_with(records)
 
 
 @pytest.mark.parametrize(

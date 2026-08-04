@@ -18,6 +18,7 @@ from app.crud import DetectionCRUD, SequenceCRUD
 from app.db import session_factory
 from app.models import AlertSequence, Detection, Sequence
 from app.services import validation as validation_service
+from app.services.inference import InferenceUnavailableError
 from app.services.risk import risk_service
 from app.services.temporal import TemporalPrediction, temporal_service
 from app.services.validation import (
@@ -764,6 +765,19 @@ async def test_notify_swallows_unexpected_errors(detection_session: AsyncSession
     monkeypatch.setattr(DetectionCRUD, "fetch_all", AsyncMock(side_effect=RuntimeError("db hiccup")))
 
     await _notify_for_sequence(cast(int, seq.id), 1, alert_id=None)  # must not raise
+
+
+@pytest.mark.asyncio
+async def test_notify_logs_and_skips_when_timezone_lookup_fails(detection_session: AsyncSession, monkeypatch, caplog):
+    seq = await _seed_sequence(detection_session, 5)
+    timezone = AsyncMock(side_effect=InferenceUnavailableError("offline"))
+    monkeypatch.setattr(validation_service.inference_service, "timezone", timezone)
+
+    with caplog.at_level("ERROR", logger="uvicorn.error"):
+        await _notify_for_sequence(cast(int, seq.id), 1, alert_id=None)
+
+    timezone.assert_awaited_once()
+    assert f"Notification dispatch failed for sequence {seq.id}" in caplog.text
 
 
 @pytest.mark.asyncio

@@ -15,6 +15,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - data
 
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
@@ -35,6 +37,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - data
+
+  inference:
+    image: ghcr.io/pyronear/alert-api-inference:latest
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile.inference
+    expose:
+      - 5051
+    environment:
+      - INFERENCE_API_TOKEN=${INFERENCE_API_TOKEN:?INFERENCE_API_TOKEN must be set}
+      - INFERENCE_WORKERS=${INFERENCE_WORKERS:-1}
+      - TRIANGULATION_RELAXATION_SECONDS=${TRIANGULATION_RELAXATION_SECONDS:-1800}
+      - TRIANGULATION_MIN_APEX_DISTANCE_KM=${TRIANGULATION_MIN_APEX_DISTANCE_KM:-0.1}
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:5051/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - compute
 
   backend:
     image: ghcr.io/pyronear/alert-api:latest
@@ -47,6 +72,8 @@ services:
       db:
         condition: service_healthy
       localstack:
+        condition: service_healthy
+      inference:
         condition: service_healthy
     ports:
       - "5050:5050"
@@ -78,6 +105,9 @@ services:
       - TEMPORAL_VALIDATION_POLL_SECONDS=${TEMPORAL_VALIDATION_POLL_SECONDS:-2}
       - TEMPORAL_VALIDATION_MAX_AGE=${TEMPORAL_VALIDATION_MAX_AGE:-300}
       - TEMPORAL_VALIDATION_LEASE_SECONDS=${TEMPORAL_VALIDATION_LEASE_SECONDS:-120}
+      - INFERENCE_API_URL=http://inference:5051
+      - INFERENCE_API_TOKEN=${INFERENCE_API_TOKEN:?INFERENCE_API_TOKEN must be set}
+      - INFERENCE_API_TIMEOUT=${INFERENCE_API_TIMEOUT:-10}
     volumes:
       - ./src/:/app/
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
@@ -87,7 +117,15 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - data
+      - compute
 
 volumes:
   postgres_data:
   localstack_data:
+
+networks:
+  data:
+  compute:
+    internal: true

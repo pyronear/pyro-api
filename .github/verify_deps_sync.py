@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-DOCKERFILES = ["src/Dockerfile", "src/Dockerfile.test"]
+DOCKERFILES = ["src/Dockerfile", "src/Dockerfile.inference", "src/Dockerfile.test"]
 PRECOMMIT_CONFIG = ".pre-commit-config.yaml"
 PYPROJECTS = ["./pyproject.toml", "./client/pyproject.toml"]
 TRACKED_DEPS = ("uv", "ruff", "ty", "prek")

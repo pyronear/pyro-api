@@ -22,6 +22,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
+      - name: Run inference tests
+        run: PYTHONPATH=src uv run --group inference --group test pytest --cov=src/inference --cov-config=/dev/null --cov-report xml:coverage-inference.xml inference/tests
       - name: Run backend tests
         env:
           SUPERADMIN_LOGIN: dummy_login
@@ -30,9 +32,11 @@ jobs:
           POSTGRES_USER: dummy_pg_user
           POSTGRES_PASSWORD: dummy_pg_pwd
           POSTGRES_DB: dummy_pg_db
+          INFERENCE_API_TOKEN: dummy-inference-token
         run: |
           UV_GROUPS="server test" docker compose -f docker-compose.dev.yml up -d --build --wait
           docker compose -f docker-compose.dev.yml exec -T backend pytest --cov=app --cov-report xml tests/
+          docker compose -f docker-compose.dev.yml exec -T backend python -c "import importlib.util; packages = ('geopy', 'networkx', 'numpy', 'pandas', 'pyproj', 'shapely', 'timezonefinder'); found = [package for package in packages if importlib.util.find_spec(package)]; assert not found, found"
           docker compose -f docker-compose.dev.yml cp backend:/app/coverage.xml ./coverage-src.xml
       - name: Run Telegram end-to-end check
         env:
@@ -50,7 +54,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: ./coverage-src.xml
+          files: ./coverage-src.xml,./coverage-inference.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 

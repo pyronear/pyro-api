@@ -25,7 +25,7 @@ from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, U
 from app.schemas.alerts import AlertCount, AlertCreate, AlertReadWithSequences
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceRead
-from app.services.alerts import refresh_alert_state
+from app.services.alerts import apply_alert_refresh, plan_alert_refresh
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
@@ -485,6 +485,8 @@ async def unmatch_alert_sequence(
             detail="Cannot unmatch the only sequence of an alert.",
         )
 
+    refresh = await plan_alert_refresh(alert_id, session, sequence_id)
+
     delete_stmt: Any = (
         delete(AlertSequence)
         .where(cast(Any, AlertSequence.alert_id) == alert_id)
@@ -493,7 +495,7 @@ async def unmatch_alert_sequence(
     await session.exec(delete_stmt)
     await session.commit()
 
-    await refresh_alert_state(alert_id, session, alerts)
+    await apply_alert_refresh(refresh, alerts)
 
     other_links_stmt: Any = (
         select(func.count()).select_from(AlertSequence).where(AlertSequence.sequence_id == sequence_id)

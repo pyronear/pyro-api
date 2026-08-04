@@ -34,14 +34,16 @@ server = [
     "boto3>=1.43.9,<1.44.0", # https://github.com/boto/boto3/issues/4435
     "httpx>=0.24.0,<1.0.0",
     "pyro-camera-api-client",
-    "geopy>=2.4.0,<3.0.0",
+    "pytz>=2024.1",
+]
+inference = [
+    "fastapi>=0.136.3,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+    "uvicorn>=0.11.1,<1.0.0",
     "networkx>=3.2.0,<4.0.0",
-    "numpy>=2.4.6,<3.0.0",
-    "pandas>=3.0.3,<4.0.0",
     "pyproj>=3.6.0,<4.0.0",
     "shapely>=2.0.0,<3.0.0",
     "timezonefinder>=8.0.0,<9.0.0",
-    "pytz>=2024.1",
 ]
 quality = [
     "ruff==0.16.0",
@@ -159,6 +161,7 @@ known-third-party = ["fastapi"]
 "scripts/**.py" = ["D", "print", "assert", "ANN", "assert-with-print-message"]
 ".github/**.py" = ["D", "print", "ANN"]
 "src/tests/**.py" = ["undocumented-public-function", "missing-copyright-notice", "assert", "print", "missing-type-function-argument", "missing-return-type-undocumented-public-function", "missing-return-type-private-function", "unused-function-argument", "assert-with-print-message"]
+"inference/tests/**.py" = ["undocumented-public-function", "missing-copyright-notice", "assert", "print", "missing-type-function-argument", "missing-return-type-undocumented-public-function", "missing-return-type-private-function", "unused-function-argument", "assert-with-print-message"]
 "src/app/api/api_v1/endpoints/camera_proxy.py" = ["any-type"]
 "src/migrations/versions/**.py" = ["missing-copyright-notice"]
 "src/migrations/**.py" = ["ANN"]
