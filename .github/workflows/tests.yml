@@ -23,7 +23,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
       - name: Run inference tests
-        run: PYTHONPATH=src uv run --group inference --group test pytest inference/tests
+        run: PYTHONPATH=src uv run --group inference --group test pytest --cov=inference --cov-config=/dev/null --cov-report xml:coverage-inference.xml inference/tests
       - name: Run backend tests
         env:
           SUPERADMIN_LOGIN: dummy_login
@@ -54,7 +54,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: ./coverage-src.xml
+          files: ./coverage-src.xml,./coverage-inference.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
