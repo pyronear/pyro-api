@@ -143,10 +143,34 @@ class S3Service:
                 else {"CreateBucketConfiguration": {"LocationConstraint": self._s3.meta.region_name}}
             )
             self._s3.create_bucket(Bucket=bucket_name, **config_)
+            self._put_bucket_cors(bucket_name)
             return True
         except ClientError as e:
             logger.warning(e)
             return False
+
+    def _put_bucket_cors(self, bucket_name: str) -> None:
+        """Apply the CORS policy so browsers can fetch() presigned URLs cross-origin.
+
+        Allows the frontend origins (settings.S3_CORS_ORIGINS) to GET bucket objects, which the
+        platform's "download all" buttons rely on (native fetch triggers CORS, unlike a plain
+        <img> or <a download>).
+        """
+        origins = [origin.strip() for origin in settings.S3_CORS_ORIGINS.split(",") if origin.strip()]
+        self._s3.put_bucket_cors(
+            Bucket=bucket_name,
+            CORSConfiguration={
+                "CORSRules": [
+                    {
+                        "AllowedOrigins": origins,
+                        "AllowedMethods": ["GET", "HEAD"],
+                        "AllowedHeaders": ["*"],
+                        "ExposeHeaders": ["Content-Length", "Content-Type"],
+                        "MaxAgeSeconds": 3000,
+                    }
+                ]
+            },
+        )
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
         """Get an existing bucket in S3 storage"""
