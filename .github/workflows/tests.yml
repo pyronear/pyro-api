@@ -23,7 +23,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
       - name: Run inference tests
-        run: PYTHONPATH=src uv run --group inference --group test pytest --cov=inference --cov-config=/dev/null --cov-report xml:coverage-inference.xml inference/tests
+        run: PYTHONPATH=src uv run --group inference --group test pytest --cov=src/inference --cov-config=/dev/null --cov-report xml:coverage-inference.xml inference/tests
       - name: Run backend tests
         env:
           SUPERADMIN_LOGIN: dummy_login
