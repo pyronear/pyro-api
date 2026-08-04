@@ -295,6 +295,16 @@ async def proxy_click_to_move(
 
 
 @router.get(
+    "/{camera_id}/control/azimuth",
+    status_code=status.HTTP_200_OK,
+    summary="Get the camera's current real-world azimuth",
+)
+async def proxy_get_azimuth(camera: Camera = Depends(_require_read)) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).get_azimuth, camera_ip)
+
+
+@router.get(
     "/{camera_id}/control/speed_tables",
     status_code=status.HTTP_200_OK,
     summary="Get calibrated speed tables",
