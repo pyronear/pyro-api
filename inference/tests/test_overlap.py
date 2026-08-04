@@ -5,6 +5,10 @@
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+from shapely.geometry import Polygon
+
+from inference import overlap
 from inference.overlap import compute_overlap
 from inference.schemas import SequenceRecord
 
@@ -115,3 +119,29 @@ def test_compute_overlap_handles_empty_and_dateline_inputs() -> None:
         _make_sequence(51, 0.0, -179.9, 270.0, 10.0, now, now),
     ])
     assert {sequence_id for group in groups for sequence_id in group.sequence_ids} == {50, 51}
+
+
+def test_overlap_defensive_geometry_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = datetime.now(timezone.utc)
+    sequence = _make_sequence(60, 0.0, 0.0, 90.0, 10.0, now, now)
+
+    with pytest.raises(ValueError, match="at least 2"):
+        overlap._linspace(0.0, 1.0, 1)
+    assert not overlap._build_cone_polygon(0.0, 0.0, 90.0, 10.0, 35.0, 0.0).is_empty
+    assert not overlap._is_degenerate_pair({}, 1, 2, 0.1)
+
+    def reject_cone(*_args) -> None:
+        raise ValueError("invalid cone")
+
+    monkeypatch.setattr(overlap, "get_projected_cone", reject_cone)
+    assert overlap._build_projected_cones([sequence], 35.0, 0.5) == {}
+    assert overlap._find_overlapping_pairs([sequence], {}, 30.0) == []
+
+    apex_by_id = {1: (0.0, 0.0), 2: (1.0, 1.0)}
+    assert overlap._group_smoke_location((1, 2), {}, apex_by_id, 0.1) is None
+
+    polygons = {
+        1: Polygon([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]),
+        2: Polygon([(2.0, 2.0), (3.0, 2.0), (2.0, 3.0)]),
+    }
+    assert overlap._group_smoke_location((1, 2), polygons, apex_by_id, 0.1) is not None
