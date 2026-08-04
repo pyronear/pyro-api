@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -23,6 +24,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from app.api.api_v1.router import api_router
 from app.core.config import settings
 from app.schemas.base import Status
+from app.services.inference import InferenceUnavailableError
 from app.services.risk import risk_service
 from app.services.validation import validation_worker_loop
 
@@ -97,6 +99,11 @@ app = FastAPI(
     docs_url=None,
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(InferenceUnavailableError)
+def inference_unavailable_handler(_: Request, exc: InferenceUnavailableError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)})
 
 
 # Healthcheck

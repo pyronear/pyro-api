@@ -20,7 +20,7 @@ from app.schemas.alerts import AlertCreate
 from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
-from app.services.alerts import refresh_alert_state
+from app.services.alerts import apply_alert_refresh, plan_alert_refresh
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
@@ -205,6 +205,7 @@ async def delete_sequence(
     telemetry_client.capture(token_payload.sub, event="sequence-deletion", properties={"sequence_id": sequence_id})
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
+    refreshes = [await plan_alert_refresh(aid, session, sequence_id) for aid in alert_ids]
     # Unset the sequence_id in the detections
     det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
     for det_id in det_ids.all():
@@ -215,9 +216,8 @@ async def delete_sequence(
     await session.commit()
     # Delete the sequence
     await sequences.delete(sequence_id)
-    # Refresh affected alerts
-    for aid in alert_ids:
-        await refresh_alert_state(aid, session, alerts)
+    for refresh in refreshes:
+        await apply_alert_refresh(refresh, alerts)
 
 
 @router.patch("/{sequence_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the sequence")
@@ -236,10 +236,8 @@ async def label_sequence(
     if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
-    updated = await sequences.update(sequence_id, payload)
-
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
-        return updated
+        return await sequences.update(sequence_id, payload)
 
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
@@ -255,13 +253,17 @@ async def label_sequence(
         )
         siblings_res = await session.exec(siblings_stmt)
         if siblings_res.first() is None:
-            return updated
+            return await sequences.update(sequence_id, payload)
 
+        refreshes = [await plan_alert_refresh(aid, session, sequence_id) for aid in alert_ids]
+
+    updated = await sequences.update(sequence_id, payload)
+    if alert_ids:
         delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
         await session.exec(delete_links)
         await session.commit()
-        for aid in alert_ids:
-            await refresh_alert_state(aid, session, alerts)
+        for refresh in refreshes:
+            await apply_alert_refresh(refresh, alerts)
 
     # Create a fresh alert for this sequence alone
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))

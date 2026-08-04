@@ -41,6 +41,7 @@ from app.models import (
     Sequence,
 )
 from app.services.i18n import build_alert_message
+from app.services.inference import inference_service
 from app.services.risk import risk_service
 from app.services.slack import slack_client
 from app.services.storage import s3_service
@@ -180,8 +181,9 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
 
             base_url = settings.PLATFORM_URL.rstrip("/")
             platform_url = f"{base_url}/alert/{alert_id}" if alert_id is not None else f"{base_url}/"
+            timezone_name = await inference_service.timezone(camera.lat, camera.lon)
             message = build_alert_message(
-                camera.lat, camera.lon, det.created_at, camera.name, sequence_.sequence_azimuth, platform_url
+                timezone_name, det.created_at, camera.name, sequence_.sequence_azimuth, platform_url
             )
 
             if telegram_client.is_enabled and org is not None and org.telegram_id:

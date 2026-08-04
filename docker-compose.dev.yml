@@ -13,6 +13,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - data
 
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
@@ -30,6 +32,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - data
+
+  inference:
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile.inference
+      args:
+        UV_GROUPS: ${INFERENCE_UV_GROUPS:-inference}
+    expose:
+      - 5051
+    environment:
+      - INFERENCE_API_TOKEN=${INFERENCE_API_TOKEN:-development-inference-token}
+      - INFERENCE_WORKERS=1
+      - TRIANGULATION_RELAXATION_SECONDS=${TRIANGULATION_RELAXATION_SECONDS:-1800}
+      - TRIANGULATION_MIN_APEX_DISTANCE_KM=${TRIANGULATION_MIN_APEX_DISTANCE_KM:-0.1}
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:5051/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - compute
 
   backend:
     build:
@@ -41,6 +66,8 @@ services:
       db:
         condition: service_healthy
       localstack:
+        condition: service_healthy
+      inference:
         condition: service_healthy
     ports:
       - "5050:5050"
@@ -59,6 +86,9 @@ services:
       - S3_REGION=us-east-1
       - SLACK_HOOK=${SLACK_HOOK}
       - PLATFORM_URL=${PLATFORM_URL:-https://platform.pyronear.org}
+      - INFERENCE_API_URL=http://inference:5051
+      - INFERENCE_API_TOKEN=${INFERENCE_API_TOKEN:-development-inference-token}
+      - INFERENCE_API_TIMEOUT=${INFERENCE_API_TIMEOUT:-10}
     volumes:
       - ./src/:/app/
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
@@ -68,3 +98,11 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    networks:
+      - data
+      - compute
+
+networks:
+  data:
+  compute:
+    internal: true

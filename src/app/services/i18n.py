@@ -9,11 +9,8 @@ from typing import Dict, Union
 from zoneinfo import ZoneInfo
 
 import pytz
-from timezonefinder import TimezoneFinder
 
 __all__ = ["build_alert_message"]
-
-_tz_finder = TimezoneFinder()
 
 # Invert pytz's country -> timezones table to resolve a timezone to its country
 _COUNTRY_BY_TZ: Dict[str, str] = {tz: country for country, tzs in pytz.country_timezones.items() for tz in tzs}
@@ -83,28 +80,26 @@ class AlertMessage:
         return f":date: {self.local_time}\n {self.site_line}\n {self.azimuth_line}\n <{self.url}|{self.link_label}>"
 
 
-def _resolve_locale(lat: float, lon: float) -> tuple[ZoneInfo, Dict[str, str]]:
-    tz_name = _tz_finder.timezone_at(lat=lat, lng=lon) or "UTC"
-    country = _COUNTRY_BY_TZ.get(tz_name, "")
+def _resolve_locale(timezone_name: str) -> tuple[ZoneInfo, Dict[str, str]]:
+    country = _COUNTRY_BY_TZ.get(timezone_name, "")
     if country in _FRENCH_COUNTRIES:
         lang = "fr"
     elif country in _SPANISH_COUNTRIES:
         lang = "es"
     else:
         lang = "en"
-    return ZoneInfo(tz_name), _STRINGS[lang]
+    return ZoneInfo(timezone_name), _STRINGS[lang]
 
 
 def build_alert_message(
-    lat: float,
-    lon: float,
+    timezone_name: str,
     created_at: datetime,
     camera_name: str,
     azimuth: Union[float, None],
     url: str,
 ) -> AlertMessage:
     """Build the alert notification, localized to the camera's timezone and country language."""
-    tz, strings = _resolve_locale(lat, lon)
+    tz, strings = _resolve_locale(timezone_name)
     local_dt = created_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
     return AlertMessage(
         title=strings["title"],

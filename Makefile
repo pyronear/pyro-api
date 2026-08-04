@@ -49,7 +49,7 @@ ruff-check: ruff-lint ruff-format
 ruff-fix: ruff-lint-fix ruff-format-fix
 
 typing-check: $(PYPROJECT)
-	uv run --group server --group client --group quality ty check src/app client/pyroclient
+	uv run --group server --group inference --group client --group quality ty check src/app src/inference client/pyroclient
 
 deps-check: .github/verify_deps_sync.py
 	uv lock --check
