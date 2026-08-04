@@ -103,7 +103,11 @@ app = FastAPI(
 
 @app.exception_handler(InferenceUnavailableError)
 def inference_unavailable_handler(_: Request, exc: InferenceUnavailableError) -> JSONResponse:
-    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)})
+    logger.warning("Inference request failed: %s", exc)
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Inference service unavailable"},
+    )
 
 
 # Healthcheck

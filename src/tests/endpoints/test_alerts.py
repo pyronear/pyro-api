@@ -566,6 +566,7 @@ async def test_unmatch_returns_503_without_mutation_when_inference_fails(
     response = await async_client.post(f"/alerts/{alert.id}/sequences/{seq_ids[0]}/unmatch", headers=auth)
 
     assert response.status_code == 503
+    assert response.json() == {"detail": "Inference service unavailable"}
     mappings = (
         await detection_session.exec(
             select(AlertSequence.alert_id, AlertSequence.sequence_id).where(AlertSequence.alert_id == alert.id)

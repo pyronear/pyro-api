@@ -64,12 +64,36 @@ jobs:
     needs: docker
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1.2.5
+      - uses: actions/checkout@v7
+      - name: Verify inference deployment secret
+        env:
+          INFERENCE_API_TOKEN: ${{ secrets.INFERENCE_API_TOKEN }}
+        run: test -n "$INFERENCE_API_TOKEN"
+      - name: Upload Compose definition
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_DEV_HOST }}
           username: ${{ secrets.SSH_DEV_USERNAME }}
           key: ${{ secrets.SSH_DEPLOY_DEV }}
+          source: docker-compose.yml
+          target: "."
+          overwrite: true
+      - name: Deploy inference, then backend
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          INFERENCE_API_TOKEN: ${{ secrets.INFERENCE_API_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_DEV_HOST }}
+          username: ${{ secrets.SSH_DEV_USERNAME }}
+          key: ${{ secrets.SSH_DEPLOY_DEV }}
+          envs: INFERENCE_API_TOKEN
           script: |
+            touch .env
+            grep -v '^INFERENCE_API_TOKEN=' .env > .env.next || true
+            printf 'INFERENCE_API_TOKEN=%s\n' "$INFERENCE_API_TOKEN" >> .env.next
+            chmod 600 .env.next
+            mv .env.next .env
+            docker compose config -q
             # Ensure we have max disk space
             docker rmi -f $(docker images -f "dangling=true" -q)
             docker volume rm -f $(docker volume ls -f "dangling=true" -q)

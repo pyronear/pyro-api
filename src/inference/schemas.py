@@ -15,7 +15,7 @@ class SequenceRecord(BaseModel):
     lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
     lon: float = Field(ge=-180, le=180, allow_inf_nan=False)
     sequence_azimuth: float = Field(allow_inf_nan=False)
-    cone_angle: float = Field(gt=0, le=360, allow_inf_nan=False)
+    cone_angle: float = Field(ge=0, le=360, allow_inf_nan=False)
     is_wildfire: Literal["wildfire_smoke", "other_smoke", "other"] | None = None
     started_at: datetime
     last_seen_at: datetime
