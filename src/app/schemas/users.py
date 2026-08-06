@@ -3,11 +3,13 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.models import UserRole
 
-__all__ = ["Cred", "CredHash", "UserCreate", "UserCreation"]
+__all__ = ["Cred", "CredHash", "RoleUpdate", "UserCreate", "UserCreation"]
 
 
 # Accesses
@@ -25,6 +27,12 @@ class CredHash(BaseModel):
 
 class Role(BaseModel):
     role: UserRole = Field(UserRole.USER)
+
+
+class RoleUpdate(BaseModel):
+    """Admin is excluded : if an admin retrograde himself that can lead to deadlock"""
+
+    role: Literal[UserRole.AGENT, UserRole.USER] = Field(..., examples=["agent"])
 
 
 class UserCreate(Role):

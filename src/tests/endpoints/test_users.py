@@ -175,6 +175,49 @@ async def test_delete_user(
 
 
 @pytest.mark.parametrize(
+    ("user_idx", "user_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 2, {"role": "user"}, 401, "Not authenticated"),
+        (1, 3, {"role": "agent"}, 403, "Incompatible token scope."),
+        (2, 2, {"role": "user"}, 403, "Incompatible token scope."),
+        (0, 0, {"role": "user"}, 422, None),
+        (0, 2, {"role": "admin"}, 422, None),
+        (0, 2, {}, 422, None),
+        (0, 400, {"role": "user"}, 404, "Table User has no corresponding entry."),
+        (0, 1, {"role": "user"}, 403, "Admins cannot change their own role : it can lead to deadlock"),
+        (0, 2, {"role": "user"}, 200, None),
+        (0, 3, {"role": "agent"}, 200, None),
+        (0, 3, {"role": "user"}, 200, None),  # setting role to the actual role
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_user_role(
+    async_client: AsyncClient,
+    user_session: AsyncSession,
+    user_idx: Union[int, None],
+    user_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/users/{user_id}/role", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        expected = next(entry for entry in pytest.user_table if entry["id"] == user_id)
+        assert response.json() == {**expected, "role": payload["role"]}
+
+
+@pytest.mark.parametrize(
     ("user_idx", "user_id", "payload", "status_code", "status_detail", "expected_idx"),
     [
         (None, 1, {"password": "HeyPyro!"}, 401, "Not authenticated", None),
