@@ -224,6 +224,35 @@ async def test_label_sequence(
             **payload,
         }
 
+@pytest.mark.parametrize(
+    ("user_idx", "sequence_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 1, {"sequence_azimuth": 100}, 401, "Not authenticated"),
+        (0, 0, {"sequence_azimuth": 100}, 422, None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_refine_azimuth(
+    async_client: AsyncClient,
+    sequence_session: AsyncSession,
+    user_idx: Union[int, None],
+    sequence_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/sequences/{sequence_id}/azimuth", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
 
 @pytest.mark.parametrize(
     ("user_idx", "from_date", "status_code", "status_detail", "expected_result"),
