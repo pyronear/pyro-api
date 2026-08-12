@@ -227,8 +227,12 @@ async def test_label_sequence(
 @pytest.mark.parametrize(
     ("user_idx", "sequence_id", "payload", "status_code", "status_detail"),
     [
-        (None, 1, {"sequence_azimuth": 100}, 401, "Not authenticated"),
-        (0, 0, {"sequence_azimuth": 100}, 422, None),
+        (None, 1, {"sequence_azimuth": 100}, 401, "Not authenticated"), # No user auth
+        (0, 0, {"sequence_azimuth": 100}, 422, None), # Sequence id should be >0
+        (0, 0, {"sequence_azimuth": 700}, 422, None), # Sequence azimuth should be in range [0, 360)
+        (0, 99, {"sequence_azimuth": 100}, 404, None), # Inexsisting Sequence
+        (1, 1, {"sequence_azimuth": 100}, 403, None), # Agent does not have permission
+        (2, 1, {"sequence_azimuth": 100}, 403, "Access forbidden."), # Non admin action on out of scope organisation
     ],
 )
 @pytest.mark.asyncio
