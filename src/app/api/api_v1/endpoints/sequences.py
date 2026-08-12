@@ -281,7 +281,7 @@ async def label_sequence(
 
 
 @router.patch(
-    "/sequences/{sequence_id}/azimuth", status_code=status.HTTP_200_OK, summary="Refine that azimuth of the sequence"
+    "/{sequence_id}/azimuth", status_code=status.HTTP_200_OK, summary="Refine the azimuth of the sequence"
 )
 async def refine_azimuth(
     payload: SequenceAzimuth,
