@@ -53,6 +53,12 @@ async def test_s3_service(region, endpoint_url, access_key, secret_key, proxy_ur
         # Create random bucket
         bucket_name = "dummy-bucket"
         service.create_bucket(bucket_name)
+        # The CORS policy is applied at creation so the frontend can fetch() presigned URLs
+        cors_rules = service._s3.get_bucket_cors(Bucket=bucket_name)["CORSRules"]
+        assert cors_rules[0]["AllowedMethods"] == ["GET", "HEAD"]
+        assert cors_rules[0]["AllowedOrigins"] == [
+            origin.strip() for origin in settings.S3_CORS_ORIGINS.split(",") if origin.strip()
+        ]
         # Delete the bucket
         await service.delete_bucket(bucket_name)
     else:
