@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
+    # Comma-separated browser origins allowed to fetch bucket objects cross-origin (the frontend
+    # platform URLs). Applied as a CORS policy at bucket creation so the frontend can fetch()
+    # presigned image URLs (e.g. the "download all" buttons). Deployments MUST set this to the
+    # real frontend origins; the localhost default only serves local dev.
+    S3_CORS_ORIGINS: str = os.environ.get("S3_CORS_ORIGINS", "http://localhost:5173")
 
     # Sequence handling: three windows gate sequence behaviour, each on its own timescale.
     # All three are tuned against the cameras' frame interval (time between two frames of the
