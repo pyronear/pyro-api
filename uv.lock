@@ -1392,7 +1392,7 @@ wheels = [
 
 [[package]]
 name = "posthog"
-version = "7.34.0"
+version = "7.39.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backoff" },
@@ -1400,9 +1400,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/c1/a51567ea78c5e9c77abbc863088f82e79f908e500d3441292a11abe8ad6a/posthog-7.34.0.tar.gz", hash = "sha256:c5f0e9a07536867bea3b5a233378b1a3f7c69ec36c5770581147f7be4fd91005", size = 390645, upload_time = "2026-07-30T09:50:07.221Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/77/3737f60571995ba07677b058bb1523b7c26f28570806b8ffaf83a66df18c/posthog-7.39.1.tar.gz", hash = "sha256:0d184596e35057457fc1094883646fd23de2d6338db8b9c3ea770643fb55d8a2", size = 428586, upload_time = "2026-08-14T13:50:24.688Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/de/a4209376d58d7d4081dff754c3bf4f99186d0d07aaca33d19e52d2a50fdf/posthog-7.34.0-py3-none-any.whl", hash = "sha256:6a277de901c240fc66926d64b4ba4a04d0212653ae616c0219168bf6addc36fb", size = 463553, upload_time = "2026-07-30T09:50:05.068Z" },
+    { url = "https://files.pythonhosted.org/packages/88/79/ee5c01937bfb0c80415929e25aa1e8296c48e26fc9a10fe1d9f665f0f478/posthog-7.39.1-py3-none-any.whl", hash = "sha256:e76e82fe571314a0a9bc11d039fd1a1a8d210cd0f737899d41b31f61b73bf08c", size = 504259, upload_time = "2026-08-14T13:50:22.896Z" },
 ]
 
 [[package]]
@@ -1771,7 +1771,7 @@ server = [
     { name = "networkx", specifier = ">=3.2.0,<4.0.0" },
     { name = "numpy", specifier = ">=2.4.6,<3.0.0" },
     { name = "pandas", specifier = ">=3.0.3,<4.0.0" },
-    { name = "posthog", specifier = ">=7.34.0,<8.0.0" },
+    { name = "posthog", specifier = ">=7.39.1,<8.0.0" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=8.1.0,<9.0.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.14.2,<3.0.0" },
