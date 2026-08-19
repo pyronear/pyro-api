@@ -216,92 +216,92 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTTPRequestError</span>
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Client&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Client"</span><span class="p">]</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ClientRoute</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
     <span class="c1"># LOGIN</span>
-    <span class="n">LOGIN_VALIDATE</span> <span class="o">=</span> <span class="s2">&quot;login/validate&quot;</span>
+    <span class="n">LOGIN_VALIDATE</span> <span class="o">=</span> <span class="s2">"login/validate"</span>
     <span class="c1"># CAMERAS</span>
-    <span class="n">CAMERAS_HEARTBEAT</span> <span class="o">=</span> <span class="s2">&quot;cameras/heartbeat&quot;</span>
-    <span class="n">CAMERAS_IMAGE</span> <span class="o">=</span> <span class="s2">&quot;cameras/image&quot;</span>
-    <span class="n">CAMERAS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;cameras/&quot;</span>
-    <span class="n">CAMERAS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;cameras/</span><span class="si">{camera_id}</span><span class="s2">&quot;</span>
+    <span class="n">CAMERAS_HEARTBEAT</span> <span class="o">=</span> <span class="s2">"cameras/heartbeat"</span>
+    <span class="n">CAMERAS_IMAGE</span> <span class="o">=</span> <span class="s2">"cameras/image"</span>
+    <span class="n">CAMERAS_FETCH</span> <span class="o">=</span> <span class="s2">"cameras/"</span>
+    <span class="n">CAMERAS_BY_ID</span> <span class="o">=</span> <span class="s2">"cameras/</span><span class="si">{camera_id}</span><span class="s2">"</span>
     <span class="c1"># POSES</span>
-    <span class="n">POSES_CREATE</span> <span class="o">=</span> <span class="s2">&quot;poses/&quot;</span>
-    <span class="n">POSES_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">&quot;</span>
-    <span class="n">POSES_IMAGE</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">/image&quot;</span>
-    <span class="n">POSES_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;poses/</span><span class="si">{pose_id}</span><span class="s2">/occlusion_masks&quot;</span>
+    <span class="n">POSES_CREATE</span> <span class="o">=</span> <span class="s2">"poses/"</span>
+    <span class="n">POSES_BY_ID</span> <span class="o">=</span> <span class="s2">"poses/</span><span class="si">{pose_id}</span><span class="s2">"</span>
+    <span class="n">POSES_IMAGE</span> <span class="o">=</span> <span class="s2">"poses/</span><span class="si">{pose_id}</span><span class="s2">/image"</span>
+    <span class="n">POSES_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">"poses/</span><span class="si">{pose_id}</span><span class="s2">/occlusion_masks"</span>
     <span class="c1"># OCCLUSION MASKS</span>
-    <span class="n">OCCLUSION_MASKS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;occlusion_masks&quot;</span>
-    <span class="n">OCCLUSION_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">&quot;occlusion_masks/</span><span class="si">{mask_id}</span><span class="s2">&quot;</span>
+    <span class="n">OCCLUSION_MASKS_CREATE</span> <span class="o">=</span> <span class="s2">"occlusion_masks"</span>
+    <span class="n">OCCLUSION_MASKS_BY_ID</span> <span class="o">=</span> <span class="s2">"occlusion_masks/</span><span class="si">{mask_id}</span><span class="s2">"</span>
     <span class="c1"># DETECTIONS</span>
-    <span class="n">DETECTIONS_CREATE</span> <span class="o">=</span> <span class="s2">&quot;detections/&quot;</span>
-    <span class="n">DETECTIONS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;detections&quot;</span>
-    <span class="n">DETECTIONS_URL</span> <span class="o">=</span> <span class="s2">&quot;detections/</span><span class="si">{det_id}</span><span class="s2">/url&quot;</span>
+    <span class="n">DETECTIONS_CREATE</span> <span class="o">=</span> <span class="s2">"detections/"</span>
+    <span class="n">DETECTIONS_FETCH</span> <span class="o">=</span> <span class="s2">"detections"</span>
+    <span class="n">DETECTIONS_URL</span> <span class="o">=</span> <span class="s2">"detections/</span><span class="si">{det_id}</span><span class="s2">/url"</span>
     <span class="c1"># SEQUENCES</span>
-    <span class="n">SEQUENCES_LABEL</span> <span class="o">=</span> <span class="s2">&quot;sequences/</span><span class="si">{seq_id}</span><span class="s2">/label&quot;</span>
-    <span class="n">SEQUENCES_FETCH_DETECTIONS</span> <span class="o">=</span> <span class="s2">&quot;sequences/</span><span class="si">{seq_id}</span><span class="s2">/detections&quot;</span>
-    <span class="n">SEQUENCES_FETCH_LATEST</span> <span class="o">=</span> <span class="s2">&quot;sequences/unlabeled/latest&quot;</span>
-    <span class="n">SEQUENCES_FETCH_FROMDATE</span> <span class="o">=</span> <span class="s2">&quot;sequences/all/fromdate&quot;</span>
+    <span class="n">SEQUENCES_LABEL</span> <span class="o">=</span> <span class="s2">"sequences/</span><span class="si">{seq_id}</span><span class="s2">/label"</span>
+    <span class="n">SEQUENCES_FETCH_DETECTIONS</span> <span class="o">=</span> <span class="s2">"sequences/</span><span class="si">{seq_id}</span><span class="s2">/detections"</span>
+    <span class="n">SEQUENCES_FETCH_LATEST</span> <span class="o">=</span> <span class="s2">"sequences/unlabeled/latest"</span>
+    <span class="n">SEQUENCES_FETCH_FROMDATE</span> <span class="o">=</span> <span class="s2">"sequences/all/fromdate"</span>
     <span class="c1"># ALERTS</span>
-    <span class="n">ALERTS_UNMATCH_SEQUENCE</span> <span class="o">=</span> <span class="s2">&quot;alerts/</span><span class="si">{alert_id}</span><span class="s2">/sequences/</span><span class="si">{seq_id}</span><span class="s2">/unmatch&quot;</span>
+    <span class="n">ALERTS_UNMATCH_SEQUENCE</span> <span class="o">=</span> <span class="s2">"alerts/</span><span class="si">{alert_id}</span><span class="s2">/sequences/</span><span class="si">{seq_id}</span><span class="s2">/unmatch"</span>
     <span class="c1"># ORGS</span>
-    <span class="n">ORGS_FETCH</span> <span class="o">=</span> <span class="s2">&quot;organizations&quot;</span>
+    <span class="n">ORGS_FETCH</span> <span class="o">=</span> <span class="s2">"organizations"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_to_str</span><span class="p">(</span><span class="n">coord</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format string conditionally&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="sd">"""Format string conditionally"""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_dump_bbox_to_json</span><span class="p">(</span>
     <span class="n">bboxes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs a custom JSON dump for list of coordinates</span>
+<span class="w">    </span><span class="sd">"""Performs a custom JSON dump for list of coordinates</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        the JSON string dump with 3 decimal precision</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">coord</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">coord</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">bboxes</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">bbox</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coordinates are expected to be relative&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"coordinates are expected to be relative"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bbox</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span> <span class="k">for</span> <span class="n">bbox</span> <span class="ow">in</span> <span class="n">bboxes</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Each bbox is expected to be in format xmin, ymin, xmax, ymax, conf"</span><span class="p">)</span>
     <span class="n">box_strs</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymin</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">ymax</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">_to_str</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">for</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">conf</span> <span class="ow">in</span> <span class="n">bboxes</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">box_strs</span><span class="p">)</span><span class="si">}</span><span class="s2">]&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="s1">','</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">box_strs</span><span class="p">)</span><span class="si">}</span><span class="s2">]"</span>
 
 
 <div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Client</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Isometric Python client for Pyronear wildfire detection API</span>
+<span class="w">    </span><span class="sd">"""Isometric Python client for Pyronear wildfire detection API</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        token: your personal API token</span>
 <span class="sd">        endpoint: the host for your instance of pyronear API</span>
 <span class="sd">        timeout (int): number of seconds before request timeout</span>
 <span class="sd">        kwargs: optional parameters of `requests.post`</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://api.pyronear.org&quot;</span><span class="p">,</span>
+        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"https://api.pyronear.org"</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># Check host</span>
-        <span class="k">if</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unable to reach host </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"unable to reach host </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="c1"># Prepend API url to each route</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;api/v1/&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="s2">"api/v1/"</span><span class="p">)</span>
         <span class="c1"># Check token</span>
         <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">LOGIN_VALIDATE</span><span class="p">),</span>
-            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Bearer </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span><span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
             <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
@@ -312,19 +312,19 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">headers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Bearer </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Bearer </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">token</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
     <span class="c1"># CAMERAS</span>
 <div class="viewcode-block" id="Client.fetch_cameras"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_cameras">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_cameras</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the cameras accessible to the authenticated user. By default, only trustable cameras are returned.</span>
+<span class="w">        </span><span class="sd">"""List the cameras accessible to the authenticated user. By default, only trustable cameras are returned.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_cameras()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -332,34 +332,34 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last ping of the camera</span>
+<span class="w">        </span><span class="sd">"""Update the last ping of the camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_CAM_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.heartbeat()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_HEARTBEAT</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.update_last_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_last_image">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_last_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the last image of the camera</span>
+<span class="w">        </span><span class="sd">"""Update the last image of the camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_CAM_TOKEN")</span>
+<span class="sd">        &gt;&gt;&gt; with open("path/to/my/file.ext", "rb") as f: data = f.read()</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.update_last_image(data)</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_IMAGE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;logo.jpg&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">)},</span>
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">"file"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"logo.jpg"</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">"image/jpeg"</span><span class="p">)},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
@@ -371,17 +371,17 @@
         <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">active</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a pose for a camera</span>
+<span class="w">        </span><span class="sd">"""Create a pose for a camera</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.create_pose(camera_id=1, azimuth=120.5, patrol_id=3)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;camera_id&quot;</span><span class="p">:</span> <span class="n">camera_id</span><span class="p">,</span>
-            <span class="s2">&quot;azimuth&quot;</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
-            <span class="s2">&quot;active&quot;</span><span class="p">:</span> <span class="n">active</span><span class="p">,</span>
+            <span class="s2">"camera_id"</span><span class="p">:</span> <span class="n">camera_id</span><span class="p">,</span>
+            <span class="s2">"azimuth"</span><span class="p">:</span> <span class="n">azimuth</span><span class="p">,</span>
+            <span class="s2">"active"</span><span class="p">:</span> <span class="n">active</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">"patrol_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
 
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_CREATE</span><span class="p">),</span>
@@ -391,10 +391,10 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.get_current_poses"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_current_poses">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_current_poses</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">camera_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch poses for the authenticated camera.</span>
+<span class="w">        </span><span class="sd">"""Fetch poses for the authenticated camera.</span>
 
 <span class="sd">        For admin/agent tokens, provide camera_id to retrieve poses via the camera endpoint.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">camera_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                 <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">camera_id</span><span class="o">=</span><span class="n">camera_id</span><span class="p">)),</span>
@@ -414,19 +414,19 @@
         <span class="n">patrol_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">active</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update a pose</span>
+<span class="w">        </span><span class="sd">"""Update a pose</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.update_pose(pose_id=1, azimuth=90.0)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">active</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one of azimuth, patrol_id, or active must be provided&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"At least one of azimuth, patrol_id, or active must be provided"</span><span class="p">)</span>
         <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="n">azimuth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;azimuth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">azimuth</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">"azimuth"</span><span class="p">]</span> <span class="o">=</span> <span class="n">azimuth</span>
         <span class="k">if</span> <span class="n">patrol_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;patrol_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">"patrol_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">patrol_id</span>
         <span class="k">if</span> <span class="n">active</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;active&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">active</span>
+            <span class="n">payload</span><span class="p">[</span><span class="s2">"active"</span><span class="p">]</span> <span class="o">=</span> <span class="n">active</span>
 
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
@@ -439,11 +439,11 @@
     <span class="n">patch_pose</span> <span class="o">=</span> <span class="n">update_pose</span>
 
 <div class="viewcode-block" id="Client.update_pose_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_pose_image">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_pose_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the image of a pose</span>
+<span class="w">        </span><span class="sd">"""Update the image of a pose</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_TOKEN")</span>
+<span class="sd">        &gt;&gt;&gt; with open("path/to/my/file.ext", "rb") as f: data = f.read()</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.update_pose_image(pose_id=1, media=data)</span>
 
 <span class="sd">        Args:</span>
@@ -452,19 +452,19 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the updated pose info</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_IMAGE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;image.jpg&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">)},</span>
+            <span class="n">files</span><span class="o">=</span><span class="p">{</span><span class="s2">"file"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"image.jpg"</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">"image/jpeg"</span><span class="p">)},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.delete_pose"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.delete_pose">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete a pose</span>
+<span class="w">        </span><span class="sd">"""Delete a pose</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.delete_pose(pose_id=1)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -472,10 +472,10 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.list_pose_masks"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.list_pose_masks">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">list_pose_masks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List occlusion masks for a pose (given its pose_id)</span>
+<span class="w">        </span><span class="sd">"""List occlusion masks for a pose (given its pose_id)</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.list_pose_masks(pose_id=1)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">POSES_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pose_id</span><span class="o">=</span><span class="n">pose_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -489,13 +489,13 @@
         <span class="n">pose_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a create occlusion_mask for a pose</span>
+<span class="w">        </span><span class="sd">"""Create a create occlusion_mask for a pose</span>
 
-<span class="sd">        &gt;&gt;&gt; api_client.create_occlusion_mask(pose_id=1, mask=&quot;(0.1,0.1,0.9,0.9)&quot;)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; api_client.create_occlusion_mask(pose_id=1, mask="(0.1,0.1,0.9,0.9)")</span>
+<span class="sd">        """</span>
         <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;pose_id&quot;</span><span class="p">:</span> <span class="n">pose_id</span><span class="p">,</span>
-            <span class="s2">&quot;mask&quot;</span><span class="p">:</span> <span class="n">mask</span><span class="p">,</span>
+            <span class="s2">"pose_id"</span><span class="p">:</span> <span class="n">pose_id</span><span class="p">,</span>
+            <span class="s2">"mask"</span><span class="p">:</span> <span class="n">mask</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
@@ -510,11 +510,11 @@
         <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update an occlusion mask</span>
+<span class="w">        </span><span class="sd">"""Update an occlusion mask</span>
 
-<span class="sd">        &gt;&gt;&gt; api_client.patch_occlusion_mask(mask_id=1, mask=&quot;(0.1,0.2,0.9,0.3)&quot;)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mask&quot;</span><span class="p">:</span> <span class="n">mask</span><span class="p">}</span>
+<span class="sd">        &gt;&gt;&gt; api_client.patch_occlusion_mask(mask_id=1, mask="(0.1,0.2,0.9,0.3)")</span>
+<span class="sd">        """</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"mask"</span><span class="p">:</span> <span class="n">mask</span><span class="p">}</span>
 
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
@@ -527,10 +527,10 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;get mask from occlusion mask</span>
+<span class="w">        </span><span class="sd">"""get mask from occlusion mask</span>
 
-<span class="sd">        &gt;&gt;&gt; api_client.get_occlusion_mask(mask_id=1&quot;)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; api_client.get_occlusion_mask(mask_id=1")</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -538,10 +538,10 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.delete_occlusion_mask"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.delete_occlusion_mask">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_occlusion_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Delete an occlusion mask</span>
+<span class="w">        </span><span class="sd">"""Delete an occlusion mask</span>
 
 <span class="sd">        &gt;&gt;&gt; api_client.delete_occlusion_mask(mask_id=1)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">OCCLUSION_MASKS_BY_ID</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mask_id</span><span class="o">=</span><span class="n">mask_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -558,11 +558,11 @@
         <span class="n">crops</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">recorded_at</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Notify the detection of a wildfire on the picture taken by a camera.</span>
+<span class="w">        </span><span class="sd">"""Notify the detection of a wildfire on the picture taken by a camera.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_CAM_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; with open(&quot;path/to/my/file.ext&quot;, &quot;rb&quot;) as f: data = f.read()</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_CAM_TOKEN")</span>
+<span class="sd">        &gt;&gt;&gt; with open("path/to/my/file.ext", "rb") as f: data = f.read()</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.create_detection(data, bboxes=[(.1,.1,.5,.8,.5)], pose_id=12)</span>
 
 <span class="sd">        Args:</span>
@@ -579,21 +579,21 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bboxes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bboxes must be a list of tuples with a maximum of 5 boxes&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"bboxes must be a list of tuples with a maximum of 5 boxes"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">crops</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bboxes</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;crops must have the same length as bboxes&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"crops must have the same length as bboxes"</span><span class="p">)</span>
         <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;bboxes&quot;</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
+            <span class="s2">"bboxes"</span><span class="p">:</span> <span class="n">_dump_bbox_to_json</span><span class="p">(</span><span class="n">bboxes</span><span class="p">),</span>
         <span class="p">}</span>
-        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;pose_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pose_id</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">"pose_id"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pose_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">recorded_at</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;recorded_at&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">recorded_at</span>
-        <span class="c1"># Use a list of tuples (not a dict) so the repeated &quot;crop&quot; key is preserved per bbox.</span>
-        <span class="n">files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;frame.jpg&quot;</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">))]</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"recorded_at"</span><span class="p">]</span> <span class="o">=</span> <span class="n">recorded_at</span>
+        <span class="c1"># Use a list of tuples (not a dict) so the repeated "crop" key is preserved per bbox.</span>
+        <span class="n">files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"file"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"frame.jpg"</span><span class="p">,</span> <span class="n">media</span><span class="p">,</span> <span class="s2">"image/jpeg"</span><span class="p">))]</span>
         <span class="k">if</span> <span class="n">crops</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">files</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="s2">&quot;crop&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;crop.jpg&quot;</span><span class="p">,</span> <span class="n">crop</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">))</span> <span class="k">for</span> <span class="n">crop</span> <span class="ow">in</span> <span class="n">crops</span><span class="p">)</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="s2">"crop"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"crop.jpg"</span><span class="p">,</span> <span class="n">crop</span><span class="p">,</span> <span class="s2">"image/jpeg"</span><span class="p">))</span> <span class="k">for</span> <span class="n">crop</span> <span class="ow">in</span> <span class="n">crops</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_CREATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -603,10 +603,10 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.get_detection_url"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.get_detection_url">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_detection_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detection_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the URL of the media linked to a detection</span>
+<span class="w">        </span><span class="sd">"""Retrieve the URL of the media linked to a detection</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.get_detection_url(1)</span>
 
 <span class="sd">        Args:</span>
@@ -614,7 +614,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_URL</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">det_id</span><span class="o">=</span><span class="n">detection_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -622,15 +622,15 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.fetch_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_detections</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections accessible to the authenticated user</span>
+<span class="w">        </span><span class="sd">"""List the detections accessible to the authenticated user</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_detections()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">DETECTIONS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -638,11 +638,11 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.label_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.label_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">label_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">is_wildfire</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the label of a sequence made by a camera</span>
+<span class="w">        </span><span class="sd">"""Update the label of a sequence made by a camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.label_sequence(1, is_wildfire=&quot;wildfire_smoke&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.label_sequence(1, is_wildfire="wildfire_smoke")</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            sequence_id: ID of the associated sequence entry</span>
@@ -650,20 +650,20 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_LABEL</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;is_wildfire&quot;</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"is_wildfire"</span><span class="p">:</span> <span class="n">is_wildfire</span><span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.fetch_sequences_from_date"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_from_date">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_from_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the sequences accessible to the authenticated user for a specific date</span>
+<span class="w">        </span><span class="sd">"""List the sequences accessible to the authenticated user for a specific date</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_from_date(&quot;2023-07-04&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
+<span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_from_date("2023-07-04")</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            from_date: date of the sequences to fetch</span>
@@ -672,8 +672,8 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;from_date&quot;</span><span class="p">:</span> <span class="n">from_date</span><span class="p">,</span> <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">&quot;offset&quot;</span><span class="p">:</span> <span class="n">offset</span><span class="p">}</span>
+<span class="sd">        """</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"from_date"</span><span class="p">:</span> <span class="n">from_date</span><span class="p">,</span> <span class="s2">"limit"</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">"offset"</span><span class="p">:</span> <span class="n">offset</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_FROMDATE</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -682,15 +682,15 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.fetch_latest_sequences"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_latest_sequences">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_latest_sequences</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the latest sequences accessible to the authenticated user</span>
+<span class="w">        </span><span class="sd">"""List the latest sequences accessible to the authenticated user</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_latest_sequences()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_LATEST</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
@@ -704,10 +704,10 @@
         <span class="n">desc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">with_crop</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the detections of a sequence</span>
+<span class="w">        </span><span class="sd">"""List the detections of a sequence</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_sequences_detections(1)</span>
 
 <span class="sd">        Args:</span>
@@ -718,22 +718,22 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_DETECTIONS</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">&quot;desc&quot;</span><span class="p">:</span> <span class="n">desc</span><span class="p">,</span> <span class="s2">&quot;with_crop&quot;</span><span class="p">:</span> <span class="n">with_crop</span><span class="p">},</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"limit"</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">"desc"</span><span class="p">:</span> <span class="n">desc</span><span class="p">,</span> <span class="s2">"with_crop"</span><span class="p">:</span> <span class="n">with_crop</span><span class="p">},</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
     <span class="c1"># ALERTS</span>
 
 <div class="viewcode-block" id="Client.unmatch_alert_sequence"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.unmatch_alert_sequence">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">unmatch_alert_sequence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alert_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Detach a sequence from an alert. If the sequence is no longer linked to any alert,</span>
+<span class="w">        </span><span class="sd">"""Detach a sequence from an alert. If the sequence is no longer linked to any alert,</span>
 <span class="sd">        a new alert is created for it.</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.unmatch_alert_sequence(1, 2)</span>
 
 <span class="sd">        Args:</span>
@@ -742,7 +742,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span>
@@ -755,15 +755,15 @@
     <span class="c1"># ORGANIZATIONS</span>
 
 <div class="viewcode-block" id="Client.fetch_organizations"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_organizations">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organizations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List the organizations accessible to the authenticated user</span>
+<span class="w">        </span><span class="sd">"""List the organizations accessible to the authenticated user</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import client</span>
-<span class="sd">        &gt;&gt;&gt; api_client = Client(&quot;MY_USER_TOKEN&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; api_client = Client("MY_USER_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.fetch_organizations()</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">ORGS_FETCH</span><span class="p">),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
