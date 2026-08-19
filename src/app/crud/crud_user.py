@@ -9,12 +9,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import User
-from app.schemas.users import CredHash
+from app.schemas.users import CredHash, RoleUpdate
 
 __all__ = ["UserCRUD"]
 
 
-class UserCRUD(BaseCRUD[User, User, CredHash]):
+class UserCRUD(BaseCRUD[User, User, Union[CredHash, RoleUpdate]]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, User)
 
