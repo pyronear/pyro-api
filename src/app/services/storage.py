@@ -5,8 +5,10 @@
 
 import hashlib
 import logging
+import time
+from collections import OrderedDict
 from mimetypes import guess_extension
-from typing import Any, BinaryIO, Dict, Union
+from typing import Any, BinaryIO, Dict, Tuple, Union
 
 import boto3
 import magic
@@ -20,6 +22,18 @@ __all__ = ["s3_service", "upload_file"]
 
 
 logger = logging.getLogger("uvicorn.warning")
+
+# ~600 bytes per entry, so ~5 MB per bucket, and buckets are never evicted: the process
+# ceiling is that times the organization count, times the worker count.
+_URL_CACHE_MAXSIZE = 8192
+
+
+def _url_cache_window(url_expiration: int) -> int:
+    """Seconds a presigned URL keeps being handed out (a quarter of its lifetime, capped at 1h).
+
+    Derived from the expiration so lowering S3_URL_EXPIRATION can never serve an expired URL.
+    """
+    return min(3600, max(1, url_expiration // 4))
 
 
 class S3Bucket:
@@ -41,6 +55,9 @@ class S3Bucket:
             raise ValueError(f"unable to access bucket {bucket_name}")
         self.name = bucket_name
         self.proxy_url = proxy_url
+        # (bucket_key, url_expiration, window slot) -> presigned URL. Scoped to the instance
+        # because proxy_url and the signing credentials are fixed per bucket.
+        self._url_cache: OrderedDict[Tuple[str, int, int], str] = OrderedDict()
 
     def get_file_metadata(self, bucket_key: str) -> Dict[str, Any]:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.head_object
@@ -59,7 +76,15 @@ class S3Bucket:
     def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        self._s3.upload_fileobj(file_binary, self.name, bucket_key)
+        # Without Cache-Control browsers only cache heuristically, so the player re-downloads
+        # frames it already has. Objects are immutable (content-hashed key), so max-age can
+        # match the URL lifetime.
+        self._s3.upload_fileobj(
+            file_binary,
+            self.name,
+            bucket_key,
+            ExtraArgs={"CacheControl": f"private, max-age={settings.S3_URL_EXPIRATION}"},
+        )
         return True
 
     def delete_file(self, bucket_key: str) -> None:
@@ -82,18 +107,45 @@ class S3Bucket:
                 exist (e.g. sequence detections): the client then gets a 403/404 from S3
                 when loading the URL instead of an upfront error.
         """
+        # Before the cache lookup: a hit must not skip the opted-in existence check.
         if verify_exists and not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
             )
 
-        # Generate a public URL for it using boto3 presign URL generation\
+        return self._stable_presign(bucket_key, url_expiration)
+
+    def _presign(self, bucket_key: str, url_expiration: int) -> str:
+        # Generate a public URL for it using boto3 presign URL generation
         presigned_url = self._s3.generate_presigned_url(
             "get_object", Params={"Bucket": self.name, "Key": bucket_key}, ExpiresIn=url_expiration
         )
         if self.proxy_url:
             return presigned_url.replace(self._s3.meta.endpoint_url, self.proxy_url)
         return presigned_url
+
+    def _stable_presign(self, bucket_key: str, url_expiration: int) -> str:
+        """Return the same URL string for a whole window, so the browser can cache frames.
+
+        boto3 stamps the signing clock into every signature, so re-presigning the same key yields
+        a different string and busts the client cache on each poll. Stability is per-process, so a
+        polling client sees one URL per key per window per worker. See #671.
+        """
+        window = _url_cache_window(url_expiration)
+        # monotonic: only the window length matters, and it is immune to NTP steps.
+        slot = int(time.monotonic()) // window
+        cache_key = (bucket_key, url_expiration, slot)
+        url = self._url_cache.get(cache_key)
+        if url is not None:
+            self._url_cache.move_to_end(cache_key)
+            return url
+        url = self._presign(bucket_key, url_expiration)
+        if len(self._url_cache) >= _URL_CACHE_MAXSIZE:
+            # Evict the coldest entry rather than clearing: a clear would change every URL in
+            # flight, for every viewer of the organization, exactly when the cache is loaded.
+            self._url_cache.popitem(last=False)
+        self._url_cache[cache_key] = url
+        return url
 
     async def delete_items(self) -> None:
         """Delete all items in the bucket"""
@@ -131,6 +183,9 @@ class S3Service:
             raise ValueError("unable to access S3")
         logger.info(f"S3 connected on {endpoint_url}")
         self.proxy_url = proxy_url
+        # S3Bucket.__init__ does a blocking head_bucket, and the per-bucket URL cache only ever
+        # hits if the instance survives.
+        self._buckets: Dict[str, S3Bucket] = {}
 
     def create_bucket(self, bucket_name: str) -> bool:
         """Create a new bucket in S3 storage"""
@@ -173,19 +228,24 @@ class S3Service:
         )
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage"""
-        return S3Bucket(self._s3, bucket_name, self.proxy_url)
+        """Get an existing bucket in S3 storage (cached instance; failures are not cached)"""
+        bucket = self._buckets.get(bucket_name)
+        if bucket is None:
+            bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+            self._buckets[bucket_name] = bucket
+        return bucket
 
     async def delete_bucket(self, bucket_name: str) -> bool:
         """Delete an existing bucket in S3 storage"""
-        bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+        bucket = self.get_bucket(bucket_name)
         try:
             await bucket.delete_items()
             self._s3.delete_bucket(Bucket=bucket_name)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        self._buckets.pop(bucket_name, None)
+        return True
 
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
