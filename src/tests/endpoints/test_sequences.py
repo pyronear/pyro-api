@@ -1062,12 +1062,21 @@ async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_t
     assert response.headers["x-sampled-total"] == "15"
     assert response.headers["x-sampled-truncated"] == "true"
 
-    # Paging to the end of the sampled set is not truncation.
+    # X-Sampled-Total counts what is left from the offset onward, so reaching the end of the
+    # sequence is not truncation: 30 detections, offset 22, sampling 2 leaves ceil(8 / 2) = 4.
     tail = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=11", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=22", headers=auth
     )
     assert tail.status_code == 200, tail.text
+    assert tail.headers["x-sampled-total"] == "4"
     assert tail.headers["x-sampled-truncated"] == "false"
+
+    # An offset past the end leaves nothing to return, and says so rather than erroring.
+    past = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&offset=99", headers=auth)
+    assert past.status_code == 200, past.text
+    assert past.json() == []
+    assert past.headers["x-sampled-total"] == "0"
+    assert past.headers["x-sampled-truncated"] == "false"
 
 
 @pytest.mark.asyncio
@@ -1131,36 +1140,15 @@ async def test_fetch_sequence_detections_sampling_larger_than_count(
 
 
 @pytest.mark.asyncio
-async def test_fetch_sequence_detections_sampling_offset_applies_to_sampled_set(
+async def test_fetch_sequence_detections_sampling_offset_counts_raw_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
 ):
-    """offset skips sampled rows, not raw rows: positions 5 and 7, not 3 and 4."""
-    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
+    """offset skips raw detections, not sampled frames, whatever sampling is.
 
-    response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=2", headers=auth
-    )
-    assert response.status_code == 200, response.text
-    assert [det["id"] for det in response.json()] == [chronological_ids[4], chronological_ids[6]]
-
-
-@pytest.mark.asyncio
-async def test_fetch_sequence_detections_sampling_offset_desc_paging(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-):
-    """`desc=true` only reverses the OUTPUT order of the sampled set, offset then skips
-    from the front of that reversed list.
-
-    The sampled set is chosen by ascending created_at: positions 1,3,5,7,9, i.e.
-    chronological_ids[::2] = [c0, c2, c4, c6, c8]. Reversing for desc=true gives
-    [c8, c6, c4, c2, c0]; offset=1, limit=2 then skips c8 and returns [c6, c4].
+    offset=3 starts at the 4th detection and sampling=2 steps from there, so the kept
+    chronological positions are 4, 6, 8, 10 and limit=2 returns the first two of them. Under the
+    old reading (offset counted in sampled frames) the same request returned positions 7 and 9.
     """
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
     auth = pytest.get_token(
@@ -1170,10 +1158,70 @@ async def test_fetch_sequence_detections_sampling_offset_desc_paging(
     )
 
     response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=2&offset=1", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=3", headers=auth
     )
     assert response.status_code == 200, response.text
-    assert [det["id"] for det in response.json()] == [chronological_ids[6], chronological_ids[4]]
+    assert [det["id"] for det in response.json()] == [chronological_ids[3], chronological_ids[5]]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_offset_ignores_desc(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """offset always counts from the oldest end; desc only reverses the output.
+
+    So the two directions select the same frames and differ only in order. That is what makes the
+    selection fully independent of desc, matching how sampling already behaves.
+    """
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    asc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false&offset=3", headers=auth)
+    desc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=true&offset=3", headers=auth)
+    assert asc.status_code == 200, asc.text
+    assert desc.status_code == 200, desc.text
+
+    expected = [chronological_ids[i] for i in (3, 5, 7, 9)]
+    assert [det["id"] for det in asc.json()] == expected
+    assert [det["id"] for det in desc.json()] == list(reversed(expected))
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """Advancing offset by limit * sampling walks the same grid without repeating or skipping.
+
+    Because offset sets where the grid starts, only multiples of sampling keep it on the same
+    detections; this is the paging rule callers are told to use.
+    """
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+    auth = pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+    sampling, limit = 3, 4
+    pages = []
+    for page in range(3):
+        offset = page * limit * sampling
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections?sampling={sampling}&desc=false&limit={limit}&offset={offset}",
+            headers=auth,
+        )
+        assert response.status_code == 200, response.text
+        pages.append([det["id"] for det in response.json()])
+
+    walked = [det_id for page in pages for det_id in page]
+    assert walked == chronological_ids[::sampling]
+    assert len(walked) == len(set(walked))
 
 
 @pytest.mark.asyncio

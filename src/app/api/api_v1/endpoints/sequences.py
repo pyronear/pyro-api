@@ -82,28 +82,39 @@ async def fetch_sequence_detections(
         None,
         description=(
             "Maximum number of detections to fetch. Defaults to 10, except when `sampling` is set "
-            "and `limit` is omitted: it then defaults to whatever spans the whole sampled set "
-            "(capped at 500), so `?sampling=10` returns a spread instead of a truncated tail."
+            "and `limit` is omitted: it then defaults to whatever spans the sampled set from "
+            "`offset` onward (capped at 500), so `?sampling=10` returns a spread instead of a "
+            "truncated tail."
         ),
         ge=1,
         le=500,
     ),
-    offset: int = Query(0, description="Number of detections to skip, within the sampled set", ge=0),
+    offset: int = Query(
+        0,
+        description=(
+            "Number of detections to skip. Always counted in raw detections, whatever `sampling` "
+            "is, and always from the oldest end regardless of `desc`. Sampling then applies from "
+            "that point, so `offset=20&sampling=48` starts at detection 21 and steps by 48. Page "
+            "by advancing `offset` in multiples of `sampling`, which keeps the same detections in "
+            "the grid instead of shifting it onto different ones."
+        ),
+        ge=0,
+    ),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
     sampling: int = Query(
         1,
         description=(
             "Keep one detection every N (1 = every detection). The kept frames are picked "
             "chronologically from the start of the sequence, so the set does not depend on `desc` "
-            "and does not shift as the sequence grows; the first detection is always kept. "
-            "`limit` and `offset` then page that sampled set. Note that with `desc=true` a newly "
-            "recorded detection shifts page boundaries, since it lands at the front. "
+            "and does not shift as the sequence grows; the detection at `offset` is always kept. "
+            "`offset` moves the starting detection and `limit` caps how many kept frames come "
+            "back. "
             "`sampling` thins the set and `limit` caps how much of it comes back, so an explicit "
-            "`limit` below `ceil(detections_count / sampling)` returns only part of the span (the "
-            "most recent part when `desc=true`). Omit `limit` to get the whole span, and read the "
-            "`X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether what you "
-            "got covers the sequence. Since `limit` caps at 500, spanning a sequence in one call "
-            "needs `sampling >= detections_count / 500`."
+            "`limit` below `ceil((detections_count - offset) / sampling)` returns only part of the "
+            "span (the most recent part when `desc=true`). Omit `limit` to get the whole span, and "
+            "read the `X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether "
+            "what you got covers the rest of the sequence. Since `limit` caps at 500, spanning a "
+            "sequence in one call needs `sampling >= detections_count / 500`."
         ),
         ge=1,
         le=10_000,
@@ -132,11 +143,15 @@ async def fetch_sequence_detections(
         # to fill in an omitted limit, and report it either way so a caller passing an explicit
         # limit can still tell whether it covered the sequence.
         counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
-        sampled_total = -(-counts.get(sequence_id, 0) // sampling)  # ceil division
+        # Frames available from the offset onward, since offset counts raw detections: that is
+        # what the caller can actually still receive, so it is also the right size for an
+        # omitted limit and the right thing to compare against for truncation.
+        remaining = max(0, counts.get(sequence_id, 0) - offset)
+        sampled_total = -(-remaining // sampling)  # ceil division
         if limit is None:
             effective_limit = max(1, min(MAX_DETECTION_LIMIT, sampled_total))
         response.headers["X-Sampled-Total"] = str(sampled_total)
-        response.headers["X-Sampled-Truncated"] = str(offset + effective_limit < sampled_total).lower()
+        response.headers["X-Sampled-Truncated"] = str(effective_limit < sampled_total).lower()
 
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))

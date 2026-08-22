@@ -44,13 +44,18 @@ class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
     ) -> List[Detection]:
         """Fetch the detections of a sequence, keeping one every ``sampling``.
 
-        The row number is always computed ascending on ``created_at``, so the sampled frame set
-        is the same whatever ``order_desc`` is: the latter only flips the output order. That
-        also keeps the set stable as the sequence grows, since a new detection lands last and
-        cannot renumber earlier rows, so the player keeps hitting the same frames (and the same
-        cached URLs) across polls. ``(rn - 1) % sampling == 0`` keeps the first detection, so a
-        non-empty sequence always yields at least one row. ``limit``/``offset`` page the
-        *sampled* set, not the raw rows.
+        ``offset`` counts raw detections, never sampled frames, so it means the same thing
+        whatever ``sampling`` is (and at ``sampling=1`` the two readings coincide). Sampling then
+        applies from that point: ``offset=20, sampling=48`` starts at detection 21 and steps by
+        48. Callers page by advancing ``offset`` in multiples of ``sampling``, which keeps the
+        grid on the same detections instead of shifting its phase.
+
+        The row number is always computed ascending on ``created_at``, so neither the offset nor
+        the sampled set depends on ``order_desc``: it only flips the output order. That also keeps
+        the set stable as the sequence grows, since a new detection lands last and cannot renumber
+        earlier rows, so the player keeps hitting the same frames (and the same cached URLs)
+        across polls. The first kept row is the one at ``offset``, so a sequence with anything
+        left past the offset always yields at least one row.
 
         Note that ``limit`` cannot push down: ``row_number()`` has to cover every row of the
         sequence before the modulo and the limit apply, which is why detections is indexed on
@@ -78,15 +83,20 @@ class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
         sampled = aliased(Detection, subq)
         created_at_col = cast(Any, sampled.created_at)
         id_col = cast(Any, sampled.id)
+        # offset lands in the WHERE rather than a SQL OFFSET: it has to be measured in raw
+        # detections on the ascending numbering, not in rows of the already-sampled result (a SQL
+        # OFFSET would also be applied after ORDER BY, making it count from the newest end
+        # whenever order_desc is set).
+        position = subq.c.rn - 1
         stmt: Any = (
             select(sampled)
-            .where((subq.c.rn - 1) % sampling == 0)
+            .where(position >= offset)
+            .where((position - offset) % sampling == 0)
             .order_by(
                 created_at_col.desc() if order_desc else created_at_col.asc(),
                 id_col.desc() if order_desc else id_col.asc(),
             )
             .limit(limit)
-            .offset(offset)
         )
         result = await self.session.exec(stmt)
         return list(result.all())

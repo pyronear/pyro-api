@@ -516,10 +516,13 @@ class Client:
             with_crop: whether to include the crop_url for detections that have a crop
             sampling: keep one detection every N (1 = all, max 10000); the kept frames are picked
                 chronologically and do not depend on desc. Pair it with limit unset to span the
-                sequence, since an explicit limit below ceil(detections_count / sampling) returns
-                only part of the span. The X-Sampled-Total and X-Sampled-Truncated response
-                headers say whether what came back covers the sequence
-            offset: number of detections to skip, within the sampled set
+                sequence, since an explicit limit below ceil((detections_count - offset) / sampling)
+                returns only part of the span. The X-Sampled-Total and X-Sampled-Truncated response
+                headers say whether what came back covers the rest of the sequence
+            offset: number of detections to skip, counted in raw detections whatever sampling is,
+                and always from the oldest end regardless of desc. Sampling applies from there, so
+                offset=20 with sampling=48 starts at detection 21; page by advancing offset in
+                multiples of sampling
 
         Returns:
             HTTP response
