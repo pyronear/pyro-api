@@ -510,19 +510,15 @@ class Client:
 
         Args:
             sequence_id: ID of the associated sequence entry
-            limit: maximum number of detections to fetch. Left unset (the default) the API picks
-                10, or with sampling the size of the whole sampled span capped at 500
+            limit: maximum number of detections to fetch. Unset (the default) lets the API pick:
+                10, or the size of the whole sampled span capped at 500 when sampling is set
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
-            sampling: keep one detection every N (1 = all, max 10000); the kept frames are picked
-                chronologically and do not depend on desc. Pair it with limit unset to span the
-                sequence, since an explicit limit below ceil((detections_count - offset) / sampling)
-                returns only part of the span. The X-Sampled-Total and X-Sampled-Truncated response
-                headers say whether what came back covers the rest of the sequence
-            offset: number of detections to skip, counted in raw detections whatever sampling is,
-                and always from the oldest end regardless of desc. Sampling applies from there, so
-                offset=20 with sampling=48 starts at detection 21; page by advancing offset in
-                multiples of sampling
+            sampling: keep one detection every N (1 = all, max 10000). The kept frames do not
+                depend on desc. Leave limit unset to span the sequence, and read the
+                X-Sampled-Total / X-Sampled-Truncated response headers
+            offset: raw detections to skip, from the oldest end when sampling. Page by advancing
+                it in multiples of sampling
 
         Returns:
             HTTP response

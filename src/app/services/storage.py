@@ -23,18 +23,15 @@ __all__ = ["s3_service", "upload_file"]
 
 logger = logging.getLogger("uvicorn.warning")
 
-# Presigned URLs run 600-900 bytes, so ~1 KB per entry => ~8 MB hard ceiling per bucket.
+# ~600 bytes per entry, so ~5 MB per bucket, and buckets are never evicted: the process
+# ceiling is that times the organization count, times the worker count.
 _URL_CACHE_MAXSIZE = 8192
 
 
 def _url_cache_window(url_expiration: int) -> int:
-    """How long a single presigned URL string keeps being handed out, in seconds.
+    """Seconds a presigned URL keeps being handed out (a quarter of its lifetime, capped at 1h).
 
-    Derived from the expiration rather than hardcoded, so lowering S3_URL_EXPIRATION can never
-    start serving already-expired URLs: the window never exceeds the lifetime, whatever the
-    input (the floor is 1, not 60, so a sub-minute expiration degrades to near-no-caching instead
-    of outliving the URL). At the 24h default the cap binds instead and the window is 1h, so a
-    handed-out URL always has >= 23h left.
+    Derived from the expiration so lowering S3_URL_EXPIRATION can never serve an expired URL.
     """
     return min(3600, max(1, url_expiration // 4))
 
@@ -79,10 +76,9 @@ class S3Bucket:
     def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        # Cache-Control is what turns the stable presigned URLs from get_public_url into actual
-        # browser cache hits: without it browsers only cache heuristically, so the player
-        # re-downloads frames it already has. Objects are immutable once written (the key
-        # embeds a content hash), so max-age can match the URL lifetime.
+        # Without Cache-Control browsers only cache heuristically, so the player re-downloads
+        # frames it already has. Objects are immutable (content-hashed key), so max-age can
+        # match the URL lifetime.
         self._s3.upload_fileobj(
             file_binary,
             self.name,
@@ -111,8 +107,7 @@ class S3Bucket:
                 exist (e.g. sequence detections): the client then gets a 403/404 from S3
                 when loading the URL instead of an upfront error.
         """
-        # Checked before the cache lookup on purpose: a cache hit must not skip the existence
-        # check callers opted into.
+        # Before the cache lookup: a hit must not skip the opted-in existence check.
         if verify_exists and not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
@@ -132,25 +127,9 @@ class S3Bucket:
     def _stable_presign(self, bucket_key: str, url_expiration: int) -> str:
         """Return the same URL string for a whole window, so the browser can cache frames.
 
-        boto3 stamps the current clock into every signature (``X-Amz-Date`` under SigV4,
-        ``Expires`` under SigV2), so re-presigning the same key yields a different string and
-        busts the client cache on each poll. The browser keys its cache on the full URL.
-
-        The window slot is part of the cache key, so a lookup against the current slot can never
-        return a previous window's entry: no explicit rollover clear is needed, and stale entries
-        simply age out through the size-bound eviction below.
-
-        Stability is per-process: the cache lives on this instance, so it only dedupes URLs
-        within one worker. With W workers a polling client sees up to W distinct URLs per key
-        per window, one per worker that happened to answer, so a frame is fetched up to W times
-        instead of once. That is still far better than re-signing on every poll (which bust the
-        cache unconditionally), just divided by W. Production runs several workers, so this
-        applies there; the worker count is not visible from this repo, which only carries dev
-        compose files. See #671.
-
-        Making it cross-process is not achievable without patching boto3's clock: SigV4 derives
-        ``X-Amz-Date`` from the wall clock at signing time rather than taking it as a
-        ``generate_presigned_url`` parameter, so a shared cache would be the way in.
+        boto3 stamps the signing clock into every signature, so re-presigning the same key yields
+        a different string and busts the client cache on each poll. Stability is per-process, so a
+        polling client sees one URL per key per window per worker. See #671.
         """
         window = _url_cache_window(url_expiration)
         # monotonic: only the window length matters, and it is immune to NTP steps.
@@ -162,9 +141,8 @@ class S3Bucket:
             return url
         url = self._presign(bucket_key, url_expiration)
         if len(self._url_cache) >= _URL_CACHE_MAXSIZE:
-            # Evict the coldest entry, never clear: one dict is shared by every viewer of an
-            # organization, so clearing here would re-presign (and so change) every URL in
-            # flight exactly when the cache is under load and stability matters most.
+            # Evict the coldest entry rather than clearing: a clear would change every URL in
+            # flight, for every viewer of the organization, exactly when the cache is loaded.
             self._url_cache.popitem(last=False)
         self._url_cache[cache_key] = url
         return url
@@ -205,9 +183,8 @@ class S3Service:
             raise ValueError("unable to access S3")
         logger.info(f"S3 connected on {endpoint_url}")
         self.proxy_url = proxy_url
-        # bucket_name -> S3Bucket. S3Bucket.__init__ does a blocking head_bucket round-trip on
-        # the event loop; the bucket set is one per organization and effectively static, so
-        # build each one once. Caching the instance is also what lets its URL cache ever hit.
+        # S3Bucket.__init__ does a blocking head_bucket, and the per-bucket URL cache only ever
+        # hits if the instance survives.
         self._buckets: Dict[str, S3Bucket] = {}
 
     def create_bucket(self, bucket_name: str) -> bool:
@@ -251,12 +228,7 @@ class S3Service:
         )
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage (cached instance)
-
-        Only successful lookups are cached, so a missing bucket still raises ValueError. Once
-        cached, a bucket deleted out-of-band keeps answering and the failure surfaces at the S3
-        call rather than here.
-        """
+        """Get an existing bucket in S3 storage (cached instance; failures are not cached)"""
         bucket = self._buckets.get(bucket_name)
         if bucket is None:
             bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
@@ -272,8 +244,6 @@ class S3Service:
         except ClientError as e:
             logger.warning(e)
             return False
-        # Evict only once the bucket is really gone, so the cache stays coherent with the
-        # organization-deletion path.
         self._buckets.pop(bucket_name, None)
         return True
 

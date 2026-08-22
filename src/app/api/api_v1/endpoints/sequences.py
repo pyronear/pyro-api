@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import math
 from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
@@ -29,10 +30,9 @@ from app.services.telemetry import telemetry_client
 
 router = APIRouter()
 
-# Historical default, kept for sampling=1 so unsampled callers see no change.
-DEFAULT_DETECTION_LIMIT = 10
-# Ceiling on one response, mirrored in the limit Query constraint.
+DEFAULT_DETECTION_LIMIT = 10  # historical default, kept for sampling=1
 MAX_DETECTION_LIMIT = 500
+MAX_SAMPLING = 10_000
 
 
 async def verify_org_rights(
@@ -81,22 +81,20 @@ async def fetch_sequence_detections(
     limit: Union[int, None] = Query(
         None,
         description=(
-            "Maximum number of detections to fetch. Defaults to 10, except when `sampling` is set "
-            "and `limit` is omitted: it then defaults to whatever spans the sampled set from "
-            "`offset` onward (capped at 500), so `?sampling=10` returns a spread instead of a "
-            "truncated tail."
+            f"Maximum number of detections to fetch. Defaults to {DEFAULT_DETECTION_LIMIT}, except "
+            "when `sampling` is set and `limit` is omitted: it then spans the whole sampled set "
+            f"from `offset` onward, capped at {MAX_DETECTION_LIMIT}."
         ),
         ge=1,
-        le=500,
+        le=MAX_DETECTION_LIMIT,
     ),
     offset: int = Query(
         0,
         description=(
-            "Number of detections to skip. Always counted in raw detections, whatever `sampling` "
-            "is, and always from the oldest end regardless of `desc`. Sampling then applies from "
-            "that point, so `offset=20&sampling=48` starts at detection 21 and steps by 48. Page "
-            "by advancing `offset` in multiples of `sampling`, which keeps the same detections in "
-            "the grid instead of shifting it onto different ones."
+            "Number of detections to skip, counted in raw detections whatever `sampling` is. When "
+            "sampling, it counts from the oldest end regardless of `desc`, so "
+            "`offset=20&sampling=48` starts at detection 21. Page by advancing `offset` in "
+            "multiples of `sampling` to keep the grid on the same detections."
         ),
         ge=0,
     ),
@@ -104,20 +102,15 @@ async def fetch_sequence_detections(
     sampling: int = Query(
         1,
         description=(
-            "Keep one detection every N (1 = every detection). The kept frames are picked "
-            "chronologically from the start of the sequence, so the set does not depend on `desc` "
-            "and does not shift as the sequence grows; the detection at `offset` is always kept. "
-            "`offset` moves the starting detection and `limit` caps how many kept frames come "
-            "back. "
-            "`sampling` thins the set and `limit` caps how much of it comes back, so an explicit "
-            "`limit` below `ceil((detections_count - offset) / sampling)` returns only part of the "
-            "span (the most recent part when `desc=true`). Omit `limit` to get the whole span, and "
-            "read the `X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether "
-            "what you got covers the rest of the sequence. Since `limit` caps at 500, spanning a "
-            "sequence in one call needs `sampling >= detections_count / 500`."
+            "Keep one detection every N (1 = every detection). Frames are picked chronologically, "
+            "so the set does not depend on `desc`. An explicit `limit` below "
+            "`ceil((detections_count - offset) / sampling)` returns only part of the span (its "
+            "most recent part when `desc=true`); omit `limit` to get the whole span, and read the "
+            "`X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether it "
+            "covered the rest of the sequence."
         ),
         ge=1,
-        le=10_000,
+        le=MAX_SAMPLING,
     ),
     with_crop: bool = Query(
         False,
@@ -135,23 +128,16 @@ async def fetch_sequence_detections(
     if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
-    effective_limit = DEFAULT_DETECTION_LIMIT if limit is None else limit
     if sampling > 1:
-        # Sampling thins the set but limit still truncates it, and truncation is invisible in the
-        # response: you get frames that look like a spread but are only its tail. So size the
-        # sampled set once (the same count the endpoint returns, continuity rows included), use it
-        # to fill in an omitted limit, and report it either way so a caller passing an explicit
-        # limit can still tell whether it covered the sequence.
+        # limit still truncates the thinned set, invisibly: you get what looks like a spread but is
+        # only its tail. Size the set so an omitted limit spans it, and report it either way.
         counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
-        # Frames available from the offset onward, since offset counts raw detections: that is
-        # what the caller can actually still receive, so it is also the right size for an
-        # omitted limit and the right thing to compare against for truncation.
-        remaining = max(0, counts.get(sequence_id, 0) - offset)
-        sampled_total = -(-remaining // sampling)  # ceil division
-        if limit is None:
-            effective_limit = max(1, min(MAX_DETECTION_LIMIT, sampled_total))
+        sampled_total = math.ceil(max(0, counts.get(sequence_id, 0) - offset) / sampling)
+        effective_limit = limit if limit is not None else min(MAX_DETECTION_LIMIT, sampled_total)
         response.headers["X-Sampled-Total"] = str(sampled_total)
         response.headers["X-Sampled-Truncated"] = str(effective_limit < sampled_total).lower()
+    else:
+        effective_limit = limit if limit is not None else DEFAULT_DETECTION_LIMIT
 
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))

@@ -126,6 +126,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # allow_headers governs request headers; response headers stay hidden from browser JS unless
+    # they are listed here, and the sampling signals exist for the frontend player.
+    expose_headers=["X-Sampled-Total", "X-Sampled-Truncated"],
 )
 
 if isinstance(settings.SENTRY_DSN, str):

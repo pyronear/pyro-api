@@ -899,11 +899,19 @@ async def test_fetch_sequence_detections_offset_validation(
     assert response.status_code == 422
 
 
+@pytest.fixture
+def user_auth():
+    return pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+
 async def _seed_sampling_sequence(session: AsyncSession, count: int = 10) -> tuple[int, List[int]]:
     """Create a sequence with `count` detections one minute apart, oldest first.
 
-    Sequence 1 in the fixtures only has 3 detections, which is too few to tell an interval
-    apart from a limit. Returns the sequence id and the detection ids in chronological order.
+    The fixtures only give sequence 1 three detections, too few to tell an interval from a limit.
     """
     now = utcnow()
     sequence = Sequence(
@@ -932,8 +940,7 @@ async def _seed_sampling_sequence(session: AsyncSession, count: int = 10) -> tup
         )
         for idx in range(count)
     ]
-    for detection in detections:
-        session.add(detection)
+    session.add_all(detections)
     await session.commit()
     for detection in detections:
         await session.refresh(detection)
@@ -945,21 +952,18 @@ async def _seed_sampling_sequence(session: AsyncSession, count: int = 10) -> tup
 async def test_fetch_sequence_detections_sampling_set_is_independent_of_desc(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
-    """The sampled frame set must not depend on `desc`: same ids, reversed order.
-
-    This is the whole point of numbering rows ascending regardless of the output order. If it
-    regresses, the player shows different frames depending on scroll direction.
-    """
+    """Same ids, reversed order: if this regresses the player shows different frames per
+    scroll direction."""
     sequence_id, _ = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    asc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=auth)
-    desc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=10", headers=auth)
+    asc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=user_auth
+    )
+    desc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=10", headers=user_auth
+    )
     assert asc.status_code == 200, asc.text
     assert desc.status_code == 200, desc.text
 
@@ -973,18 +977,14 @@ async def test_fetch_sequence_detections_sampling_one_matches_default(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     pinned_url_window: None,
+    user_auth: Dict[str, str],
 ):
     """sampling=1 must be indistinguishable from not passing it at all, urls included."""
     sequence_id, _ = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    default = await async_client.get(f"/sequences/{sequence_id}/detections?limit=10&desc=false", headers=auth)
+    default = await async_client.get(f"/sequences/{sequence_id}/detections?limit=10&desc=false", headers=user_auth)
     sampled = await async_client.get(
-        f"/sequences/{sequence_id}/detections?limit=10&desc=false&sampling=1", headers=auth
+        f"/sequences/{sequence_id}/detections?limit=10&desc=false&sampling=1", headers=user_auth
     )
     assert default.status_code == 200, default.text
     assert sampled.status_code == 200, sampled.text
@@ -999,17 +999,13 @@ async def test_fetch_sequence_detections_sampling_one_matches_default(
 async def test_fetch_sequence_detections_sampling_interval(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
     """sampling=2 over 10 detections keeps chronological positions 1, 3, 5, 7, 9."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
     response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=user_auth
     )
     assert response.status_code == 200, response.text
     assert [det["id"] for det in response.json()] == chronological_ids[::2]
@@ -1019,20 +1015,13 @@ async def test_fetch_sequence_detections_sampling_interval(
 async def test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
-    """Without an explicit limit, sampling must return the whole span, not its tail.
-
-    This is the guardrail: with the historical limit=10 default, `?sampling=2` on a 30-detection
-    sequence would silently return the 10 most recent sampled frames while looking like a spread.
-    """
+    """Without an explicit limit, sampling returns the whole span rather than its tail: the
+    historical limit=10 default would have silently returned only the 10 most recent."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false", headers=auth)
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false", headers=user_auth)
     assert response.status_code == 200, response.text
     # ceil(30 / 2) = 15 frames, spanning the sequence rather than stopping at 10.
     assert [det["id"] for det in response.json()] == chronological_ids[::2]
@@ -1045,17 +1034,13 @@ async def test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set(
 async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
     """An explicit limit is honoured, and the headers say the span was cut short."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
     response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4", headers=user_auth
     )
     assert response.status_code == 200, response.text
     assert [det["id"] for det in response.json()] == chronological_ids[::2][:4]
@@ -1065,14 +1050,14 @@ async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_t
     # X-Sampled-Total counts what is left from the offset onward, so reaching the end of the
     # sequence is not truncation: 30 detections, offset 22, sampling 2 leaves ceil(8 / 2) = 4.
     tail = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=22", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=22", headers=user_auth
     )
     assert tail.status_code == 200, tail.text
     assert tail.headers["x-sampled-total"] == "4"
     assert tail.headers["x-sampled-truncated"] == "false"
 
     # An offset past the end leaves nothing to return, and says so rather than erroring.
-    past = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&offset=99", headers=auth)
+    past = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&offset=99", headers=user_auth)
     assert past.status_code == 200, past.text
     assert past.json() == []
     assert past.headers["x-sampled-total"] == "0"
@@ -1083,16 +1068,12 @@ async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_t
 async def test_fetch_sequence_detections_unsampled_default_limit_unchanged(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
     """sampling=1 keeps the historical limit=10 default and skips the extra count entirely."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    response = await async_client.get(f"/sequences/{sequence_id}/detections?desc=false", headers=auth)
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?desc=false", headers=user_auth)
     assert response.status_code == 200, response.text
     assert [det["id"] for det in response.json()] == chronological_ids[:10]
     # The headers describe a sampled set, so they are absent when nothing was sampled.
@@ -1103,16 +1084,12 @@ async def test_fetch_sequence_detections_unsampled_default_limit_unchanged(
 async def test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
     """A sampling interval past the detection count still yields one row, not zero."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=10)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=500", headers=auth)
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=500", headers=user_auth)
     assert response.status_code == 200, response.text
     assert [det["id"] for det in response.json()] == [chronological_ids[0]]
     assert response.headers["x-sampled-total"] == "1"
@@ -1120,45 +1097,17 @@ async def test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampli
 
 
 @pytest.mark.asyncio
-async def test_fetch_sequence_detections_sampling_larger_than_count(
-    async_client: AsyncClient,
-    detection_session: AsyncSession,
-):
-    """A sampling interval above the detection count still returns the first detection."""
-    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
-
-    response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=100&desc=false&limit=10", headers=auth
-    )
-    assert response.status_code == 200, response.text
-    assert [det["id"] for det in response.json()] == [chronological_ids[0]]
-
-
-@pytest.mark.asyncio
 async def test_fetch_sequence_detections_sampling_offset_counts_raw_detections(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
-    """offset skips raw detections, not sampled frames, whatever sampling is.
-
-    offset=3 starts at the 4th detection and sampling=2 steps from there, so the kept
-    chronological positions are 4, 6, 8, 10 and limit=2 returns the first two of them. Under the
-    old reading (offset counted in sampled frames) the same request returned positions 7 and 9.
-    """
+    """offset skips raw detections, not sampled frames: positions 4, 6, 8, 10 for offset=3 and
+    sampling=2, of which limit=2 returns the first two."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
     response = await async_client.get(
-        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=3", headers=auth
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=3", headers=user_auth
     )
     assert response.status_code == 200, response.text
     assert [det["id"] for det in response.json()] == [chronological_ids[3], chronological_ids[5]]
@@ -1168,21 +1117,18 @@ async def test_fetch_sequence_detections_sampling_offset_counts_raw_detections(
 async def test_fetch_sequence_detections_sampling_offset_ignores_desc(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
-    """offset always counts from the oldest end; desc only reverses the output.
-
-    So the two directions select the same frames and differ only in order. That is what makes the
-    selection fully independent of desc, matching how sampling already behaves.
-    """
+    """offset counts from the oldest end, so both directions select the same frames and differ
+    only in order."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
-    asc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false&offset=3", headers=auth)
-    desc = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=true&offset=3", headers=auth)
+    asc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&offset=3", headers=user_auth
+    )
+    desc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&offset=3", headers=user_auth
+    )
     assert asc.status_code == 200, asc.text
     assert desc.status_code == 200, desc.text
 
@@ -1195,18 +1141,11 @@ async def test_fetch_sequence_detections_sampling_offset_ignores_desc(
 async def test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling(
     async_client: AsyncClient,
     detection_session: AsyncSession,
+    user_auth: Dict[str, str],
 ):
-    """Advancing offset by limit * sampling walks the same grid without repeating or skipping.
-
-    Because offset sets where the grid starts, only multiples of sampling keep it on the same
-    detections; this is the paging rule callers are told to use.
-    """
+    """offset sets where the grid starts, so only multiples of sampling keep it on the same
+    detections. This is the paging rule callers are given."""
     sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
 
     sampling, limit = 3, 4
     pages = []
@@ -1214,7 +1153,7 @@ async def test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling
         offset = page * limit * sampling
         response = await async_client.get(
             f"/sequences/{sequence_id}/detections?sampling={sampling}&desc=false&limit={limit}&offset={offset}",
-            headers=auth,
+            headers=user_auth,
         )
         assert response.status_code == 200, response.text
         pages.append([det["id"] for det in response.json()])
@@ -1245,13 +1184,9 @@ async def test_fetch_sequence_detections_sampling_validation(
     detection_session: AsyncSession,
     query: str,
     status_code: int,
+    user_auth: Dict[str, str],
 ):
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
-    response = await async_client.get(f"/sequences/1/detections?{query}", headers=auth)
+    response = await async_client.get(f"/sequences/1/detections?{query}", headers=user_auth)
     assert response.status_code == status_code, response.text
 
 
@@ -1260,19 +1195,13 @@ async def test_fetch_sequence_detections_reuses_presigned_urls_across_requests(
     async_client: AsyncClient,
     detection_session: AsyncSession,
     pinned_url_window: None,
+    user_auth: Dict[str, str],
 ):
-    """A repeat request must serve cached urls instead of re-signing every key.
+    """A repeat request serves cached urls instead of re-signing.
 
-    boto3 stamps the current clock into every signature, so without the presign cache the
-    browser's cache key changes on every poll and the player re-downloads every frame. Asserting
-    the urls merely match is not enough: two signatures taken in the same wall-clock second are
-    identical anyway, so the presign calls are counted instead.
+    Counts presign calls rather than comparing urls: two signatures taken in the same wall-clock
+    second are identical anyway, so a url comparison would pass even with the cache removed.
     """
-    auth = pytest.get_token(
-        pytest.user_table[0]["id"],
-        pytest.user_table[0]["role"].split(),
-        pytest.user_table[0]["organization_id"],
-    )
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
     presign_calls: List[str] = []
     original_presign = bucket._presign
@@ -1283,9 +1212,9 @@ async def test_fetch_sequence_detections_reuses_presigned_urls_across_requests(
 
     bucket._presign = counting_presign  # type: ignore[method-assign]
     try:
-        first = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=auth)
+        first = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=user_auth)
         signed_once = len(presign_calls)
-        second = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=auth)
+        second = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=user_auth)
     finally:
         del bucket._presign
 
@@ -1353,6 +1282,11 @@ async def test_fetch_sequence_detections_includes_crop_url(
             pytest.user_table[0]["role"].split(),
             pytest.user_table[0]["organization_id"],
         )
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
         sequence_id = pytest.detection_table[0]["sequence_id"]
         response = await async_client.get(
             f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
@@ -1383,6 +1317,11 @@ async def test_fetch_sequence_detections_with_crop_false_skips_crop_url(
         detection_session.add(detection)
         await detection_session.commit()
 
+        auth = pytest.get_token(
+            pytest.user_table[0]["id"],
+            pytest.user_table[0]["role"].split(),
+            pytest.user_table[0]["organization_id"],
+        )
         auth = pytest.get_token(
             pytest.user_table[0]["id"],
             pytest.user_table[0]["role"].split(),

@@ -341,16 +341,10 @@ def mock_img():
 
 @pytest.fixture
 def pinned_url_window(monkeypatch):
-    """Freeze the presigned-URL cache window so a test cannot straddle a rollover.
-
-    Any assertion that two requests return the same url is otherwise wall-clock dependent: it
-    fails whenever the requests land either side of a window boundary. A window far longer than
-    any process uptime keeps the slot constant instead.
-    """
+    """Freeze the presigned-URL cache window so a test cannot straddle a rollover."""
     monkeypatch.setattr(storage, "_url_cache_window", lambda _url_expiration: 10**9)
     for bucket in storage.s3_service._buckets.values():
-        # Both fixture consumers pin the window to the same huge value, so without clearing,
-        # whichever test runs second would start warm off the other's cache entries.
+        # Otherwise whichever consumer runs second starts warm off the first one's entries.
         bucket._url_cache.clear()
 
 

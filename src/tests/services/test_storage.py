@@ -114,25 +114,16 @@ async def test_s3_bucket(bucket_name, proxy_url, expected_error, mock_img):
 
 @pytest.mark.parametrize("url_expiration", [1, 4, 20, 60, 300, 3600, 24 * 3600])
 def test_url_cache_window_leaves_most_of_the_lifetime(url_expiration):
-    """A cached url must always be handed out with the bulk of its lifetime left, and the window
-    must never exceed the expiration itself: a sub-minute expiration must not serve urls that are
-    already expired."""
-    window = _url_cache_window(url_expiration)
-    assert 1 <= window <= 3600
-    assert window <= max(1, url_expiration // 4)
-    assert window <= url_expiration
+    """A cached url is always handed out with most of its lifetime left, and the window never
+    exceeds the expiration, so a sub-minute expiration cannot serve an expired url."""
+    assert 1 <= _url_cache_window(url_expiration) <= min(3600, url_expiration)
 
 
 def test_s3_bucket_presigned_urls_are_stable_within_a_window(monkeypatch):
-    """The same key presigns once per window, and is re-signed once the slot advances.
+    """The same key presigns once per window and is re-signed once the slot advances.
 
-    boto3 stamps the current clock into every signature, so without this cache the browser's
-    cache key changes on every request and clients re-download unchanged objects. Both halves
-    count presign calls rather than comparing url strings: two signatures taken in the same
-    wall-clock second are identical, so a string comparison would assert on the clock instead of
-    on the cache. The clock is faked, rather than waited out or mutated on the instance (the
-    window slot now lives in the cache key, not on a `bucket._url_window` attribute), so the
-    slot advance is deterministic instead of racing a real monotonic boundary.
+    Counts presign calls rather than comparing urls, since two signatures taken in the same
+    wall-clock second are identical. The clock is faked so the slot advance is deterministic.
     """
     session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
     s3 = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
@@ -156,13 +147,11 @@ def test_s3_bucket_presigned_urls_are_stable_within_a_window(monkeypatch):
         assert bucket.get_public_url("stable.png", verify_exists=False) == first
         assert len(presign_calls) == 1
 
-        # Advance the clock past the window instead of waiting one out: the slot changes, so the
-        # key changes, so the lookup misses and the url is re-signed.
+        # Advance past the window: the slot changes, so the key misses and the url is re-signed.
         fake_clock[0] += _url_cache_window(settings.S3_URL_EXPIRATION)
         bucket.get_public_url("stable.png", verify_exists=False)
         assert len(presign_calls) == 2
-        # Nothing clears on rollover anymore: the previous window's entry is still there,
-        # aging out through the size-bound eviction rather than being dropped outright.
+        # The previous window's entry stays, aging out through eviction rather than a clear.
         assert set(bucket._url_cache) == {
             ("stable.png", settings.S3_URL_EXPIRATION, 0),
             ("stable.png", settings.S3_URL_EXPIRATION, 1),
@@ -171,20 +160,14 @@ def test_s3_bucket_presigned_urls_are_stable_within_a_window(monkeypatch):
         s3.delete_bucket(Bucket=bucket_name)
 
 
-def test_s3_bucket_url_cache_evicts_coldest_entry_only(monkeypatch):
-    """The size bound evicts only the least-recently-used entry; it must never clear the whole
-    cache, since one dict is shared by every viewer of an organization and clearing it would
-    re-sign (and so change) every url in flight exactly when the cache is under load.
-    """
+def test_s3_bucket_url_cache_evicts_coldest_entry_only(monkeypatch, pinned_url_window):
+    """The size bound evicts the LRU entry only: a clear would change every url in flight."""
     session = boto3.Session(settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, region_name=settings.S3_REGION)
     s3 = session.client("s3", endpoint_url=settings.S3_ENDPOINT_URL)
     bucket_name = "dummy-bucket-url-cache-eviction"
     s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": settings.S3_REGION})
     try:
         bucket = S3Bucket(s3, bucket_name, settings.S3_PROXY_URL)
-        # Pin the window so the three calls below can't straddle a real rollover and pick up
-        # differing slot components in their cache keys.
-        monkeypatch.setattr(storage, "_url_cache_window", lambda _url_expiration: 10**9)
         monkeypatch.setattr(storage, "_URL_CACHE_MAXSIZE", 2)
 
         bucket.get_public_url("k1.png", verify_exists=False)

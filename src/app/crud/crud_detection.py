@@ -44,25 +44,14 @@ class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
     ) -> List[Detection]:
         """Fetch the detections of a sequence, keeping one every ``sampling``.
 
-        ``offset`` counts raw detections, never sampled frames, so it means the same thing
-        whatever ``sampling`` is (and at ``sampling=1`` the two readings coincide). Sampling then
-        applies from that point: ``offset=20, sampling=48`` starts at detection 21 and steps by
-        48. Callers page by advancing ``offset`` in multiples of ``sampling``, which keeps the
-        grid on the same detections instead of shifting its phase.
-
-        The row number is always computed ascending on ``created_at``, so neither the offset nor
-        the sampled set depends on ``order_desc``: it only flips the output order. That also keeps
-        the set stable as the sequence grows, since a new detection lands last and cannot renumber
-        earlier rows, so the player keeps hitting the same frames (and the same cached URLs)
-        across polls. The first kept row is the one at ``offset``, so a sequence with anything
-        left past the offset always yields at least one row.
-
-        Note that ``limit`` cannot push down: ``row_number()`` has to cover every row of the
-        sequence before the modulo and the limit apply, which is why detections is indexed on
-        ``(sequence_id, created_at)``.
+        ``offset`` counts raw detections, never sampled frames. When sampling, the row number is
+        computed ascending on ``created_at``, so neither the offset nor the kept set depends on
+        ``order_desc``: it only flips the output order. Page by advancing ``offset`` in multiples
+        of ``sampling`` to keep the grid on the same detections. Unsampled calls delegate to
+        ``fetch_all``, where a SQL ``OFFSET`` applies after the sort and so counts from whichever
+        end ``order_desc`` selects.
         """
         if sampling <= 1:
-            # Unchanged pre-sampling behaviour, on purpose: same query, same ordering.
             return await self.fetch_all(
                 filters=("sequence_id", sequence_id),
                 order_by="created_at",
@@ -75,18 +64,15 @@ class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
         row_num = func.row_number().over(
             order_by=(cast(Any, Detection.created_at).asc(), cast(Any, Detection.id).asc())
         )
-        # sqlalchemy's select for the numbering subquery (two entities, and .subquery() on it);
-        # sqlmodel's select for the outer one, since a single-entity SelectOfScalar is what makes
-        # session.exec return Detection instances rather than Row tuples.
+        # sqlmodel's select on the outer query: a single-entity SelectOfScalar is what makes
+        # exec return Detection instances rather than Row tuples.
         numbered: Any = select_sa(Detection, row_num.label("rn")).where(cast(Any, Detection.sequence_id) == sequence_id)
         subq = numbered.subquery()
         sampled = aliased(Detection, subq)
         created_at_col = cast(Any, sampled.created_at)
         id_col = cast(Any, sampled.id)
-        # offset lands in the WHERE rather than a SQL OFFSET: it has to be measured in raw
-        # detections on the ascending numbering, not in rows of the already-sampled result (a SQL
-        # OFFSET would also be applied after ORDER BY, making it count from the newest end
-        # whenever order_desc is set).
+        # offset in the WHERE, not a SQL OFFSET: it counts raw detections on the ascending
+        # numbering, and a SQL OFFSET would instead apply after ORDER BY.
         position = subq.c.rn - 1
         stmt: Any = (
             select(sampled)
