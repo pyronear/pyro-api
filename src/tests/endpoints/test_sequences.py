@@ -1282,11 +1282,6 @@ async def test_fetch_sequence_detections_includes_crop_url(
             pytest.user_table[0]["role"].split(),
             pytest.user_table[0]["organization_id"],
         )
-        auth = pytest.get_token(
-            pytest.user_table[0]["id"],
-            pytest.user_table[0]["role"].split(),
-            pytest.user_table[0]["organization_id"],
-        )
         sequence_id = pytest.detection_table[0]["sequence_id"]
         response = await async_client.get(
             f"/sequences/{sequence_id}/detections", params={"with_crop": "true"}, headers=auth
@@ -1317,11 +1312,6 @@ async def test_fetch_sequence_detections_with_crop_false_skips_crop_url(
         detection_session.add(detection)
         await detection_session.commit()
 
-        auth = pytest.get_token(
-            pytest.user_table[0]["id"],
-            pytest.user_table[0]["role"].split(),
-            pytest.user_table[0]["organization_id"],
-        )
         auth = pytest.get_token(
             pytest.user_table[0]["id"],
             pytest.user_table[0]["role"].split(),
