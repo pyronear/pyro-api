@@ -700,9 +700,11 @@
 <div class="viewcode-block" id="Client.fetch_sequences_detections"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.fetch_sequences_detections">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_sequences_detections</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sequence_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">desc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">with_crop</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">sampling</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""List the detections of a sequence</span>
 
@@ -712,17 +714,32 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            sequence_id: ID of the associated sequence entry</span>
-<span class="sd">            limit: maximum number of detections to fetch</span>
+<span class="sd">            limit: maximum number of detections to fetch. Unset (the default) lets the API pick:</span>
+<span class="sd">                10, or the size of the whole sampled span capped at 500 when sampling is set</span>
 <span class="sd">            desc: whether to order the detections by created_at in descending order</span>
 <span class="sd">            with_crop: whether to include the crop_url for detections that have a crop</span>
+<span class="sd">            sampling: keep one detection every N (1 = all, max 10000). The kept frames do not</span>
+<span class="sd">                depend on desc. Leave limit unset to span the sequence, and read the</span>
+<span class="sd">                X-Sampled-Total / X-Sampled-Truncated response headers</span>
+<span class="sd">            offset: raw detections to skip, from the oldest end when sampling. Page by advancing</span>
+<span class="sd">                it in multiples of sampling</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response</span>
 <span class="sd">        """</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"desc"</span><span class="p">:</span> <span class="n">desc</span><span class="p">,</span>
+            <span class="s2">"with_crop"</span><span class="p">:</span> <span class="n">with_crop</span><span class="p">,</span>
+            <span class="s2">"sampling"</span><span class="p">:</span> <span class="n">sampling</span><span class="p">,</span>
+            <span class="s2">"offset"</span><span class="p">:</span> <span class="n">offset</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="c1"># Omitted rather than defaulted client-side, so the API can size it from the sampled set.</span>
+        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">params</span><span class="p">[</span><span class="s2">"limit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">limit</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">SEQUENCES_FETCH_DETECTIONS</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">seq_id</span><span class="o">=</span><span class="n">sequence_id</span><span class="p">)),</span>
             <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"limit"</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span> <span class="s2">"desc"</span><span class="p">:</span> <span class="n">desc</span><span class="p">,</span> <span class="s2">"with_crop"</span><span class="p">:</span> <span class="n">with_crop</span><span class="p">},</span>
+            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
