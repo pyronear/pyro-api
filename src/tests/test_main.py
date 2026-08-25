@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
+from httpx import AsyncClient
 
 from app.main import _risk_refresh_loop, _seconds_until_next_utc_hour, lifespan
 
@@ -153,3 +154,15 @@ async def test_lifespan_skips_risk_refresh_but_starts_validation_worker_when_ris
             create_task_mock.assert_called_once()  # the validation worker always runs
 
     assert fake_task.cancel_called is True
+
+
+@pytest.mark.asyncio
+async def test_sampling_headers_are_exposed_to_browsers(async_client: AsyncClient):
+    """CORSMiddleware hides response headers from browser JS unless they are listed in
+    expose_headers, and the sampling signals exist for the frontend player. Neither the endpoint
+    tests (ASGI transport, no CORS enforcement) nor the client tests (requests, not a browser)
+    would catch a regression here.
+    """
+    response = await async_client.get("/status", headers={"Origin": "http://localhost:5173"})
+    exposed = {h.strip() for h in response.headers.get("access-control-expose-headers", "").split(",")}
+    assert {"X-Sampled-Total", "X-Sampled-Truncated"} <= exposed

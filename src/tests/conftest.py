@@ -22,6 +22,7 @@ from app.core.time import utcnow
 from app.db import engine, session_factory
 from app.main import app
 from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
+from app.services import storage
 from app.services.storage import s3_service
 from app.services.validation import process_next_due_validation
 
@@ -336,6 +337,15 @@ def mock_hash_password(password):
 def mock_img():
     # Get Pyronear logo
     return requests.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
+
+
+@pytest.fixture
+def pinned_url_window(monkeypatch):
+    """Freeze the presigned-URL cache window so a test cannot straddle a rollover."""
+    monkeypatch.setattr(storage, "_url_cache_window", lambda _url_expiration: 10**9)
+    for bucket in storage.s3_service._buckets.values():
+        # Otherwise whichever consumer runs second starts warm off the first one's entries.
+        bucket._url_cache.clear()
 
 
 @pytest_asyncio.fixture(loop_scope="session")
