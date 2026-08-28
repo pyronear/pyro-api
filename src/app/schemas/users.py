@@ -30,7 +30,7 @@ class Role(BaseModel):
 
 
 class RoleUpdate(BaseModel):
-    """Admin is excluded : if an admin retrograde himself that can lead to deadlock"""
+    """Admin is intentionally excluded: an admin demoting themselves could lock everyone out."""
 
     role: Literal[UserRole.AGENT, UserRole.USER] = Field(..., examples=["agent"])
 

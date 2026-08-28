@@ -5,16 +5,16 @@
 
 from typing import Union
 
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
 from app.models import User
-from app.schemas.users import CredHash, RoleUpdate
 
 __all__ = ["UserCRUD"]
 
 
-class UserCRUD(BaseCRUD[User, User, Union[CredHash, RoleUpdate]]):
+class UserCRUD(BaseCRUD[User, User, BaseModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, User)
 

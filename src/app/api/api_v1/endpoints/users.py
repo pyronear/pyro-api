@@ -95,20 +95,20 @@ async def update_user_role(
     """Promote or demote a user between the `agent` role and the `user` role.
     Admins are out of scope: neither the requester nor the target user can have their admin role changed here.
 
-    Beware that the role is baked into the access tokens that were already issued, and those are long-lived
-    (see `JWT_EXPIRE_MINUTES`). The new role only applies to tokens minted afterwards, so the user has to log in
-    again for the change to take effect.
+    Beware that the role is baked into the access tokens that were already issued, and those last a year
+    (`JWT_UNLIMITED`, see `login_with_creds`). The new role only applies to tokens minted afterwards, so the
+    user has to log in again for the change to take effect.
     """
-    telemetry_client.capture(
-        token_payload.sub, event="user-role", properties={"user_id": user_id, "role": payload.role}
-    )
     if user_id == token_payload.sub:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admins cannot change their own role : it can lead to deadlock")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admins cannot change their own role: it would lock them out")
 
     user = cast(User, await users.get(user_id, strict=True))
     if user.role == UserRole.ADMIN:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot change an admin's role")
 
+    telemetry_client.capture(
+        token_payload.sub, event="user-role", properties={"user_id": user_id, "role": payload.role}
+    )
     return await users.update(user_id, payload)
 
 
