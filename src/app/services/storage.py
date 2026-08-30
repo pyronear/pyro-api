@@ -198,11 +198,16 @@ class S3Service:
                 else {"CreateBucketConfiguration": {"LocationConstraint": self._s3.meta.region_name}}
             )
             self._s3.create_bucket(Bucket=bucket_name, **config_)
-            self._put_bucket_cors(bucket_name)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        # MinIO answers NotImplemented here, so CORS is best-effort: the bucket is usable
+        # without it, only cross-origin fetch() of presigned URLs degrades.
+        try:
+            self._put_bucket_cors(bucket_name)
+        except ClientError as e:
+            logger.warning(f"CORS policy not applied on {bucket_name}: {e}")
+        return True
 
     def _put_bucket_cors(self, bucket_name: str) -> None:
         """Apply the CORS policy so browsers can fetch() presigned URLs cross-origin.

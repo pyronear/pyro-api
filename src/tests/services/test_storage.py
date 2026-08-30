@@ -2,6 +2,7 @@ import io
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
 from app.core.config import settings
@@ -65,6 +66,28 @@ async def test_s3_service(region, endpoint_url, access_key, secret_key, proxy_ur
     else:
         with pytest.raises(expected_error):
             S3Service(region, endpoint_url, access_key, secret_key, proxy_url)
+
+
+@pytest.mark.asyncio
+async def test_s3_service_create_bucket_survives_an_unsupported_cors_api(monkeypatch):
+    """MinIO answers NotImplemented to PutBucketCors, so a CORS failure must not fail the
+    creation: the bucket exists and is usable, only cross-origin fetch() degrades."""
+    service = S3Service(
+        settings.S3_REGION,
+        settings.S3_ENDPOINT_URL,
+        settings.S3_ACCESS_KEY,
+        settings.S3_SECRET_KEY,
+        settings.S3_PROXY_URL,
+    )
+
+    def raise_not_implemented(bucket_name):
+        raise ClientError({"Error": {"Code": "NotImplemented"}}, "PutBucketCors")
+
+    monkeypatch.setattr(service, "_put_bucket_cors", raise_not_implemented)
+    bucket_name = "dummy-bucket-no-cors"
+    assert service.create_bucket(bucket_name)
+    assert service.get_bucket(bucket_name).name == bucket_name
+    await service.delete_bucket(bucket_name)
 
 
 @pytest.mark.parametrize(
