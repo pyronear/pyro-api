@@ -68,10 +68,22 @@ async def test_s3_service(region, endpoint_url, access_key, secret_key, proxy_ur
             S3Service(region, endpoint_url, access_key, secret_key, proxy_url)
 
 
+@pytest.mark.parametrize(
+    ("error_code", "expected_created"),
+    [
+        # MinIO does not implement PutBucketCors: the bucket is usable without the policy, so
+        # creation must succeed and only cross-origin fetch() degrades.
+        ("NotImplemented", True),
+        # A backend that does support the API failing for a real reason must not be swallowed,
+        # otherwise the organization keeps a bucket its frontend cannot fetch() from.
+        ("AccessDenied", False),
+        ("MalformedXML", False),
+    ],
+)
 @pytest.mark.asyncio
-async def test_s3_service_create_bucket_survives_an_unsupported_cors_api(monkeypatch):
-    """MinIO answers NotImplemented to PutBucketCors, so a CORS failure must not fail the
-    creation: the bucket exists and is usable, only cross-origin fetch() degrades."""
+async def test_s3_service_create_bucket_only_tolerates_an_unsupported_cors_api(
+    error_code, expected_created, monkeypatch
+):
     service = S3Service(
         settings.S3_REGION,
         settings.S3_ENDPOINT_URL,
@@ -80,14 +92,18 @@ async def test_s3_service_create_bucket_survives_an_unsupported_cors_api(monkeyp
         settings.S3_PROXY_URL,
     )
 
-    def raise_not_implemented(bucket_name):
-        raise ClientError({"Error": {"Code": "NotImplemented"}}, "PutBucketCors")
+    def raise_cors_error(bucket_name):
+        raise ClientError({"Error": {"Code": error_code}}, "PutBucketCors")
 
-    monkeypatch.setattr(service, "_put_bucket_cors", raise_not_implemented)
-    bucket_name = "dummy-bucket-no-cors"
-    assert service.create_bucket(bucket_name)
-    assert service.get_bucket(bucket_name).name == bucket_name
-    await service.delete_bucket(bucket_name)
+    monkeypatch.setattr(service, "_put_bucket_cors", raise_cors_error)
+    bucket_name = f"dummy-bucket-cors-{error_code.lower()}"
+    try:
+        assert service.create_bucket(bucket_name) is expected_created
+        if expected_created:
+            # Tolerated only because the bucket really is there and usable.
+            assert service.get_bucket(bucket_name).name == bucket_name
+    finally:
+        await service.delete_bucket(bucket_name)
 
 
 @pytest.mark.parametrize(

@@ -201,12 +201,19 @@ class S3Service:
         except ClientError as e:
             logger.warning(e)
             return False
-        # MinIO answers NotImplemented here, so CORS is best-effort: the bucket is usable
-        # without it, only cross-origin fetch() of presigned URLs degrades.
         try:
             self._put_bucket_cors(bucket_name)
         except ClientError as e:
-            logger.warning(f"CORS policy not applied on {bucket_name}: {e}")
+            if e.response.get("Error", {}).get("Code") != "NotImplemented":
+                # A genuine failure (AccessDenied, malformed S3_CORS_ORIGINS) on a backend that
+                # does support the API: stay loud and fail, so the caller rolls the organization
+                # back instead of silently keeping a bucket the frontend cannot fetch() from.
+                logger.error(f"unable to apply the CORS policy on {bucket_name}: {e}")
+                return False
+            # MinIO does not implement PutBucketCors. On that backend alone CORS is best-effort:
+            # the bucket is usable without it, only cross-origin fetch() of presigned urls
+            # degrades, so creation must not fail.
+            logger.warning(f"CORS policy unsupported by the backend, skipped on {bucket_name}: {e}")
         return True
 
     def _put_bucket_cors(self, bucket_name: str) -> None:
