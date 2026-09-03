@@ -1833,6 +1833,45 @@ async def test_create_detection_defaults_recorded_at_to_now(
 
 
 @pytest.mark.asyncio
+async def test_create_detection_sequence_recorded_at_is_first_detection_capture(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    # Capture times deliberately far from the server clock: the sequence must expose the first
+    # detection's recorded_at, not created_at, so the platform can show one consistent time.
+    first_capture = datetime(2024, 1, 15, 10, 30, 0)
+    for idx, recorded_at in enumerate((first_capture, first_capture + timedelta(seconds=30))):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "recorded_at": recorded_at.isoformat(),
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq_id = response.json()["sequence_id"]
+    assert isinstance(seq_id, int)
+    seq = await detection_session.get(Sequence, seq_id)
+    assert seq is not None
+    assert seq.recorded_at == first_capture
+    assert seq.started_at != first_capture
+
+
+@pytest.mark.asyncio
 async def test_attach_sequence_merges_same_event_alerts(detection_session: AsyncSession):
     """
     Regression guard for the duplicate-alert bug (prod alerts 49341/49342/49343).
