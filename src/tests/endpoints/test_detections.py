@@ -1833,7 +1833,7 @@ async def test_create_detection_defaults_recorded_at_to_now(
 
 
 @pytest.mark.asyncio
-async def test_create_detection_sequence_recorded_at_is_first_detection_capture(
+async def test_create_detection_sequence_starts_at_first_detection_capture(
     async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
 ):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
@@ -1847,8 +1847,8 @@ async def test_create_detection_sequence_recorded_at_is_first_detection_capture(
     await detection_session.commit()
     await detection_session.refresh(pose)
 
-    # Capture times deliberately far from the server clock: the sequence must expose the first
-    # detection's recorded_at, not created_at, so the platform can show one consistent time.
+    # Capture times deliberately far from the server clock: the sequence must start at the first
+    # detection's recorded_at, not created_at, so the platform shows one consistent time.
     first_capture = datetime(2024, 1, 15, 10, 30, 0)
     for idx, recorded_at in enumerate((first_capture, first_capture + timedelta(seconds=30))):
         response = await async_client.post(
@@ -1867,8 +1867,7 @@ async def test_create_detection_sequence_recorded_at_is_first_detection_capture(
     assert isinstance(seq_id, int)
     seq = await detection_session.get(Sequence, seq_id)
     assert seq is not None
-    assert seq.recorded_at == first_capture
-    assert seq.started_at != first_capture
+    assert seq.started_at == first_capture
 
 
 @pytest.mark.asyncio
