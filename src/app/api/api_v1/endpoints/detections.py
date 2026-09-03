@@ -686,9 +686,8 @@ async def create_detection(
                         camera_azimuth=pose.azimuth,
                         sequence_azimuth=cone_azimuth,
                         cone_angle=cone_angle,
-                        started_at=first_det.created_at,
+                        started_at=first_det.recorded_at,
                         last_seen_at=det.created_at,
-                        recorded_at=first_det.recorded_at,
                         max_conf=seq_max_conf,
                     )
                 )
