@@ -688,6 +688,7 @@ async def create_detection(
                         cone_angle=cone_angle,
                         started_at=first_det.created_at,
                         last_seen_at=det.created_at,
+                        recorded_at=first_det.recorded_at,
                         max_conf=seq_max_conf,
                     )
                 )

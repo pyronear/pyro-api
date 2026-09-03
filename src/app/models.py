@@ -121,6 +121,11 @@ class Sequence(SQLModel, table=True):
     cone_angle: Union[float, None] = Field(None, nullable=True)
     started_at: datetime = Field(..., nullable=False)
     last_seen_at: datetime = Field(..., nullable=False)
+    recorded_at: datetime = Field(
+        default_factory=utcnow,
+        nullable=False,
+        description="Capture time (recorded_at) of the detection that started the sequence, for display.",
+    )
     max_conf: Union[float, None] = Field(
         None,
         nullable=True,
