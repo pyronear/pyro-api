@@ -22,22 +22,23 @@ def upgrade() -> None:
     # Add as nullable first so existing rows don't violate the NOT NULL constraint.
     op.add_column("sequences", sa.Column("recorded_at", sa.DateTime(), nullable=True))
     # Backfill from the detection that started the sequence (earliest created_at, the same
-    # row started_at comes from); sequences with no detection left fall back to started_at.
+    # row started_at comes from). One DISTINCT ON pass over detections rather than a
+    # correlated subquery per sequence: detections.sequence_id is not indexed.
     op.execute(
         """
         UPDATE sequences s
-        SET recorded_at = COALESCE(
-            (
-                SELECT d.recorded_at
-                FROM detections d
-                WHERE d.sequence_id = s.id
-                ORDER BY d.created_at, d.id
-                LIMIT 1
-            ),
-            s.started_at
-        )
+        SET recorded_at = d.recorded_at
+        FROM (
+            SELECT DISTINCT ON (sequence_id) sequence_id, recorded_at
+            FROM detections
+            WHERE sequence_id IS NOT NULL
+            ORDER BY sequence_id, created_at, id
+        ) d
+        WHERE d.sequence_id = s.id
         """
     )
+    # Sequences with no detection left fall back to started_at.
+    op.execute("UPDATE sequences SET recorded_at = started_at WHERE recorded_at IS NULL")
     # Tighten to NOT NULL to match the SQLModel definition.
     op.alter_column("sequences", "recorded_at", nullable=False)
 
