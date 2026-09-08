@@ -194,6 +194,7 @@ async def fetch_latest_unlabeled_sequences(
         seq_filter = max_conf_filter_clause(classes)
         if seq_filter is not None:
             stmt = stmt.where(seq_filter)
+    # Most recently active first (the alert feed still orders on started_at).
     stmt = stmt.order_by(Sequence.last_seen_at.desc()).limit(15)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
