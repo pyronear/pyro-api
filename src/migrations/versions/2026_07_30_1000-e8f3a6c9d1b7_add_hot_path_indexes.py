@@ -26,31 +26,48 @@ INDEXES = (
 )
 
 
-def _drop_if_invalid(index_name: str, table_name: str) -> None:
-    """Drop an index left INVALID by a cancelled CONCURRENTLY build.
+def _ensure_absent_or_replaceable(index_name: str, table_name: str, columns: list) -> None:
+    """Clear the way for the create below, or fail loudly rather than silently skip.
 
-    Without this the migration is not safely re-runnable: if_not_exists sees the leftover
-    relation and skips creating it, the revision stamps, and the upgrade reports success while
-    the planner ignores the invalid index, silently leaving these queries on sequential scans.
+    ``CREATE INDEX IF NOT EXISTS`` matches on the **name alone**: Postgres never compares the
+    definition. So a same-named index over the wrong columns, or a leftover INVALID one from a
+    cancelled CONCURRENTLY build, makes the create a no-op, the revision stamp, and the upgrade
+    report success while the queries stay on sequential scans. Both are reachable on the manual
+    pre-creation path, where a human types the column list.
 
-    The lookup joins pg_class by name rather than casting the name to regclass, since that cast
-    raises when the relation does not exist yet (the common case) instead of returning no rows.
+    Anything else holding the name (a table, a view) is not ours to drop, so raise instead.
     """
     row = (
         op
         .get_bind()
         .execute(
             text(
-                "SELECT idx.indisvalid FROM pg_index idx "
-                "JOIN pg_class c ON c.oid = idx.indexrelid "
-                "WHERE c.relname = :name"
+                "SELECT c.relkind, i.indisvalid, t.relname, "
+                "  (SELECT array_agg(a.attname ORDER BY k.ord) "
+                "     FROM unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) "
+                "     JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum) AS cols "
+                "FROM pg_class c "
+                "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "LEFT JOIN pg_index i ON i.indexrelid = c.oid "
+                "LEFT JOIN pg_class t ON t.oid = i.indrelid "
+                "WHERE c.relname = :name AND n.nspname = ANY (current_schemas(false))"
             ),
             {"name": index_name},
         )
         .first()
     )
-    if row is not None and not row[0]:
-        op.drop_index(index_name, table_name=table_name, if_exists=True, postgresql_concurrently=True)
+    if row is None:
+        return
+    relkind, is_valid, owning_table, cols = row
+    # pg_class.relkind is Postgres "char", which comes back as bytes over this driver.
+    kind = relkind.decode() if isinstance(relkind, (bytes, bytearray)) else str(relkind)
+    if kind != "i":
+        raise RuntimeError(f"{index_name!r} already exists as relkind {kind!r}, not an index")
+    if owning_table != table_name:
+        raise RuntimeError(f"{index_name!r} already indexes {owning_table!r}, not {table_name!r}")
+    if is_valid and list(cols or []) == list(columns):
+        return
+    op.drop_index(index_name, table_name=table_name, if_exists=True, postgresql_concurrently=True)
 
 
 def upgrade() -> None:
@@ -61,12 +78,12 @@ def upgrade() -> None:
     #     sequence per detection, and also the shape the player's sequence reads sort on
     #   - sibling rows sharing a frame object (bucket_key), on DELETE /detections/{id}
     #
-    # detections is the highest-write table, so a plain CREATE INDEX would hold ACCESS EXCLUSIVE
-    # against camera ingest for the whole build. CONCURRENTLY cannot run inside a transaction and
+    # detections is the highest-write table, so a plain CREATE INDEX holds SHARE against camera
+    # ingest for the whole build (blocking writes, not reads). CONCURRENTLY cannot run inside a transaction and
     # env.py wraps the migration run in one, hence the autocommit block.
     with op.get_context().autocommit_block():
         for index_name, table_name, columns in INDEXES:
-            _drop_if_invalid(index_name, table_name)
+            _ensure_absent_or_replaceable(index_name, table_name, columns)
             op.create_index(
                 index_name,
                 table_name,
