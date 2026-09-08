@@ -29,7 +29,7 @@ def upgrade() -> None:
             SELECT DISTINCT ON (sequence_id) sequence_id, recorded_at
             FROM detections
             WHERE sequence_id IS NOT NULL
-            ORDER BY sequence_id, created_at, id
+            ORDER BY sequence_id, recorded_at, created_at, id
         ) d
         WHERE d.sequence_id = s.id AND s.started_at <> d.recorded_at
         """

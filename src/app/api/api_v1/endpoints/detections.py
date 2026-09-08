@@ -571,9 +571,10 @@ async def create_detection(
         )
 
     # The engine may report when the image was actually captured; fall back to now when it doesn't.
-    # Stored for display and as a camera-lag signal (created_at - recorded_at); sequence linking still
-    # keys on created_at (the monotonic server clock). Aware timestamps are normalized to UTC, naive
-    # ones are assumed UTC, and all rows from a single upload share the same capture time.
+    # This is the event time the platform displays, and it sets the sequence's started_at; liveness
+    # gates (last_seen_at, continuity) still key on created_at, the monotonic server clock. Aware
+    # timestamps are normalized to UTC, naive ones are assumed UTC, and all rows from a single
+    # upload share the same capture time.
     effective_recorded_at = to_utc_naive(recorded_at) if recorded_at is not None else utcnow()
 
     # Frame with no detection: it only matters as continuity for recently-seen sequences of
@@ -676,7 +677,10 @@ async def create_detection(
                     overlapping_dets.append(cand)
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-                first_det = min(overlapping_dets, key=lambda item: item.created_at)
+                # First captured, not first inserted: a backlog flush can upload detections out of
+                # capture order, and started_at is event time. created_at then id break the tie
+                # (bboxes of one upload share the same recorded_at).
+                first_det = min(overlapping_dets, key=lambda item: (item.recorded_at, item.created_at, item.id))
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
                 seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
