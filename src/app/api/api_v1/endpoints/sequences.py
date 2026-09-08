@@ -176,7 +176,10 @@ async def fetch_latest_unlabeled_sequences(
 
     stmt: Any = (
         select(Sequence)
-        .where(Sequence.started_at > utcnow() - timedelta(hours=24))
+        # Freshness window on last_seen_at, not started_at: started_at is now event time from the
+        # device clock (drift, backlog flush), so a late upload would silently miss the feed.
+        # last_seen_at is written from the server clock, same rule as the alert feed.
+        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     )
     # Admins see every organization's sequences without risk-score filtering
@@ -191,7 +194,7 @@ async def fetch_latest_unlabeled_sequences(
         seq_filter = max_conf_filter_clause(classes)
         if seq_filter is not None:
             stmt = stmt.where(seq_filter)
-    stmt = stmt.order_by(Sequence.started_at.desc()).limit(15)  # type: ignore[attr-defined]
+    stmt = stmt.order_by(Sequence.last_seen_at.desc()).limit(15)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
