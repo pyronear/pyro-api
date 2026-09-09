@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Union
 
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
@@ -83,6 +84,15 @@ class OcclusionMask(SQLModel, table=True):
 
 class Detection(SQLModel, table=True):
     __tablename__ = "detections"
+    # Declared here as well as in the migration so create_all-built databases (the test suite)
+    # carry the same indexes as production, instead of silently planning every query differently.
+    __table_args__ = (
+        # Latest-real-bbox lookups during spatial matching, and the sequence reads the player
+        # pages through: sequence_id equality then a created_at scan.
+        Index("ix_detections_sequence_id_created_at", "sequence_id", "created_at"),
+        # Sibling-row check on deletion (multi-bbox and continuity rows share one frame object).
+        Index("ix_detections_bucket_key", "bucket_key"),
+    )
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
@@ -112,6 +122,10 @@ TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
 
 class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
+    __table_args__ = (
+        # Per-frame lookups of a pose's recently-seen sequences (spatial matching, continuity).
+        Index("ix_sequences_camera_pose_last_seen", "camera_id", "pose_id", "last_seen_at"),
+    )
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
