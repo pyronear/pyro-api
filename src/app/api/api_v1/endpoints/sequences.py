@@ -20,7 +20,7 @@ from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequenc
 from app.schemas.alerts import AlertCreate
 from app.schemas.detections import DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
-from app.schemas.sequences import SequenceLabel, SequenceRead
+from app.schemas.sequences import SequenceAzimuth, SequenceLabel, SequenceRead
 from app.services.alerts import refresh_alert_state
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
@@ -325,5 +325,47 @@ async def label_sequence(
     )
     session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
     await session.commit()
+
+    return updated
+
+
+@router.patch(
+    "/{sequence_id}/azimuth", status_code=status.HTTP_200_OK, summary="Refine the azimuth of the sequence"
+)
+async def refine_azimuth(
+    payload: SequenceAzimuth,
+    sequence_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    alerts: AlertCRUD = Depends(get_alert_crud),
+    session: AsyncSession = Depends(get_session),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.USER]),
+) -> Sequence:
+
+    telemetry_client.capture(token_payload.sub, event="azimuth-refine", properties={"sequence_id": sequence_id})
+
+    # Fetch the sequence:
+    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+
+    # Non-admins are scoped to their own organization:
+    if not token_payload.is_admin:
+        await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
+
+    # Persist the new azimuth:
+    updated = await sequences.update(sequence_id, payload)
+
+    # Re-run the same attach/reconcile flow:
+    # Imported lazily to avoid a services -> endpoints import at module load.
+    from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
+
+    camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+    # Recompute triangulation:
+    _ = _attach_sequence_to_alert(sequence_=updated, camera=camera, cameras=cameras, sequences=sequences, alerts=alerts)
+
+    # Refresh every previously- and newly-linked alert:
+    alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
+    alert_ids = list(alert_ids_res.all())
+    for aid in alert_ids:
+        await refresh_alert_state(aid, session, alerts)
 
     return updated
