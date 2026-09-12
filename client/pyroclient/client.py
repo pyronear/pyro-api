@@ -127,18 +127,23 @@ class Client:
             timeout=self.timeout,
         )
 
-    def heartbeat(self) -> Response:
+    def heartbeat(self, timeout: int | None = None) -> Response:
         """Update the last ping of the camera
 
         >>> from pyroclient import Client
         >>> api_client = Client("MY_CAM_TOKEN")
         >>> response = api_client.heartbeat()
 
+        Args:
+            timeout: request timeout in seconds for this call only; defaults to the client timeout
+
         Returns:
             HTTP response containing the update device info
         """
         return requests.patch(
-            urljoin(self._route_prefix, ClientRoute.CAMERAS_HEARTBEAT), headers=self.headers, timeout=self.timeout
+            urljoin(self._route_prefix, ClientRoute.CAMERAS_HEARTBEAT),
+            headers=self.headers,
+            timeout=self.timeout if timeout is None else timeout,
         )
 
     def update_last_image(self, media: bytes) -> Response:
