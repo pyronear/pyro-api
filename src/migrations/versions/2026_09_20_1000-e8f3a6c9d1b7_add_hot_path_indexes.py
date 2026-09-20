@@ -1,8 +1,8 @@
 """add hot-path indexes for sequence matching, latest-bbox and shared frame lookups
 
 Revision ID: e8f3a6c9d1b7
-Revises: c4e9f1a2b3d5
-Create Date: 2026-07-30 10:00:00.000000
+Revises: d6f3a8b2c4e1
+Create Date: 2026-09-20 10:00:00.000000
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "e8f3a6c9d1b7"
-down_revision: Union[str, None] = "c4e9f1a2b3d5"
+down_revision: Union[str, None] = "d6f3a8b2c4e1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
