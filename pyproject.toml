@@ -26,8 +26,8 @@ server = [
     "uvicorn>=0.11.1,<1.0.0",
     "asyncpg>=0.25.0,<1.0.0",
     "alembic>=1.18.5,<2.0.0",
-    "sentry-sdk[fastapi]>=2.68.0,<3.0.0",
-    "posthog>=7.39.1,<8.0.0",
+    "sentry-sdk[fastapi]>=2.68.1,<3.0.0",
+    "posthog>=7.44.2,<8.0.0",
     "prometheus-fastapi-instrumentator>=8.1.0,<9.0.0",
     "python-multipart==0.0.32",
     "python-magic>=0.4.17,<0.5.0",
@@ -44,9 +44,9 @@ server = [
     "pytz>=2024.1",
 ]
 quality = [
-    "ruff==0.16.1",
-    "ty==0.0.69",
-    "prek==0.4.12",
+    "ruff==0.16.5",
+    "ty==0.0.75",
+    "prek==0.5.0",
     "types-requests>=2.33.0.20260712",
     "types-python-dateutil>=2.9.0.20260807,<3.0.0",
     "sqlalchemy-stubs>=0.4,<0.5",

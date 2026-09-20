@@ -496,9 +496,11 @@ class Client:
     def fetch_sequences_detections(
         self,
         sequence_id: int,
-        limit: int = 10,
+        limit: Union[int, None] = None,
         desc: bool = True,
         with_crop: bool = True,
+        sampling: int = 1,
+        offset: int = 0,
     ) -> Response:
         """List the detections of a sequence
 
@@ -508,17 +510,32 @@ class Client:
 
         Args:
             sequence_id: ID of the associated sequence entry
-            limit: maximum number of detections to fetch
+            limit: maximum number of detections to fetch. Unset (the default) lets the API pick:
+                10, or the size of the whole sampled span capped at 500 when sampling is set
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
+            sampling: keep one detection every N (1 = all, max 10000). The kept frames do not
+                depend on desc. Leave limit unset to span the sequence, and read the
+                X-Sampled-Total / X-Sampled-Truncated response headers
+            offset: raw detections to skip, from the oldest end when sampling. Page by advancing
+                it in multiples of sampling
 
         Returns:
             HTTP response
         """
+        params: Dict[str, Any] = {
+            "desc": desc,
+            "with_crop": with_crop,
+            "sampling": sampling,
+            "offset": offset,
+        }
+        # Omitted rather than defaulted client-side, so the API can size it from the sampled set.
+        if limit is not None:
+            params["limit"] = limit
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
-            params={"limit": limit, "desc": desc, "with_crop": with_crop},
+            params=params,
             timeout=self.timeout,
         )
 

@@ -148,7 +148,7 @@ def _serialize_alert(
 
 async def _serialize_alerts_page(
     session: AsyncSession,
-    alerts_stmt: SelectOfScalar[Alert],  # ty: ignore[not-subscriptable]
+    alerts_stmt: SelectOfScalar[Alert],  # ty: ignore[invalid-type-form]
     seq_filter: Union[ColumnElement[bool], None],
 ) -> List[AlertReadWithSequences]:
     """Run an alert-selecting statement and hydrate each row with its filtered sequences and detection counts."""

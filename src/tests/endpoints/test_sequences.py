@@ -899,6 +899,338 @@ async def test_fetch_sequence_detections_offset_validation(
     assert response.status_code == 422
 
 
+@pytest.fixture
+def user_auth():
+    return pytest.get_token(
+        pytest.user_table[0]["id"],
+        pytest.user_table[0]["role"].split(),
+        pytest.user_table[0]["organization_id"],
+    )
+
+
+async def _seed_sampling_sequence(session: AsyncSession, count: int = 10) -> tuple[int, List[int]]:
+    """Create a sequence with `count` detections one minute apart, oldest first.
+
+    The fixtures only give sequence 1 three detections, too few to tell an interval from a limit.
+    """
+    now = utcnow()
+    sequence = Sequence(
+        camera_id=pytest.camera_table[0]["id"],
+        pose_id=pytest.pose_table[0]["id"],
+        camera_azimuth=180.0,
+        sequence_azimuth=175.0,
+        cone_angle=5.0,
+        is_wildfire=None,
+        started_at=now - timedelta(minutes=count),
+        last_seen_at=now,
+    )
+    session.add(sequence)
+    await session.commit()
+    await session.refresh(sequence)
+
+    detections = [
+        Detection(
+            camera_id=sequence.camera_id,
+            pose_id=pytest.pose_table[0]["id"],
+            sequence_id=sequence.id,
+            bucket_key=f"sampling-{sequence.id}-{idx}.jpg",
+            bbox="[(.1,.1,.7,.8,.9)]",
+            others_bboxes=None,
+            created_at=now - timedelta(minutes=count - idx),
+        )
+        for idx in range(count)
+    ]
+    session.add_all(detections)
+    await session.commit()
+    for detection in detections:
+        await session.refresh(detection)
+
+    return sequence.id, [detection.id for detection in detections]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_set_is_independent_of_desc(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """Same ids, reversed order: if this regresses the player shows different frames per
+    scroll direction."""
+    sequence_id, _ = await _seed_sampling_sequence(detection_session)
+
+    asc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=user_auth
+    )
+    desc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&limit=10", headers=user_auth
+    )
+    assert asc.status_code == 200, asc.text
+    assert desc.status_code == 200, desc.text
+
+    asc_ids = [det["id"] for det in asc.json()]
+    desc_ids = [det["id"] for det in desc.json()]
+    assert asc_ids == list(reversed(desc_ids))
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_one_matches_default(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    pinned_url_window: None,
+    user_auth: Dict[str, str],
+):
+    """sampling=1 must be indistinguishable from not passing it at all, urls included."""
+    sequence_id, _ = await _seed_sampling_sequence(detection_session)
+
+    default = await async_client.get(f"/sequences/{sequence_id}/detections?limit=10&desc=false", headers=user_auth)
+    sampled = await async_client.get(
+        f"/sequences/{sequence_id}/detections?limit=10&desc=false&sampling=1", headers=user_auth
+    )
+    assert default.status_code == 200, default.text
+    assert sampled.status_code == 200, sampled.text
+    # Full equality, urls included. The fixture pins the presign window so a rollover between
+    # the two requests can't make the urls differ for reasons unrelated to sampling; that the
+    # cache is actually used is covered by
+    # test_fetch_sequence_detections_reuses_presigned_urls_across_requests.
+    assert default.json() == sampled.json()
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_interval(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """sampling=2 over 10 detections keeps chronological positions 1, 3, 5, 7, 9."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=10", headers=user_auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[::2]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """Without an explicit limit, sampling returns the whole span rather than its tail: the
+    historical limit=10 default would have silently returned only the 10 most recent."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&desc=false", headers=user_auth)
+    assert response.status_code == 200, response.text
+    # ceil(30 / 2) = 15 frames, spanning the sequence rather than stopping at 10.
+    assert [det["id"] for det in response.json()] == chronological_ids[::2]
+    assert len(response.json()) == 15
+    assert response.headers["x-sampled-total"] == "15"
+    assert response.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """An explicit limit is honoured, and the headers say the span was cut short."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4", headers=user_auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[::2][:4]
+    assert response.headers["x-sampled-total"] == "15"
+    assert response.headers["x-sampled-truncated"] == "true"
+
+    # X-Sampled-Total counts what is left from the offset onward, so reaching the end of the
+    # sequence is not truncation: 30 detections, offset 22, sampling 2 leaves ceil(8 / 2) = 4.
+    tail = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=4&offset=22", headers=user_auth
+    )
+    assert tail.status_code == 200, tail.text
+    assert tail.headers["x-sampled-total"] == "4"
+    assert tail.headers["x-sampled-truncated"] == "false"
+
+    # An offset past the end leaves nothing to return, and says so rather than erroring.
+    past = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=2&offset=99", headers=user_auth)
+    assert past.status_code == 200, past.text
+    assert past.json() == []
+    assert past.headers["x-sampled-total"] == "0"
+    assert past.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_unsampled_default_limit_unchanged(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """sampling=1 keeps the historical limit=10 default and skips the extra count entirely."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?desc=false", headers=user_auth)
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == chronological_ids[:10]
+    # The headers describe a sampled set, so they are absent when nothing was sampled.
+    assert "x-sampled-total" not in response.headers
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """A sampling interval past the detection count still yields one row, not zero."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=10)
+
+    response = await async_client.get(f"/sequences/{sequence_id}/detections?sampling=500", headers=user_auth)
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[0]]
+    assert response.headers["x-sampled-total"] == "1"
+    assert response.headers["x-sampled-truncated"] == "false"
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_offset_counts_raw_detections(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """offset skips raw detections, not sampled frames: positions 4, 6, 8, 10 for offset=3 and
+    sampling=2, of which limit=2 returns the first two."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+
+    response = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&limit=2&offset=3", headers=user_auth
+    )
+    assert response.status_code == 200, response.text
+    assert [det["id"] for det in response.json()] == [chronological_ids[3], chronological_ids[5]]
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_offset_ignores_desc(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """offset counts from the oldest end, so both directions select the same frames and differ
+    only in order."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session)
+
+    asc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=false&offset=3", headers=user_auth
+    )
+    desc = await async_client.get(
+        f"/sequences/{sequence_id}/detections?sampling=2&desc=true&offset=3", headers=user_auth
+    )
+    assert asc.status_code == 200, asc.text
+    assert desc.status_code == 200, desc.text
+
+    expected = [chronological_ids[i] for i in (3, 5, 7, 9)]
+    assert [det["id"] for det in asc.json()] == expected
+    assert [det["id"] for det in desc.json()] == list(reversed(expected))
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    user_auth: Dict[str, str],
+):
+    """offset sets where the grid starts, so only multiples of sampling keep it on the same
+    detections. This is the paging rule callers are given."""
+    sequence_id, chronological_ids = await _seed_sampling_sequence(detection_session, count=30)
+
+    sampling, limit = 3, 4
+    pages = []
+    for page in range(3):
+        offset = page * limit * sampling
+        response = await async_client.get(
+            f"/sequences/{sequence_id}/detections?sampling={sampling}&desc=false&limit={limit}&offset={offset}",
+            headers=user_auth,
+        )
+        assert response.status_code == 200, response.text
+        pages.append([det["id"] for det in response.json()])
+
+    walked = [det_id for page in pages for det_id in page]
+    assert walked == chronological_ids[::sampling]
+    assert len(walked) == len(set(walked))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("query", "status_code"),
+    [
+        ("sampling=0", 422),
+        ("sampling=-1", 422),
+        ("sampling=1", 200),
+        ("sampling=10000", 200),
+        ("sampling=10001", 422),
+        # asyncpg can't encode this into int8, so without an upper bound this reached the
+        # database and came back as a 500 instead of a validation error.
+        ("sampling=9223372036854775808", 422),
+        ("limit=500", 200),
+        ("limit=501", 422),
+    ],
+)
+async def test_fetch_sequence_detections_sampling_validation(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    query: str,
+    status_code: int,
+    user_auth: Dict[str, str],
+):
+    response = await async_client.get(f"/sequences/1/detections?{query}", headers=user_auth)
+    assert response.status_code == status_code, response.text
+
+
+@pytest.mark.asyncio
+async def test_fetch_sequence_detections_reuses_presigned_urls_across_requests(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    pinned_url_window: None,
+    user_auth: Dict[str, str],
+):
+    """A repeat request serves cached urls instead of re-signing.
+
+    Counts presign calls rather than comparing urls: two signatures taken in the same wall-clock
+    second are identical anyway, so a url comparison would pass even with the cache removed.
+    """
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[0]["organization_id"]))
+    presign_calls: List[str] = []
+    original_presign = bucket._presign
+
+    def counting_presign(bucket_key: str, url_expiration: int) -> str:
+        presign_calls.append(bucket_key)
+        return original_presign(bucket_key, url_expiration)
+
+    bucket._presign = counting_presign  # type: ignore[method-assign]
+    try:
+        first = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=user_auth)
+        signed_once = len(presign_calls)
+        second = await async_client.get("/sequences/1/detections?limit=10&desc=false", headers=user_auth)
+    finally:
+        del bucket._presign
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+
+    first_urls = {det["id"]: det["url"] for det in first.json()}
+    assert first_urls
+    assert {det["id"]: det["url"] for det in second.json()} == first_urls
+    # One presign per distinct key: the fixture detections of sequence 1 all share a bucket_key,
+    # so the cache already collapses them within a single request.
+    assert signed_once == len(set(first_urls.values()))
+    # The second request signed nothing at all.
+    assert len(presign_calls) == signed_once
+
+
 @pytest.mark.asyncio
 async def test_unit_label_sequence_forbidden_for_wrong_org():
     """Verify that an AGENT from a different organization cannot label the sequence."""
