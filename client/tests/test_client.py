@@ -208,3 +208,25 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert len(response.json()) == 3  # ceil(5 / 2)
     assert response.headers["x-sampled-total"] == "3"
     assert response.headers["x-sampled-truncated"] == "false"
+
+
+def test_heartbeat_timeout_override(monkeypatch):
+    """heartbeat() uses the client timeout unless an explicit per-call timeout is given."""
+
+    class _Resp:
+        status_code = 200
+        text = "ok"
+
+    captured: list = []
+
+    def fake_patch(url, headers=None, timeout=None):
+        captured.append(timeout)
+        return _Resp()
+
+    monkeypatch.setattr(requests, "get", lambda *_args, **_kwargs: _Resp())
+    monkeypatch.setattr(requests, "patch", fake_patch)
+
+    api_client = Client("tok", "http://testserver", timeout=10)
+    api_client.heartbeat()
+    api_client.heartbeat(timeout=3)
+    assert captured == [10, 3]
