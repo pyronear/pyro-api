@@ -56,7 +56,7 @@ async def test_unlabeled_latest_drops_low_conf_when_camera_is_low_risk(
 ):
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.40, minutes_ago=30)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=30)
     high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=20)
 
     risk_service._scores = {camera_id: "low"}
@@ -80,9 +80,9 @@ async def test_unlabeled_latest_admin_bypasses_risk_filter(
     """Admins skip the risk filter entirely; the ``risk_score`` override is ignored for them."""
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.40, minutes_ago=30)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=30)
 
-    risk_service._scores = {camera_id: "low"}  # 0.45 threshold would drop the sequence
+    risk_service._scores = {camera_id: "low"}  # 0.30 threshold would drop the sequence
 
     auth = pytest.get_token(
         pytest.user_table[0]["id"],
@@ -101,8 +101,8 @@ async def test_unlabeled_latest_drops_below_very_low_threshold(
 ):
     camera_id = pytest.camera_table[0]["id"]
     pose_id = pytest.pose_table[0]["id"]
-    # 0.55 passes the low threshold (0.45) but fails very_low (0.6)
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=25)
+    # 0.32 passes the low threshold (0.30) but fails very_low (0.35)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.32, minutes_ago=25)
 
     risk_service._scores = {camera_id: "very_low"}
 
@@ -147,7 +147,7 @@ async def test_unlabeled_latest_keeps_seq_with_null_max_conf_under_filter(
     pose_id = pytest.pose_table[0]["id"]
     null_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=None, minutes_ago=20)  # type: ignore[arg-type]
 
-    risk_service._scores = {camera_id: "low"}  # 0.45 threshold, would normally drop
+    risk_service._scores = {camera_id: "low"}  # 0.30 threshold, would normally drop
 
     auth = pytest.get_token(
         pytest.user_table[1]["id"],
@@ -169,7 +169,7 @@ async def test_unlabeled_latest_keeps_seq_for_camera_unknown_to_risk_api(
     known_pose = pytest.pose_table[0]["id"]
     unknown_pose = pytest.pose_table[2]["id"]
 
-    # Cache only knows about ``known_cam`` and flags it ``low`` (0.45 threshold).
+    # Cache only knows about ``known_cam`` and flags it ``low`` (0.30 threshold).
     # ``unknown_cam`` has no entry -> CASE else_=0.0 -> any max_conf passes.
     risk_service._scores = {known_cam: "low"}
 
@@ -218,7 +218,7 @@ async def test_alerts_unlabeled_latest_drops_alert_when_all_seqs_below_threshold
 ):
     camera_id = pytest.camera_table[1]["id"]  # belongs to org 2 (user_idx 2)
     pose_id = pytest.pose_table[2]["id"]
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
     alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
     risk_service._scores = {camera_id: "low"}
@@ -239,10 +239,10 @@ async def test_alerts_unlabeled_latest_risk_score_override(
 ):
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
     alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
-    # Risk-api would say "moderate" (no filter), but the override forces "low" -> 0.45 threshold drops it.
+    # Risk-api would say "moderate" (no filter), but the override forces "low" -> 0.30 threshold drops it.
     risk_service._scores = {camera_id: "moderate"}
 
     auth = pytest.get_token(
@@ -262,7 +262,7 @@ async def test_alerts_unlabeled_latest_count_matches_list_under_risk_filter(
     """The count endpoint must apply the same risk_score filter as the list, so the two stay in sync."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
     high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=15)
     await _seed_alert_with_sequence(detection_session, organization_id=2, seq=low_seq)
     kept_alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=high_seq)
@@ -275,7 +275,7 @@ async def test_alerts_unlabeled_latest_count_matches_list_under_risk_filter(
         pytest.user_table[2]["organization_id"],
     )
 
-    # low threshold (0.45) drops the 0.30 alert but keeps the 0.55 one.
+    # low threshold (0.30) drops the 0.20 alert but keeps the 0.55 one.
     count_resp = await async_client.get("/alerts/unlabeled/latest/count?risk_score=low", headers=auth)
     assert count_resp.status_code == 200, print(count_resp.__dict__)
     assert count_resp.json() == {"count": 1}
@@ -335,7 +335,7 @@ async def test_sequences_unlabeled_latest_risk_score_override_drops_low_conf(
 ):
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
     high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.55, minutes_ago=15)
 
     auth = pytest.get_token(
@@ -399,7 +399,7 @@ async def test_alerts_unlabeled_latest_keeps_alert_with_mixed_seqs(
     """An alert mixing one passing and one failing sequence stays, with only the passing seq in payload."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=25)
+    low_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=25)
     high_seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.70, minutes_ago=15)
 
     now = utcnow()
@@ -415,7 +415,7 @@ async def test_alerts_unlabeled_latest_keeps_alert_with_mixed_seqs(
     detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=high_seq.id))
     await detection_session.commit()
 
-    risk_service._scores = {camera_id: "low"}  # 0.45 threshold
+    risk_service._scores = {camera_id: "low"}  # 0.30 threshold
 
     auth = pytest.get_token(
         pytest.user_table[2]["id"],
@@ -439,7 +439,7 @@ async def test_alerts_fromdate_risk_score_override_drops_low_conf_alert(
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
     target_date = utcnow().date().isoformat()
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.30, minutes_ago=20)
+    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
     alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
 
     auth = pytest.get_token(
@@ -629,4 +629,4 @@ async def test_sequences_fromdate_pagination_filters_before_limit(
     assert response.status_code == 200, print(response.__dict__)
     page = response.json()
     assert len(page) == 3
-    assert all(seq["max_conf"] >= 0.45 for seq in page)
+    assert all(seq["max_conf"] >= 0.30 for seq in page)
