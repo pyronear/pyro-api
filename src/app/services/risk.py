@@ -19,10 +19,11 @@ __all__ = ["FWI_MIN_CONF", "FwiClass", "min_confidence_for_class", "risk_service
 FwiClass = Literal["very_low", "low", "moderate", "high", "very_high", "extreme"]
 
 # Minimum sequence ``max_conf`` required per FWI class. Zero or absent → no filter.
+# very_low and low are temporarily lowered until the Ocorus study gives final values.
 # All EFFIS classes are listed even when unused so the table stays explicit and easy to tune.
 FWI_MIN_CONF: dict[str, float] = {
-    "very_low": 0.6,
-    "low": 0.45,
+    "very_low": 0.35,
+    "low": 0.3,
     "moderate": 0.0,
     "high": 0.0,
     "very_high": 0.0,
