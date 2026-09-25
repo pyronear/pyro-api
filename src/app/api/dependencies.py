@@ -8,7 +8,7 @@ from typing import Dict, Type, TypeVar, Union, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
-from httpx import AsyncClient, HTTPStatusError
+from httpx import AsyncClient, HTTPStatusError, RequestError
 from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
 from jwt import decode as jwt_decode
 from pydantic import BaseModel, ValidationError
@@ -135,8 +135,10 @@ async def get_current_user(
 async def dispatch_webhook(url: str, payload: BaseModel) -> None:
     async with AsyncClient(timeout=5) as client:
         try:
-            response = await client.post(url, json=payload.model_dump_json())
+            response = await client.post(url, json=payload.model_dump(mode="json"))
             response.raise_for_status()
             logger.info(f"Successfully dispatched to {url}")
         except HTTPStatusError as e:
             logger.error(f"Error dispatching webhook to {url}: {e.response.status_code} - {e.response.text}")
+        except RequestError as e:
+            logger.error(f"Error dispatching webhook to {url}: {e}")

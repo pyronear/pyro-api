@@ -1,8 +1,12 @@
+from datetime import datetime
+
 import pytest
 from fastapi import HTTPException
 from fastapi.security import SecurityScopes
+from httpx import ConnectError
+from pydantic import BaseModel
 
-from app.api.dependencies import get_jwt
+from app.api.dependencies import dispatch_webhook, get_jwt
 from app.core.security import create_access_token
 
 
@@ -54,3 +58,41 @@ def test_get_jwt(scopes, token, expires_minutes, error_code, expected_payload):
         payload = get_jwt(SecurityScopes(scopes), token_)
         if expected_payload is not None:
             assert payload.model_dump() == expected_payload
+
+
+@pytest.mark.asyncio
+async def test_dispatch_webhook_sends_json_object(monkeypatch):
+    captured = {}
+
+    class _Response:
+        def raise_for_status(self):
+            return None
+
+    async def _post(self, url, json=None):  # ruff:ignore[unused-async] - must match AsyncClient.post's async signature
+        captured["json"] = json
+        return _Response()
+
+    monkeypatch.setattr("app.api.dependencies.AsyncClient.post", _post)
+
+    class _Payload(BaseModel):
+        id: int
+        created_at: datetime
+
+    await dispatch_webhook("https://example.com/hook", _Payload(id=1, created_at=datetime(2026, 6, 11, 15, 38, 6)))
+
+    # The body must be a JSON object, not a double-encoded JSON string
+    assert captured["json"] == {"id": 1, "created_at": "2026-06-11T15:38:06"}
+
+
+@pytest.mark.asyncio
+async def test_dispatch_webhook_swallows_request_errors(monkeypatch):
+    async def _post(self, url, json=None):  # ruff:ignore[unused-async] - must match AsyncClient.post's async signature
+        raise ConnectError("connection refused")
+
+    monkeypatch.setattr("app.api.dependencies.AsyncClient.post", _post)
+
+    class _Payload(BaseModel):
+        id: int
+
+    # Best-effort dispatch: a network failure is logged, never raised to the caller
+    await dispatch_webhook("https://example.com/hook", _Payload(id=1))
