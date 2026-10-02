@@ -9,7 +9,7 @@ import secrets
 import socket
 from typing import Union
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["settings"]
@@ -41,10 +41,17 @@ class Settings(BaseSettings):
         return v
 
     # Security
-    JWT_SECRET: str = os.environ.get("JWT_SECRET") or secrets.token_urlsafe(32)
+    JWT_SECRET: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     JWT_EXPIRE_MINUTES: int = 60
     JWT_UNLIMITED: int = 60 * 24 * 365
     JWT_ALGORITHM: str = "HS256"
+
+    @field_validator("JWT_SECRET")
+    @classmethod
+    def jwt_secret_can_be_blank(cls, v: str) -> str:
+        # Compose passes an empty value when no secret is configured. Normalize it
+        # after settings loading so it cannot replace the generated default.
+        return v or secrets.token_urlsafe(32)
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5
