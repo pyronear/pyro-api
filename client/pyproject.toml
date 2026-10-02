@@ -39,12 +39,11 @@ test = [
     "types-requests>=2.33.0.20260712",
 ]
 docs = [
-    "sphinx>=3.0.0,!=3.5.0",
+    "sphinx>=5.3.0",
     "sphinxemoji>=0.1.8",
     "sphinx-copybutton>=0.3.1",
     "docutils<0.18",
-    # cf. https://github.com/readthedocs/readthedocs.org/issues/9038
-    "Jinja2<3.1",
+    "Jinja2>=3.1.6,<4.0.0",
     "furo>=2022.3.4",
 ]
 
