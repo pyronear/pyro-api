@@ -1,9 +1,33 @@
 import logging
+import secrets
 
 import pytest
 from pydantic import ValidationError
 
 from app.core.config import Settings
+
+
+@pytest.mark.parametrize("secret", [None, ""])
+def test_settings_generate_jwt_secret_when_unset_or_empty(monkeypatch, secret):
+    if secret is None:
+        monkeypatch.delenv("JWT_SECRET", raising=False)
+    else:
+        monkeypatch.setenv("JWT_SECRET", secret)
+
+    first = Settings().JWT_SECRET
+    second = Settings().JWT_SECRET
+    assert len(first) >= 32
+    assert len(second) >= 32
+    assert first != second
+
+
+def test_settings_preserve_configured_jwt_secret(monkeypatch):
+    secret = secrets.token_urlsafe(32)
+    monkeypatch.setenv("JWT_SECRET", secret)
+    first = Settings().JWT_SECRET
+    second = Settings().JWT_SECRET
+    assert first == secret
+    assert second == secret
 
 
 @pytest.mark.parametrize(
