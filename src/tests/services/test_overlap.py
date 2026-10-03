@@ -6,9 +6,21 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
+import pytest
+from shapely.geometry import box
 
 from app.core.time import utcnow
-from app.services.overlap import compute_overlap
+from app.services.overlap import _find_overlapping_pairs, compute_overlap
+
+
+@pytest.mark.parametrize("relaxation", [0, 30])
+def test_overlap_pairs_preserve_input_order_and_time_boundary(relaxation) -> None:
+    now = pd.Timestamp("2026-10-03", tz="UTC")
+    starts = [now, now + timedelta(seconds=relaxation), now + timedelta(seconds=relaxation + 0.001), now]
+    frame = pd.DataFrame({"id": [71, 13, 42, 9], "started_at": starts, "last_seen_at": starts})
+    cones = {71: box(0, 0, 2, 2), 13: box(1, 1, 3, 3), 42: box(0, 0, 2, 2), 9: box(10, 10, 11, 11)}
+    expected = [(71, 13)] + ([(13, 42)] if relaxation else [])
+    assert _find_overlapping_pairs(frame, cones, relaxation) == expected
 
 
 def _make_sequence(

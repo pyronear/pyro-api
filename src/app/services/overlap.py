@@ -16,16 +16,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import networkx as nx
 import numpy as np
 import pandas as pd
-import pyproj
-from geopy.distance import geodesic
-from pyproj import Transformer
+from pyproj import Geod, Transformer
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform as shapely_transform
+from shapely.strtree import STRtree
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+_GEOD = Geod(ellps="WGS84")
+_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -71,8 +73,7 @@ def get_centroid_latlon(geom: BaseGeometry) -> Tuple[float, float]:
         Latitude and longitude of the centroid in EPSG:4326.
     """
     centroid = geom.centroid
-    transformer = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
-    lon, lat = transformer.transform(centroid.x, centroid.y)
+    lon, lat = _TO_LATLON.transform(centroid.x, centroid.y)
     return float(lat), float(lon)
 
 
@@ -111,16 +112,17 @@ def _build_cone_polygon(
         Cone polygon in EPSG:4326 coordinates.
     """
     half_angle = opening_angle / 2.0
-    angles = np.linspace(azimuth - half_angle, azimuth + half_angle, resolution)
+    angles = np.linspace(azimuth - half_angle, azimuth + half_angle, resolution) % 360
+    lons, lats = np.full(resolution, lon), np.full(resolution, lat)
 
     # Outer arc points
-    outer_arc = [geodesic(kilometers=dist_km).destination((lat, lon), float(az % 360)) for az in angles]
-    outer_points = [(p.longitude, p.latitude) for p in outer_arc]
+    outer_lons, outer_lats, _ = _GEOD.fwd(lons, lats, angles, np.full(resolution, dist_km * 1000))
+    outer_points = list(zip(outer_lons, outer_lats, strict=True))
 
     if r_min_km > 0:
         # Inner arc points, walk reversed so ring orientation stays valid
-        inner_arc = [geodesic(kilometers=r_min_km).destination((lat, lon), float(az % 360)) for az in reversed(angles)]
-        inner_points = [(p.longitude, p.latitude) for p in inner_arc]
+        inner_lons, inner_lats, _ = _GEOD.fwd(lons, lats, angles[::-1], np.full(resolution, r_min_km * 1000))
+        inner_points = list(zip(inner_lons, inner_lats, strict=True))
         # Outer ring with a hole for the inner radius
         return Polygon(outer_points + inner_points, holes=[inner_points]).buffer(0)
     # Triangle like sector with apex at camera position
@@ -141,8 +143,7 @@ def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
     Polygon
         Geometry in EPSG:3857.
     """
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-    return shapely_transform(transformer.transform, polygon)
+    return shapely_transform(_TO_MERCATOR.transform, polygon)
 
 
 def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
@@ -329,29 +330,32 @@ def _find_overlapping_pairs(
 ) -> List[Tuple[int, int]]:
     if time_relaxation_seconds is None:
         time_relaxation_seconds = settings.TRIANGULATION_RELAXATION_SECONDS
-    ids = df_valid["id"].astype(int).tolist()
+    ids = [sid for sid in df_valid["id"].astype(int).tolist() if sid in projected_cones]
     cols = ["started_at", "last_seen_at"]
     rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
+    cones = [projected_cones[sid] for sid in ids]
+    tree = STRtree(cones)
     # `_attach_sequence_to_alert` runs when the validation worker validates a sequence,
     # which can be early in its life (a few frames in) while prior sequences' windows
     # haven't been bumped yet. Treat any pair within `time_relaxation_seconds` of each
-    # other as concurrent so we don't drop them before the spatial test.
+    # other as concurrent when building overlap groups.
     # Near-apex pairs (same pose or same mast) are kept as grouping evidence — they see
     # the same event — but are excluded from location math downstream.
     tolerance = timedelta(seconds=time_relaxation_seconds)
     overlapping_pairs: List[Tuple[int, int]] = []
     for i, id1 in enumerate(ids):
         row1 = rows_by_id[id1]
-        for id2 in ids[i + 1 :]:
+        for j in sorted(tree.query(cones[i], predicate="intersects")):
+            if j <= i:
+                continue
+            id2 = ids[j]
             row2 = rows_by_id[id2]
             if (
                 row1["started_at"] - row2["last_seen_at"] > tolerance
                 or row2["started_at"] - row1["last_seen_at"] > tolerance
             ):
                 continue
-            # Spatial overlap test
-            if projected_cones[id1].intersects(projected_cones[id2]):
-                overlapping_pairs.append((id1, id2))
+            overlapping_pairs.append((id1, id2))
     return overlapping_pairs
 
 
