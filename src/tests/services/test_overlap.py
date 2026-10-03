@@ -68,6 +68,21 @@ def test_compute_overlap_groups_and_locations() -> None:
     assert row4["event_smoke_locations"] == [None]
 
 
+def test_compute_overlap_centroids_are_isolated_between_calls() -> None:
+    now = utcnow()
+    frame = pd.DataFrame([
+        _make_sequence(20, 48.3792, 2.8208, 276.5, 3.0, now, now),
+        _make_sequence(21, 48.4267, 2.7109, 163.4, 1.0, now, now),
+    ])
+    first = compute_overlap(frame)
+    frame["lon"] += 1
+    second = compute_overlap(frame)
+    assert first["event_groups"].tolist() == second["event_groups"].tolist()
+    location = first.iloc[0]["event_smoke_locations"][0]
+    assert location is not None
+    assert second.iloc[0]["event_smoke_locations"][0] == pytest.approx((location[0], location[1] + 1), abs=1e-8)
+
+
 def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
     # Two cones from different poses whose first-detection windows are 30 s apart:
     # at sequence-creation time, last_seen_at == started_at, so the strict time
