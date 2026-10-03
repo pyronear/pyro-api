@@ -19,7 +19,7 @@ async def test_upload_streams_hashes_preserves_bytes_and_errors(outcome, monkeyp
 
     class BoundedFile(io.BytesIO):
         def read(self, size=-1):
-            assert 0 < size <= 256 * 1024
+            assert 0 < size <= 64 * 1024
             return super().read(size)
 
     def upload(key, file):
@@ -58,7 +58,7 @@ async def test_upload_pool_is_bounded_and_keeps_event_loop_responsive(monkeypatc
 
     def upload(*args):
         started.append(threading.get_ident())
-        if len(started) == 4:
+        if len(started) == 8:
             anyio.from_thread.run_sync(ready.set)
         assert release.wait(timeout=5)
         return "uploaded"
@@ -66,13 +66,13 @@ async def test_upload_pool_is_bounded_and_keeps_event_loop_responsive(monkeypatc
     monkeypatch.setattr(storage, "_upload_file", upload)
     try:
         async with anyio.create_task_group() as group:
-            for _ in range(5):
+            for _ in range(9):
                 group.start_soon(storage.upload_file, None, 1, 7)
             with anyio.fail_after(3):
                 await ready.wait()
             await anyio.sleep(0.01)
-            assert len(started) == 4
+            assert len(started) == 8
             release.set()
     finally:
         release.set()
-    assert len(started) == 5
+    assert len(started) == 9

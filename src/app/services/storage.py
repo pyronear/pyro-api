@@ -28,7 +28,7 @@ logger = logging.getLogger("uvicorn.warning")
 # ceiling is that times the organization count, times the worker count.
 _URL_CACHE_MAXSIZE = 8192
 # S3 transfers use their own threads too; bound concurrent uploads per API worker.
-_UPLOAD_LIMITER = CapacityLimiter(4)
+_UPLOAD_LIMITER = CapacityLimiter(8)
 
 
 def _url_cache_window(url_expiration: int) -> int:
@@ -279,9 +279,10 @@ def _upload_file(file: UploadFile, organization_id: int, camera_id: int, key_pre
     md5 = hashlib.md5(usedforsecurity=False)
     head = file.file.read(8192)
     file.file.seek(0)
-    while chunk := file.file.read(256 * 1024):
+    while chunk := file.file.read(64 * 1024):
         sha.update(chunk)
         md5.update(chunk)
+        del chunk
     sha_hash, md5_hash = sha.hexdigest(), md5.hexdigest()
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(head, mime=True)) or ""
