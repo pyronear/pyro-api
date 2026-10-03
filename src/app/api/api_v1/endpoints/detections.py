@@ -802,7 +802,7 @@ async def delete_detection(
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
     # The frame object is shared by every detection of the same upload (multi-bbox siblings,
     # continuity rows): only delete it once no other row references it. Crops are per-row.
-    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key))
+    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key), limit=2)
     if all(d.id == detection_id for d in sharing):
         bucket.delete_file(detection.bucket_key)
     if detection.crop_bucket_key:
