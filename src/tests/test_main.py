@@ -148,12 +148,15 @@ async def test_lifespan_skips_risk_refresh_but_starts_validation_worker_when_ris
     with (
         patch("app.main.risk_service", fake_service),
         patch("app.main.asyncio.create_task", create_task_mock),
+        patch("app.main.temporal_service.aclose", new_callable=AsyncMock) as close_client,
     ):
         async with lifespan(FastAPI()):
             fake_service.refresh.assert_not_awaited()
             create_task_mock.assert_called_once()  # the validation worker always runs
+            close_client.assert_not_awaited()
 
     assert fake_task.cancel_called is True
+    close_client.assert_awaited_once()
 
 
 @pytest.mark.asyncio
