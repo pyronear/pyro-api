@@ -1,0 +1,12 @@
+{
+  "README.md": "53c8afce1a621c0189eccd1785852ea0aeaace3b0ac0a59c1bd563441c531bf7",
+  "REPORT.md": "238ed0fac53dde656211b723bea0d9cf88866f43b317f5fffab2ae096f0a72c2",
+  "temporal_client.py": "d239a50a63656cbc1fb8ca16d5f2adba4291bb1bbf0e4d548672ab0422f4c7fe",
+  "bootstrap.py": "ad66fb1f2c6fba12d9dd6e1a339e914483e667fc8d7679eff80b53cddd82b7e4",
+  "run_matrix.py": "c0e7f69ab052db20e83448c2300fbf9b84e7b46ca67c2839acf88b4f791b5c7e",
+  "baseline_temporal.py": "8ab15b50596e237de0190a8bf4f69f396ee342775e434a507d65e8e4f3dc2b51",
+  "updated_temporal.py": "fcfc2711491372bf68179b3495e5e06dbd8866da81bce41fb0f9faf69fba6ad6",
+  "original_results.jsonl": "d5b5a6a377256576bbc9858989b55eddf6e91a6b41a18faea414c566737db200",
+  "original_summary.json": "c61bfa8a9691c91affc23c22193e74122f343254cee2117c7e71b92cc970c52e",
+  "original_provenance.json": "6687eba4dd2b9f517187bf854761379907c71381aa0a77239cdc5d805e3eadbd"
+}

@@ -1,0 +1,19 @@
+{
+  "baseline_commit": "25f3d2ed10bde088ddd2a62c22711bfdfbde695e",
+  "updated_commit": "48eef0e2adaca911754e85c802b62a17733da225",
+  "seed": 705707,
+  "repeats": 5,
+  "requests_per_case": 100,
+  "python": "3.11.15",
+  "httpx": "0.28.1",
+  "files": {
+    "benchmarks/temporal-client/baseline_temporal.py": "8ab15b50596e237de0190a8bf4f69f396ee342775e434a507d65e8e4f3dc2b51",
+    "benchmarks/temporal-client/updated_temporal.py": "fcfc2711491372bf68179b3495e5e06dbd8866da81bce41fb0f9faf69fba6ad6",
+    "scripts/benchmarks/temporal_client.py": "d239a50a63656cbc1fb8ca16d5f2adba4291bb1bbf0e4d548672ab0422f4c7fe",
+    "benchmarks/temporal-client/run_matrix.py": "ece6218abbc0bd61887d5b97e79ce4bc3f99ec370b99312895560e6abf7a614b",
+    "benchmarks/temporal-client/lifecycle.py": "63381363c463ea3db7ecd9cc168247d01ec1b40df7e69072918d26c4887eaaf1",
+    "benchmarks/results/temporal_client.jsonl": "d5b5a6a377256576bbc9858989b55eddf6e91a6b41a18faea414c566737db200"
+  },
+  "pr": "https://github.com/pyronear/pyro-api/pull/708",
+  "note": "The matrix now reads the frozen PR snapshot. It is byte-identical to the worktree source used for these measurements."
+}
