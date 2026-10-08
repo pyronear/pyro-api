@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 root = Path(__file__).parent
 summary = json.loads((root / "results/summary.json").read_text())
 labels, ratios, values = [], [], []
-for row in summary[:3]:
+for row in summary[:1]:
     before, after = row["pandas"]["median_ms"], row["records"]["median_ms"]
     labels.append(f"Time · {row['size']} views")
     ratios.append(after / before * 100)
@@ -21,9 +21,9 @@ ratios.append(after / before * 100)
 values.append(f"{before:.1f} → {after:.1f} MiB")
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10})
-fig, ax = plt.subplots(figsize=(9, 3.2), layout="constrained")
-ys = list(range(4))[::-1]
-ax.barh(ys, [100] * 4, color="#e2e8f0", height=0.55, label="#706")
+fig, ax = plt.subplots(figsize=(9, 2.1), layout="constrained")
+ys = list(range(len(labels)))[::-1]
+ax.barh(ys, [100] * len(labels), color="#e2e8f0", height=0.55, label="#706")
 ax.barh(ys, ratios, color="#2563eb", height=0.36, label="Python records")
 for y, ratio, value in zip(ys, ratios, values, strict=True):
     ax.text(103, y, value, va="center", color="#0f172a", fontsize=10)
@@ -32,7 +32,7 @@ ax.set_yticks(ys, labels)
 ax.set_xlim(0, 146)
 ax.set_xticks([0, 25, 50, 75, 100], ["0%", "25%", "50%", "75%", "100%"])
 ax.set_xlabel("Gray: #706 (100%). Blue: Python records. Lower is better.", loc="left")
-ax.set_title("Remove pandas: less memory per process, less work per call", loc="left", weight="bold", pad=16)
+ax.set_title("Less time for 3 views; less memory for 300 views", loc="left", weight="bold", pad=16)
 ax.tick_params(axis="both", length=0)
 for spine in ax.spines.values():
     spine.set_visible(False)
