@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.models import AnnotationType, Sequence
 
-__all__ = ["SequenceLabel", "SequenceRead", "SequenceUpdate"]
+__all__ = ["SequenceAzimuth", "SequenceLabel", "SequenceRead", "SequenceUpdate"]
 
 
 # Accesses
@@ -30,3 +30,7 @@ class SequenceRead(Sequence):
     validation_lease_until: Union[datetime, None] = Field(None, exclude=True)
     validation_status: Union[str, None] = Field(None, exclude=True)
     validation_attempts: int = Field(0, exclude=True)
+
+
+class SequenceAzimuth(BaseModel):
+    sequence_azimuth: float = Field(..., ge=0, lt=360)

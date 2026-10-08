@@ -15,14 +15,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.time import utcnow
 from app.crud.base import BaseCRUD
 from app.models import TERMINAL_VALIDATION_STATUSES, VALIDATION_FAILED, Detection, Sequence
-from app.schemas.sequences import SequenceLabel, SequenceUpdate
+from app.schemas.sequences import SequenceAzimuth, SequenceLabel, SequenceUpdate
 
 __all__ = ["SequenceCRUD"]
 
 logger = logging.getLogger("uvicorn.error")
 
 
-class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLabel]]):
+class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceAzimuth, SequenceUpdate, SequenceLabel]]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Sequence)
 
