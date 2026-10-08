@@ -12,6 +12,7 @@ from typing import Any, BinaryIO, Dict, Tuple, Union
 
 import boto3
 import magic
+from anyio import CapacityLimiter, to_thread
 from botocore.exceptions import ClientError, EndpointConnectionError, NoCredentialsError, PartialCredentialsError
 from fastapi import HTTPException, UploadFile, status
 
@@ -26,6 +27,8 @@ logger = logging.getLogger("uvicorn.warning")
 # ~600 bytes per entry, so ~5 MB per bucket, and buckets are never evicted: the process
 # ceiling is that times the organization count, times the worker count.
 _URL_CACHE_MAXSIZE = 8192
+# S3 transfers use their own threads too; bound concurrent uploads per API worker.
+_UPLOAD_LIMITER = CapacityLimiter(8)
 
 
 def _url_cache_window(url_expiration: int) -> int:
@@ -266,19 +269,28 @@ class S3Service:
 
 async def upload_file(file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = "") -> str:
     """Upload a file to S3 storage and return the public URL"""
+    # Keep AnyIO's default cancellation shielding while the worker owns the file.
+    return await to_thread.run_sync(_upload_file, file, organization_id, camera_id, key_prefix, limiter=_UPLOAD_LIMITER)
+
+
+def _upload_file(file: UploadFile, organization_id: int, camera_id: int, key_prefix: str) -> str:
     # Concatenate the first 8 chars (to avoid system interactions issues) of SHA256 hash with file extension
-    sha_hash = hashlib.sha256(file.file.read()).hexdigest()
-    await file.seek(0)
-    # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
-    await file.seek(0)
+    sha = hashlib.sha256()
+    md5 = hashlib.md5(usedforsecurity=False)
+    head = file.file.read(8192)
+    file.file.seek(0)
+    while chunk := file.file.read(64 * 1024):
+        sha.update(chunk)
+        md5.update(chunk)
+        del chunk
+    sha_hash, md5_hash = sha.hexdigest(), md5.hexdigest()
     # guess_extension will return none if this fails
-    extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""
+    extension = guess_extension(magic.from_buffer(head, mime=True)) or ""
     # Concatenate timestamp & hash; key_prefix lets callers segregate distinct uploads in the
     # same request (e.g. frame vs crop) so identical bytes don't collide on the same key.
     bucket_key = f"{key_prefix}{camera_id}-{utcnow().strftime('%Y%m%d%H%M%S')}-{sha_hash[:8]}{extension}"
     # Reset byte position of the file (cf. https://fastapi.tiangolo.com/tutorial/request-files/#uploadfile)
-    await file.seek(0)
+    file.file.seek(0)
     bucket_name = s3_service.resolve_bucket_name(organization_id)
     bucket = s3_service.get_bucket(bucket_name)
     # Upload the file
