@@ -451,7 +451,7 @@ it in multiples of sampling</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pyroclient.client.Client.heartbeat">
-<span class="sig-name descname"><span class="pre">heartbeat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">heartbeat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Response</span></span></span><a class="reference internal" href="_modules/pyroclient/client.html#Client.heartbeat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pyroclient.client.Client.heartbeat" title="Permalink to this definition">#</a></dt>
 <dd><p>Update the last ping of the camera</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pyroclient</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">api_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">"MY_CAM_TOKEN"</span><span class="p">)</span>
@@ -459,8 +459,11 @@ it in multiples of sampling</p></li>
 </pre></div>
 </div>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>HTTP response containing the update device info</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>timeout</strong> – request timeout in seconds for this call only; defaults to the client timeout</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>HTTP response containing the update device info</p>
 </dd>
 </dl>
 </dd></dl>

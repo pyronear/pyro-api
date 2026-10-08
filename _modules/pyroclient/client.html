@@ -331,18 +331,23 @@
             <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<div class="viewcode-block" id="Client.heartbeat"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.heartbeat">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Update the last ping of the camera</span>
 
 <span class="sd">        &gt;&gt;&gt; from pyroclient import Client</span>
 <span class="sd">        &gt;&gt;&gt; api_client = Client("MY_CAM_TOKEN")</span>
 <span class="sd">        &gt;&gt;&gt; response = api_client.heartbeat()</span>
 
+<span class="sd">        Args:</span>
+<span class="sd">            timeout: request timeout in seconds for this call only; defaults to the client timeout</span>
+
 <span class="sd">        Returns:</span>
 <span class="sd">            HTTP response containing the update device info</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="n">requests</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
-            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_HEARTBEAT</span><span class="p">),</span> <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span>
+            <span class="n">urljoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_route_prefix</span><span class="p">,</span> <span class="n">ClientRoute</span><span class="o">.</span><span class="n">CAMERAS_HEARTBEAT</span><span class="p">),</span>
+            <span class="n">headers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">timeout</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Client.update_last_image"><a class="viewcode-back" href="../../client.html#pyroclient.client.Client.update_last_image">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_last_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">media</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
