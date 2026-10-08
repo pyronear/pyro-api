@@ -192,15 +192,17 @@ async def _get_recent_sequences(
     sequences: SequenceCRUD,
     camera_ids: List[int],
     sequence_: Sequence,
+    anchor_on_sequence: bool = False,
 ) -> List[Sequence]:
+    relaxation = timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS)
+    # Anchoring on the sequence's own window lets a late relabel still find its neighbours
+    anchor = sequence_.started_at if anchor_on_sequence else utcnow()
     recent_sequences = await sequences.fetch_all(
         in_pair=("camera_id", camera_ids),
-        inequality_pair=(
-            "last_seen_at",
-            ">",
-            utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
-        ),
+        inequality_pair=("last_seen_at", ">", anchor - relaxation),
     )
+    if anchor_on_sequence:
+        recent_sequences = [seq for seq in recent_sequences if seq.started_at <= sequence_.last_seen_at + relaxation]
     if all(seq.id != sequence_.id for seq in recent_sequences):
         recent_sequences.append(sequence_)
     return recent_sequences
@@ -461,12 +463,13 @@ async def _attach_sequence_to_alert(
     cameras: CameraCRUD,
     sequences: SequenceCRUD,
     alerts: AlertCRUD,
+    anchor_on_sequence: bool = False,
 ) -> Optional[int]:
     """Assign the given sequence to an alert based on cone/time overlap."""
     camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
 
     # Fetch recent sequences for the organization based on recency of last_seen_at
-    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_)
+    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_, anchor_on_sequence)
 
     # Build DataFrame for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)

@@ -768,6 +768,58 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
 
 @pytest.mark.asyncio
+@patch("app.api.api_v1.endpoints.sequences._organization_alert_lock")
+@patch("app.api.api_v1.endpoints.sequences._attach_sequence_to_alert", new_callable=AsyncMock)
+async def test_unit_relabel_sequence_to_wildfire_smoke_reattaches(
+    mock_attach_sequence_to_alert: AsyncMock,
+    mock_lock: MagicMock,
+):
+    """Reverting a non-wildfire label back to wildfire_smoke re-runs cone matching under the
+    organization lock, without detaching the sequence from its current alert first."""
+    mock_sequence = Sequence(
+        id=1,
+        camera_id=1,
+        is_wildfire=AnnotationType.OTHER_SMOKE,
+        started_at=utcnow(),
+        last_seen_at=utcnow(),
+    )
+    mock_camera = Camera(id=1, organization_id=1)
+    updated_seq = mock_sequence.model_copy(update={"is_wildfire": AnnotationType.WILDFIRE_SMOKE})
+
+    mock_sequences_crud = AsyncMock()
+    mock_sequences_crud.get.return_value = mock_sequence
+    mock_sequences_crud.update.return_value = updated_seq
+    mock_cameras_crud = AsyncMock()
+    mock_cameras_crud.get.return_value = mock_camera
+    mock_alerts_crud = AsyncMock()
+    mock_session = AsyncMock()
+
+    payload = SequenceLabel(is_wildfire=AnnotationType.WILDFIRE_SMOKE)
+    result = await label_sequence(
+        payload=payload,
+        sequence_id=1,
+        cameras=mock_cameras_crud,
+        sequences=mock_sequences_crud,
+        alerts=mock_alerts_crud,
+        session=mock_session,
+        token_payload=TokenPayload(sub=1, scopes=[UserRole.AGENT], organization_id=1),
+    )
+
+    mock_lock.assert_called_once_with(1)
+    mock_attach_sequence_to_alert.assert_awaited_once_with(
+        updated_seq,
+        mock_camera,
+        mock_cameras_crud,
+        mock_sequences_crud,
+        mock_alerts_crud,
+        anchor_on_sequence=True,
+    )
+    mock_session.exec.assert_not_called()
+    mock_alerts_crud.create.assert_not_called()
+    assert result.is_wildfire == AnnotationType.WILDFIRE_SMOKE
+
+
+@pytest.mark.asyncio
 @patch("app.api.api_v1.endpoints.sequences.refresh_alert_state", new_callable=AsyncMock)
 async def test_unit_label_sequence_solo_alert_keeps_alert(
     mock_refresh_alert_state: AsyncMock,

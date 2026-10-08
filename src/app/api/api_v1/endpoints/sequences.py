@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Se
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
@@ -27,6 +28,7 @@ from app.services.sequence_confidence import max_conf_filter_clause
 from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
+from app.services.validation import _organization_alert_lock
 
 router = APIRouter()
 
@@ -285,7 +287,21 @@ async def label_sequence(
     if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
+    previous_label = sequence.is_wildfire
     updated = await sequences.update(sequence_id, payload)
+
+    # Reverting a non-wildfire label: re-run cone matching. The sequence keeps its lonely alert
+    # until the matching merges it into an overlapping one, so it is never left without an alert.
+    # Unvalidated or cone-less sequences are skipped by the matching and keep their alert as-is.
+    if (
+        payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE
+        and previous_label is not None
+        and previous_label != AnnotationType.WILDFIRE_SMOKE
+    ):
+        camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
+        async with _organization_alert_lock(camera.organization_id):
+            await _attach_sequence_to_alert(updated, camera, cameras, sequences, alerts, anchor_on_sequence=True)
+        return updated
 
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
         return updated
