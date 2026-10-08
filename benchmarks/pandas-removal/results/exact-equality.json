@@ -1,0 +1,23 @@
+{
+  "overlap_cases": 274,
+  "bit_identical_location_pairs": 2729,
+  "overlap_output_bytes": 327073,
+  "orm_scenarios": 68,
+  "caller_comparisons": {
+    "resolve": 408,
+    "attach": 124,
+    "refresh": 68
+  },
+  "mismatches": 0,
+  "numeric_tolerance": 0,
+  "baseline_output_sha256": "a2438ef38c495908c01785629d3a62bbc1fdb02d5fb1fd5118ff0d7c73281ecb",
+  "candidate_output_sha256": "a2438ef38c495908c01785629d3a62bbc1fdb02d5fb1fd5118ff0d7c73281ecb",
+  "compared": [
+    "ordered IDs/groups/locations",
+    "float64 bits",
+    "CRUD payload bytes",
+    "alert link bytes",
+    "AlertRead JSONResponse bytes"
+  ],
+  "external_io": "DB/CRUD/S3 boundaries mocked; real ORM models, geometry, production callers and API serializers"
+}

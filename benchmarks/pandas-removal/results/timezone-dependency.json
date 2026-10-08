@@ -1,0 +1,20 @@
+{
+  "baseline_transitive_dependency": "sys_platform == \"emscripten\" or sys_platform == \"win32\"",
+  "candidate_direct_dependency": "tzdata; sys_platform == \"win32\" or sys_platform == \"emscripten\"",
+  "same_platform_marker_behavior": {
+    "linux": false,
+    "darwin": false,
+    "win32": true,
+    "emscripten": true
+  },
+  "same_locked_version": "2026.2",
+  "linux_tzdata_installed": false,
+  "system_paths": [
+    "/usr/share/zoneinfo",
+    "/usr/lib/zoneinfo",
+    "/usr/share/lib/zoneinfo",
+    "/etc/zoneinfo"
+  ],
+  "linux_zoneinfo_lookup": "success using system data",
+  "lookup_without_system_data": "ZoneInfoNotFoundError despite installed pytz"
+}

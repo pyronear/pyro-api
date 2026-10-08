@@ -1,8 +1,10 @@
-"""Compare outputs against the parent PR without putting pandas back in production."""
+"""Compare consumed output bytes against the baseline, without numeric tolerances."""
 
 import importlib.util
-import math
+import hashlib
+import json
 import random
+import struct
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,10 +23,23 @@ spec.loader.exec_module(parent)
 import pandas as pd
 
 checks = 0
+location_pairs = 0
+output_bytes = 0
+expected_digest = hashlib.sha256()
+actual_digest = hashlib.sha256()
+
+
+def serialize(rows):
+    # Preserve row, group and location order. These are the fields both callers consume.
+    return json.dumps(
+        [{key: row[key] for key in ("id", "event_groups", "event_smoke_locations")} for row in rows],
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
 
 
 def compare(records, **options):
-    global checks
+    global checks, location_pairs, output_bytes
     frame = pd.DataFrame.from_records(records)
     if not records:
         frame = pd.DataFrame(
@@ -32,16 +47,22 @@ def compare(records, **options):
         )
     expected = parent.compute_overlap(frame, **options).to_dict("records")
     actual = compute_overlap(records, **options)
-    assert [r["id"] for r in actual] == [r["id"] for r in expected]
-    assert [r["event_groups"] for r in actual] == [r["event_groups"] for r in expected]
+    expected_bytes = serialize(expected)
+    actual_bytes = serialize(actual)
+    assert actual_bytes == expected_bytes, (records, options, expected_bytes, actual_bytes)
+    expected_digest.update(struct.pack("!Q", len(expected_bytes)) + expected_bytes)
+    actual_digest.update(struct.pack("!Q", len(actual_bytes)) + actual_bytes)
     for a, b in zip(actual, expected, strict=True):
         assert len(a["event_smoke_locations"]) == len(b["event_smoke_locations"])
         for x, y in zip(a["event_smoke_locations"], b["event_smoke_locations"], strict=True):
             if x is None or y is None:
                 assert x is y
             else:
-                assert all(math.isclose(xx, yy, abs_tol=1e-8, rel_tol=0) for xx, yy in zip(x, y, strict=True))
+                # Also verify IEEE-754 bits, including the sign of zero.
+                assert struct.pack("!dd", *x) == struct.pack("!dd", *y)
+                location_pairs += 1
     checks += 1
+    output_bytes += len(actual_bytes)
 
 
 for scenario in SCENARIOS:
@@ -71,4 +92,6 @@ for label in [None, "wildfire_smoke", "other"]:
     records[1]["is_wildfire"] = label
     records[2]["is_wildfire"] = "wildfire_smoke"
     compare(records)
-print(f"{checks} differential comparisons passed")
+print(
+    f"{checks} byte-for-byte comparisons passed ({location_pairs} bit-identical location pairs, {output_bytes} bytes)"
+)

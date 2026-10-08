@@ -48,4 +48,7 @@ for relaxation in [0, 0.000001, 0.0000005, 30]:
         validate.compare(records, time_relaxation_seconds=relaxation)
 
 assert validate.checks - initial_checks == 42
-print(f"{validate.checks} extended differential comparisons passed")
+print(
+    f"{validate.checks} extended byte-for-byte comparisons passed "
+    f"({validate.location_pairs} bit-identical location pairs, {validate.output_bytes} bytes)"
+)
