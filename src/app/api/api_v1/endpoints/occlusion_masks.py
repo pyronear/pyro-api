@@ -61,7 +61,7 @@ async def create_mask(
     pose = cast(Pose, await poses.get(payload.pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     telemetry_client.capture(
@@ -93,7 +93,7 @@ async def get_mask(
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     telemetry_client.capture(
@@ -128,7 +128,7 @@ async def update_mask(
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     telemetry_client.capture(
@@ -160,7 +160,7 @@ async def delete_mask(
     pose = cast(Pose, await poses.get(mask.pose_id, strict=True))
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
     telemetry_client.capture(

@@ -3,15 +3,18 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import logging
 import os
 import secrets
 import socket
 from typing import Union
 
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["settings"]
+
+logger = logging.getLogger("uvicorn.error")
 
 
 class Settings(BaseSettings):
@@ -38,10 +41,17 @@ class Settings(BaseSettings):
         return v
 
     # Security
-    JWT_SECRET: str = os.environ.get("JWT_SECRET") or secrets.token_urlsafe(32)
+    JWT_SECRET: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     JWT_EXPIRE_MINUTES: int = 60
     JWT_UNLIMITED: int = 60 * 24 * 365
     JWT_ALGORITHM: str = "HS256"
+
+    @field_validator("JWT_SECRET")
+    @classmethod
+    def jwt_secret_can_be_blank(cls, v: str) -> str:
+        # Compose passes an empty value when no secret is configured. Normalize it
+        # after settings loading so it cannot replace the generated default.
+        return v or secrets.token_urlsafe(32)
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5
@@ -65,17 +75,72 @@ class Settings(BaseSettings):
     S3_ENDPOINT_URL: str = os.environ["S3_ENDPOINT_URL"]
     S3_PROXY_URL: str = os.environ.get("S3_PROXY_URL", "")
     S3_URL_EXPIRATION: int = int(os.environ.get("S3_URL_EXPIRATION") or 24 * 3600)
+    # Comma-separated browser origins allowed to fetch bucket objects cross-origin (the frontend
+    # platform URLs). Applied as a CORS policy at bucket creation so the frontend can fetch()
+    # presigned image URLs (e.g. the "download all" buttons). Deployments MUST set this to the
+    # real frontend origins; the localhost default only serves local dev.
+    S3_CORS_ORIGINS: str = os.environ.get("S3_CORS_ORIGINS", "http://localhost:5173")
 
-    # Sequence handling
+    # Sequence handling: three windows gate sequence behaviour, each on its own timescale.
+    # All three are tuned against the cameras' frame interval (time between two frames of the
+    # same pose, patrol period included), not against each other.
+    # Max gap between two real detections still matched to the same sequence; above it a new
+    # sequence starts. Spans camera downtime, so it is much larger than the frame interval.
     SEQUENCE_RELAXATION_SECONDS: int = int(os.environ.get("SEQUENCE_RELAXATION_SECONDS") or 120 * 60)
+    # A sequence is confirmed once it holds MIN_INTERVAL_DETS detections within
+    # MIN_INTERVAL_SECONDS: the ratio implies an expected frame cadence, so the window must
+    # cover at least MIN_INTERVAL_DETS frame intervals or sequences never confirm.
     SEQUENCE_MIN_INTERVAL_DETS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_DETS") or 3)
     SEQUENCE_MIN_INTERVAL_SECONDS: int = int(os.environ.get("SEQUENCE_MIN_INTERVAL_SECONDS") or 5 * 60)
+    # Window after a sequence's last real detection during which a frame with no matching bbox
+    # is still attached to it (with an empty bbox) to keep the frame timeline continuous.
+    # Must span a few frame intervals to ever fire; kept short so long-faded sequences stop
+    # collecting frames well before RELAXATION lets them match a new bbox again.
+    SEQUENCE_CONTINUITY_SECONDS: int = int(os.environ.get("SEQUENCE_CONTINUITY_SECONDS") or 2 * 60)
+    # Max gap (relative image coords) between two bboxes still considered the same smoke plume.
+    SEQUENCE_BBOX_TOLERANCE: float = float(os.environ.get("SEQUENCE_BBOX_TOLERANCE") or 0.05)
     TRIANGULATION_RELAXATION_SECONDS: int = int(os.environ.get("TRIANGULATION_RELAXATION_SECONDS") or 30 * 60)
+    # Cameras closer than this share an apex: their cone intersection cannot localize smoke.
+    TRIANGULATION_MIN_APEX_DISTANCE_KM: float = float(os.environ.get("TRIANGULATION_MIN_APEX_DISTANCE_KM") or 0.1)
     ALERT_MERGE_MAX_DISTANCE_KM: float = float(os.environ.get("ALERT_MERGE_MAX_DISTANCE_KM") or 2.0)
+
+    @model_validator(mode="after")
+    def check_sequence_windows(self) -> "Settings":
+        for name in ("SEQUENCE_RELAXATION_SECONDS", "SEQUENCE_MIN_INTERVAL_SECONDS", "SEQUENCE_CONTINUITY_SECONDS"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be > 0")
+        # Not a hard error: the windows are not monotonic by design, but continuity frames
+        # attaching past the matchable window is almost certainly a misconfiguration.
+        if self.SEQUENCE_CONTINUITY_SECONDS > self.SEQUENCE_RELAXATION_SECONDS:
+            logger.warning(
+                "SEQUENCE_CONTINUITY_SECONDS (%s) > SEQUENCE_RELAXATION_SECONDS (%s): "
+                "continuity frames attach past the matchable window.",
+                self.SEQUENCE_CONTINUITY_SECONDS,
+                self.SEQUENCE_RELAXATION_SECONDS,
+            )
+        return self
 
     # Notifications
     TELEGRAM_TOKEN: Union[str, None] = os.environ.get("TELEGRAM_TOKEN")
     PLATFORM_URL: str = os.environ.get("PLATFORM_URL", "")
+
+    # Temporal model API (validates sequences from their frames)
+    TEMPORAL_API_URL: Union[str, None] = os.environ.get("TEMPORAL_API_URL")
+    # Shared bearer token for /predict; empty = server has auth disabled, send no header.
+    TEMPORAL_API_TOKEN: Union[str, None] = os.environ.get("TEMPORAL_API_TOKEN") or None
+    TEMPORAL_MODEL_THRESHOLD: float = float(os.environ.get("TEMPORAL_MODEL_THRESHOLD") or 0.45)
+    # Generous timeout: the temporal API serializes inference server-side, so with N uvicorn
+    # workers a call can wait behind N-1 others; keep N * model latency under this value.
+    TEMPORAL_API_TIMEOUT: float = float(os.environ.get("TEMPORAL_API_TIMEOUT") or 30.0)
+    # Validation worker (one loop per uvicorn process, coordinated through the DB):
+    # idle poll interval for due sequences,
+    TEMPORAL_VALIDATION_POLL_SECONDS: float = float(os.environ.get("TEMPORAL_VALIDATION_POLL_SECONDS") or 2.0)
+    # max time a sequence may wait in the queue before failing open on the risk gate alone
+    # (bounds validation latency under a backlog; traced as validation_status=fail_open_stale),
+    TEMPORAL_VALIDATION_MAX_AGE: float = float(os.environ.get("TEMPORAL_VALIDATION_MAX_AGE") or 300.0)
+    # and how long a claimed job is leased before a sibling worker may retry it (must exceed
+    # TEMPORAL_API_TIMEOUT plus the DB phases).
+    TEMPORAL_VALIDATION_LEASE_SECONDS: float = float(os.environ.get("TEMPORAL_VALIDATION_LEASE_SECONDS") or 120.0)
 
     # Risk API (daily fire-weather index per camera)
     RISK_API_URL: Union[str, None] = os.environ.get("RISK_API_URL")

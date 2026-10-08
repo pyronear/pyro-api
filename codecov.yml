@@ -1,0 +1,31 @@
+# Coverage arrives in two uploads from two independent jobs: the backend suite (--cov=app,
+# ~3100 lines) and the client suite (--cov=pyroclient, ~135 lines). Without this config the
+# project status is evaluated as soon as the first upload lands, so whenever the client job
+# finishes first the check compares a 3-file report against the full base, reports a ~2.5%
+# project drop and fails the PR, then silently recovers once the backend upload arrives.
+#
+# notify.after_n_builds holds every status and the PR comment until both uploads are in, so they
+# are only ever computed on a complete report. The flags exist so each job's contribution is
+# identifiable in the Codecov UI, and so a missing upload shows up as such instead of silently
+# lowering the total.
+codecov:
+  notify:
+    after_n_builds: 2
+
+coverage:
+  status:
+    project:
+      default:
+        # Small unavoidable swings (a refactor moving covered lines around) should not block.
+        threshold: 0.5%
+
+comment:
+  after_n_builds: 2
+
+flags:
+  backend:
+    paths:
+      - src/app/
+  client:
+    paths:
+      - client/pyroclient/

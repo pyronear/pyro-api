@@ -18,16 +18,17 @@ from app.core.security import hash_password
 from app.models import Organization, User, UserRole
 from app.services.storage import s3_service
 
-__all__ = ["get_session", "init_db"]
+__all__ = ["get_session", "init_db", "session_factory"]
 
 logger = logging.getLogger("uvicorn.error")
 engine = AsyncEngine(create_engine(settings.POSTGRES_URL, echo=False))
+session_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    async_session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
-        yield session
+    async with session_factory() as session:
+        # FastAPI runs dependency generators to completion, so cleanup is guaranteed
+        yield session  # ruff:ignore[yield-in-context-manager-in-async-generator]
 
 
 async def init_db() -> None:

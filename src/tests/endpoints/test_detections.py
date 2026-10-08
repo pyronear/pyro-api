@@ -1,18 +1,21 @@
 import asyncio
+import hashlib
 import io
 from ast import literal_eval
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import pytest  # type: ignore
-from fastapi import BackgroundTasks, HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import detections as detections_api
 from app.api.api_v1.endpoints.detections import (
+    _attach_sequence_to_alert,
+    _bboxes_overlap,
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
@@ -22,18 +25,22 @@ from app.api.api_v1.endpoints.detections import (
     _get_or_create_alert_id,
     _get_recent_sequences,
     _maybe_update_alert,
+    _merge_alerts,
     _parse_bbox,
     _resolve_groups_and_locations,
-    attach_sequence_to_alert,
     create_detection,
 )
 from app.core.config import settings
 from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
 from app.schemas.login import TokenPayload
+from app.services import validation as validation_service
 from app.services.cones import resolve_cone
+from app.services.slack import slack_client
 from app.services.storage import s3_service
+from app.services.telegram import telegram_client
+from app.services.validation import process_next_due_validation
 
 
 @pytest.mark.parametrize(
@@ -208,21 +215,158 @@ async def test_create_detection_rejects_inverted_bbox(
 
 
 @pytest.mark.asyncio
-async def test_create_detection_rejects_empty_bbox_strings(
-    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+async def test_create_detection_empty_bboxes_without_active_sequence_stores_nothing(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
 ):
-    monkeypatch.setattr(detections_api, "_extract_bbox_strings", lambda _: [])
     auth = pytest.get_token(
         pytest.camera_table[0]["id"],
         ["camera"],
         pytest.camera_table[0]["organization_id"],
     )
-    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[]"}
+    # Empty frames must never seed a sequence (no phantom sequences from no-detection frames)
+    for _ in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+        )
+        assert response.status_code == 204, response.__dict__
+    detection_session.expire_all()
+    dets = (await detection_session.exec(select(Detection))).all()
+    assert len(dets) == len(pytest.detection_table)
+    seqs = (await detection_session.exec(select(Sequence))).all()
+    assert len(seqs) == len(pytest.sequence_table)
+
+
+@pytest.mark.asyncio
+async def test_create_detection_empty_bboxes_rejects_crops(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[("file", ("logo.png", mock_img, "image/png")), ("crop", ("crop.png", mock_img, "image/png"))],
+        headers=auth,
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Number of crops must match the number of bboxes."
+
+
+@pytest.mark.asyncio
+async def test_create_detection_empty_bboxes_extends_active_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"}
+    for _ in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+        )
+        assert response.status_code == 201, response.__dict__
+    sequence_id = response.json()["sequence_id"]
+    assert isinstance(sequence_id, int)
+    detection_session.expire_all()
+    sequence = await detection_session.get(Sequence, sequence_id)
+    last_seen_before = sequence.last_seen_at
+    # Clear the queue marker to observe the re-enqueue triggered by the continuity row
+    sequence.validation_due_at = None
+    detection_session.add(sequence)
+    await detection_session.commit()
+
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.__dict__
+    data = response.json()
+    assert data["bbox"] == "[]"
+    assert data["sequence_id"] == sequence_id
+
+    detection_session.expire_all()
+    sequence = await detection_session.get(Sequence, sequence_id)
+    # A continuity row is not real evidence: the sequence lifetime is untouched...
+    assert sequence.last_seen_at == last_seen_before
+    # ...but the frame set changed, so validation is due again
+    assert sequence.validation_due_at is not None
+
+    # Spatial matching must survive the continuity row (compare against the last REAL bbox)
     response = await async_client.post(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
-    assert response.status_code == 422
-    assert response.json()["detail"] == "Invalid bbox format."
+    assert response.status_code == 201, response.__dict__
+    assert response.json()["sequence_id"] == sequence_id
+
+
+@pytest.mark.asyncio
+async def test_create_detection_continuity_row_for_unmatched_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    # Two disjoint objects on the same pose -> two sequences. Each frame gets distinct bytes:
+    # bucket keys are content+second based, so identical uploads would collide on one key.
+    both = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.1,0.1,0.2,0.2,0.8)]"}
+    for idx in range(settings.SEQUENCE_MIN_INTERVAL_DETS):
+        response = await async_client.post(
+            "/detections",
+            data=both,
+            files={"file": ("logo.png", mock_img + bytes([idx]), "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.__dict__
+    detection_session.expire_all()
+    new_seqs = (
+        await detection_session.exec(
+            select(Sequence).where(Sequence.id > max(entry["id"] for entry in pytest.sequence_table))
+        )
+    ).all()
+    assert len(new_seqs) == 2
+
+    # Only the first object is detected on the next frame
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={"file": ("logo.png", mock_img + b"-final-frame", "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.__dict__
+    matched_seq_id = response.json()["sequence_id"]
+    assert isinstance(matched_seq_id, int)
+    (unmatched_seq,) = [seq for seq in new_seqs if seq.id != matched_seq_id]
+    unmatched_seq_id = unmatched_seq.id
+    unmatched_last_seen = unmatched_seq.last_seen_at
+
+    # The unmatched sequence still gets the frame, as a continuity row sharing the bucket_key
+    bucket_key = response.json()["bucket_key"]
+    detection_session.expire_all()
+    rows = (
+        await detection_session.exec(
+            select(Detection).where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        )
+    ).all()
+    assert len(rows) == 2
+    by_seq = {row.sequence_id: row for row in rows}
+    assert by_seq[matched_seq_id].bbox == "[(0.6,0.6,0.7,0.7,0.6)]"
+    assert by_seq[unmatched_seq_id].bbox == "[]"
+    # No duplicate attach: the matched sequence got the real row only
+    assert len(by_seq) == 2
+
+    unmatched_after = await detection_session.get(Sequence, unmatched_seq_id)
+    assert unmatched_after.last_seen_at == unmatched_last_seen
 
 
 @pytest.mark.asyncio
@@ -339,6 +483,53 @@ async def test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox(detectio
 
 
 @pytest.mark.asyncio
+async def test_get_last_bbox_for_sequence_skips_continuity_rows(detection_session: AsyncSession):
+    detections = DetectionCRUD(detection_session)
+    now = utcnow()
+    camera_id = pytest.camera_table[0]["id"]
+    pose = Pose(camera_id=camera_id, azimuth=80.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    sequence = Sequence(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        camera_azimuth=80.0,
+        sequence_azimuth=80.0,
+        cone_angle=10.0,
+        started_at=now - timedelta(seconds=10),
+        last_seen_at=now,
+    )
+    detection_session.add(sequence)
+    await detection_session.commit()
+    await detection_session.refresh(sequence)
+
+    real_det = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-real",
+        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
+        created_at=now - timedelta(seconds=5),
+    )
+    continuity_det = Detection(
+        camera_id=camera_id,
+        pose_id=pose.id,
+        sequence_id=sequence.id,
+        bucket_key="bbox-continuity",
+        bbox="[]",
+        created_at=now,
+    )
+    detection_session.add(real_det)
+    detection_session.add(continuity_det)
+    await detection_session.commit()
+
+    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
+    assert last_bbox == (0.1, 0.1, 0.2, 0.2, 0.9)
+
+
+@pytest.mark.asyncio
 async def test_get_camera_by_id_adds_missing_sequence_camera(detection_session: AsyncSession):
     cam_crud = CameraCRUD(detection_session)
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
@@ -421,6 +612,26 @@ def test_resolve_groups_and_locations_no_match_returns_none():
     assert _resolve_groups_and_locations(records, 999) is None
 
 
+@pytest.mark.parametrize(
+    ("left", "right", "tolerance", "expected"),
+    [
+        # Overlapping boxes always match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.2, 0.2, 0.4, 0.4, 0.9), 0.0, True),
+        # Disjoint boxes with zero tolerance never match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.1, 0.5, 0.3, 0.9), 0.0, False),
+        # Gap smaller than the tolerance matches
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.1, 0.5, 0.3, 0.9), 0.05, True),
+        # Gap larger than the tolerance does not match
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.4, 0.1, 0.5, 0.3, 0.9), 0.05, False),
+        # Tolerance applies per axis
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.32, 0.5, 0.5, 0.9), 0.05, True),
+    ],
+)
+def test_bboxes_overlap_tolerance(left, right, tolerance, expected):
+    assert _bboxes_overlap(left, right, tolerance) is expected
+    assert _bboxes_overlap(right, left, tolerance) is expected
+
+
 @pytest.mark.asyncio
 async def test_fetch_alert_mapping_empty(detection_session: AsyncSession):
     mapping = await _fetch_alert_mapping(detection_session, [])
@@ -467,6 +678,27 @@ async def test_maybe_update_alert_updates_fields(detection_session: AsyncSession
 
 
 @pytest.mark.asyncio
+async def test_maybe_update_alert_widens_bounds_without_location(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    alert = Alert(organization_id=1, lat=5.0, lon=6.0, started_at=now, last_seen_at=now)
+    detection_session.add(alert)
+    await detection_session.commit()
+    await detection_session.refresh(alert)
+
+    # A location-less group (e.g. same-mast only) must still extend the time bounds
+    # without erasing the existing location.
+    start_at = now - timedelta(seconds=60)
+    last_seen_at = now + timedelta(seconds=60)
+    await _maybe_update_alert(alert_crud, alert.id, None, start_at, last_seen_at)
+
+    updated = await alert_crud.get(alert.id, strict=True)
+    assert (updated.lat, updated.lon) == (5.0, 6.0)
+    assert updated.started_at == start_at
+    assert updated.last_seen_at == last_seen_at
+
+
+@pytest.mark.asyncio
 async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: AsyncSession):
     alert_crud = AlertCRUD(detection_session)
     now = utcnow()
@@ -479,7 +711,7 @@ async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: A
     await detection_session.refresh(alert2)
 
     location = (1.5, 2.5)
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {alert2.id, alert1.id},
         location,
         1,
@@ -488,6 +720,7 @@ async def test_get_or_create_alert_id_reuses_existing_alert(detection_session: A
         alert_crud,
     )
     assert target_id == min(alert1.id, alert2.id)
+    assert absorbed_ids == {max(alert1.id, alert2.id)}
 
     updated = await alert_crud.get(target_id, strict=True)
     assert updated.lat == location[0]
@@ -594,7 +827,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
     await detection_session.commit()
     await detection_session.refresh(distant)
 
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {distant.id},
         SMOKE_LOCATION,
         1,
@@ -603,6 +836,7 @@ async def test_get_or_create_alert_id_creates_new_when_existing_too_far(detectio
         alert_crud,
     )
     assert target_id != distant.id
+    assert absorbed_ids == set()
     new_alert = await alert_crud.get(target_id, strict=True)
     assert (new_alert.lat, new_alert.lon) == SMOKE_LOCATION
 
@@ -632,7 +866,7 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
     await detection_session.refresh(nearby)
 
     # Even though `distant` may have a smaller id, it must be filtered out by the distance gate.
-    target_id = await _get_or_create_alert_id(
+    target_id, absorbed_ids = await _get_or_create_alert_id(
         {distant.id, nearby.id},
         SMOKE_LOCATION,
         1,
@@ -641,6 +875,113 @@ async def test_get_or_create_alert_id_picks_nearby_over_distant(detection_sessio
         alert_crud,
     )
     assert target_id == nearby.id
+    assert absorbed_ids == set()
+
+
+@pytest.mark.asyncio
+async def test_merge_alerts_absorbs_duplicates(detection_session: AsyncSession):
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    cam = await detection_session.get(Camera, pytest.camera_table[0]["id"])
+    assert cam is not None
+    seq1 = Sequence(camera_id=cam.id, camera_azimuth=0.0, started_at=now, last_seen_at=now)
+    seq2 = Sequence(camera_id=cam.id, camera_azimuth=0.0, started_at=now, last_seen_at=now)
+    target = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now - timedelta(seconds=30))
+    duplicate = Alert(
+        organization_id=1,
+        lat=SMOKE_LOCATION[0],
+        lon=SMOKE_LOCATION[1],
+        started_at=now - timedelta(seconds=60),
+        last_seen_at=now,
+    )
+    detection_session.add_all([seq1, seq2, target, duplicate])
+    await detection_session.commit()
+    for obj in (seq1, seq2, target, duplicate):
+        await detection_session.refresh(obj)
+    detection_session.add_all([
+        AlertSequence(alert_id=target.id, sequence_id=seq1.id),
+        AlertSequence(alert_id=duplicate.id, sequence_id=seq1.id),
+        AlertSequence(alert_id=duplicate.id, sequence_id=seq2.id),
+    ])
+    await detection_session.commit()
+
+    await _merge_alerts(target.id, {duplicate.id}, alert_crud)
+
+    merged = await alert_crud.get(target.id, strict=True)
+    # Bounds widened and location inherited from the absorbed alert
+    assert merged.started_at == duplicate.started_at
+    assert merged.last_seen_at == duplicate.last_seen_at
+    assert (merged.lat, merged.lon) == SMOKE_LOCATION
+    # Sequences relinked without duplicating the shared one
+    links_res = await detection_session.exec(select(AlertSequence))
+    links = {(link.alert_id, link.sequence_id) for link in links_res.all()}
+    assert links == {(target.id, seq1.id), (target.id, seq2.id)}
+    assert await alert_crud.get(duplicate.id) is None
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_alert_id_does_not_merge_distant_alerts_without_location(
+    detection_session: AsyncSession,
+):
+    """A location-less group bridging two located alerts far apart (e.g. two same-mast
+    cameras each watching a different fire along the same bearing) must not merge them."""
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    fire_a = Alert(organization_id=1, lat=SMOKE_LOCATION[0], lon=SMOKE_LOCATION[1], started_at=now, last_seen_at=now)
+    fire_b = Alert(
+        organization_id=1, lat=DISTANT_LOCATION[0], lon=DISTANT_LOCATION[1], started_at=now, last_seen_at=now
+    )
+    detection_session.add_all([fire_a, fire_b])
+    await detection_session.commit()
+    await detection_session.refresh(fire_a)
+    await detection_session.refresh(fire_b)
+
+    target_id, absorbed_ids = await _get_or_create_alert_id(
+        {fire_a.id, fire_b.id},
+        None,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    assert target_id == min(fire_a.id, fire_b.id)
+    assert absorbed_ids == set()
+    assert await alert_crud.get(fire_a.id) is not None
+    assert await alert_crud.get(fire_b.id) is not None
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_alert_id_merges_close_alerts_without_location(detection_session: AsyncSession):
+    """A location-less group may still merge alerts that are themselves colocated (or unlocated)."""
+    alert_crud = AlertCRUD(detection_session)
+    now = utcnow()
+    located = Alert(organization_id=1, lat=SMOKE_LOCATION[0], lon=SMOKE_LOCATION[1], started_at=now, last_seen_at=now)
+    nearby = Alert(
+        organization_id=1,
+        lat=SMOKE_LOCATION[0] + 0.005,
+        lon=SMOKE_LOCATION[1] + 0.005,
+        started_at=now,
+        last_seen_at=now,
+    )
+    unlocated = Alert(organization_id=1, lat=None, lon=None, started_at=now, last_seen_at=now)
+    detection_session.add_all([located, nearby, unlocated])
+    await detection_session.commit()
+    for obj in (located, nearby, unlocated):
+        await detection_session.refresh(obj)
+
+    target_id, absorbed_ids = await _get_or_create_alert_id(
+        {located.id, nearby.id, unlocated.id},
+        None,
+        1,
+        now - timedelta(seconds=10),
+        now + timedelta(seconds=10),
+        alert_crud,
+    )
+    all_ids = {located.id, nearby.id, unlocated.id}
+    assert target_id == min(all_ids)
+    assert absorbed_ids == all_ids - {target_id}
+    for aid in absorbed_ids:
+        assert await alert_crud.get(aid) is None
 
 
 @pytest.mark.asyncio
@@ -664,7 +1005,7 @@ async def test_attach_sequence_to_alert_returns_without_overlap_records(detectio
     await detection_session.commit()
     await detection_session.refresh(sequence)
 
-    await attach_sequence_to_alert(sequence, camera, cam_crud, seq_crud, alert_crud)
+    await _attach_sequence_to_alert(sequence, camera, cam_crud, seq_crud, alert_crud)
 
     alerts = await alert_crud.fetch_all()
     assert alerts == []
@@ -705,6 +1046,8 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp1.status_code == 201, resp1.text
+    # The worker loop is not running in tests: process due sequences synchronously.
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 1
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -717,6 +1060,7 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp2.status_code == 201, resp2.text
+    await pytest.drain_validation_queue()
     assert await count(Detection) == base_det + 2
     assert await count(Sequence) == base_seq + 1
     assert await count(Alert) == base_alert + 1
@@ -729,7 +1073,10 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp3.status_code == 201, resp3.text
-    assert await count(Detection) == base_det + 3
+    await pytest.drain_validation_queue()
+    # +2: the real detection (new sequence) plus a continuity row attaching the frame to the
+    # still-active first sequence, whose object was not detected on it.
+    assert await count(Detection) == base_det + 4
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
     assert await count(AlertSequence) == base_map + 2
@@ -741,7 +1088,9 @@ async def test_detection_counts_split_sequences_and_alerts(
         headers=auth,
     )
     assert resp4.status_code == 201, resp4.text
-    assert await count(Detection) == base_det + 5
+    await pytest.drain_validation_queue()
+    # +2 real detections (one per bbox, both sequences matched -> no continuity row)
+    assert await count(Detection) == base_det + 6
     assert await count(Sequence) == base_seq + 2
     assert await count(Alert) == base_alert + 2
     assert await count(AlertSequence) == base_map + 2
@@ -754,19 +1103,20 @@ async def test_create_detection_triggers_telegram_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """Webhooks and Telegram fire only once the validation worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "telegram": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
     def fake_telegram_notify(channel_id: str, message: str) -> None:
         calls["telegram"].append(channel_id)
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.telegram_client, "notify", fake_telegram_notify)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", False)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", True)
+    monkeypatch.setattr(telegram_client, "notify", fake_telegram_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -785,7 +1135,14 @@ async def test_create_detection_triggers_telegram_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"] == []  # gated: nothing fires at creation
+    assert calls["telegram"] == []
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
+    assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
+    assert calls["webhooks"] == ["http://example.com/webhook-telegram"]
     assert calls["telegram"] == ["test-channel"]
 
 
@@ -796,13 +1153,15 @@ async def test_create_detection_triggers_slack_notifications(
     mock_img: bytes,
     monkeypatch,
 ):
+    """All channels (webhooks + Slack here) fire only once the worker validates the sequence."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
     calls: Dict[str, List[str]] = {"webhooks": [], "slack": []}
 
-    def fake_dispatch_webhook(url: str, det: Detection) -> None:
+    async def fake_dispatch_webhook(url: str, det: Detection) -> None:
+        await asyncio.sleep(0)
         calls["webhooks"].append(url)
 
-    def fake_slack_notify(slack_hook: str, message: str, camera_name: str, alert_id: int | None = None) -> object:
+    def fake_slack_notify(slack_hook: str, title: str, text_body: str) -> object:
         calls["slack"].append(slack_hook)
 
         class DummyResponse:
@@ -811,10 +1170,10 @@ async def test_create_detection_triggers_slack_notifications(
 
         return DummyResponse()
 
-    monkeypatch.setattr(detections_api, "dispatch_webhook", fake_dispatch_webhook)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", False)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "notify", fake_slack_notify)
+    monkeypatch.setattr(validation_service, "dispatch_webhook", fake_dispatch_webhook)
+    monkeypatch.setattr(telegram_client, "is_enabled", False)
+    monkeypatch.setattr(slack_client, "is_enabled", True)
+    monkeypatch.setattr(slack_client, "notify", fake_slack_notify)
 
     org = await detection_session.get(Organization, pytest.organization_table[0]["id"])
     assert org is not None
@@ -833,25 +1192,63 @@ async def test_create_detection_triggers_slack_notifications(
         "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
     )
     assert response.status_code == 201, response.text
-    assert calls["webhooks"]
+    assert calls["webhooks"] == []  # gated: every channel waits for validation
+    assert calls["slack"] == []
+
+    # The worker picks the due sequence up; temporal unconfigured -> fail-open validates.
+    # Notifications run as a detached task off the worker's critical path: drain them.
+    assert await process_next_due_validation() is True
+    await asyncio.gather(*validation_service._pending_notifications, return_exceptions=True)
+    assert calls["webhooks"] == ["http://example.com/webhook-slack"]
     assert calls["slack"] == ["http://example.com/slack"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_enqueues_validation_on_append(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """Appending a detection to an existing sequence must mark it due for validation (main path)."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+
+    cam = pytest.camera_table[1]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    payload = {"pose_id": pytest.pose_table[2]["id"], "bboxes": "[(0.3,0.3,0.5,0.5,0.9)]"}
+
+    first = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert first.status_code == 201, first.text
+    sequence_id = first.json()["sequence_id"]
+    assert isinstance(sequence_id, int)
+    seq = await detection_session.get(Sequence, sequence_id)
+    assert seq is not None
+    assert seq.validation_due_at is not None  # creation path enqueues
+
+    # Reset the queue marker to assert the append path on its own.
+    seq.validation_due_at = None
+    detection_session.add(seq)
+    await detection_session.commit()
+
+    second = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert second.status_code == 201, second.text
+    assert second.json()["sequence_id"] == sequence_id  # appended, not a new sequence
+    await detection_session.refresh(seq)
+    assert seq.validation_due_at is not None  # append path re-enqueues
 
 
 @pytest.mark.asyncio
 async def test_create_detection_sequence_flow_direct(detection_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
-    monkeypatch.setattr(detections_api.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(detections_api.slack_client, "is_enabled", True)
 
     camera_id = pytest.camera_table[0]["id"]
     org_id = pytest.camera_table[0]["organization_id"]
     pose_id = pytest.pose_table[0]["id"]
 
     detections = DetectionCRUD(detection_session)
-    webhooks = WebhookCRUD(detection_session)
     organizations = OrganizationCRUD(detection_session)
     sequences = SequenceCRUD(detection_session)
-    alerts = AlertCRUD(detection_session)
     cameras = CameraCRUD(detection_session)
     poses = PoseCRUD(detection_session)
     org = await organizations.get(org_id, strict=True)
@@ -875,16 +1272,13 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
     upload = UploadFile(filename="img.png", file=io.BytesIO(b"img"))
 
     det_read = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
@@ -913,16 +1307,13 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
 
     upload_again = UploadFile(filename="img-2.png", file=io.BytesIO(b"img2"))
     det_read_2 = await create_detection(
-        background_tasks=BackgroundTasks(),
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
+        recorded_at=None,
         file=upload_again,
-        crop_file=None,
+        crop_files=None,
         detections=detections,
-        webhooks=webhooks,
-        organizations=organizations,
         sequences=sequences,
-        alerts=alerts,
         cameras=cameras,
         poses=poses,
         token_payload=token_payload,
@@ -1209,6 +1600,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=0.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1219,6 +1611,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
         sequence_azimuth=5.0,
         cone_angle=90.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=10),
     )
@@ -1228,7 +1621,7 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     await detection_session.refresh(seq1)
     await detection_session.refresh(seq2)
 
-    await attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud)
+    await _attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud)
 
     alerts = await alert_crud.fetch_all()
     assert len(alerts) == 1
@@ -1311,6 +1704,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=-17.5,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=30),
         last_seen_at=now - timedelta(seconds=20),
     )
@@ -1321,6 +1715,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=276.5,
         cone_angle=3.0,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=25),
         last_seen_at=now - timedelta(seconds=15),
     )
@@ -1330,7 +1725,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     await detection_session.refresh(seq_cam5)
 
     # Step 1 — attach cam5 sequence triangulates with cam7, creates smoke-A alert.
-    smoke_a_alert_id = await attach_sequence_to_alert(seq_cam5, cam5, cam_crud, seq_crud, alert_crud)
+    smoke_a_alert_id = await _attach_sequence_to_alert(seq_cam5, cam5, cam_crud, seq_crud, alert_crud)
     assert smoke_a_alert_id is not None
     smoke_a = await alert_crud.get(smoke_a_alert_id, strict=True)
     assert smoke_a.lat is not None
@@ -1344,6 +1739,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
         sequence_azimuth=75.2,
         cone_angle=1.4,
         is_wildfire=None,
+        is_validated=True,
         started_at=now - timedelta(seconds=5),
         last_seen_at=now,
     )
@@ -1351,7 +1747,7 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     await detection_session.commit()
     await detection_session.refresh(seq_cam2)
 
-    target_id = await attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
+    target_id = await _attach_sequence_to_alert(seq_cam2, cam2, cam_crud, seq_crud, alert_crud)
 
     # The cam2 sequence must land on a NEW alert, not the smoke-A one.
     assert target_id is not None
@@ -1361,6 +1757,250 @@ async def test_attach_sequence_does_not_bridge_to_distant_alert(detection_sessio
     mappings_res = await detection_session.exec(select(AlertSequence).where(AlertSequence.alert_id == smoke_a_alert_id))
     seqs_in_a = {m.sequence_id for m in mappings_res.all()}
     assert seq_cam2.id not in seqs_in_a
+
+
+@pytest.mark.asyncio
+async def test_create_detection_uses_payload_recorded_at(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    recorded_at = datetime(2024, 1, 15, 10, 30, 0, 123456)
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": recorded_at.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == recorded_at
+
+
+@pytest.mark.asyncio
+async def test_create_detection_converts_aware_recorded_at_to_utc(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    # A France-local (UTC+2) capture time must be stored as the equivalent naive-UTC instant.
+    aware = datetime(2024, 7, 1, 10, 30, 0, 123456, tzinfo=timezone(timedelta(hours=2)))
+    payload = {
+        "pose_id": pytest.pose_table[0]["id"],
+        "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+        "recorded_at": aware.isoformat(),
+    }
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    assert det.recorded_at == datetime(2024, 7, 1, 8, 30, 0, 123456)
+    assert det.recorded_at.tzinfo is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_defaults_recorded_at_to_now(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    payload = {"pose_id": pytest.pose_table[0]["id"], "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"}
+    response = await async_client.post(
+        "/detections", data=payload, files={"file": ("logo.png", mock_img, "image/png")}, headers=auth
+    )
+    assert response.status_code == 201, response.text
+
+    det = await detection_session.get(Detection, response.json()["id"])
+    assert det is not None
+    # When the engine omits recorded_at it falls back to the server clock, lining up with created_at.
+    assert abs((det.recorded_at - det.created_at).total_seconds()) < 5
+
+
+@pytest.mark.asyncio
+async def test_create_detection_sequence_starts_at_first_detection_capture(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    # Capture times deliberately far from the server clock: the sequence must start at the first
+    # detection's recorded_at, not created_at, so the platform shows one consistent time.
+    first_capture = datetime(2024, 1, 15, 10, 30, 0)
+    for idx, recorded_at in enumerate((first_capture, first_capture + timedelta(seconds=30))):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "recorded_at": recorded_at.isoformat(),
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq_id = response.json()["sequence_id"]
+    assert isinstance(seq_id, int)
+    seq = await detection_session.get(Sequence, seq_id)
+    assert seq is not None
+    assert seq.started_at == first_capture
+
+
+@pytest.mark.asyncio
+async def test_create_detection_sequence_starts_at_earliest_capture_on_backlog_flush(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    # Backlog flush: uploads arrive out of capture order — the second upload carries the
+    # earlier capture time. started_at must be the earliest recorded_at, not the first insert's.
+    earliest_capture = datetime(2024, 1, 15, 10, 30, 0)
+    for idx, recorded_at in enumerate((earliest_capture + timedelta(seconds=30), earliest_capture)):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "recorded_at": recorded_at.isoformat(),
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq_id = response.json()["sequence_id"]
+    assert isinstance(seq_id, int)
+    seq = await detection_session.get(Sequence, seq_id)
+    assert seq is not None
+    assert seq.started_at == earliest_capture
+
+
+@pytest.mark.asyncio
+async def test_attach_sequence_merges_same_event_alerts(detection_session: AsyncSession):
+    """
+    Regression guard for the duplicate-alert bug (prod alerts 49341/49342/49343).
+
+    Two masts see the same fire, each mast carrying two cameras. The same-mast pairs
+    must group into ONE alert per mast without a location, and once a cross-mast
+    triangulation bridges the two events, the alerts must be merged into a single one.
+    """
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = utcnow()
+
+    def make_camera(name: str, lat: float, lon: float) -> Camera:
+        return Camera(
+            organization_id=1,
+            name=name,
+            angle_of_view=54.2,
+            elevation=110.0,
+            lat=lat,
+            lon=lon,
+            is_trustable=True,
+            last_active_at=now,
+            last_image=None,
+            created_at=now,
+        )
+
+    # Two cameras per mast: mast A (croix-augas-like) and mast B (nemours-like)
+    cam_a1 = make_camera("mast-a-01", 48.4267, 2.7109)
+    cam_a2 = make_camera("mast-a-02", 48.4267, 2.7109)
+    cam_b1 = make_camera("mast-b-01", 48.2605, 2.7064)
+    cam_b2 = make_camera("mast-b-02", 48.2605, 2.7064)
+    detection_session.add_all([cam_a1, cam_a2, cam_b1, cam_b2])
+    await detection_session.commit()
+    for cam in (cam_a1, cam_a2, cam_b1, cam_b2):
+        await detection_session.refresh(cam)
+
+    def make_sequence(camera_id: int, azimuth: float, cone_angle: float, is_validated: bool) -> Sequence:
+        return Sequence(
+            camera_id=camera_id,
+            pose_id=None,
+            camera_azimuth=azimuth,
+            sequence_azimuth=azimuth,
+            cone_angle=cone_angle,
+            is_wildfire=None,
+            is_validated=is_validated,
+            started_at=now - timedelta(seconds=30),
+            last_seen_at=now,
+        )
+
+    # Mast B sequences are not validated yet: only mast A is visible to the first attaches.
+    seq_a1 = make_sequence(cam_a1.id, 163.4, 1.0, is_validated=True)
+    seq_a2 = make_sequence(cam_a2.id, 164.0, 2.0, is_validated=True)
+    seq_b1 = make_sequence(cam_b1.id, 8.3, 0.8, is_validated=False)
+    seq_b2 = make_sequence(cam_b2.id, 9.0, 0.8, is_validated=False)
+    detection_session.add_all([seq_a1, seq_a2, seq_b1, seq_b2])
+    await detection_session.commit()
+    for seq in (seq_a1, seq_a2, seq_b1, seq_b2):
+        await detection_session.refresh(seq)
+
+    # Mast A sequences validate first: one alert, no location (same-apex, no triangulation).
+    await _attach_sequence_to_alert(seq_a1, cam_a1, cam_crud, seq_crud, alert_crud)
+    mast_a_alert_id = await _attach_sequence_to_alert(seq_a2, cam_a2, cam_crud, seq_crud, alert_crud)
+    assert mast_a_alert_id is not None
+    mast_a_alert = await alert_crud.get(mast_a_alert_id, strict=True)
+    assert mast_a_alert.lat is None
+
+    # Mast B got its own alert earlier (e.g. attached before its cones crossed mast A's).
+    mast_b_alert = Alert(
+        organization_id=1, lat=None, lon=None, started_at=now - timedelta(seconds=20), last_seen_at=now
+    )
+    seq_b1.is_validated = True
+    seq_b2.is_validated = True
+    detection_session.add_all([mast_b_alert, seq_b1, seq_b2])
+    await detection_session.commit()
+    await detection_session.refresh(mast_b_alert)
+    detection_session.add(AlertSequence(alert_id=mast_b_alert.id, sequence_id=seq_b1.id))
+    await detection_session.commit()
+
+    # seq_b2 validates: the cross-mast group covers both alerts, which must merge into one.
+    target_id = await _attach_sequence_to_alert(seq_b2, cam_b2, cam_crud, seq_crud, alert_crud)
+    assert target_id == mast_a_alert_id
+
+    alerts = await alert_crud.fetch_all()
+    assert [a.id for a in alerts] == [mast_a_alert_id]
+    merged = alerts[0]
+    assert merged.lat is not None
+    assert merged.lon is not None
+
+    links_res = await detection_session.exec(select(AlertSequence))
+    links = {(link.alert_id, link.sequence_id) for link in links_res.all()}
+    assert links == {(mast_a_alert_id, seq.id) for seq in (seq_a1, seq_a2, seq_b1, seq_b2)}
 
 
 @pytest.mark.asyncio
@@ -1391,6 +2031,85 @@ async def test_create_detection_persists_crop_bucket_key(
     det = await detection_session.get(Detection, data["id"])
     assert det is not None
     assert det.crop_bucket_key == data["crop_bucket_key"]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_assigns_distinct_crop_per_bbox(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    # Each crop frames a different object, so the two crops carry distinct bytes.
+    crop_0 = mock_img + b"crop-0"
+    crop_1 = mock_img + b"crop-1"
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", crop_0, "image/jpeg")),
+            ("crop", ("crop-1.jpg", crop_1, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    bucket_key = response.json()["bucket_key"]
+
+    dets_res = await detection_session.exec(
+        select(Detection)
+        .where(Detection.bucket_key == bucket_key)  # type: ignore[attr-defined]
+        .order_by(Detection.id)  # type: ignore[attr-defined]
+    )
+    dets = dets_res.all()
+    assert len(dets) == 2
+    crop_keys = [det.crop_bucket_key for det in dets]
+    # Every detection gets its own crop, and crops are not shared across detections.
+    assert all(isinstance(key, str) and key.startswith("crop_") for key in crop_keys)
+    assert len(set(crop_keys)) == 2
+    assert all(key != bucket_key for key in crop_keys)
+    # The first bbox maps to the first crop, the second bbox to the second crop.
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    assert bucket.get_file_metadata(crop_keys[0])["ETag"].replace('"', "") == hashlib.md5(crop_0).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+    assert bucket.get_file_metadata(crop_keys[1])["ETag"].replace('"', "") == hashlib.md5(crop_1).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+
+
+@pytest.mark.asyncio
+async def test_create_detection_rejects_crop_bbox_count_mismatch(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(  # ruff:ignore[unused-async]
+        file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
+    ) -> str:
+        upload_calls.append(file.filename or "")
+        return f"{key_prefix}should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    auth = pytest.get_token(
+        pytest.camera_table[1]["id"],
+        ["camera"],
+        pytest.camera_table[1]["organization_id"],
+    )
+    payload = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    response = await async_client.post(
+        "/detections",
+        data=payload,
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("crop", ("crop-0.jpg", mock_img, "image/jpeg")),
+        ],
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["detail"] == "Number of crops must match the number of bboxes."
+    # Validation runs before any upload, so no orphan S3 objects are created.
+    assert upload_calls == []
 
 
 @pytest.mark.asyncio
@@ -1489,7 +2208,7 @@ async def test_create_detection_authorizes_pose_before_uploading(
 ):
     upload_calls: List[str] = []
 
-    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # noqa: RUF029
+    async def fake_upload_file(file: UploadFile, organization_id: int, camera_id: int) -> str:  # ruff:ignore[unused-async]
         upload_calls.append(file.filename or "")
         return "should-never-persist"
 

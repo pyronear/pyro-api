@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+import requests
 from requests.exceptions import ConnectionError as ConnError
 from requests.exceptions import ReadTimeout
 
@@ -23,6 +24,36 @@ def test_client_constructor(token, host, timeout, expected_error):
     else:
         with pytest.raises(expected_error):
             Client(token, host, timeout=timeout)
+
+
+def test_create_detection_forwards_recorded_at(monkeypatch):
+    """The client forwards recorded_at as form data; when omitted the field is absent so the API defaults it."""
+
+    class _Resp:
+        status_code = 200
+        text = "ok"
+
+    captured: dict = {}
+
+    def fake_post(url, headers=None, data=None, timeout=None, files=None):
+        captured["data"] = data
+        resp = _Resp()
+        resp.status_code = 201
+        return resp
+
+    # Stub the constructor's token-validation GET and the create_detection POST (no network / DB).
+    monkeypatch.setattr(requests, "get", lambda *_args, **_kwargs: _Resp())
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    api_client = Client("tok", "http://testserver", timeout=1)
+
+    ts = "2026-07-21T14:30:00.123456+02:00"
+    api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, recorded_at=ts)
+    assert captured["data"]["recorded_at"] == ts
+
+    captured.clear()
+    api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1)
+    assert "recorded_at" not in captured["data"]
 
 
 def test_get_current_poses_camera(cam_token, cam_pose_id):
@@ -91,10 +122,11 @@ def test_cam_workflow(cam_token, cam_pose_id, mock_img):
     assert response.status_code == 200, response.__dict__
     assert isinstance(response.json()["last_image"], str)
     # Check that adding bboxes works
-    with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
+    with pytest.raises(ValueError, match="bboxes must be a list of tuples"):
         cam_client.create_detection(mock_img, None, pose_id=cam_pose_id)
-    with pytest.raises(ValueError, match="bboxes must be a non-empty list of tuples"):
-        cam_client.create_detection(mock_img, [], pose_id=cam_pose_id)
+    # An empty frame with no recently-seen sequence is not stored
+    response = cam_client.create_detection(mock_img, [], pose_id=cam_pose_id)
+    assert response.status_code == 204, response.__dict__
     response = cam_client.create_detection(mock_img, [(0, 0, 1.0, 0.9, 0.5)], pose_id=cam_pose_id)
     assert response.status_code == 201, response.__dict__
     response = cam_client.create_detection(
@@ -103,9 +135,24 @@ def test_cam_workflow(cam_token, cam_pose_id, mock_img):
         pose_id=cam_pose_id,
     )
     assert response.status_code == 201, response.__dict__
-    response = cam_client.create_detection(mock_img, [(0, 0, 1.0, 0.9, 0.5)], pose_id=cam_pose_id)
+    # One crop per bbox is accepted over HTTP
+    response = cam_client.create_detection(mock_img, [(0, 0, 1.0, 0.9, 0.5)], pose_id=cam_pose_id, crops=[mock_img])
     assert response.status_code == 201, response.__dict__
-    return response.json()["id"]
+    # A crop/bbox count mismatch is rejected client-side before any request
+    with pytest.raises(ValueError, match="crops must have the same length as bboxes"):
+        cam_client.create_detection(
+            mock_img,
+            [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)],
+            pose_id=cam_pose_id,
+            crops=[mock_img],
+        )
+    detection_id = response.json()["id"]
+    # An empty frame extends the freshly created sequence with a continuity detection
+    response = cam_client.create_detection(mock_img, [], pose_id=cam_pose_id)
+    assert response.status_code == 201, response.__dict__
+    assert response.json()["bbox"] == "[]"
+    assert isinstance(response.json()["sequence_id"], int)
+    return detection_id
 
 
 def test_agent_workflow(test_cam_workflow, agent_token):
@@ -144,6 +191,20 @@ def test_user_workflow(test_cam_workflow, user_token):
     assert len(response.json()) == 0  # Sequence was labeled by agent
     response = user_client.fetch_sequences_from_date(datetime.utcnow().date().isoformat())
     assert len(response.json()) == 1
-    response = user_client.fetch_sequences_detections(response.json()[0]["id"])
+    sequence_id = response.json()[0]["id"]
+    response = user_client.fetch_sequences_detections(sequence_id)
     assert response.status_code == 200, response.__dict__
-    assert len(response.json()) == 4
+    # 4 real detections + the continuity row added by the empty frame in test_cam_workflow
+    detections = response.json()
+    assert len(detections) == 5
+    assert sum(det["bbox"] == "[]" for det in detections) == 1
+    # An explicit limit is forwarded, an omitted one is left to the API.
+    response = user_client.fetch_sequences_detections(sequence_id, limit=2)
+    assert response.status_code == 200, response.__dict__
+    assert len(response.json()) == 2
+    # With sampling and no limit, the API sizes the response to span the sampled set.
+    response = user_client.fetch_sequences_detections(sequence_id, sampling=2)
+    assert response.status_code == 200, response.__dict__
+    assert len(response.json()) == 3  # ceil(5 / 2)
+    assert response.headers["x-sampled-total"] == "3"
+    assert response.headers["x-sampled-truncated"] == "false"

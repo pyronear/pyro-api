@@ -8,15 +8,17 @@ updates:
     commit-message:
       prefix: "ci(github)"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
       time: "08:00"
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns:
           - "*"
   - package-ecosystem: "uv"
-    target-branch: "main"
+    # Use the default branch so this configuration also applies to security updates.
     directory: "/"
     labels:
       - "dependencies"
@@ -24,26 +26,54 @@ updates:
     commit-message:
       prefix: "build(deps)"
     schedule:
-      interval: "daily"
+      interval: "monthly"
       time: "08:00"
+    # These limits and cooldown affect version updates only; security fixes stay immediate.
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
+    # Avoid raising minimum requirements when the existing range already permits an update.
+    versioning-strategy: "increase-if-necessary"
+    # SemVer filtering here affects version updates only; major security fixes remain eligible.
+    # Match every package so vulnerable transitive dependencies remain eligible.
+    allow:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
     groups:
       security:
+        applies-to: "security-updates"
         patterns:
-          - "PyJWT"
-          - "passlib"
-          - "bcrypt"
+          - "*"
       quality:
+        applies-to: "version-updates"
         patterns:
           - "ruff"
           - "ty"
           - "prek"
           - "types-*"
           - "sqlalchemy-stubs"
-  - package-ecosystem: "docker"
+      python:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+  # Compose manifests live at the root; Dockerfiles live under src/.
+  # Update uv in the Dockerfiles together with every workflow's UV_VERSION manually.
+  - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
       time: "08:00"
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
     allow:
-      - dependency-name: "ghcr.io/astral-sh/uv"
       - dependency-name: "localstack/localstack"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    groups:
+      localstack:
+        patterns:
+          - "localstack/localstack"

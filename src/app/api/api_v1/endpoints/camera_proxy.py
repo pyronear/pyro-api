@@ -93,7 +93,7 @@ async def _require_read(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 
@@ -104,7 +104,7 @@ async def _require_write(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT]),
 ) -> Camera:
     camera = cast(Camera, await cameras.get(camera_id, strict=True))
-    if token_payload.organization_id != camera.organization_id and UserRole.ADMIN not in token_payload.scopes:
+    if token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     return camera
 
@@ -292,6 +292,16 @@ async def proxy_click_to_move(
         payload.click_x,
         payload.click_y,
     )
+
+
+@router.get(
+    "/{camera_id}/control/azimuth",
+    status_code=status.HTTP_200_OK,
+    summary="Get the camera's current real-world azimuth",
+)
+async def proxy_get_azimuth(camera: Camera = Depends(_require_read)) -> Any:
+    device_ip, camera_ip = _device_config(camera)
+    return await _run_sync(_make_client(device_ip).get_azimuth, camera_ip)
 
 
 @router.get(

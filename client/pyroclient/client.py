@@ -351,7 +351,8 @@ class Client:
         media: bytes,
         bboxes: List[Tuple[float, float, float, float, float]],
         pose_id: int,
-        crop: bytes | None = None,
+        crops: List[bytes] | None = None,
+        recorded_at: str | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -362,22 +363,33 @@ class Client:
 
         Args:
             media: byte data of the picture
-            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf
+            bboxes: list of tuples where each tuple is a relative coordinate in order xmin, ymin, xmax, ymax, conf.
+                An empty list reports a frame with no detection: the API attaches it to recently
+                seen sequences of the pose (keeping their frame timeline continuous) and stores
+                nothing otherwise (204).
             pose_id: pose_id of the detection
-            crop: optional byte data of a cropped picture associated with the detection
+            crops: optional list of cropped pictures, one per bbox (must align with `bboxes`).
+                Each crop frames a single object, so its length must equal that of `bboxes`.
+            recorded_at: optional ISO 8601 timestamp of when the image was captured on-device.
+                Timezone-aware values are converted to UTC server-side; defaults to server now if omitted.
 
         Returns:
             HTTP response
         """
-        if not isinstance(bboxes, (list, tuple)) or len(bboxes) == 0 or len(bboxes) > 5:
-            raise ValueError("bboxes must be a non-empty list of tuples with a maximum of 5 boxes")
+        if not isinstance(bboxes, (list, tuple)) or len(bboxes) > 5:
+            raise ValueError("bboxes must be a list of tuples with a maximum of 5 boxes")
+        if crops is not None and len(crops) != len(bboxes):
+            raise ValueError("crops must have the same length as bboxes")
         data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
-        files: Dict[str, Tuple[str, bytes, str]] = {"file": ("frame.jpg", media, "image/jpeg")}
-        if crop is not None:
-            files["crop"] = ("crop.jpg", crop, "image/jpeg")
+        if recorded_at is not None:
+            data["recorded_at"] = recorded_at
+        # Use a list of tuples (not a dict) so the repeated "crop" key is preserved per bbox.
+        files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", ("frame.jpg", media, "image/jpeg"))]
+        if crops is not None:
+            files.extend(("crop", ("crop.jpg", crop, "image/jpeg")) for crop in crops)
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
@@ -484,9 +496,11 @@ class Client:
     def fetch_sequences_detections(
         self,
         sequence_id: int,
-        limit: int = 10,
+        limit: Union[int, None] = None,
         desc: bool = True,
         with_crop: bool = True,
+        sampling: int = 1,
+        offset: int = 0,
     ) -> Response:
         """List the detections of a sequence
 
@@ -496,17 +510,32 @@ class Client:
 
         Args:
             sequence_id: ID of the associated sequence entry
-            limit: maximum number of detections to fetch
+            limit: maximum number of detections to fetch. Unset (the default) lets the API pick:
+                10, or the size of the whole sampled span capped at 500 when sampling is set
             desc: whether to order the detections by created_at in descending order
             with_crop: whether to include the crop_url for detections that have a crop
+            sampling: keep one detection every N (1 = all, max 10000). The kept frames do not
+                depend on desc. Leave limit unset to span the sequence, and read the
+                X-Sampled-Total / X-Sampled-Truncated response headers
+            offset: raw detections to skip, from the oldest end when sampling. Page by advancing
+                it in multiples of sampling
 
         Returns:
             HTTP response
         """
+        params: Dict[str, Any] = {
+            "desc": desc,
+            "with_crop": with_crop,
+            "sampling": sampling,
+            "offset": offset,
+        }
+        # Omitted rather than defaulted client-side, so the API can size it from the sampled set.
+        if limit is not None:
+            params["limit"] = limit
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.SEQUENCES_FETCH_DETECTIONS.format(seq_id=sequence_id)),
             headers=self.headers,
-            params={"limit": limit, "desc": desc, "with_crop": with_crop},
+            params=params,
             timeout=self.timeout,
         )
 

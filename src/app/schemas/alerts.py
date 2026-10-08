@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.sequences import SequenceRead
 
-__all__ = ["AlertBase", "AlertCreate", "AlertRead", "AlertReadWithSequences", "AlertUpdate"]
+__all__ = ["AlertBase", "AlertCount", "AlertCreate", "AlertRead", "AlertReadWithSequences", "AlertUpdate"]
 
 
 class AlertBase(BaseModel):
@@ -37,3 +37,7 @@ class AlertRead(AlertCreate):
 
 class AlertReadWithSequences(AlertRead):
     sequences: List[SequenceRead] = Field(default_factory=list)
+
+
+class AlertCount(BaseModel):
+    count: int

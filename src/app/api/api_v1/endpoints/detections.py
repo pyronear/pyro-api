@@ -4,50 +4,45 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
-import json
+import itertools
 import logging
 import re
 from ast import literal_eval
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import AbstractSet, Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import pandas as pd
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     Form,
     HTTPException,
     Path,
+    Response,
     Security,
     UploadFile,
     status,
 )
-from fastapi.encoders import jsonable_encoder
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import (
-    dispatch_webhook,
-    get_alert_crud,
     get_camera_crud,
     get_detection_crud,
     get_jwt,
-    get_organization_crud,
     get_pose_crud,
     get_sequence_crud,
-    get_webhook_crud,
 )
 from app.core.config import settings
-from app.core.time import utcnow
-from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD, WebhookCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, UserRole
+from app.core.time import to_utc_naive, utcnow
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
+from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
     BOXES_PATTERN,
-    COMPILED_BOXES_PATTERN,
+    EMPTY_BBOXES,
     DetectionCreate,
     DetectionRead,
     DetectionSequence,
@@ -57,11 +52,8 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.overlap import compute_overlap, haversine_km
-from app.services.risk import risk_service
 from app.services.sequence_confidence import max_conf_from_bboxes
-from app.services.slack import slack_client
 from app.services.storage import s3_service, upload_file
-from app.services.telegram import telegram_client
 from app.services.telemetry import telemetry_client
 
 logger = logging.getLogger("uvicorn.error")
@@ -90,30 +82,98 @@ def _parse_bbox(bbox_str: str) -> Tuple[float, float, float, float, float]:
 def _bboxes_overlap(
     left: Tuple[float, float, float, float, float],
     right: Tuple[float, float, float, float, float],
+    tolerance: float = 0.0,
 ) -> bool:
+    # A negative intersection is a gap: allow up to `tolerance` (relative coords) per axis
+    # so a plume whose bbox drifts between frames still matches its sequence.
     lx_min, ly_min, lx_max, ly_max, _ = left
     rx_min, ry_min, rx_max, ry_max, _ = right
     inter_w = min(lx_max, rx_max) - max(lx_min, rx_min)
     inter_h = min(ly_max, ry_max) - max(ly_min, ry_min)
-    return inter_w > 0 and inter_h > 0
+    return inter_w > -tolerance and inter_h > -tolerance
 
 
 async def _get_last_bbox_for_sequence(
     detections: DetectionCRUD,
     sequence_id: int,
 ) -> Optional[Tuple[float, float, float, float, float]]:
-    dets = await detections.fetch_all(
-        filters=("sequence_id", sequence_id),
-        order_by="created_at",
-        order_desc=True,
-        limit=1,
-    )
-    if not dets:
+    # Continuity rows (empty bbox) are skipped: spatial matching must compare against the
+    # last real evidence, not against a frame where nothing was detected.
+    det = await detections.get_latest_with_bbox(sequence_id)
+    if det is None:
         return None
-    bbox_strs = _extract_bbox_strings(dets[0].bbox)
+    bbox_strs = _extract_bbox_strings(det.bbox)
     if not bbox_strs:
         return None
     return _parse_bbox(bbox_strs[0])
+
+
+async def _get_continuity_sequences(
+    sequences: SequenceCRUD,
+    camera_id: int,
+    pose_id: int,
+) -> List[Sequence]:
+    """Sequences of the pose seen recently enough for an unmatched frame to be attached to them."""
+    return await sequences.fetch_all(
+        filters=[("camera_id", camera_id), ("pose_id", pose_id)],
+        inequality_pair=(
+            "last_seen_at",
+            ">",
+            utcnow() - timedelta(seconds=settings.SEQUENCE_CONTINUITY_SECONDS),
+        ),
+    )
+
+
+async def _create_continuity_detection(
+    detections: DetectionCRUD,
+    camera_id: int,
+    pose_id: int,
+    bucket_key: str,
+    sequence_id: int,
+    recorded_at: datetime,
+) -> Detection:
+    """Attach a frame to a sequence whose object was not detected on it (empty bbox).
+
+    Continuity rows keep the sequence's frame timeline gapless for the temporal model.
+    They never refresh last_seen_at nor max_conf: the sequence's lifetime and confidence
+    track real evidence only.
+    """
+    return await detections.create(
+        DetectionCreate(
+            camera_id=camera_id,
+            pose_id=pose_id,
+            bucket_key=bucket_key,
+            bbox=EMPTY_BBOXES,
+            sequence_id=sequence_id,
+            recorded_at=recorded_at,
+        )
+    )
+
+
+async def _attach_continuity_detections(
+    detections: DetectionCRUD,
+    sequences: SequenceCRUD,
+    continuity_sequences: List[Sequence],
+    camera_id: int,
+    pose_id: int,
+    bucket_key: str,
+    recorded_at: datetime,
+    skip_sequence_ids: AbstractSet[int] = frozenset(),
+) -> List[Detection]:
+    """Attach the frame as a continuity row to every given sequence not already covered.
+
+    Each touched sequence is re-enqueued for validation: its frame set changed even though
+    no real evidence was added.
+    """
+    created: List[Detection] = []
+    for seq in continuity_sequences:
+        if seq.id in skip_sequence_ids:
+            continue
+        created.append(
+            await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id, recorded_at)
+        )
+        await sequences.enqueue_validation(seq.id)
+    return created
 
 
 async def _get_camera_by_id(
@@ -132,15 +192,13 @@ async def _get_recent_sequences(
     sequences: SequenceCRUD,
     camera_ids: List[int],
     sequence_: Sequence,
-    reference_time: Optional[datetime] = None,
 ) -> List[Sequence]:
-    anchor = reference_time if reference_time is not None else utcnow()
     recent_sequences = await sequences.fetch_all(
         in_pair=("camera_id", camera_ids),
         inequality_pair=(
             "last_seen_at",
             ">",
-            anchor - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
+            utcnow() - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS),
         ),
     )
     if all(seq.id != sequence_.id for seq in recent_sequences):
@@ -156,6 +214,9 @@ def _build_overlap_records(
     for seq in recent_sequences:
         cam = camera_by_id.get(seq.camera_id)
         if cam is None or seq.sequence_azimuth is None or seq.cone_angle is None:
+            continue
+        # Only validated sequences are eligible for triangulation (as target or partner).
+        if not seq.is_validated:
             continue
         records.append({
             "id": int(seq.id),
@@ -218,22 +279,24 @@ def _collect_existing_alert_ids(group: Tuple[int, ...], mapping: Dict[int, Set[i
 async def _maybe_update_alert(
     alerts: AlertCRUD,
     target_alert_id: int,
-    location: Tuple[float, float],
+    location: Optional[Tuple[float, float]],
     start_at: datetime,
     last_seen_at: datetime,
 ) -> None:
     current_alert = cast(Alert, await alerts.get(target_alert_id, strict=True))
     new_start_at = min(start_at, current_alert.started_at) if current_alert.started_at else start_at
     new_last_seen = max(last_seen_at, current_alert.last_seen_at) if current_alert.last_seen_at else last_seen_at
+    # A location-less group (e.g. same-mast only) still widens the time bounds but must
+    # not erase a location the alert already has.
+    lat, lon = location if location is not None else (current_alert.lat, current_alert.lon)
     if (
-        current_alert.lat is None
-        or current_alert.lon is None
+        (location is not None and (current_alert.lat is None or current_alert.lon is None))
         or (current_alert.started_at is None or new_start_at < current_alert.started_at)
         or (current_alert.last_seen_at is None or new_last_seen > current_alert.last_seen_at)
     ):
         await alerts.update(
             target_alert_id,
-            AlertUpdate(lat=location[0], lon=location[1], started_at=new_start_at, last_seen_at=new_last_seen),
+            AlertUpdate(lat=lat, lon=lon, started_at=new_start_at, last_seen_at=new_last_seen),
         )
 
 
@@ -255,6 +318,93 @@ async def _filter_candidate_alert_ids(
     return kept
 
 
+async def _merge_alerts(
+    target_alert_id: int,
+    absorbed_ids: Set[int],
+    alerts: AlertCRUD,
+    queued_links: Optional[List[AlertSequence]] = None,
+) -> None:
+    """Absorb duplicate alerts into the target: relink their sequences, widen the target's
+    time bounds, inherit a location if the target has none, then delete the absorbed rows."""
+    session = alerts.session
+    target = cast(Alert, await alerts.get(target_alert_id, strict=True))
+    absorbed = sorted(await alerts.get_in(list(absorbed_ids), "id"), key=lambda a: a.id)
+
+    links_stmt: Any = select(AlertSequence).where(
+        AlertSequence.alert_id.in_([target_alert_id, *absorbed_ids])  # type: ignore[attr-defined]
+    )
+    links = (await session.exec(links_stmt)).all()
+    target_seq_ids = {link.sequence_id for link in links if link.alert_id == target_alert_id}
+    # Links to the target queued by the caller but not committed yet count as existing,
+    # otherwise relinking would insert the same composite key twice.
+    target_seq_ids |= {link.sequence_id for link in queued_links or [] if link.alert_id == target_alert_id}
+    for link in links:
+        if link.alert_id == target_alert_id or link.sequence_id in target_seq_ids:
+            continue
+        target_seq_ids.add(link.sequence_id)
+        session.add(AlertSequence(alert_id=target_alert_id, sequence_id=link.sequence_id))
+
+    target.started_at = min([target.started_at, *[a.started_at for a in absorbed]])
+    target.last_seen_at = max([target.last_seen_at, *[a.last_seen_at for a in absorbed]])
+    if target.lat is None or target.lon is None:
+        located = next((a for a in absorbed if a.lat is not None and a.lon is not None), None)
+        if located is not None:
+            target.lat = located.lat
+            target.lon = located.lon
+    session.add(target)
+
+    delete_links_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(list(absorbed_ids)))
+    await session.exec(delete_links_stmt)
+    delete_alerts_stmt: Any = delete(Alert).where(cast(Any, Alert.id).in_(list(absorbed_ids)))
+    await session.exec(delete_alerts_stmt)
+    await session.commit()
+
+
+def _rewrite_after_merge(
+    mapping: Dict[int, Set[int]],
+    to_link: List[AlertSequence],
+    absorbed_ids: Set[int],
+    target_alert_id: int,
+) -> None:
+    """Point in-memory attach state at the merge survivor so later groups neither reference
+    deleted alerts nor duplicate links the merge already created."""
+    kept: List[AlertSequence] = []
+    seen: Set[Tuple[int, int]] = set()
+    for link in to_link:
+        if link.alert_id in absorbed_ids:
+            if target_alert_id in mapping.get(link.sequence_id, set()):
+                # The merge relinked this sequence (or a link is already queued): drop it.
+                continue
+            link.alert_id = target_alert_id
+        pair = (link.alert_id, link.sequence_id)
+        if pair in seen:
+            continue
+        seen.add(pair)
+        kept.append(link)
+    to_link[:] = kept
+    for alert_ids in mapping.values():
+        if alert_ids & absorbed_ids:
+            alert_ids -= absorbed_ids
+            alert_ids.add(target_alert_id)
+
+
+async def _candidates_are_one_event(candidates: Set[int], alerts: AlertCRUD) -> bool:
+    """Whether every located candidate sits within the merge radius of the others.
+
+    A location-less group passes the distance filter against every candidate, so on its
+    own it says nothing about which distant alerts are the same event — e.g. two cameras
+    on one mast can each watch a different fire along the same bearing."""
+    located = []
+    for aid in candidates:
+        alert = cast(Alert, await alerts.get(aid, strict=True))
+        if alert.lat is not None and alert.lon is not None:
+            located.append((alert.lat, alert.lon))
+    return all(
+        haversine_km(lat1, lon1, lat2, lon2) <= settings.ALERT_MERGE_MAX_DISTANCE_KM
+        for (lat1, lon1), (lat2, lon2) in itertools.combinations(located, 2)
+    )
+
+
 async def _get_or_create_alert_id(
     existing_alert_ids: Set[int],
     location: Optional[Tuple[float, float]],
@@ -262,13 +412,22 @@ async def _get_or_create_alert_id(
     start_at: datetime,
     last_seen_at: datetime,
     alerts: AlertCRUD,
-) -> int:
+    queued_links: Optional[List[AlertSequence]] = None,
+) -> Tuple[int, Set[int]]:
+    """Pick the alert a group belongs to, merging duplicates when the group's sequences
+    span several compatible alerts. Returns the target alert id and the absorbed ids."""
     candidates = await _filter_candidate_alert_ids(existing_alert_ids, location, alerts)
     if candidates:
         target_alert_id = min(candidates)
-        if isinstance(location, tuple):
-            await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
-        return target_alert_id
+        absorbed_ids = set(candidates) - {target_alert_id}
+        if absorbed_ids and location is None and not await _candidates_are_one_event(candidates, alerts):
+            # Without a triangulated location, a group bridging distant alerts is not
+            # merge evidence: link to the oldest one and leave the others alive.
+            absorbed_ids = set()
+        if absorbed_ids:
+            await _merge_alerts(target_alert_id, absorbed_ids, alerts, queued_links)
+        await _maybe_update_alert(alerts, target_alert_id, location, start_at, last_seen_at)
+        return target_alert_id, absorbed_ids
     alert = await alerts.create(
         AlertCreate(
             organization_id=organization_id,
@@ -278,7 +437,7 @@ async def _get_or_create_alert_id(
             last_seen_at=last_seen_at,
         )
     )
-    return alert.id
+    return alert.id, set()
 
 
 def _build_links_for_group(
@@ -296,19 +455,18 @@ def _build_links_for_group(
     return links
 
 
-async def attach_sequence_to_alert(
+async def _attach_sequence_to_alert(
     sequence_: Sequence,
     camera: Camera,
     cameras: CameraCRUD,
     sequences: SequenceCRUD,
     alerts: AlertCRUD,
-    reference_time: Optional[datetime] = None,
 ) -> Optional[int]:
     """Assign the given sequence to an alert based on cone/time overlap."""
     camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
 
     # Fetch recent sequences for the organization based on recency of last_seen_at
-    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_, reference_time)
+    recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_)
 
     # Build DataFrame for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
@@ -331,14 +489,17 @@ async def attach_sequence_to_alert(
         location = group_locations.get(g)
         start_at, last_seen_at = _group_time_bounds(g, seq_by_id)
         existing_alert_ids = _collect_existing_alert_ids(g, mapping)
-        target_alert_id = await _get_or_create_alert_id(
+        target_alert_id, absorbed_ids = await _get_or_create_alert_id(
             existing_alert_ids,
             location,
             camera.organization_id,
             start_at,
             last_seen_at,
             alerts,
+            queued_links=to_link,
         )
+        if absorbed_ids:
+            _rewrite_after_merge(mapping, to_link, absorbed_ids, target_alert_id)
         if int(sequence_.id) in g:
             alert_id = target_alert_id
         to_link.extend(_build_links_for_group(g, target_alert_id, mapping))
@@ -350,9 +511,15 @@ async def attach_sequence_to_alert(
     return alert_id
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new wildfire detection")
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new wildfire detection",
+    # The return annotation is not a valid response-model type (a 204 Response is returned
+    # for an empty frame extending no sequence), so the model is declared explicitly.
+    response_model=DetectionRead,
+)
 async def create_detection(
-    background_tasks: BackgroundTasks,
     bboxes: str = Form(
         ...,
         description="string representation of list of detection localizations, each represented as a tuple of relative coords (max 3 decimals) in order: xmin, ymin, xmax, ymax, conf",
@@ -361,21 +528,27 @@ async def create_detection(
         max_length=settings.MAX_BBOX_STR_LENGTH,
     ),
     pose_id: int = Form(..., gt=0, description="pose id of the detection"),
+    recorded_at: Optional[datetime] = Form(
+        None,
+        description=(
+            "Timestamp of when the image was captured by the engine. Timezone-aware values are "
+            "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
-    crop_file: Optional[UploadFile] = File(None, alias="crop"),
+    crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
-    webhooks: WebhookCRUD = Depends(get_webhook_crud),
-    organizations: OrganizationCRUD = Depends(get_organization_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
-    alerts: AlertCRUD = Depends(get_alert_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
     poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
-) -> Detection:
+) -> Union[Detection, Response]:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="detections-create")
 
-    # Throw an error if the format is invalid and can't be captured by the regex
-    if any(box[0] >= box[2] or box[1] >= box[3] for box in COMPILED_BOXES_PATTERN.findall(bboxes)):
+    # The Form regex already constrains the format; parse to validate coordinate ordering on
+    # every box (an empty list parses to no box at all and is a valid frame with no detection).
+    bbox_strings = _extract_bbox_strings(bboxes)
+    if any(box[0] >= box[2] or box[1] >= box[3] for box in map(_parse_bbox, bbox_strings)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="xmin & ymin are expected to be respectively smaller than xmax & ymax",
@@ -388,20 +561,49 @@ async def create_detection(
     if not pose.active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
 
-    bbox_strings = _extract_bbox_strings(bboxes)
+    # Validate crop/bbox alignment before any S3 upload to avoid orphan objects.
+    # Each crop frames a single object, so there must be exactly one crop per bbox (or none at all).
+    crops = crop_files or []
+    if crops and len(crops) != len(bbox_strings):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Number of crops must match the number of bboxes.",
+        )
+
+    # The engine may report when the image was actually captured; fall back to now when it doesn't.
+    # This is the event time the platform displays, and it sets the sequence's started_at; liveness
+    # gates (last_seen_at, continuity) still key on created_at, the monotonic server clock. Aware
+    # timestamps are normalized to UTC, naive ones are assumed UTC, and all rows from a single
+    # upload share the same capture time.
+    effective_recorded_at = to_utc_naive(recorded_at) if recorded_at is not None else utcnow()
+
+    # Frame with no detection: it only matters as continuity for recently-seen sequences of
+    # the pose. Without one, store nothing at all — empty frames must never seed a sequence
+    # (the historical placeholder bboxes did, creating phantom sequences).
     if not bbox_strings:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid bbox format.")
+        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.sub, pose_id)
+        if not continuity_sequences:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+        continuity_dets = await _attach_continuity_detections(
+            detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key, effective_recorded_at
+        )
+        return DetectionRead(**continuity_dets[0].model_dump())
 
     # Upload media
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    crop_bucket_key: Optional[str] = None
-    if crop_file is not None:
-        crop_bucket_key = await upload_file(
-            crop_file, token_payload.organization_id, token_payload.sub, key_prefix="crop_"
+    crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
+    for idx, crop in enumerate(crops):
+        # Prefix with the bbox index so byte-identical crops in the same request still get
+        # distinct keys; each detection then owns its crop object (safe to delete independently).
+        crop_bucket_keys[idx] = await upload_file(
+            crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
 
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    # sequences touched by this request, to mark due for validation (DB-backed queue).
+    affected_sequences: Set[int] = set()
 
     for idx, bbox_str in enumerate(bbox_strings):
         single_bboxes = _bbox_list_to_str([bbox_str])
@@ -412,9 +614,10 @@ async def create_detection(
                 camera_id=token_payload.sub,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
-                crop_bucket_key=crop_bucket_key,
+                crop_bucket_key=crop_bucket_keys[idx],
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
+                recorded_at=effective_recorded_at,
             )
         )
 
@@ -436,7 +639,7 @@ async def create_detection(
             if seq.id is None:
                 continue
             last_bbox = await _get_last_bbox_for_sequence(detections, seq.id)
-            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox):
+            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
                 matched_sequence = seq
                 break
 
@@ -447,6 +650,7 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
                 ("camera_id", token_payload.sub),
@@ -469,11 +673,14 @@ async def create_detection(
                 if not cand_bbox_strs:
                     continue
                 cand_bbox = _parse_bbox(cand_bbox_strs[0])
-                if _bboxes_overlap(cand_bbox, det_bbox):
+                if _bboxes_overlap(cand_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
                     overlapping_dets.append(cand)
 
             if len(overlapping_dets) >= settings.SEQUENCE_MIN_INTERVAL_DETS:
-                first_det = min(overlapping_dets, key=lambda item: item.created_at)
+                # First captured, not first inserted: a backlog flush can upload detections out of
+                # capture order, and started_at is event time. created_at then id break the tie
+                # (bboxes of one upload share the same recorded_at).
+                first_det = min(overlapping_dets, key=lambda item: (item.recorded_at, item.created_at, item.id))
                 cone_azimuth, cone_angle = resolve_cone(pose.azimuth, first_det.bbox, camera.angle_of_view)
                 seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
@@ -483,7 +690,7 @@ async def create_detection(
                         camera_azimuth=pose.azimuth,
                         sequence_azimuth=cone_azimuth,
                         cone_angle=cone_angle,
-                        started_at=first_det.created_at,
+                        started_at=first_det.recorded_at,
                         last_seen_at=det.created_at,
                         max_conf=seq_max_conf,
                     )
@@ -492,42 +699,31 @@ async def create_detection(
                     updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
                     if det_.id == det.id:
                         det = updated
-
-                alert_id = await attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
-
-                # Webhooks
-                whs = await webhooks.fetch_all()
-                if any(whs):
-                    for webhook in await webhooks.fetch_all():
-                        background_tasks.add_task(dispatch_webhook, webhook.url, det)
-
-                org = None
-                # Telegram notifications
-                if telegram_client.is_enabled:
-                    org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.telegram_id:
-                        background_tasks.add_task(telegram_client.notify, org.telegram_id, det.model_dump_json())
-
-                if slack_client.is_enabled:
-                    if org is None:
-                        org = cast(Organization, await organizations.get(token_payload.organization_id, strict=True))
-                    if org.slack_hook:
-                        min_conf = risk_service.min_confidence(camera.id)
-                        if min_conf is None or sequence_.max_conf is None or sequence_.max_conf >= min_conf:
-                            slack_payload = jsonable_encoder(det)
-                            slack_payload["sequence_azimuth"] = sequence_.sequence_azimuth
-                            background_tasks.add_task(
-                                slack_client.notify, org.slack_hook, json.dumps(slack_payload), camera.name, alert_id
-                            )
-                        else:
-                            logger.info(
-                                "Skipping Slack notification for camera %s: max conf %.3f < threshold %.3f",
-                                camera.name,
-                                sequence_.max_conf,
-                                min_conf,
-                            )
+                affected_sequences.add(sequence_.id)
 
         created.append(det)
+
+    # Continuity pass: a recently-seen sequence of this pose whose object was not detected on
+    # this frame (no bbox matched it, e.g. one of two smokes faded) still gets the frame,
+    # attached with an empty bbox, so its frame timeline stays gapless for the temporal model.
+    # The helper enqueues validation itself, so these sequences stay out of affected_sequences.
+    await _attach_continuity_detections(
+        detections,
+        sequences,
+        await _get_continuity_sequences(sequences, token_payload.sub, pose_id),
+        token_payload.sub,
+        pose_id,
+        bucket_key,
+        effective_recorded_at,
+        skip_sequence_ids=affected_sequences,
+    )
+
+    # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
+    # whichever uvicorn worker received the detection). The per-process validation worker
+    # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
+    # notification channels (webhooks, Telegram, Slack) fire only once validated.
+    for seq_id in affected_sequences:
+        await sequences.enqueue_validation(seq_id)
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())
@@ -543,7 +739,7 @@ async def get_detection(
     telemetry_client.capture(token_payload.sub, event="detections-get", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return detection
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
@@ -565,11 +761,13 @@ async def get_detection_url(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
 
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    crop_url = bucket.get_public_url(detection.crop_bucket_key) if detection.crop_bucket_key else None
-    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key), crop_url=crop_url)
+    crop_url = (
+        bucket.get_public_url(detection.crop_bucket_key, verify_exists=False) if detection.crop_bucket_key else None
+    )
+    return DetectionUrl(url=bucket.get_public_url(detection.bucket_key, verify_exists=False), crop_url=crop_url)
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
@@ -579,7 +777,7 @@ async def fetch_detections(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    if UserRole.ADMIN in token_payload.scopes:
+    if token_payload.is_admin:
         return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
 
     cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
@@ -602,7 +800,11 @@ async def delete_detection(
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    bucket.delete_file(detection.bucket_key)
+    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
+    # continuity rows): only delete it once no other row references it. Crops are per-row.
+    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key), limit=2)
+    if all(d.id == detection_id for d in sharing):
+        bucket.delete_file(detection.bucket_key)
     if detection.crop_bucket_key:
         bucket.delete_file(detection.crop_bucket_key)
     await detections.delete(detection_id)

@@ -31,7 +31,7 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 
-def render_item(type_, obj, autogen_context):  # noqa: ARG001
+def render_item(type_, obj, autogen_context):  # ruff:ignore[unused-function-argument]
     """Render sqlmodel's AutoString as plain sa.String so migrations don't import sqlmodel."""
     if type_ == "type" and isinstance(obj, AutoString):
         length = getattr(obj.impl, "length", None)

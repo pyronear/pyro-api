@@ -1,24 +1,30 @@
+import asyncio
 import io
 import os
-from datetime import datetime
-from typing import AsyncGenerator, Dict
+import time
+from datetime import datetime, timedelta
+from typing import Any, AsyncGenerator, Dict, cast
 
 import pytest
 import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import update
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, text
+from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import login, users
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.db import engine
+from app.core.time import utcnow
+from app.db import engine, session_factory
 from app.main import app
 from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
+from app.services import storage
 from app.services.storage import s3_service
+from app.services.validation import process_next_due_validation
 
 dt_format = "%Y-%m-%dT%H:%M:%S.%f"
 
@@ -155,6 +161,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
     },
     {
         "id": 2,
@@ -166,6 +173,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:18:19.226673", dt_format),
     },
     {
         "id": 3,
@@ -177,6 +185,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
     },
     {
         "id": 4,
@@ -188,6 +197,7 @@ DET_TABLE = [
         "bbox": "[(.1,.1,.7,.8,.9)]",
         "others_bboxes": None,
         "created_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "recorded_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
     },
 ]
 
@@ -203,6 +213,10 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
+        "is_validated": True,
     },
     {
         "id": 2,
@@ -215,6 +229,10 @@ SEQ_TABLE = [
         "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
         "max_conf": None,
+        "temporal_model_score": None,
+        "temporal_model_version": None,
+        "temporal_api_version": None,
+        "is_validated": True,
     },
 ]
 
@@ -230,7 +248,7 @@ WEBHOOK_TABLE = [
 ]
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app=app)
     async with AsyncClient(
@@ -242,7 +260,54 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         yield client
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(autouse=True, loop_scope="session")
+async def _drain_detached_notifications():
+    """Detached notification tasks must finish inside the test's event loop."""
+    from app.services import validation as validation_service
+
+    yield
+    pending = list(validation_service._pending_notifications)
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
+async def drain_validation_queue(timeout_seconds: float = 30.0) -> None:
+    """Synchronously drain the validation queue (the worker loop is not running in tests).
+
+    A bare claim-until-empty loop is racy under CI load: the claim query only picks rows
+    with ``validation_due_at <= utcnow()`` and no active lease, so a retry backoff, a
+    leftover lease, or a clock step on the runner can hide a still-pending job and end
+    the drain while a sequence is left unprocessed. Each round therefore backdates every
+    pending due time (and clears leases) before claiming, so the loop only stops once the
+    queue is provably empty. The deadline guards against a job that keeps re-queueing.
+    """
+    due_col = cast(Any, Sequence.validation_due_at)
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        async with session_factory() as session:
+            stmt: Any = (
+                update(Sequence)
+                .where(due_col.is_not(None))
+                .values(validation_due_at=utcnow() - timedelta(seconds=60), validation_lease_until=None)
+            )
+            await session.exec(stmt)
+            await session.commit()
+        if not await process_next_due_validation():
+            return
+        if time.monotonic() > deadline:
+            async with session_factory() as session:
+                res = await session.exec(select(Sequence).where(due_col.is_not(None)))
+                pending = [
+                    (seq.id, seq.validation_due_at, seq.validation_lease_until, seq.validation_attempts)
+                    for seq in res.all()
+                ]
+            # The last claim may have emptied the queue right as the deadline passed:
+            # only fail when jobs actually remain, else let the next claim confirm.
+            if pending:
+                pytest.fail(f"Validation queue not drained after {timeout_seconds}s; still pending: {pending}")
+
+
+@pytest_asyncio.fixture(loop_scope="session")
 async def async_session() -> AsyncSession:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -274,7 +339,16 @@ def mock_img():
     return requests.get("https://avatars.githubusercontent.com/u/61667887?s=200&v=4", timeout=5).content
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest.fixture
+def pinned_url_window(monkeypatch):
+    """Freeze the presigned-URL cache window so a test cannot straddle a rollover."""
+    monkeypatch.setattr(storage, "_url_cache_window", lambda _url_expiration: 10**9)
+    for bucket in storage.s3_service._buckets.values():
+        # Otherwise whichever consumer runs second starts warm off the first one's entries.
+        bucket._url_cache.clear()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
 async def organization_session(async_session: AsyncSession):
     for entry in ORGANIZATION_TABLE:
         async_session.add(Organization(**entry))
@@ -298,7 +372,7 @@ async def organization_session(async_session: AsyncSession):
         pass
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def webhook_session(async_session: AsyncSession):
     for entry in WEBHOOK_TABLE:
         async_session.add(Webhook(**entry))
@@ -313,7 +387,7 @@ async def webhook_session(async_session: AsyncSession):
     await async_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def user_session(organization_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(users, "hash_password", mock_hash_password)
     monkeypatch.setattr(login, "verify_password", mock_verify_password)
@@ -328,7 +402,7 @@ async def user_session(organization_session: AsyncSession, monkeypatch):
     await organization_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def camera_session(user_session: AsyncSession, organization_session: AsyncSession):
     for entry in CAM_TABLE:
         user_session.add(Camera(**entry))
@@ -341,7 +415,7 @@ async def camera_session(user_session: AsyncSession, organization_session: Async
     await user_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def pose_session(camera_session: AsyncSession):
     for entry in POSE_TABLE:
         camera_session.add(Pose(**entry))
@@ -354,7 +428,7 @@ async def pose_session(camera_session: AsyncSession):
     await camera_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def occlusion_mask_session(pose_session: AsyncSession):
     for entry in OCCLUSION_MASK_TABLE:
         pose_session.add(OcclusionMask(**entry))
@@ -369,7 +443,7 @@ async def occlusion_mask_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def sequence_session(pose_session: AsyncSession):
     for entry in SEQ_TABLE:
         pose_session.add(Sequence(**entry))
@@ -384,7 +458,7 @@ async def sequence_session(pose_session: AsyncSession):
     await pose_session.rollback()
 
 
-@pytest_asyncio.fixture(scope="function", loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session")
 async def detection_session(pose_session: AsyncSession, sequence_session: AsyncSession):
     for entry in DET_TABLE:
         sequence_session.add(Detection(**entry))
@@ -420,6 +494,7 @@ def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str
 def pytest_configure():
     # api.security patching
     pytest.get_token = get_token
+    pytest.drain_validation_queue = drain_validation_queue
     # Table
     pytest.organization_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}

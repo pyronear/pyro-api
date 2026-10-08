@@ -29,7 +29,7 @@ FAKE_JPEG = b"\xff\xd8\xff" + b"\x00" * 64
 _PROXY_MODULE = "app.api.api_v1.endpoints.camera_proxy"
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture
 async def configured_camera_session(camera_session: AsyncSession):
     """camera_session extended with one camera that has device_ip / camera_ip set."""
     camera_session.add(Camera(**CONFIGURED_CAM))
@@ -138,6 +138,7 @@ async def test_proxy_write_auth(
         "/cameras/1/latest_image?pose=0",
         "/cameras/1/control/presets",
         "/cameras/1/control/speed_tables",
+        "/cameras/1/control/azimuth",
         "/cameras/1/focus/status",
         "/cameras/1/patrol/status",
         "/cameras/1/stream/status",
@@ -275,6 +276,7 @@ async def test_device_ip_not_leaked_in_camera_response(
         (f"/cameras/{CONFIGURED_CAM_ID}/camera_infos", "get", None),
         (f"/cameras/{CONFIGURED_CAM_ID}/control/presets", "get", None),
         (f"/cameras/{CONFIGURED_CAM_ID}/control/speed_tables", "get", None),
+        (f"/cameras/{CONFIGURED_CAM_ID}/control/azimuth", "get", None),
         (f"/cameras/{CONFIGURED_CAM_ID}/focus/status", "get", None),
         (f"/cameras/{CONFIGURED_CAM_ID}/patrol/status", "get", None),
         (f"/cameras/{CONFIGURED_CAM_ID}/stream/status", "get", None),

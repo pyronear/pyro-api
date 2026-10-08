@@ -4,10 +4,11 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 
+import math
 from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,7 +19,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
 from app.schemas.alerts import AlertCreate
-from app.schemas.detections import DetectionRead, DetectionSequence, DetectionWithUrl
+from app.schemas.detections import DetectionSequence, DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.alerts import refresh_alert_state
@@ -29,6 +30,10 @@ from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+
+DEFAULT_DETECTION_LIMIT = 10  # historical default, kept for sampling=1
+MAX_DETECTION_LIMIT = 500
+MAX_SAMPLING = 10_000
 
 
 async def verify_org_rights(
@@ -66,7 +71,7 @@ async def get_sequence(
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id])
@@ -74,13 +79,52 @@ async def get_sequence(
 
 
 @router.get(
-    "/{sequence_id}/detections", status_code=status.HTTP_200_OK, summary="Fetch the detections of a specific sequence"
+    "/{sequence_id}/detections",
+    status_code=status.HTTP_200_OK,
+    summary="Fetch the detections of a specific sequence",
+    description=(
+        "Returns the sequence's detections, including continuity rows: frames attached with "
+        'bbox="[]" where the tracked object was not detected, kept so the frame timeline stays '
+        "gapless. Filter on bbox if only real detections are wanted."
+    ),
 )
 async def fetch_sequence_detections(
+    response: Response,
     sequence_id: int = Path(..., gt=0),
-    limit: int = Query(10, description="Maximum number of detections to fetch", ge=1, le=100),
-    offset: int = Query(0, description="Number of detections to skip", ge=0),
+    limit: Union[int, None] = Query(
+        None,
+        description=(
+            f"Maximum number of detections to fetch. Defaults to {DEFAULT_DETECTION_LIMIT}, except "
+            "when `sampling` is set and `limit` is omitted: it then spans the whole sampled set "
+            f"from `offset` onward, capped at {MAX_DETECTION_LIMIT}."
+        ),
+        ge=1,
+        le=MAX_DETECTION_LIMIT,
+    ),
+    offset: int = Query(
+        0,
+        description=(
+            "Number of detections to skip, counted in raw detections whatever `sampling` is. When "
+            "sampling, it counts from the oldest end regardless of `desc`, so "
+            "`offset=20&sampling=48` starts at detection 21. Page by advancing `offset` in "
+            "multiples of `sampling` to keep the grid on the same detections."
+        ),
+        ge=0,
+    ),
     desc: bool = Query(True, description="Whether to order the detections by created_at in descending order"),
+    sampling: int = Query(
+        1,
+        description=(
+            "Keep one detection every N (1 = every detection). Frames are picked chronologically, "
+            "so the set does not depend on `desc`. An explicit `limit` below "
+            "`ceil((detections_count - offset) / sampling)` returns only part of the span (its "
+            "most recent part when `desc=true`); omit `limit` to get the whole span, and read the "
+            "`X-Sampled-Total` and `X-Sampled-Truncated` response headers to tell whether it "
+            "covered the rest of the sequence."
+        ),
+        ge=1,
+        le=MAX_SAMPLING,
+    ),
     with_crop: bool = Query(
         False,
         description="If true, presign and include crop_url for detections that have a crop. Defaults to false to skip the extra S3 head requests when crops are not needed.",
@@ -88,28 +132,40 @@ async def fetch_sequence_detections(
     cameras: CameraCRUD = Depends(get_camera_crud),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionWithUrl]:
     telemetry_client.capture(token_payload.sub, event="sequences-get", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
-    if UserRole.ADMIN not in token_payload.scopes and token_payload.organization_id != camera.organization_id:
+    if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+    if sampling > 1:
+        # limit still truncates the thinned set, invisibly: you get what looks like a spread but is
+        # only its tail. Size the set so an omitted limit spans it, and report it either way.
+        counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
+        sampled_total = math.ceil(max(0, counts.get(sequence_id, 0) - offset) / sampling)
+        effective_limit = limit if limit is not None else min(MAX_DETECTION_LIMIT, sampled_total)
+        response.headers["X-Sampled-Total"] = str(sampled_total)
+        response.headers["X-Sampled-Truncated"] = str(effective_limit < sampled_total).lower()
+    else:
+        effective_limit = limit if limit is not None else DEFAULT_DETECTION_LIMIT
 
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    fetched = await detections.fetch_all(
-        filters=("sequence_id", sequence_id),
-        order_by="created_at",
-        order_desc=desc,
-        limit=limit,
-        offset=offset,
+    fetched = await detections.fetch_by_sequence(
+        sequence_id, sampling=sampling, order_desc=desc, limit=effective_limit, offset=offset
     )
     return [
         DetectionWithUrl(
-            **DetectionRead(**elt.model_dump()).model_dump(),
-            url=bucket.get_public_url(elt.bucket_key),
-            crop_url=(bucket.get_public_url(elt.crop_bucket_key) if with_crop and elt.crop_bucket_key else None),
+            **elt.model_dump(),
+            url=bucket.get_public_url(elt.bucket_key, verify_exists=False),
+            crop_url=(
+                bucket.get_public_url(elt.crop_bucket_key, verify_exists=False)
+                if with_crop and elt.crop_bucket_key
+                else None
+            ),
         )
         for elt in fetched
     ]
@@ -122,29 +178,37 @@ async def fetch_sequence_detections(
 )
 async def fetch_latest_unlabeled_sequences(
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-latest")
-    camera_ids = (
-        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-    ).all()
-    classes: dict[int, Union[str, None]] = (
-        dict.fromkeys(camera_ids, risk_score) if risk_score is not None else dict(risk_service.scores())
-    )
+    is_admin = token_payload.is_admin
 
     stmt: Any = (
         select(Sequence)
-        .where(Sequence.started_at > utcnow() - timedelta(hours=24))
-        .where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        # Freshness window on last_seen_at, not started_at: started_at is now event time from the
+        # device clock (drift, backlog flush), so a late upload would silently miss the feed.
+        # last_seen_at is written from the server clock, same rule as the alert feed.
+        .where(Sequence.last_seen_at > utcnow() - timedelta(hours=24))
         .where(Sequence.is_wildfire.is_(None))  # type: ignore[union-attr]
     )
-    seq_filter = max_conf_filter_clause(classes)
-    if seq_filter is not None:
-        stmt = stmt.where(seq_filter)
-    stmt = stmt.order_by(Sequence.started_at.desc()).limit(15)  # type: ignore[attr-defined]
+    # Admins see every organization's sequences without risk-score filtering
+    if not is_admin:
+        camera_ids = (
+            await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
+        ).all()
+        classes: dict[int, Union[str, None]] = (
+            dict.fromkeys(camera_ids, risk_score) if risk_score is not None else dict(risk_service.scores())
+        )
+        stmt = stmt.where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        seq_filter = max_conf_filter_clause(classes)
+        if seq_filter is not None:
+            stmt = stmt.where(seq_filter)
+    # Most recently active first (the alert feed still orders on started_at).
+    stmt = stmt.order_by(Sequence.last_seen_at.desc()).limit(15)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])
@@ -157,29 +221,33 @@ async def fetch_sequences_from_date(
     limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
     offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
-        None, description="Override FWI class applied to every sequence; bypasses risk-api lookup."
+        None,
+        description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
     ),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[SequenceRead]:
     telemetry_client.capture(token_payload.sub, event="sequence-fetch-from-date")
-    # Limit to cameras in the same organization
-    camera_ids = (
-        await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
-    ).all()
-    classes: dict[int, str | None]
-    if risk_score is not None:
-        classes = dict.fromkeys(camera_ids, risk_score)
-    else:
-        scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
-        classes = dict(scores)
+    is_admin = token_payload.is_admin
 
-    stmt: Any = (
-        select(Sequence).where(func.date(Sequence.started_at) == from_date).where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
-    )
-    seq_filter = max_conf_filter_clause(classes)
-    if seq_filter is not None:
-        stmt = stmt.where(seq_filter)
+    stmt: Any = select(Sequence).where(func.date(Sequence.started_at) == from_date)
+    # Admins see every organization's sequences without risk-score filtering
+    if not is_admin:
+        # Limit to cameras in the same organization
+        camera_ids = (
+            await session.exec(select(Camera.id).where(Camera.organization_id == token_payload.organization_id))
+        ).all()
+        classes: dict[int, str | None]
+        if risk_score is not None:
+            classes = dict.fromkeys(camera_ids, risk_score)
+        else:
+            scores = await risk_service.get_scores_for_date(from_date, organization_id=token_payload.organization_id)
+            classes = dict(scores)
+
+        stmt = stmt.where(Sequence.camera_id.in_(camera_ids))  # type: ignore[attr-defined]
+        seq_filter = max_conf_filter_clause(classes)
+        if seq_filter is not None:
+            stmt = stmt.where(seq_filter)
     stmt = stmt.order_by(Sequence.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
@@ -227,7 +295,7 @@ async def label_sequence(
     telemetry_client.capture(token_payload.sub, event="sequence-label", properties={"sequence_id": sequence_id})
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
 
-    if UserRole.ADMIN not in token_payload.scopes:
+    if not token_payload.is_admin:
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     previous_label = sequence.is_wildfire

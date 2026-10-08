@@ -5,8 +5,10 @@
 
 import hashlib
 import logging
+import time
+from collections import OrderedDict
 from mimetypes import guess_extension
-from typing import Any, BinaryIO, Dict, Union
+from typing import Any, BinaryIO, Dict, Tuple, Union
 
 import boto3
 import magic
@@ -21,6 +23,18 @@ __all__ = ["s3_service", "upload_file"]
 
 logger = logging.getLogger("uvicorn.warning")
 
+# ~600 bytes per entry, so ~5 MB per bucket, and buckets are never evicted: the process
+# ceiling is that times the organization count, times the worker count.
+_URL_CACHE_MAXSIZE = 8192
+
+
+def _url_cache_window(url_expiration: int) -> int:
+    """Seconds a presigned URL keeps being handed out (a quarter of its lifetime, capped at 1h).
+
+    Derived from the expiration so lowering S3_URL_EXPIRATION can never serve an expired URL.
+    """
+    return min(3600, max(1, url_expiration // 4))
+
 
 class S3Bucket:
     """S3 bucket manager
@@ -31,7 +45,7 @@ class S3Bucket:
         proxy_url: the proxy url
     """
 
-    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # noqa: ANN001
+    def __init__(self, s3_client, bucket_name: str, proxy_url: Union[str, None] = None) -> None:  # ruff:ignore[missing-type-function-argument]
         self._s3 = s3_client
         try:
             self._s3.head_bucket(Bucket=bucket_name)
@@ -41,6 +55,9 @@ class S3Bucket:
             raise ValueError(f"unable to access bucket {bucket_name}")
         self.name = bucket_name
         self.proxy_url = proxy_url
+        # (bucket_key, url_expiration, window slot) -> presigned URL. Scoped to the instance
+        # because proxy_url and the signing credentials are fixed per bucket.
+        self._url_cache: OrderedDict[Tuple[str, int, int], str] = OrderedDict()
 
     def get_file_metadata(self, bucket_key: str) -> Dict[str, Any]:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.head_object
@@ -59,7 +76,15 @@ class S3Bucket:
     def upload_file(self, bucket_key: str, file_binary: BinaryIO) -> bool:
         """Upload a file to bucket and return whether the upload succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Bucket.upload_fileobj
-        self._s3.upload_fileobj(file_binary, self.name, bucket_key)
+        # Without Cache-Control browsers only cache heuristically, so the player re-downloads
+        # frames it already has. Objects are immutable (content-hashed key), so max-age can
+        # match the URL lifetime.
+        self._s3.upload_fileobj(
+            file_binary,
+            self.name,
+            bucket_key,
+            ExtraArgs={"CacheControl": f"private, max-age={settings.S3_URL_EXPIRATION}"},
+        )
         return True
 
     def delete_file(self, bucket_key: str) -> None:
@@ -67,20 +92,60 @@ class S3Bucket:
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.name, Key=bucket_key)
 
-    def get_public_url(self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION) -> str:
-        """Generate a temporary public URL for a bucket file"""
-        if not self.check_file_existence(bucket_key):
+    def get_public_url(
+        self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION, verify_exists: bool = True
+    ) -> str:
+        """Generate a temporary public URL for a bucket file
+
+        Args:
+            bucket_key: the key of the file on the bucket
+            url_expiration: how long the presigned URL stays valid, in seconds
+            verify_exists: when True (default), raise a 404 if the object is missing on the
+                bucket. Presigning itself is a local signature computation with no network
+                I/O, whereas this check adds one blocking S3 ``head_object`` round-trip per
+                file. Set it to False on hot paths where the object is expected to always
+                exist (e.g. sequence detections): the client then gets a 403/404 from S3
+                when loading the URL instead of an upfront error.
+        """
+        # Before the cache lookup: a hit must not skip the opted-in existence check.
+        if verify_exists and not self.check_file_existence(bucket_key):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="File cannot be found on the bucket storage"
             )
 
-        # Generate a public URL for it using boto3 presign URL generation\
+        return self._stable_presign(bucket_key, url_expiration)
+
+    def _presign(self, bucket_key: str, url_expiration: int) -> str:
+        # Generate a public URL for it using boto3 presign URL generation
         presigned_url = self._s3.generate_presigned_url(
             "get_object", Params={"Bucket": self.name, "Key": bucket_key}, ExpiresIn=url_expiration
         )
         if self.proxy_url:
             return presigned_url.replace(self._s3.meta.endpoint_url, self.proxy_url)
         return presigned_url
+
+    def _stable_presign(self, bucket_key: str, url_expiration: int) -> str:
+        """Return the same URL string for a whole window, so the browser can cache frames.
+
+        boto3 stamps the signing clock into every signature, so re-presigning the same key yields
+        a different string and busts the client cache on each poll. Stability is per-process, so a
+        polling client sees one URL per key per window per worker. See #671.
+        """
+        window = _url_cache_window(url_expiration)
+        # monotonic: only the window length matters, and it is immune to NTP steps.
+        slot = int(time.monotonic()) // window
+        cache_key = (bucket_key, url_expiration, slot)
+        url = self._url_cache.get(cache_key)
+        if url is not None:
+            self._url_cache.move_to_end(cache_key)
+            return url
+        url = self._presign(bucket_key, url_expiration)
+        if len(self._url_cache) >= _URL_CACHE_MAXSIZE:
+            # Evict the coldest entry rather than clearing: a clear would change every URL in
+            # flight, for every viewer of the organization, exactly when the cache is loaded.
+            self._url_cache.popitem(last=False)
+        self._url_cache[cache_key] = url
+        return url
 
     async def delete_items(self) -> None:
         """Delete all items in the bucket"""
@@ -118,6 +183,9 @@ class S3Service:
             raise ValueError("unable to access S3")
         logger.info(f"S3 connected on {endpoint_url}")
         self.proxy_url = proxy_url
+        # S3Bucket.__init__ does a blocking head_bucket, and the per-bucket URL cache only ever
+        # hits if the instance survives.
+        self._buckets: Dict[str, S3Bucket] = {}
 
     def create_bucket(self, bucket_name: str) -> bool:
         """Create a new bucket in S3 storage"""
@@ -130,25 +198,66 @@ class S3Service:
                 else {"CreateBucketConfiguration": {"LocationConstraint": self._s3.meta.region_name}}
             )
             self._s3.create_bucket(Bucket=bucket_name, **config_)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        try:
+            self._put_bucket_cors(bucket_name)
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") != "NotImplemented":
+                # A genuine failure (AccessDenied, malformed S3_CORS_ORIGINS) on a backend that
+                # does support the API: stay loud and fail, so the caller rolls the organization
+                # back instead of silently keeping a bucket the frontend cannot fetch() from.
+                logger.error(f"unable to apply the CORS policy on {bucket_name}: {e}")
+                return False
+            # MinIO does not implement PutBucketCors. On that backend alone CORS is best-effort:
+            # the bucket is usable without it, only cross-origin fetch() of presigned urls
+            # degrades, so creation must not fail.
+            logger.warning(f"CORS policy unsupported by the backend, skipped on {bucket_name}: {e}")
+        return True
+
+    def _put_bucket_cors(self, bucket_name: str) -> None:
+        """Apply the CORS policy so browsers can fetch() presigned URLs cross-origin.
+
+        Allows the frontend origins (settings.S3_CORS_ORIGINS) to GET bucket objects, which the
+        platform's "download all" buttons rely on (native fetch triggers CORS, unlike a plain
+        <img> or <a download>).
+        """
+        origins = [origin.strip() for origin in settings.S3_CORS_ORIGINS.split(",") if origin.strip()]
+        self._s3.put_bucket_cors(
+            Bucket=bucket_name,
+            CORSConfiguration={
+                "CORSRules": [
+                    {
+                        "AllowedOrigins": origins,
+                        "AllowedMethods": ["GET", "HEAD"],
+                        "AllowedHeaders": ["*"],
+                        "ExposeHeaders": ["Content-Length", "Content-Type"],
+                        "MaxAgeSeconds": 3000,
+                    }
+                ]
+            },
+        )
 
     def get_bucket(self, bucket_name: str) -> S3Bucket:
-        """Get an existing bucket in S3 storage"""
-        return S3Bucket(self._s3, bucket_name, self.proxy_url)
+        """Get an existing bucket in S3 storage (cached instance; failures are not cached)"""
+        bucket = self._buckets.get(bucket_name)
+        if bucket is None:
+            bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+            self._buckets[bucket_name] = bucket
+        return bucket
 
     async def delete_bucket(self, bucket_name: str) -> bool:
         """Delete an existing bucket in S3 storage"""
-        bucket = S3Bucket(self._s3, bucket_name, self.proxy_url)
+        bucket = self.get_bucket(bucket_name)
         try:
             await bucket.delete_items()
             self._s3.delete_bucket(Bucket=bucket_name)
-            return True
         except ClientError as e:
             logger.warning(e)
             return False
+        self._buckets.pop(bucket_name, None)
+        return True
 
     @staticmethod
     def resolve_bucket_name(organization_id: int) -> str:
@@ -161,7 +270,7 @@ async def upload_file(file: UploadFile, organization_id: int, camera_id: int, ke
     sha_hash = hashlib.sha256(file.file.read()).hexdigest()
     await file.seek(0)
     # Use MD5 to verify upload
-    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # noqa S324
+    md5_hash = hashlib.md5(file.file.read()).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
     await file.seek(0)
     # guess_extension will return none if this fails
     extension = guess_extension(magic.from_buffer(file.file.read(), mime=True)) or ""

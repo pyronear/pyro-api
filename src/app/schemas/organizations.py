@@ -31,7 +31,7 @@ class OrganizationUpdate(BaseModel):
 
 
 class TelegramChannelId(BaseModel):
-    telegram_id: Union[str, None] = Field(None, pattern=r"^@[a-zA-Z0-9_-]+$")
+    telegram_id: Union[str, None] = Field(None, pattern=r"^(@[a-zA-Z0-9_-]+|-?\d+)$")
 
 
 class SlackHook(BaseModel):
