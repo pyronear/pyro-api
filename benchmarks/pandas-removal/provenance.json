@@ -16,7 +16,7 @@
     "workloads.py": "282a2e427ee644a6eb21f1d065bd87570c537b73d27a1a5b1a1e67389fb0d488",
     "validate.py": "97a3bc94b6fe0be067a36394d6a9a7ee9c61537bfee92a4121e0d43fd6cb2357",
     "full_tests.py": "a74f8ff18df6dd2289f5f0b518ab9670751985a5e248b0646679189c2b1e6599",
-    "plot.py": "ef994e274097b7315b65666ef85bfd0e20af862a9cab5113032589c8d1ab6808"
+    "plot.py": "f387ff38cc9f59f94eb6ee73f4cb3898d7be8f33fbcfac05fc89007d4ca0d42f"
   },
   "validation": {
     "differential_comparisons": 105,

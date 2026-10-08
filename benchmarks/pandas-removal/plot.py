@@ -31,9 +31,8 @@ for y, ratio, value in zip(ys, ratios, values, strict=True):
 ax.set_yticks(ys, labels)
 ax.set_xlim(0, 146)
 ax.set_xticks([0, 25, 50, 75, 100], ["0%", "25%", "50%", "75%", "100%"])
-ax.set_xlabel("Time or memory used relative to #706 · lower is better", loc="left")
+ax.set_xlabel("Gray: #706 (100%). Blue: Python records. Lower is better.", loc="left")
 ax.set_title("Remove pandas: less memory per process, less work per call", loc="left", weight="bold", pad=16)
-ax.legend(loc="lower right", frameon=False)
 ax.tick_params(axis="both", length=0)
 for spine in ax.spines.values():
     spine.set_visible(False)
