@@ -16,16 +16,19 @@ from typing import Any, Dict, List, Optional, Tuple
 import networkx as nx
 import numpy as np
 import pandas as pd
-import pyproj
-from geopy.distance import geodesic
-from pyproj import Transformer
+from pyproj import Geod, Transformer
+from shapely import transform as shapely_transform
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform as shapely_transform
+from shapely.strtree import STRtree
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+_GEOD = Geod(ellps="WGS84")
+_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
+_PairCentroids = Dict[Tuple[int, int], Optional[Tuple[float, float]]]
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -71,8 +74,7 @@ def get_centroid_latlon(geom: BaseGeometry) -> Tuple[float, float]:
         Latitude and longitude of the centroid in EPSG:4326.
     """
     centroid = geom.centroid
-    transformer = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
-    lon, lat = transformer.transform(centroid.x, centroid.y)
+    lon, lat = _TO_LATLON.transform(centroid.x, centroid.y)
     return float(lat), float(lon)
 
 
@@ -111,16 +113,17 @@ def _build_cone_polygon(
         Cone polygon in EPSG:4326 coordinates.
     """
     half_angle = opening_angle / 2.0
-    angles = np.linspace(azimuth - half_angle, azimuth + half_angle, resolution)
+    angles = np.linspace(azimuth - half_angle, azimuth + half_angle, resolution) % 360
+    lons, lats = np.full(resolution, lon), np.full(resolution, lat)
 
     # Outer arc points
-    outer_arc = [geodesic(kilometers=dist_km).destination((lat, lon), float(az % 360)) for az in angles]
-    outer_points = [(p.longitude, p.latitude) for p in outer_arc]
+    outer_lons, outer_lats, _ = _GEOD.fwd(lons, lats, angles, np.full(resolution, dist_km * 1000))
+    outer_points = list(zip(outer_lons, outer_lats, strict=True))
 
     if r_min_km > 0:
         # Inner arc points, walk reversed so ring orientation stays valid
-        inner_arc = [geodesic(kilometers=r_min_km).destination((lat, lon), float(az % 360)) for az in reversed(angles)]
-        inner_points = [(p.longitude, p.latitude) for p in inner_arc]
+        inner_lons, inner_lats, _ = _GEOD.fwd(lons, lats, angles[::-1], np.full(resolution, r_min_km * 1000))
+        inner_points = list(zip(inner_lons, inner_lats, strict=True))
         # Outer ring with a hole for the inner radius
         return Polygon(outer_points + inner_points, holes=[inner_points]).buffer(0)
     # Triangle like sector with apex at camera position
@@ -141,17 +144,18 @@ def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
     Polygon
         Geometry in EPSG:3857.
     """
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-    return shapely_transform(transformer.transform, polygon)
+    return shapely_transform(
+        polygon, lambda coords: np.column_stack(_TO_MERCATOR.transform(coords[:, 0], coords[:, 1]))
+    )
 
 
-def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
+def get_projected_cone(row: pd.Series | Dict[str, Any], r_km: float, r_min_km: float) -> Polygon:
     """
     Build and project a detection cone to Web Mercator.
 
     Parameters
     ----------
-    row : pd.Series
+    row : pd.Series or dict
         Row with fields: lat, lon, sequence_azimuth, cone_angle.
     r_km : float
         Outer radius of the camera detection cone in kilometers.
@@ -175,7 +179,23 @@ def get_projected_cone(row: pd.Series, r_km: float, r_min_km: float) -> Polygon:
 
 
 def _build_apex_by_id(df_valid: pd.DataFrame) -> Dict[int, Tuple[float, float]]:
-    return {int(row["id"]): (float(row["lat"]), float(row["lon"])) for _, row in df_valid.iterrows()}
+    return {
+        int(sid): (float(lat), float(lon))
+        for sid, lat, lon in df_valid[["id", "lat", "lon"]].itertuples(index=False, name=None)
+    }
+
+
+def _pair_centroid(i: int, j: int, cones: Dict[int, Polygon], cache: _PairCentroids) -> Optional[Tuple[float, float]]:
+    pair = (min(i, j), max(i, j))
+    if pair in cache:
+        return cache[pair]
+    gi, gj = cones.get(i), cones.get(j)
+    inter = gi.intersection(gj) if gi is not None and gj is not None else None
+    point = get_centroid_latlon(inter) if inter is not None and not inter.is_empty and inter.area > 0 else None
+    # Bound temporary memory even when a dense overlap graph has many pairs.
+    if len(cache) < 4096:
+        cache[pair] = point
+    return point
 
 
 def _is_degenerate_pair(
@@ -200,6 +220,7 @@ def _compute_localized_groups_from_cliques(
     max_dist_km: float,
     apex_by_id: Dict[int, Tuple[float, float]],
     min_apex_km: float,
+    pair_centroids: _PairCentroids,
 ) -> List[Tuple[int, ...]]:
     """
     From maximal cliques, split each clique into localized groups.
@@ -225,6 +246,8 @@ def _compute_localized_groups_from_cliques(
         Mapping from sequence id to its camera (lat, lon).
     min_apex_km : float
         Minimum apex distance for a pair to count as a triangulation.
+    pair_centroids : dict
+        Bounded centroid cache owned by this compute call.
 
     Returns
     -------
@@ -238,7 +261,7 @@ def _compute_localized_groups_from_cliques(
 
     def split_one_group(group: Tuple[int, ...]) -> List[Tuple[int, ...]]:
         group = tuple(sorted(group))
-        if len(group) <= 1:
+        if len(group) <= 2:
             return [group]
 
         # Collect pairwise intersection barycenters
@@ -248,17 +271,9 @@ def _compute_localized_groups_from_cliques(
             if _is_degenerate_pair(apex_by_id, i, j, min_apex_km):
                 continue
             has_triangulable_pair = True
-            gi = projected_cones.get(i)
-            gj = projected_cones.get(j)
-            if gi is None or gj is None:
-                continue
-            inter = gi.intersection(gj)
-            if inter.is_empty or inter.area <= 0:
-                continue
-            pair_barys.append(get_centroid_latlon(inter))
-
-        if len(group) == 2:
-            return [group]
+            point = _pair_centroid(i, j, projected_cones, pair_centroids)
+            if point is not None:
+                pair_barys.append(point)
 
         if not has_triangulable_pair:
             # Every pair shares an apex (multi-camera mast): one event, nothing to localize
@@ -272,6 +287,8 @@ def _compute_localized_groups_from_cliques(
         max_d = 0.0
         for (lat1, lon1), (lat2, lon2) in itertools.combinations(pair_barys, 2):
             d = haversine_km(lat1, lon1, lat2, lon2)
+            if d > max_dist_km:
+                return [tuple(sorted(p)) for p in itertools.combinations(group, 2)]
             if d > max_d:
                 max_d = d
 
@@ -291,7 +308,7 @@ def _compute_localized_groups_from_cliques(
     keep: List[Tuple[int, ...]] = []
     as_sets = [set(g) for g in candidates]
     for i, gi in enumerate(as_sets):
-        if any(i != j and gi.issubset(as_sets[j]) for j in range(len(as_sets))):
+        if any(gi < gj for gj in as_sets):
             continue
         keep.append(candidates[i])
 
@@ -313,10 +330,11 @@ def _filter_valid_sequences(df: pd.DataFrame) -> pd.DataFrame:
 
 def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float) -> Dict[int, Polygon]:
     projected_cones: Dict[int, Polygon] = {}
-    for _, row in df_valid.iterrows():
-        sid = int(row["id"])
+    cols = ["id", "lat", "lon", "sequence_azimuth", "cone_angle"]
+    for row in df_valid[cols].itertuples(index=False, name=None):
+        sid = int(row[0])
         try:
-            projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
+            projected_cones[sid] = get_projected_cone(dict(zip(cols, row, strict=True)), r_km, r_min_km)
         except Exception as exc:  # ruff:ignore[blind-except]
             logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
     return projected_cones
@@ -329,29 +347,29 @@ def _find_overlapping_pairs(
 ) -> List[Tuple[int, int]]:
     if time_relaxation_seconds is None:
         time_relaxation_seconds = settings.TRIANGULATION_RELAXATION_SECONDS
-    ids = df_valid["id"].astype(int).tolist()
-    cols = ["started_at", "last_seen_at"]
-    rows_by_id: Dict[int, Dict[str, Any]] = df_valid.set_index("id")[cols].to_dict("index")
+    rows = [
+        row
+        for row in df_valid[["id", "started_at", "last_seen_at"]].itertuples(index=False, name=None)
+        if int(row[0]) in projected_cones
+    ]
+    cones = [projected_cones[int(row[0])] for row in rows]
+    tree = STRtree(cones)
     # `_attach_sequence_to_alert` runs when the validation worker validates a sequence,
     # which can be early in its life (a few frames in) while prior sequences' windows
     # haven't been bumped yet. Treat any pair within `time_relaxation_seconds` of each
-    # other as concurrent so we don't drop them before the spatial test.
+    # other as concurrent when building overlap groups.
     # Near-apex pairs (same pose or same mast) are kept as grouping evidence — they see
     # the same event — but are excluded from location math downstream.
     tolerance = timedelta(seconds=time_relaxation_seconds)
     overlapping_pairs: List[Tuple[int, int]] = []
-    for i, id1 in enumerate(ids):
-        row1 = rows_by_id[id1]
-        for id2 in ids[i + 1 :]:
-            row2 = rows_by_id[id2]
-            if (
-                row1["started_at"] - row2["last_seen_at"] > tolerance
-                or row2["started_at"] - row1["last_seen_at"] > tolerance
-            ):
+    for i, (id1, start1, last1) in enumerate(rows):
+        for j in sorted(tree.query(cones[i], predicate="intersects")):
+            if j <= i:
                 continue
-            # Spatial overlap test
-            if projected_cones[id1].intersects(projected_cones[id2]):
-                overlapping_pairs.append((id1, id2))
+            id2, start2, last2 = rows[j]
+            if start1 - last2 > tolerance or start2 - last1 > tolerance:
+                continue
+            overlapping_pairs.append((int(id1), int(id2)))
     return overlapping_pairs
 
 
@@ -366,6 +384,7 @@ def _group_smoke_location(
     projected_cones: Dict[int, Polygon],
     apex_by_id: Dict[int, Tuple[float, float]],
     min_apex_km: float,
+    pair_centroids: _PairCentroids,
 ) -> Optional[Tuple[float, float]]:
     if len(seq_tuple) < 2:
         return None
@@ -375,14 +394,9 @@ def _group_smoke_location(
         if _is_degenerate_pair(apex_by_id, i, j, min_apex_km):
             continue
         has_triangulable_pair = True
-        gi = projected_cones.get(i)
-        gj = projected_cones.get(j)
-        if gi is None or gj is None:
-            continue
-        inter = gi.intersection(gj)
-        if inter.is_empty or inter.area <= 0:
-            continue
-        pts.append(get_centroid_latlon(inter))
+        point = _pair_centroid(i, j, projected_cones, pair_centroids)
+        if point is not None:
+            pts.append(point)
     if not pts:
         if not has_triangulable_pair:
             # Same-mast group: one event, but no pair carries range information
@@ -478,15 +492,16 @@ def compute_overlap(
     # Phase 1, build overlap graph gated by time overlap
     overlapping_pairs = _find_overlapping_pairs(df_valid, projected_cones, time_relaxation_seconds)
     cliques = _build_overlap_cliques(overlapping_pairs)
+    pair_centroids: _PairCentroids = {}
 
     # Phase 2, localized groups from cliques
     localized_groups = _compute_localized_groups_from_cliques(
-        df, cliques, projected_cones, max_dist_km, apex_by_id, min_apex_km
+        df, cliques, projected_cones, max_dist_km, apex_by_id, min_apex_km, pair_centroids
     )
 
     # Per group localization, median of pair barycenters for robustness
     group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {
-        g: _group_smoke_location(g, projected_cones, apex_by_id, min_apex_km) for g in localized_groups
+        g: _group_smoke_location(g, projected_cones, apex_by_id, min_apex_km, pair_centroids) for g in localized_groups
     }
 
     # Attach back to df

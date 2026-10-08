@@ -6,9 +6,21 @@
 from datetime import datetime, timedelta
 
 import pandas as pd
+import pytest
+from shapely.geometry import box
 
 from app.core.time import utcnow
-from app.services.overlap import compute_overlap
+from app.services.overlap import _find_overlapping_pairs, compute_overlap
+
+
+@pytest.mark.parametrize("relaxation", [0, 30])
+def test_overlap_pairs_preserve_input_order_and_time_boundary(relaxation) -> None:
+    now = pd.Timestamp("2026-10-03", tz="UTC")
+    starts = [now, now + timedelta(seconds=relaxation), now + timedelta(seconds=relaxation + 0.001), now]
+    frame = pd.DataFrame({"id": [71, 13, 42, 9], "started_at": starts, "last_seen_at": starts})
+    cones = {71: box(0, 0, 2, 2), 13: box(1, 1, 3, 3), 42: box(0, 0, 2, 2), 9: box(10, 10, 11, 11)}
+    expected = [(71, 13)] + ([(13, 42)] if relaxation else [])
+    assert _find_overlapping_pairs(frame, cones, relaxation) == expected
 
 
 def _make_sequence(
@@ -54,6 +66,21 @@ def test_compute_overlap_groups_and_locations() -> None:
     # Non-overlapping singleton keeps its own group and no location
     assert row4["event_groups"] == [(4,)]
     assert row4["event_smoke_locations"] == [None]
+
+
+def test_compute_overlap_centroids_are_isolated_between_calls() -> None:
+    now = utcnow()
+    frame = pd.DataFrame([
+        _make_sequence(20, 48.3792, 2.8208, 276.5, 3.0, now, now),
+        _make_sequence(21, 48.4267, 2.7109, 163.4, 1.0, now, now),
+    ])
+    first = compute_overlap(frame)
+    frame["lon"] += 1
+    second = compute_overlap(frame)
+    assert first["event_groups"].tolist() == second["event_groups"].tolist()
+    location = first.iloc[0]["event_smoke_locations"][0]
+    assert location is not None
+    assert second.iloc[0]["event_smoke_locations"][0] == pytest.approx((location[0], location[1] + 1), abs=1e-8)
 
 
 def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
