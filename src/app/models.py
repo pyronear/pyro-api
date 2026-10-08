@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Union
 
+from sqlalchemy import Index, text
 from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
@@ -83,6 +84,17 @@ class OcclusionMask(SQLModel, table=True):
 
 class Detection(SQLModel, table=True):
     __tablename__ = "detections"
+    __table_args__ = (
+        Index("ix_detections_sequence_id_created_at", "sequence_id", "created_at"),
+        Index("ix_detections_bucket_key", "bucket_key"),
+        Index(
+            "ix_detections_unassigned_camera_pose_created_at",
+            "camera_id",
+            "pose_id",
+            "created_at",
+            postgresql_where=text("sequence_id IS NULL"),
+        ),
+    )
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
@@ -112,6 +124,14 @@ TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
 
 class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
+    __table_args__ = (
+        Index("ix_sequences_camera_pose_last_seen", "camera_id", "pose_id", "last_seen_at"),
+        Index(
+            "ix_sequences_validation_due_at",
+            "validation_due_at",
+            postgresql_where=text("validation_due_at IS NOT NULL"),
+        ),
+    )
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
     pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
