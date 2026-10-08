@@ -30,11 +30,24 @@ from app.api.api_v1.endpoints.detections import (
     _resolve_groups_and_locations,
     create_detection,
 )
+from app.api.api_v1.endpoints.sequences import label_sequence
 from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Organization, Pose, Role, Sequence, Webhook
+from app.models import (
+    Alert,
+    AlertSequence,
+    AnnotationType,
+    Camera,
+    Detection,
+    Organization,
+    Pose,
+    Role,
+    Sequence,
+    Webhook,
+)
 from app.schemas.login import TokenPayload
+from app.schemas.sequences import SequenceLabel
 from app.services import validation as validation_service
 from app.services.cones import resolve_cone
 from app.services.slack import slack_client
@@ -1634,6 +1647,79 @@ async def test_attach_sequence_to_alert_creates_alert(detection_session: AsyncSe
     mappings_res = await detection_session.exec(select(AlertSequence))
     mappings = mappings_res.all()
     assert {(m.alert_id, m.sequence_id) for m in mappings} == {(alert.id, seq1.id), (alert.id, seq2.id)}
+
+
+@pytest.mark.asyncio
+async def test_relabel_back_to_wildfire_merges_into_triangulated_alert(detection_session: AsyncSession):
+    """other_smoke -> wildfire_smoke, hours later: the lonely alert is absorbed back into the
+    triangulated one, and the sequence is never left without an alert."""
+    seq_crud = SequenceCRUD(detection_session)
+    alert_crud = AlertCRUD(detection_session)
+    cam_crud = CameraCRUD(detection_session)
+    now = utcnow()
+    # Older than SEQUENCE_RELAXATION_SECONDS: only the sequence-anchored window finds the neighbour
+    past = now - timedelta(seconds=settings.SEQUENCE_RELAXATION_SECONDS + 3600)
+    cam1 = await detection_session.get(Camera, 1)
+    assert cam1 is not None
+    cam2 = Camera(
+        organization_id=1,
+        name="cam-3",
+        angle_of_view=90.0,
+        elevation=100.0,
+        lat=3.7,
+        lon=-45.0,
+        is_trustable=True,
+        last_active_at=now,
+        last_image=None,
+        created_at=now,
+    )
+    detection_session.add(cam2)
+    await detection_session.commit()
+    await detection_session.refresh(cam2)
+
+    seq1, seq2 = (
+        Sequence(
+            camera_id=cam.id,
+            pose_id=None,
+            camera_azimuth=azimuth,
+            sequence_azimuth=azimuth,
+            cone_angle=90.0,
+            is_wildfire=None,
+            is_validated=True,
+            started_at=past,
+            last_seen_at=past + timedelta(seconds=20),
+        )
+        for cam, azimuth in ((cam1, 0.0), (cam2, 5.0))
+    )
+    detection_session.add_all([seq1, seq2])
+    await detection_session.commit()
+    await detection_session.refresh(seq1)
+    await detection_session.refresh(seq2)
+    alert_id = await _attach_sequence_to_alert(seq2, cam2, cam_crud, seq_crud, alert_crud, anchor_on_sequence=True)
+    assert alert_id is not None
+
+    async def relabel(label: AnnotationType) -> None:
+        await label_sequence(
+            payload=SequenceLabel(is_wildfire=label),
+            sequence_id=seq2.id,
+            cameras=cam_crud,
+            sequences=seq_crud,
+            alerts=alert_crud,
+            session=detection_session,
+            token_payload=TokenPayload(sub=1, scopes=[Role.ADMIN], organization_id=1),
+        )
+
+    async def links() -> set:
+        return {(m.alert_id, m.sequence_id) for m in (await detection_session.exec(select(AlertSequence))).all()}
+
+    await relabel(AnnotationType.OTHER_SMOKE)
+    lonely = {aid for aid, sid in await links() if sid == seq2.id}
+    assert lonely
+    assert alert_id not in lonely
+
+    await relabel(AnnotationType.WILDFIRE_SMOKE)
+    assert await links() == {(alert_id, seq1.id), (alert_id, seq2.id)}
+    assert [a.id for a in await alert_crud.fetch_all()] == [alert_id]
 
 
 @pytest.mark.asyncio
