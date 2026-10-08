@@ -8,7 +8,6 @@ import io
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple, cast
 
-import pandas as pd
 import pytest  # type: ignore
 from httpx import AsyncClient
 from sqlmodel import select
@@ -439,10 +438,11 @@ async def test_triangulation_creates_single_alert(
         }
         for seq in sequences
     ]
-    df = compute_overlap(pd.DataFrame.from_records(records))
+    result = compute_overlap(records)
     expected_loc = None
-    for groups, locations in zip(df["event_groups"], df["event_smoke_locations"], strict=False):
-        for idx, group in enumerate(groups):
+    for row in result:
+        locations = row["event_smoke_locations"]
+        for idx, group in enumerate(row["event_groups"]):
             if set(group) == seq_ids:
                 if idx < len(locations):
                     expected_loc = locations[idx]

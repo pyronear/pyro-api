@@ -5,7 +5,6 @@
 
 from datetime import datetime, timedelta
 
-import pandas as pd
 import pytest
 from shapely.geometry import box
 
@@ -15,12 +14,15 @@ from app.services.overlap import _find_overlapping_pairs, compute_overlap
 
 @pytest.mark.parametrize("relaxation", [0, 30])
 def test_overlap_pairs_preserve_input_order_and_time_boundary(relaxation) -> None:
-    now = pd.Timestamp("2026-10-03", tz="UTC")
+    now = datetime.fromisoformat("2026-10-03T00:00:00+00:00")
     starts = [now, now + timedelta(seconds=relaxation), now + timedelta(seconds=relaxation + 0.001), now]
-    frame = pd.DataFrame({"id": [71, 13, 42, 9], "started_at": starts, "last_seen_at": starts})
+    records = [
+        {"id": sid, "started_at": start, "last_seen_at": start}
+        for sid, start in zip([71, 13, 42, 9], starts, strict=True)
+    ]
     cones = {71: box(0, 0, 2, 2), 13: box(1, 1, 3, 3), 42: box(0, 0, 2, 2), 9: box(10, 10, 11, 11)}
     expected = [(71, 13)] + ([(13, 42)] if relaxation else [])
-    assert _find_overlapping_pairs(frame, cones, relaxation) == expected
+    assert _find_overlapping_pairs(records, cones, relaxation) == expected
 
 
 def _make_sequence(
@@ -55,10 +57,10 @@ def test_compute_overlap_groups_and_locations() -> None:
         _make_sequence(3, 48.4267, 2.7109, 163.4, 1.0, now - timedelta(seconds=7), now - timedelta(seconds=3)),
         _make_sequence(4, 10.0, 10.0, 90.0, 1.0, now - timedelta(seconds=6), now - timedelta(seconds=4)),
     ]
-    df = compute_overlap(pd.DataFrame.from_records(seqs))
+    result = compute_overlap(seqs)
 
-    row1 = df[df["id"] == 1].iloc[0]
-    row4 = df[df["id"] == 4].iloc[0]
+    row1 = next(row for row in result if row["id"] == 1)
+    row4 = next(row for row in result if row["id"] == 4)
 
     assert row1["event_groups"] == [(1, 2, 3)]
     assert row1["event_smoke_locations"][0] is not None
@@ -70,17 +72,18 @@ def test_compute_overlap_groups_and_locations() -> None:
 
 def test_compute_overlap_centroids_are_isolated_between_calls() -> None:
     now = utcnow()
-    frame = pd.DataFrame([
+    records = [
         _make_sequence(20, 48.3792, 2.8208, 276.5, 3.0, now, now),
         _make_sequence(21, 48.4267, 2.7109, 163.4, 1.0, now, now),
-    ])
-    first = compute_overlap(frame)
-    frame["lon"] += 1
-    second = compute_overlap(frame)
-    assert first["event_groups"].tolist() == second["event_groups"].tolist()
-    location = first.iloc[0]["event_smoke_locations"][0]
+    ]
+    first = compute_overlap(records)
+    for row in records:
+        row["lon"] += 1
+    second = compute_overlap(records)
+    assert [row["event_groups"] for row in first] == [row["event_groups"] for row in second]
+    location = first[0]["event_smoke_locations"][0]
     assert location is not None
-    assert second.iloc[0]["event_smoke_locations"][0] == pytest.approx((location[0], location[1] + 1), abs=1e-8)
+    assert second[0]["event_smoke_locations"][0] == pytest.approx((location[0], location[1] + 1), abs=1e-8)
 
 
 def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
@@ -93,14 +96,14 @@ def test_compute_overlap_time_relaxation_recovers_just_started_pair() -> None:
         _make_sequence(20, 48.3792, 2.8208, 276.5, 3.0, now - timedelta(seconds=30), now - timedelta(seconds=30)),
         _make_sequence(21, 48.4267, 2.7109, 163.4, 1.0, now, now),
     ]
-    df_strict = compute_overlap(pd.DataFrame.from_records(seqs), time_relaxation_seconds=0)
-    assert df_strict[df_strict["id"] == 20].iloc[0]["event_groups"] == [(20,)]
-    assert df_strict[df_strict["id"] == 21].iloc[0]["event_groups"] == [(21,)]
+    strict = compute_overlap(seqs, time_relaxation_seconds=0)
+    assert strict[0]["event_groups"] == [(20,)]
+    assert strict[1]["event_groups"] == [(21,)]
 
     # Default relaxation (settings.TRIANGULATION_RELAXATION_SECONDS) recovers the pair.
-    df_relaxed = compute_overlap(pd.DataFrame.from_records(seqs))
-    assert df_relaxed[df_relaxed["id"] == 20].iloc[0]["event_groups"] == [(20, 21)]
-    assert df_relaxed[df_relaxed["id"] == 21].iloc[0]["event_groups"] == [(20, 21)]
+    relaxed = compute_overlap(seqs)
+    assert relaxed[0]["event_groups"] == [(20, 21)]
+    assert relaxed[1]["event_groups"] == [(20, 21)]
 
 
 def test_compute_overlap_groups_same_pose_pair_without_location() -> None:
@@ -115,10 +118,10 @@ def test_compute_overlap_groups_same_pose_pair_without_location() -> None:
             11, 48.3792, 2.8208, 185.0, 10.0, now - timedelta(seconds=8), now - timedelta(seconds=2), pose_id=42
         ),
     ]
-    df = compute_overlap(pd.DataFrame.from_records(seqs))
+    result = compute_overlap(seqs)
 
-    row10 = df[df["id"] == 10].iloc[0]
-    row11 = df[df["id"] == 11].iloc[0]
+    row10 = next(row for row in result if row["id"] == 10)
+    row11 = next(row for row in result if row["id"] == 11)
     assert row10["event_groups"] == [(10, 11)]
     assert row11["event_groups"] == [(10, 11)]
     assert row10["event_smoke_locations"] == [None]
@@ -133,9 +136,9 @@ def test_compute_overlap_groups_same_mast_pair_without_location() -> None:
         _make_sequence(30, 48.4267, 2.7109, 100.0, 2.0, now - timedelta(seconds=9), now - timedelta(seconds=1)),
         _make_sequence(31, 48.4268, 2.7110, 101.0, 2.0, now - timedelta(seconds=8), now - timedelta(seconds=2)),
     ]
-    df = compute_overlap(pd.DataFrame.from_records(seqs))
+    result = compute_overlap(seqs)
 
-    row30 = df[df["id"] == 30].iloc[0]
+    row30 = next(row for row in result if row["id"] == 30)
     assert row30["event_groups"] == [(30, 31)]
     assert row30["event_smoke_locations"] == [None]
 
@@ -149,11 +152,24 @@ def test_compute_overlap_mixed_group_locates_from_triangulable_pairs_only() -> N
         _make_sequence(41, 48.4267, 2.7109, 163.4, 1.0, now - timedelta(seconds=8), now - timedelta(seconds=2)),
         _make_sequence(42, 48.2605, 2.7064, 8.3, 0.8, now - timedelta(seconds=7), now - timedelta(seconds=3)),
     ]
-    df = compute_overlap(pd.DataFrame.from_records(seqs))
+    result = compute_overlap(seqs)
 
-    row40 = df[df["id"] == 40].iloc[0]
+    row40 = next(row for row in result if row["id"] == 40)
     assert row40["event_groups"] == [(40, 41, 42)]
     location = row40["event_smoke_locations"][0]
     assert location is not None
     # The triangulated point sits between the two sites, close to neither apex
     assert 48.26 < location[0] < 48.43
+
+
+@pytest.mark.parametrize("label", [None, "other"])
+def test_compute_overlap_copies_records_and_handles_empty_input(label) -> None:
+    now = datetime.fromisoformat("2026-10-03T00:00:00.123456+00:00")
+    record = _make_sequence(1, 48.3792, 2.8208, 276.5, 3.0, now, now, is_wildfire=label)
+    result = compute_overlap([record])
+    assert "event_groups" not in record
+    assert "event_smoke_locations" not in record
+    assert result[0]["started_at"] is now
+    assert result[0]["event_groups"] == [(1,)]
+    assert result[0]["event_smoke_locations"] == ([None] if label is None else [])
+    assert compute_overlap([]) == []

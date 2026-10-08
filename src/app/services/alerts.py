@@ -6,7 +6,6 @@
 
 from typing import Any, Union, cast
 
-import pandas as pd
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -52,8 +51,8 @@ async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Aler
                 "started_at": seq.started_at,
                 "last_seen_at": seq.last_seen_at,
             })
-        df = compute_overlap(pd.DataFrame.from_records(records))
-        loc = next((loc for locs in df["event_smoke_locations"].tolist() for loc in locs if loc is not None), None)
+        result = compute_overlap(records)
+        loc = next((loc for row in result for loc in row["event_smoke_locations"] if loc is not None), None)
 
     await alerts.update(
         alert_id,
