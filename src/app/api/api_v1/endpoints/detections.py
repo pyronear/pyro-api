@@ -11,7 +11,6 @@ from ast import literal_eval
 from datetime import datetime, timedelta
 from typing import AbstractSet, Any, Dict, List, Optional, Set, Tuple, Union, cast
 
-import pandas as pd
 from fastapi import (
     APIRouter,
     Depends,
@@ -240,12 +239,11 @@ def _resolve_groups_and_locations(
 ) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
         return None
-    df = compute_overlap(pd.DataFrame.from_records(records))
-    row = df[df["id"] == int(sequence_id)]
-    if row.empty:
+    row = next((row for row in compute_overlap(records) if row["id"] == int(sequence_id)), None)
+    if row is None:
         return None
-    groups = [tuple(g) for g in row.iloc[0]["event_groups"]]
-    locations = row.iloc[0].get("event_smoke_locations", [])
+    groups = [tuple(g) for g in row["event_groups"]]
+    locations = row.get("event_smoke_locations", [])
     group_locations: Dict[Tuple[int, ...], Optional[Tuple[float, float]]] = {}
     for idx, group in enumerate(groups):
         group_locations[group] = locations[idx] if idx < len(locations) else None
@@ -471,7 +469,7 @@ async def _attach_sequence_to_alert(
     # Fetch recent sequences for the organization based on recency of last_seen_at
     recent_sequences = await _get_recent_sequences(sequences, list(camera_by_id.keys()), sequence_, anchor_on_sequence)
 
-    # Build DataFrame for overlap computation
+    # Build records for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
     resolved = _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:

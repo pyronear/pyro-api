@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx
 import numpy as np
-import pandas as pd
 from pyproj import Geod, Transformer
 from shapely import transform as shapely_transform
 from shapely.geometry import Polygon
@@ -149,13 +148,13 @@ def _project_polygon_from_4326_to_3857(polygon: Polygon) -> Polygon:
     )
 
 
-def get_projected_cone(row: pd.Series | Dict[str, Any], r_km: float, r_min_km: float) -> Polygon:
+def get_projected_cone(row: Dict[str, Any], r_km: float, r_min_km: float) -> Polygon:
     """
     Build and project a detection cone to Web Mercator.
 
     Parameters
     ----------
-    row : pd.Series or dict
+    row : dict
         Row with fields: lat, lon, sequence_azimuth, cone_angle.
     r_km : float
         Outer radius of the camera detection cone in kilometers.
@@ -178,11 +177,8 @@ def get_projected_cone(row: pd.Series | Dict[str, Any], r_km: float, r_min_km: f
     return _project_polygon_from_4326_to_3857(poly)
 
 
-def _build_apex_by_id(df_valid: pd.DataFrame) -> Dict[int, Tuple[float, float]]:
-    return {
-        int(sid): (float(lat), float(lon))
-        for sid, lat, lon in df_valid[["id", "lat", "lon"]].itertuples(index=False, name=None)
-    }
+def _build_apex_by_id(valid_sequences: List[Dict[str, Any]]) -> Dict[int, Tuple[float, float]]:
+    return {row["id"]: (float(row["lat"]), float(row["lon"])) for row in valid_sequences}
 
 
 def _pair_centroid(i: int, j: int, cones: Dict[int, Polygon], cache: _PairCentroids) -> Optional[Tuple[float, float]]:
@@ -214,7 +210,7 @@ def _is_degenerate_pair(
 
 
 def _compute_localized_groups_from_cliques(
-    df: pd.DataFrame,
+    sequences: List[Dict[str, Any]],
     cliques: List[Tuple[int, ...]],
     projected_cones: Dict[int, Polygon],
     max_dist_km: float,
@@ -234,8 +230,8 @@ def _compute_localized_groups_from_cliques(
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Source sequences, must contain column id.
+    sequences : list[dict]
+        Source records, each with an id.
     cliques : list[tuple[int, ...]]
         Maximal cliques computed from the overlap graph.
     projected_cones : dict[int, Polygon]
@@ -256,7 +252,7 @@ def _compute_localized_groups_from_cliques(
     """
     base = [tuple(sorted(g)) for g in cliques]
     ids_in_cliques = {x for g in base for x in g}
-    all_ids = set(df["id"].astype(int).tolist())
+    all_ids = {row["id"] for row in sequences}
     work = base + [(sid,) for sid in sorted(all_ids - ids_in_cliques)]
 
     def split_one_group(group: Tuple[int, ...]) -> List[Tuple[int, ...]]:
@@ -315,42 +311,26 @@ def _compute_localized_groups_from_cliques(
     return keep
 
 
-def _prepare_sequences_df(api_sequences: pd.DataFrame) -> pd.DataFrame:
-    df = api_sequences.copy()
-    df["id"] = df["id"].astype(int)
-    df["started_at"] = pd.to_datetime(df["started_at"])
-    df["last_seen_at"] = pd.to_datetime(df["last_seen_at"])
-    return df
-
-
-def _filter_valid_sequences(df: pd.DataFrame) -> pd.DataFrame:
-    # Keep positives and unknowns
-    return df[df["is_wildfire"].isin([None, "wildfire_smoke"])]
-
-
-def _build_projected_cones(df_valid: pd.DataFrame, r_km: float, r_min_km: float) -> Dict[int, Polygon]:
+def _build_projected_cones(valid_sequences: List[Dict[str, Any]], r_km: float, r_min_km: float) -> Dict[int, Polygon]:
     projected_cones: Dict[int, Polygon] = {}
-    cols = ["id", "lat", "lon", "sequence_azimuth", "cone_angle"]
-    for row in df_valid[cols].itertuples(index=False, name=None):
-        sid = int(row[0])
+    for row in valid_sequences:
+        sid = row["id"]
         try:
-            projected_cones[sid] = get_projected_cone(dict(zip(cols, row, strict=True)), r_km, r_min_km)
+            projected_cones[sid] = get_projected_cone(row, r_km, r_min_km)
         except Exception as exc:  # ruff:ignore[blind-except]
             logger.warning("Failed to build cone for sequence %s: %s", sid, exc)
     return projected_cones
 
 
 def _find_overlapping_pairs(
-    df_valid: pd.DataFrame,
+    valid_sequences: List[Dict[str, Any]],
     projected_cones: Dict[int, Polygon],
     time_relaxation_seconds: Optional[float] = None,
 ) -> List[Tuple[int, int]]:
     if time_relaxation_seconds is None:
         time_relaxation_seconds = settings.TRIANGULATION_RELAXATION_SECONDS
     rows = [
-        row
-        for row in df_valid[["id", "started_at", "last_seen_at"]].itertuples(index=False, name=None)
-        if int(row[0]) in projected_cones
+        (row["id"], row["started_at"], row["last_seen_at"]) for row in valid_sequences if row["id"] in projected_cones
     ]
     cones = [projected_cones[int(row[0])] for row in rows]
     tree = STRtree(cones)
@@ -418,8 +398,8 @@ def _group_smoke_location(
     return float(np.median(lats)), float(np.median(lons))
 
 
-def _attach_groups_to_df(
-    df: pd.DataFrame,
+def _attach_groups_to_records(
+    sequences: List[Dict[str, Any]],
     localized_groups: List[Tuple[int, ...]],
     group_to_smoke: Dict[Tuple[int, ...], Optional[Tuple[float, float]]],
 ) -> None:
@@ -430,30 +410,30 @@ def _attach_groups_to_df(
         for sid in g:
             seq_to_groups[sid].append(g)
             seq_to_smokes[sid].append(smo)
-    df["event_groups"] = df["id"].astype(int).map(lambda sid: seq_to_groups.get(sid, [(sid,)]))
-    df["event_smoke_locations"] = df["id"].astype(int).map(lambda sid: seq_to_smokes.get(sid, []))
+    for row in sequences:
+        row["event_groups"] = seq_to_groups.get(row["id"], [(row["id"],)])
+        row["event_smoke_locations"] = seq_to_smokes.get(row["id"], [])
 
 
 def compute_overlap(
-    api_sequences: pd.DataFrame,
+    api_sequences: List[Dict[str, Any]],
     r_km: float = 35.0,
     r_min_km: float = 0.5,
     max_dist_km: float = 2.0,
     time_relaxation_seconds: Optional[float] = None,
     min_apex_km: Optional[float] = None,
-) -> pd.DataFrame:
+) -> List[Dict[str, Any]]:
     """
-    Build localized event groups and attach them to the input DataFrame.
+    Build localized event groups and attach them to copies of the input records.
 
-    This function sets two columns on the returned DataFrame:
-      event_groups: list of tuples of sequence ids
-      event_smoke_locations: list of (lat, lon), same order as event_groups
+    Each returned record includes event_groups and event_smoke_locations,
+    with locations in the same order as groups. Input records are not modified.
 
     Parameters
     ----------
-    api_sequences : pd.DataFrame
-        Input with fields: id, lat, lon, sequence_azimuth, cone_angle, is_wildfire,
-        started_at, last_seen_at.
+    api_sequences : list[dict]
+        Records with fields: id, lat, lon, sequence_azimuth, cone_angle, is_wildfire,
+        started_at, last_seen_at. Timestamps must be UTC datetime objects.
     r_km : float
         Outer radius of the camera detection cone in kilometers.
     r_min_km : float
@@ -471,32 +451,31 @@ def compute_overlap(
 
     Returns
     -------
-    pd.DataFrame
-        DataFrame copy including event_groups and event_smoke_locations columns.
+    list[dict]
+        Record copies including event_groups and event_smoke_locations.
     """
-    df = _prepare_sequences_df(api_sequences)
-    df_valid = _filter_valid_sequences(df)
+    sequences = [dict(row, id=int(row["id"])) for row in api_sequences]
+    valid_sequences = [row for row in sequences if row["is_wildfire"] in (None, "wildfire_smoke")]
 
-    if df_valid.empty:
-        df["event_groups"] = df["id"].astype(int).map(lambda sid: [(sid,)])
-        df["event_smoke_locations"] = [[] for _ in range(len(df))]
-        return df
+    if not valid_sequences:
+        _attach_groups_to_records(sequences, [], {})
+        return sequences
 
     if min_apex_km is None:
         min_apex_km = settings.TRIANGULATION_MIN_APEX_DISTANCE_KM
 
     # Precompute cones in Web Mercator
-    projected_cones = _build_projected_cones(df_valid, r_km, r_min_km)
-    apex_by_id = _build_apex_by_id(df_valid)
+    projected_cones = _build_projected_cones(valid_sequences, r_km, r_min_km)
+    apex_by_id = _build_apex_by_id(valid_sequences)
 
     # Phase 1, build overlap graph gated by time overlap
-    overlapping_pairs = _find_overlapping_pairs(df_valid, projected_cones, time_relaxation_seconds)
+    overlapping_pairs = _find_overlapping_pairs(valid_sequences, projected_cones, time_relaxation_seconds)
     cliques = _build_overlap_cliques(overlapping_pairs)
     pair_centroids: _PairCentroids = {}
 
     # Phase 2, localized groups from cliques
     localized_groups = _compute_localized_groups_from_cliques(
-        df, cliques, projected_cones, max_dist_km, apex_by_id, min_apex_km, pair_centroids
+        sequences, cliques, projected_cones, max_dist_km, apex_by_id, min_apex_km, pair_centroids
     )
 
     # Per group localization, median of pair barycenters for robustness
@@ -504,7 +483,7 @@ def compute_overlap(
         g: _group_smoke_location(g, projected_cones, apex_by_id, min_apex_km, pair_centroids) for g in localized_groups
     }
 
-    # Attach back to df
-    _attach_groups_to_df(df, localized_groups, group_to_smoke)
+    # Attach results to record copies
+    _attach_groups_to_records(sequences, localized_groups, group_to_smoke)
 
-    return df
+    return sequences
