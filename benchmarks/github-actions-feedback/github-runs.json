@@ -7,7 +7,15 @@
     "historical_pr_median_seconds": 296.5,
     "historical_pr_median_comparison_percent": 23.77740303541316,
     "checks_green": true,
-    "check_count": 23
+    "check_count": 23,
+    "runner_scope": "Backend jobs and required pytest gate only; excludes other CI jobs and runner queue time",
+    "baseline_backend_runner_seconds": 279.0,
+    "candidate_backend_runner_seconds": 427.0,
+    "baseline_backend_runner_minutes": 4.65,
+    "candidate_backend_runner_minutes": 7.116666666666666,
+    "backend_runner_increase_percent": 53.046594982078844,
+    "runner_minutes_are_unrounded": true,
+    "public_standard_runner_billed_minutes": 0
   },
   "baseline": {
     "commit": "9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24",

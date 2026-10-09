@@ -6,10 +6,17 @@ The backend suite was the last job on 16 of 20 recent PR revisions. Their median
 
 ## GitHub measurement
 
-| Observed hosted-runner time | Before | After |
-|---|---:|---:|
-| Backend start to required `pytest` success | 279 s (4m39s) | 223 s (3m43s), 20.07% lower |
-| pytest's reported suite time | 156.01 s | max(90.17 s, 79.86 s), 42.20% lower |
+This change trades more runner time for earlier developer feedback. Measure the two effects separately:
+
+| Metric, backend scope | Before | After | Change |
+|---|---:|---:|---:|
+| Developer wait: backend start to required `pytest` success | 279 s (4m39s) | 223 s (3m43s) | 56 s less waiting, -20.07% |
+| Runner time: sum of backend job runtimes, including the gate | 279 s (4.65 runner-min) | 427 s (7.12 runner-min) | 148 extra runner-seconds, +53.05% |
+| Billed Actions minutes in this public repository | 0 | 0 | Unchanged |
+
+Developer wait is elapsed wall time, including the gate's queue. Runner time is the sum of job running times and excludes time spent waiting for a runner. These totals include only the changed backend jobs and gate; other CI jobs are excluded. The candidate runner total is 206 + 218 + 3 = 427 seconds. Runtime totals are unrounded usage measurements, not a private-repository invoice or a billing API result. Private-repository charges and quota usage depend on the applicable billing rules, runner prices and included allowances. Standard hosted runners in this public repository are free. See [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+For phase profiling only, pytest reports 156.01 seconds for the baseline suite versus max(90.17 seconds, 79.86 seconds) for the shards. That excludes setup, cleanup and uploads, so it is not the developer's full wait or total runner consumption.
 
 Baseline: [successful main run 37810410521](https://github.com/pyronear/pyro-api/actions/runs/37810410521), backend job 113425496752 at commit `9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24`.
 
