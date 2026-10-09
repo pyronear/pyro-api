@@ -1,0 +1,12 @@
+{
+  "feature_commit": "cad7e979fbbe478e547d6e4e284eff8ccc51468e",
+  "source_parent": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+  "python": "3.11.15",
+  "postgres": "15.19",
+  "moto": "5.2.2",
+  "local_dependency_note": "baseline locked server/test environment, Mako 1.3.12; hosted candidate uses current lock Mako 1.4.2",
+  "schema_setup": "Alembic upgrade head followed by python app/db.py for every database before timing pytest",
+  "durability": "PostgreSQL defaults including fsync on",
+  "services": "one shared PostgreSQL container and one shared Moto server",
+  "cpus": 4
+}

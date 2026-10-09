@@ -1,0 +1,15 @@
+{
+  "schema_sha256": {
+    "baseline": "6f4ac75d30c76b844ec382e3914a5983f2ed30a637387ebedd3ae56905a7dbe6",
+    "api": "6f4ac75d30c76b844ec382e3914a5983f2ed30a637387ebedd3ae56905a7dbe6",
+    "remaining": "6f4ac75d30c76b844ec382e3914a5983f2ed30a637387ebedd3ae56905a7dbe6"
+  },
+  "identical_schemas": true,
+  "normalization": "Remove only random pg_dump restrict/unrestrict tokens, if present",
+  "postgres_version": "PostgreSQL 15.19 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "migration_heads": {
+    "baseline": "e7a4b9c3d5f2",
+    "api": "e7a4b9c3d5f2",
+    "remaining": "e7a4b9c3d5f2"
+  }
+}
