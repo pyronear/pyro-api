@@ -1,0 +1,9 @@
+{
+  "baseline_process_seconds": 240.7163629160059,
+  "parallel_process_seconds": 132.2231439740135,
+  "baseline_exit_code": 0,
+  "parallel_exit_codes": [
+    0,
+    0
+  ]
+}

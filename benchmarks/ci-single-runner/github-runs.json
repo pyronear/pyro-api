@@ -1,0 +1,3893 @@
+{
+  "baseline": {
+    "commit": "9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24",
+    "run_id": 37810410521,
+    "total_count": 3,
+    "jobs": [
+      {
+        "id": 113425496734,
+        "run_id": 37810410521,
+        "workflow_name": "tests",
+        "head_branch": "main",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37810410521",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAaaK-6ng",
+        "head_sha": "9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113425496734",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37810410521/job/113425496734",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-08T16:38:45Z",
+        "started_at": "2026-10-08T16:38:47Z",
+        "completed_at": "2026-10-08T16:41:03Z",
+        "name": "pytest-client",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-08T16:38:47Z",
+            "completed_at": "2026-10-08T16:38:50Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-08T16:38:50Z",
+            "completed_at": "2026-10-08T16:38:51Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-08T16:38:51Z",
+            "completed_at": "2026-10-08T16:38:51Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-08T16:38:51Z",
+            "completed_at": "2026-10-08T16:38:55Z"
+          },
+          {
+            "name": "Run client tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-08T16:38:55Z",
+            "completed_at": "2026-10-08T16:40:52Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-08T16:40:52Z",
+            "completed_at": "2026-10-08T16:40:59Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-08T16:40:59Z",
+            "completed_at": "2026-10-08T16:40:59Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-08T16:40:59Z",
+            "completed_at": "2026-10-08T16:40:59Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-08T16:40:59Z",
+            "completed_at": "2026-10-08T16:40:59Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-08T16:40:59Z",
+            "completed_at": "2026-10-08T16:40:59Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113425496734",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032779,
+        "runner_name": "GitHub Actions 1000032779",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113425496752,
+        "run_id": 37810410521,
+        "workflow_name": "tests",
+        "head_branch": "main",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37810410521",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAaaK-6sA",
+        "head_sha": "9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113425496752",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37810410521/job/113425496752",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-08T16:38:45Z",
+        "started_at": "2026-10-08T16:38:47Z",
+        "completed_at": "2026-10-08T16:43:26Z",
+        "name": "pytest",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-08T16:38:47Z",
+            "completed_at": "2026-10-08T16:38:48Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-08T16:38:48Z",
+            "completed_at": "2026-10-08T16:38:49Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-08T16:38:49Z",
+            "completed_at": "2026-10-08T16:38:49Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-08T16:38:49Z",
+            "completed_at": "2026-10-08T16:38:51Z"
+          },
+          {
+            "name": "Run backend tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-08T16:38:51Z",
+            "completed_at": "2026-10-08T16:43:03Z"
+          },
+          {
+            "name": "Run Telegram end-to-end check",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-08T16:43:03Z",
+            "completed_at": "2026-10-08T16:43:09Z"
+          },
+          {
+            "name": "Stop the stack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-08T16:43:09Z",
+            "completed_at": "2026-10-08T16:43:21Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-08T16:43:21Z",
+            "completed_at": "2026-10-08T16:43:23Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-10-08T16:43:23Z",
+            "completed_at": "2026-10-08T16:43:23Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-08T16:43:23Z",
+            "completed_at": "2026-10-08T16:43:24Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-10-08T16:43:24Z",
+            "completed_at": "2026-10-08T16:43:24Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17,
+            "started_at": "2026-10-08T16:43:24Z",
+            "completed_at": "2026-10-08T16:43:24Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113425496752",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032780,
+        "runner_name": "GitHub Actions 1000032780",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113425497084,
+        "run_id": 37810410521,
+        "workflow_name": "tests",
+        "head_branch": "main",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37810410521",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAaaK-7_A",
+        "head_sha": "9f4c75f2fddfd0d3e922c4d2066ff357fdc63b24",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113425497084",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37810410521/job/113425497084",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-08T16:38:45Z",
+        "started_at": "2026-10-08T16:38:47Z",
+        "completed_at": "2026-10-08T16:38:55Z",
+        "name": "headers (ubuntu-latest)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-08T16:38:47Z",
+            "completed_at": "2026-10-08T16:38:49Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-08T16:38:49Z",
+            "completed_at": "2026-10-08T16:38:51Z"
+          },
+          {
+            "name": "Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-08T16:38:51Z",
+            "completed_at": "2026-10-08T16:38:53Z"
+          },
+          {
+            "name": "Post Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-08T16:38:53Z",
+            "completed_at": "2026-10-08T16:38:53Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-08T16:38:53Z",
+            "completed_at": "2026-10-08T16:38:53Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-08T16:38:53Z",
+            "completed_at": "2026-10-08T16:38:53Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113425497084",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032781,
+        "runner_name": "GitHub Actions 1000032781",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ]
+  },
+  "candidate": {
+    "commit": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+    "run_id": 37939066818,
+    "total_count": 3,
+    "jobs": [
+      {
+        "id": 113848467353,
+        "run_id": 37939066818,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37939066818",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAageW_mQ",
+        "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113848467353",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467353",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T13:44:58Z",
+        "started_at": "2026-10-09T13:45:00Z",
+        "completed_at": "2026-10-09T13:47:20Z",
+        "name": "pytest-client",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T13:45:00Z",
+            "completed_at": "2026-10-09T13:45:01Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T13:45:01Z",
+            "completed_at": "2026-10-09T13:45:02Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T13:45:02Z",
+            "completed_at": "2026-10-09T13:45:02Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-09T13:45:02Z",
+            "completed_at": "2026-10-09T13:45:04Z"
+          },
+          {
+            "name": "Run client tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T13:45:04Z",
+            "completed_at": "2026-10-09T13:47:16Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T13:47:16Z",
+            "completed_at": "2026-10-09T13:47:18Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-09T13:47:18Z",
+            "completed_at": "2026-10-09T13:47:18Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-09T13:47:18Z",
+            "completed_at": "2026-10-09T13:47:18Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-09T13:47:18Z",
+            "completed_at": "2026-10-09T13:47:19Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-09T13:47:19Z",
+            "completed_at": "2026-10-09T13:47:19Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467353",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032937,
+        "runner_name": "GitHub Actions 1000032937",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113848467551,
+        "run_id": 37939066818,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37939066818",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAageXAXw",
+        "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113848467551",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467551",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T13:44:58Z",
+        "started_at": "2026-10-09T13:45:00Z",
+        "completed_at": "2026-10-09T13:48:13Z",
+        "name": "pytest",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T13:45:01Z",
+            "completed_at": "2026-10-09T13:45:02Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T13:45:02Z",
+            "completed_at": "2026-10-09T13:45:03Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T13:45:03Z",
+            "completed_at": "2026-10-09T13:45:03Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-09T13:45:03Z",
+            "completed_at": "2026-10-09T13:45:06Z"
+          },
+          {
+            "name": "Start test services",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:46:16Z"
+          },
+          {
+            "name": "Build the test image",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:45:56Z"
+          },
+          {
+            "name": "Parallel group",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:46:16Z"
+          },
+          {
+            "name": "Create isolated test databases",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-09T13:46:16Z",
+            "completed_at": "2026-10-09T13:46:17Z"
+          },
+          {
+            "name": "Run slow API tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-10-09T13:46:17Z",
+            "completed_at": "2026-10-09T13:48:02Z"
+          },
+          {
+            "name": "Run all remaining backend tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-09T13:46:17Z",
+            "completed_at": "2026-10-09T13:47:46Z"
+          },
+          {
+            "name": "Parallel group",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-09T13:46:17Z",
+            "completed_at": "2026-10-09T13:48:02Z"
+          },
+          {
+            "name": "Run Telegram end-to-end check",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-09T13:48:02Z",
+            "completed_at": "2026-10-09T13:48:08Z"
+          },
+          {
+            "name": "Stop the stack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-09T13:48:08Z",
+            "completed_at": "2026-10-09T13:48:10Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-10-09T13:48:08Z",
+            "completed_at": "2026-10-09T13:48:10Z"
+          },
+          {
+            "name": "Wait for all background steps",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-09T13:48:10Z",
+            "completed_at": "2026-10-09T13:48:10Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-10-09T13:48:10Z",
+            "completed_at": "2026-10-09T13:48:11Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29,
+            "started_at": "2026-10-09T13:48:11Z",
+            "completed_at": "2026-10-09T13:48:11Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30,
+            "started_at": "2026-10-09T13:48:11Z",
+            "completed_at": "2026-10-09T13:48:11Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31,
+            "started_at": "2026-10-09T13:48:11Z",
+            "completed_at": "2026-10-09T13:48:11Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467551",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032935,
+        "runner_name": "GitHub Actions 1000032935",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113848467587,
+        "run_id": 37939066818,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37939066818",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAageXAgw",
+        "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113848467587",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467587",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T13:44:58Z",
+        "started_at": "2026-10-09T13:45:00Z",
+        "completed_at": "2026-10-09T13:45:08Z",
+        "name": "headers (ubuntu-latest)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T13:45:01Z",
+            "completed_at": "2026-10-09T13:45:03Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T13:45:03Z",
+            "completed_at": "2026-10-09T13:45:04Z"
+          },
+          {
+            "name": "Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T13:45:04Z",
+            "completed_at": "2026-10-09T13:45:06Z"
+          },
+          {
+            "name": "Post Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:45:06Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:45:06Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-09T13:45:06Z",
+            "completed_at": "2026-10-09T13:45:06Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467587",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032936,
+        "runner_name": "GitHub Actions 1000032936",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ]
+  },
+  "candidate_checks": [
+    {
+      "id": 113850031872,
+      "name": "codecov/patch",
+      "node_id": "CR_kwDOEeE9_c8AAAAagf2fAA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113850031872",
+      "html_url": "https://github.com/pyronear/pyro-api/runs/113850031872",
+      "details_url": "https://app.codecov.io/gh/pyronear/pyro-api/pull/712",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:48:45Z",
+      "completed_at": "2026-10-09T13:48:45Z",
+      "output": {
+        "title": "Coverage not affected when comparing 9eb5e8a...9a7bf68",
+        "summary": "[View this Pull Request on Codecov](https://app.codecov.io/gh/pyronear/pyro-api/pull/712?dropdown=coverage&src=pr&el=h1&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear)\n\nCoverage not affected when comparing 9eb5e8a...9a7bf68",
+        "text": null,
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113850031872/annotations"
+      },
+      "check_suite": {
+        "id": 102793090689
+      },
+      "app": {
+        "id": 254,
+        "client_id": "Iv1.9d88ef6ecc903626",
+        "slug": "codecov",
+        "node_id": "MDM6QXBwMjU0",
+        "owner": {
+          "login": "codecov",
+          "id": 8226205,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjgyMjYyMDU=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/8226205?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/codecov",
+          "html_url": "https://github.com/codecov",
+          "followers_url": "https://api.github.com/users/codecov/followers",
+          "following_url": "https://api.github.com/users/codecov/following{/other_user}",
+          "gists_url": "https://api.github.com/users/codecov/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/codecov/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/codecov/subscriptions",
+          "organizations_url": "https://api.github.com/users/codecov/orgs",
+          "repos_url": "https://api.github.com/users/codecov/repos",
+          "events_url": "https://api.github.com/users/codecov/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/codecov/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "Codecov",
+        "description": "Codecov provides highly integrated tools to group, merge, archive and compare coverage reports. Whether your team is comparing changes in a pull request or reviewing a single commit, Codecov will improve the code review workflow and quality.\r\n\r\n## Code coverage done right.®\r\n\r\n1. Upload coverage reports from your CI builds.\r\n2. Codecov merges all builds and languages into one beautiful coherent report.\r\n3. Get commit statuses, pull request comments and coverage overlay via our browser extension.\r\n\r\nWhen Codecov merges your uploads it keeps track of the CI provider (inc. build details) and user specified context, e.g. `#unittest` ~ `#smoketest` or `#oldcode` ~ `#newcode`. You can track the `#unittest` coverage independently of other groups. [Learn more here](\r\nhttp://docs.codecov.io/docs/flags)\r\n\r\nThrough **Codecov's Browser Extension** reports overlay directly in GitHub UI to assist in code review in [Chrome](https://chrome.google.com/webstore/detail/codecov/gedikamndpbemklijjkncpnolildpbgo) or Firefox (https://addons.mozilla.org/en-US/firefox/addon/codecov/)\r\n\r\n*Highly detailed* **pull request comments** and *customizable* **commit statuses** will improve your team's workflow and code coverage incrementally.\r\n\r\n**File backed configuration** all through the `codecov.yml`. \r\n\r\n## FAQ\r\n- Do you **merge multiple uploads** to the same commit? **Yes**\r\n- Do you **support multiple languages** in the same project? **Yes**\r\n- Can you **group coverage reports** by project and/or test type? **Yes**\r\n- How does **pricing** work? Only paid users can view reports and post statuses/comments. ",
+        "external_url": "https://codecov.io",
+        "html_url": "https://github.com/apps/codecov",
+        "created_at": "2016-09-25T14:18:27Z",
+        "updated_at": "2025-03-20T19:12:59Z",
+        "permissions": {
+          "administration": "read",
+          "checks": "write",
+          "contents": "read",
+          "emails": "read",
+          "issues": "read",
+          "members": "read",
+          "metadata": "read",
+          "pull_requests": "write",
+          "statuses": "write"
+        },
+        "events": [
+          "delete",
+          "fork",
+          "member",
+          "membership",
+          "organization",
+          "public",
+          "pull_request",
+          "push",
+          "release",
+          "repository",
+          "status",
+          "team_add"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113850025184,
+      "name": "codecov/project",
+      "node_id": "CR_kwDOEeE9_c8AAAAagf2E4A",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113850025184",
+      "html_url": "https://github.com/pyronear/pyro-api/runs/113850025184",
+      "details_url": "https://app.codecov.io/gh/pyronear/pyro-api/pull/712",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:48:44Z",
+      "completed_at": "2026-10-09T13:48:44Z",
+      "output": {
+        "title": "94.48% (+3.18%) compared to 9eb5e8a",
+        "summary": "[View this Pull Request on Codecov](https://app.codecov.io/gh/pyronear/pyro-api/pull/712?dropdown=coverage&src=pr&el=h1&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear)\n\n94.48% (+3.18%) compared to 9eb5e8a",
+        "text": "## [Codecov](https://app.codecov.io/gh/pyronear/pyro-api/pull/712?dropdown=coverage&src=pr&el=h1&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear) Report\n:white_check_mark: All modified and coverable lines are covered by tests.\n:white_check_mark: Project coverage is 94.48%. Comparing base ([`9eb5e8a`](https://app.codecov.io/gh/pyronear/pyro-api/commit/9eb5e8aa013e62070c047e11b7151294584bf9c6?dropdown=coverage&el=desc&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear)) to head ([`9a7bf68`](https://app.codecov.io/gh/pyronear/pyro-api/commit/9a7bf68444dea7359e4c6694e9fca9dc5143aba6?dropdown=coverage&el=desc&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear)).\n\n<details><summary>Additional details and impacted files</summary>\n\n\n\n```diff\n@@            Coverage Diff             @@\n##             main     #712      +/-   ##\n==========================================\n+ Coverage   91.30%   94.48%   +3.18%     \n==========================================\n  Files           3       59      +56     \n  Lines         138     3246    +3108     \n==========================================\n+ Hits          126     3067    +2941     \n- Misses         12      179     +167     \n```\n</details>\n\n[:umbrella: View full report in Codecov by Harness](https://app.codecov.io/gh/pyronear/pyro-api/pull/712?dropdown=coverage&src=pr&el=continue&utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear).   \n:loudspeaker: Have feedback on the report? [Share it here](https://about.codecov.io/codecov-pr-comment-feedback/?utm_medium=referral&utm_source=github&utm_content=checks&utm_campaign=pr+comments&utm_term=pyronear).\n<details><summary> :rocket: New features to boost your workflow: </summary>\n\n- :snowflake: [Test Analytics](https://docs.codecov.com/docs/test-analytics): Detect flaky tests, report on failures, and find test suite problems.\n</details>",
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113850025184/annotations"
+      },
+      "check_suite": {
+        "id": 102793090689
+      },
+      "app": {
+        "id": 254,
+        "client_id": "Iv1.9d88ef6ecc903626",
+        "slug": "codecov",
+        "node_id": "MDM6QXBwMjU0",
+        "owner": {
+          "login": "codecov",
+          "id": 8226205,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjgyMjYyMDU=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/8226205?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/codecov",
+          "html_url": "https://github.com/codecov",
+          "followers_url": "https://api.github.com/users/codecov/followers",
+          "following_url": "https://api.github.com/users/codecov/following{/other_user}",
+          "gists_url": "https://api.github.com/users/codecov/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/codecov/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/codecov/subscriptions",
+          "organizations_url": "https://api.github.com/users/codecov/orgs",
+          "repos_url": "https://api.github.com/users/codecov/repos",
+          "events_url": "https://api.github.com/users/codecov/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/codecov/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "Codecov",
+        "description": "Codecov provides highly integrated tools to group, merge, archive and compare coverage reports. Whether your team is comparing changes in a pull request or reviewing a single commit, Codecov will improve the code review workflow and quality.\r\n\r\n## Code coverage done right.®\r\n\r\n1. Upload coverage reports from your CI builds.\r\n2. Codecov merges all builds and languages into one beautiful coherent report.\r\n3. Get commit statuses, pull request comments and coverage overlay via our browser extension.\r\n\r\nWhen Codecov merges your uploads it keeps track of the CI provider (inc. build details) and user specified context, e.g. `#unittest` ~ `#smoketest` or `#oldcode` ~ `#newcode`. You can track the `#unittest` coverage independently of other groups. [Learn more here](\r\nhttp://docs.codecov.io/docs/flags)\r\n\r\nThrough **Codecov's Browser Extension** reports overlay directly in GitHub UI to assist in code review in [Chrome](https://chrome.google.com/webstore/detail/codecov/gedikamndpbemklijjkncpnolildpbgo) or Firefox (https://addons.mozilla.org/en-US/firefox/addon/codecov/)\r\n\r\n*Highly detailed* **pull request comments** and *customizable* **commit statuses** will improve your team's workflow and code coverage incrementally.\r\n\r\n**File backed configuration** all through the `codecov.yml`. \r\n\r\n## FAQ\r\n- Do you **merge multiple uploads** to the same commit? **Yes**\r\n- Do you **support multiple languages** in the same project? **Yes**\r\n- Can you **group coverage reports** by project and/or test type? **Yes**\r\n- How does **pricing** work? Only paid users can view reports and post statuses/comments. ",
+        "external_url": "https://codecov.io",
+        "html_url": "https://github.com/apps/codecov",
+        "created_at": "2016-09-25T14:18:27Z",
+        "updated_at": "2025-03-20T19:12:59Z",
+        "permissions": {
+          "administration": "read",
+          "checks": "write",
+          "contents": "read",
+          "emails": "read",
+          "issues": "read",
+          "members": "read",
+          "metadata": "read",
+          "pull_requests": "write",
+          "statuses": "write"
+        },
+        "events": [
+          "delete",
+          "fork",
+          "member",
+          "membership",
+          "organization",
+          "public",
+          "pull_request",
+          "push",
+          "release",
+          "repository",
+          "status",
+          "team_add"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848470087,
+      "name": "client (windows-latest, 3.12)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXKRw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "f1e071d0-c9a6-5c7f-ac26-0d6bbdc383dc",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848470087",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848470087",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848470087",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:22Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848470087/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469960,
+      "name": "client (ubuntu-latest, 3.11)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJyA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "9c13c58d-1f99-5508-b524-90de30e015c3",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469960",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469960",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469960",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:12Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469960/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469903,
+      "name": "client (windows-latest, 3.11)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJjw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "5969246d-faf7-5040-b609-8f3e0c9e8d50",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469903",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469903",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469903",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:18Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469903/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469880,
+      "name": "client (windows-latest, 3.10)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJeA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "b889eb03-c7e5-588f-a515-e2ac034871e7",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469880",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469880",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469880",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:01Z",
+      "completed_at": "2026-10-09T13:45:33Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 0,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469880/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469863,
+      "name": "client (ubuntu-latest, 3.10)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJZw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "12f2449d-3cf0-5a89-9521-59e46e503400",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469863",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469863",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469863",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:11Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469863/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469800,
+      "name": "client (macos-latest, 3.12)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJKA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "e7277ab1-ca0f-574f-8883-36ead0bb814e",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469800",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469800",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469800",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:06Z",
+      "completed_at": "2026-10-09T13:45:45Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469800/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469769,
+      "name": "client (ubuntu-latest, 3.12)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXJCQ",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "62ab6186-91ac-548a-ad28-deeeddf7a3ed",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469769",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469769",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469769",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:10Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469769/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469720,
+      "name": "client (macos-latest, 3.11)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXI2A",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "6807510c-8e18-577a-911c-8d7c453b0377",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469720",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469720",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469720",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:06Z",
+      "completed_at": "2026-10-09T13:45:46Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469720/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469332,
+      "name": "docker",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXHVA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "0d02743d-6b98-5e54-855a-d16fc3641ab4",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469332",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469332",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939067039/job/113848469332",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:46:39Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469332/annotations"
+      },
+      "check_suite": {
+        "id": 102793115848
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469132,
+      "name": "ruff",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXGjA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "58e423f8-c814-5041-b224-574724a6a3ef",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469132",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848469132",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848469132",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:09Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469132/annotations"
+      },
+      "check_suite": {
+        "id": 102793115302
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848469077,
+      "name": "precommit-hooks",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXGVQ",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "7c960d9f-d560-556c-b654-f7e46c919157",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469077",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848469077",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848469077",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:15Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848469077/annotations"
+      },
+      "check_suite": {
+        "id": 102793115302
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848468934,
+      "name": "ty",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXFxg",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "24ad056e-76da-50a0-b096-fa0ff6a65a80",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848468934",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848468934",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066872/job/113848468934",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:12Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848468934/annotations"
+      },
+      "check_suite": {
+        "id": 102793115302
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467698,
+      "name": "triage",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXA8g",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "6b924960-ff54-5aa7-b3ac-f231decccb96",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467698",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066822/job/113848467698",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066822/job/113848467698",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:04Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467698/annotations"
+      },
+      "check_suite": {
+        "id": 102793115114
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467587,
+      "name": "headers (ubuntu-latest)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXAgw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "eddf8a1e-17fc-5b5c-992e-46dd513839bc",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467587",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467587",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467587",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:08Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467587/annotations"
+      },
+      "check_suite": {
+        "id": 102793115125
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467551,
+      "name": "pytest",
+      "node_id": "CR_kwDOEeE9_c8AAAAageXAXw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "232d9657-9bb0-57c2-b92b-24aa91cd23c0",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467551",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467551",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467551",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:48:13Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467551/annotations"
+      },
+      "check_suite": {
+        "id": 102793115125
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467355,
+      "name": "end-to-end",
+      "node_id": "CR_kwDOEeE9_c8AAAAageW_mw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "fe6db8b0-3cfc-5e1c-864e-566302662865",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467355",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066813/job/113848467355",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066813/job/113848467355",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:46:50Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467355/annotations"
+      },
+      "check_suite": {
+        "id": 102793115092
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467353,
+      "name": "pytest-client",
+      "node_id": "CR_kwDOEeE9_c8AAAAageW_mQ",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "f2bbae57-77a8-5e88-b90b-9ecf7e17bde0",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467353",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467353",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066818/job/113848467353",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:47:20Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467353/annotations"
+      },
+      "check_suite": {
+        "id": 102793115125
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848467276,
+      "name": "docs-client",
+      "node_id": "CR_kwDOEeE9_c8AAAAageW_TA",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "0366daee-1f1f-5025-999e-4008bcada454",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467276",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066822/job/113848467276",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939066822/job/113848467276",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:45:00Z",
+      "completed_at": "2026-10-09T13:45:16Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848467276/annotations"
+      },
+      "check_suite": {
+        "id": 102793115114
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/pyronear/pyro-api/pulls/712",
+          "id": 4794186951,
+          "number": 712,
+          "head": {
+            "ref": "codex/ci-faster-backend-checks",
+            "sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          },
+          "base": {
+            "ref": "main",
+            "sha": "9eb5e8aa013e62070c047e11b7151294584bf9c6",
+            "repo": {
+              "id": 299974141,
+              "url": "https://api.github.com/repos/pyronear/pyro-api",
+              "name": "pyro-api"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 113848461387,
+      "name": "Analyze (python)",
+      "node_id": "CR_kwDOEeE9_c8AAAAageWoSw",
+      "head_sha": "9a7bf68444dea7359e4c6694e9fca9dc5143aba6",
+      "external_id": "6297318d-eee1-5d05-a31d-713b42a05e63",
+      "url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848461387",
+      "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37939062902/job/113848461387",
+      "details_url": "https://github.com/pyronear/pyro-api/actions/runs/37939062902/job/113848461387",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T13:44:59Z",
+      "completed_at": "2026-10-09T13:45:56Z",
+      "output": {
+        "title": null,
+        "summary": null,
+        "text": null,
+        "annotations_count": 1,
+        "annotations_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113848461387/annotations"
+      },
+      "check_suite": {
+        "id": 102793103927
+      },
+      "app": {
+        "id": 15368,
+        "client_id": "Iv1.05c79e9ad1f6bdfa",
+        "slug": "github-actions",
+        "node_id": "MDM6QXBwMTUzNjg=",
+        "owner": {
+          "login": "github",
+          "id": 9919,
+          "node_id": "MDEyOk9yZ2FuaXphdGlvbjk5MTk=",
+          "avatar_url": "https://avatars.githubusercontent.com/u/9919?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/github",
+          "html_url": "https://github.com/github",
+          "followers_url": "https://api.github.com/users/github/followers",
+          "following_url": "https://api.github.com/users/github/following{/other_user}",
+          "gists_url": "https://api.github.com/users/github/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/github/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/github/subscriptions",
+          "organizations_url": "https://api.github.com/users/github/orgs",
+          "repos_url": "https://api.github.com/users/github/repos",
+          "events_url": "https://api.github.com/users/github/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/github/received_events",
+          "type": "Organization",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "name": "GitHub Actions",
+        "description": "Automate your workflow from idea to production",
+        "external_url": "https://help.github.com/en/actions",
+        "html_url": "https://github.com/apps/github-actions",
+        "created_at": "2018-07-30T09:30:17Z",
+        "updated_at": "2026-06-18T16:17:48Z",
+        "permissions": {
+          "actions": "write",
+          "administration": "read",
+          "artifact_metadata": "write",
+          "attestations": "write",
+          "checks": "write",
+          "code_quality": "write",
+          "contents": "write",
+          "copilot_requests": "write",
+          "deployments": "write",
+          "discussions": "write",
+          "drives": "write",
+          "issues": "write",
+          "merge_queues": "write",
+          "metadata": "read",
+          "models": "read",
+          "packages": "write",
+          "pages": "write",
+          "pull_requests": "write",
+          "repository_hooks": "write",
+          "repository_projects": "write",
+          "security_events": "write",
+          "statuses": "write",
+          "vulnerability_alerts": "read"
+        },
+        "events": [
+          "branch_protection_rule",
+          "check_run",
+          "check_suite",
+          "create",
+          "delete",
+          "deployment",
+          "deployment_status",
+          "discussion",
+          "discussion_comment",
+          "fork",
+          "gollum",
+          "issues",
+          "issue_comment",
+          "label",
+          "merge_group",
+          "milestone",
+          "page_build",
+          "public",
+          "pull_request",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "push",
+          "registry_package",
+          "release",
+          "repository",
+          "repository_dispatch",
+          "status",
+          "watch",
+          "workflow_dispatch",
+          "workflow_run"
+        ]
+      },
+      "pull_requests": []
+    }
+  ],
+  "rejected_schema_trial": {
+    "commit": "72b681346e5d7fcd5b694bf647d7e3d318cf39a6",
+    "run_id": 37942138947,
+    "total_count": 3,
+    "jobs": [
+      {
+        "id": 113858950710,
+        "run_id": 37942138947,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37942138947",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAagoW2Ng",
+        "head_sha": "72b681346e5d7fcd5b694bf647d7e3d318cf39a6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113858950710",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37942138947/job/113858950710",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T14:09:54Z",
+        "started_at": "2026-10-09T14:09:56Z",
+        "completed_at": "2026-10-09T14:13:14Z",
+        "name": "pytest",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T14:09:57Z",
+            "completed_at": "2026-10-09T14:09:58Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T14:09:58Z",
+            "completed_at": "2026-10-09T14:09:59Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T14:09:59Z",
+            "completed_at": "2026-10-09T14:09:59Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-09T14:09:59Z",
+            "completed_at": "2026-10-09T14:10:01Z"
+          },
+          {
+            "name": "Start test services",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T14:10:01Z",
+            "completed_at": "2026-10-09T14:11:01Z"
+          },
+          {
+            "name": "Build the test image",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T14:10:01Z",
+            "completed_at": "2026-10-09T14:10:41Z"
+          },
+          {
+            "name": "Parallel group",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-09T14:10:01Z",
+            "completed_at": "2026-10-09T14:11:01Z"
+          },
+          {
+            "name": "Create isolated test databases",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-10-09T14:11:01Z",
+            "completed_at": "2026-10-09T14:11:02Z"
+          },
+          {
+            "name": "Run slow API tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-10-09T14:11:02Z",
+            "completed_at": "2026-10-09T14:13:01Z"
+          },
+          {
+            "name": "Run all remaining backend tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-09T14:11:02Z",
+            "completed_at": "2026-10-09T14:12:51Z"
+          },
+          {
+            "name": "Parallel group",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-09T14:11:02Z",
+            "completed_at": "2026-10-09T14:13:01Z"
+          },
+          {
+            "name": "Run Telegram end-to-end check",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-09T14:13:01Z",
+            "completed_at": "2026-10-09T14:13:08Z"
+          },
+          {
+            "name": "Stop the stack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-09T14:13:08Z",
+            "completed_at": "2026-10-09T14:13:10Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-10-09T14:13:08Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          },
+          {
+            "name": "Wait for all background steps",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-10-09T14:13:11Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-10-09T14:13:11Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29,
+            "started_at": "2026-10-09T14:13:11Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30,
+            "started_at": "2026-10-09T14:13:11Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31,
+            "started_at": "2026-10-09T14:13:11Z",
+            "completed_at": "2026-10-09T14:13:11Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113858950710",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032957,
+        "runner_name": "GitHub Actions 1000032957",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113858950982,
+        "run_id": 37942138947,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37942138947",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAagoW3Rg",
+        "head_sha": "72b681346e5d7fcd5b694bf647d7e3d318cf39a6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113858950982",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37942138947/job/113858950982",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T14:09:54Z",
+        "started_at": "2026-10-09T14:09:56Z",
+        "completed_at": "2026-10-09T14:10:02Z",
+        "name": "headers (ubuntu-latest)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T14:09:56Z",
+            "completed_at": "2026-10-09T14:09:58Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T14:09:58Z",
+            "completed_at": "2026-10-09T14:09:58Z"
+          },
+          {
+            "name": "Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T14:09:58Z",
+            "completed_at": "2026-10-09T14:10:00Z"
+          },
+          {
+            "name": "Post Check the headers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T14:10:00Z",
+            "completed_at": "2026-10-09T14:10:00Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T14:10:00Z",
+            "completed_at": "2026-10-09T14:10:00Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-10-09T14:10:00Z",
+            "completed_at": "2026-10-09T14:10:00Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113858950982",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032956,
+        "runner_name": "GitHub Actions 1000032956",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      {
+        "id": 113858951036,
+        "run_id": 37942138947,
+        "workflow_name": "tests",
+        "head_branch": "codex/ci-faster-backend-checks",
+        "run_url": "https://api.github.com/repos/pyronear/pyro-api/actions/runs/37942138947",
+        "run_attempt": 1,
+        "node_id": "CR_kwDOEeE9_c8AAAAagoW3fA",
+        "head_sha": "72b681346e5d7fcd5b694bf647d7e3d318cf39a6",
+        "url": "https://api.github.com/repos/pyronear/pyro-api/actions/jobs/113858951036",
+        "html_url": "https://github.com/pyronear/pyro-api/actions/runs/37942138947/job/113858951036",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-10-09T14:09:54Z",
+        "started_at": "2026-10-09T14:09:56Z",
+        "completed_at": "2026-10-09T14:11:57Z",
+        "name": "pytest-client",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-10-09T14:09:56Z",
+            "completed_at": "2026-10-09T14:09:59Z"
+          },
+          {
+            "name": "Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-10-09T14:09:59Z",
+            "completed_at": "2026-10-09T14:09:59Z"
+          },
+          {
+            "name": "Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-10-09T14:09:59Z",
+            "completed_at": "2026-10-09T14:09:59Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-10-09T14:09:59Z",
+            "completed_at": "2026-10-09T14:10:02Z"
+          },
+          {
+            "name": "Run client tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-10-09T14:10:02Z",
+            "completed_at": "2026-10-09T14:11:51Z"
+          },
+          {
+            "name": "Upload coverage to Codecov",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-10-09T14:11:51Z",
+            "completed_at": "2026-10-09T14:11:54Z"
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-10-09T14:11:54Z",
+            "completed_at": "2026-10-09T14:11:54Z"
+          },
+          {
+            "name": "Post Run actions/setup-python@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-10-09T14:11:54Z",
+            "completed_at": "2026-10-09T14:11:54Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v7",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-10-09T14:11:54Z",
+            "completed_at": "2026-10-09T14:11:54Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-10-09T14:11:54Z",
+            "completed_at": "2026-10-09T14:11:54Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/pyronear/pyro-api/check-runs/113858951036",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "runner_id": 1000032958,
+        "runner_name": "GitHub Actions 1000032958",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      }
+    ]
+  }
+}
+

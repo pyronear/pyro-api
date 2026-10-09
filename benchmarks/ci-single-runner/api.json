@@ -1,0 +1,5201 @@
+{
+  "label": "api",
+  "elapsed_seconds": 131.00805588600633,
+  "exit_code": 0,
+  "outcomes": {
+    "passed": 288
+  },
+  "fixture_sha256": "c25f81acee8e82cf1d295591371d660dd18fc661d95deba12685d82fd137c8ba",
+  "selection": [
+    "tests/endpoints/test_detections.py",
+    "tests/endpoints/test_sequences.py",
+    "tests/endpoints/test_camera_proxy.py",
+    "tests/endpoints/test_temporal_validation.py"
+  ],
+  "reports": [
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-None-payload0-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 1.256241990995477
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-None-payload0-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06304345899843611
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-None-payload0-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1175544239958981
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[0-None-payload1-403-Incompatible token scope.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.46896383199782576
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[0-None-payload1-403-Incompatible token scope.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021447703999001533
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[0-None-payload1-403-Incompatible token scope.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09325311899010558
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[1-None-payload2-403-Incompatible token scope.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31928014699951746
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[1-None-payload2-403-Incompatible token scope.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.030775383987929672
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[1-None-payload2-403-Incompatible token scope.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07644752699707169
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[2-None-payload3-403-Incompatible token scope.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3057566770003177
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[2-None-payload3-403-Incompatible token scope.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.036532344995066524
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[2-None-payload3-403-Incompatible token scope.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09520835299917962
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload4-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31326472300861496
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload4-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03473874999326654
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload4-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.18119203500100411
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload5-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.38402514399786014
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload5-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.034768726996844634
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload5-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11458494000544306
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload6-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36416880099568516
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload6-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0734891489992151
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload6-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11730018300295342
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload7-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36430047400062904
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload7-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.026296880998415872
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload7-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10778264599503018
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload8-403-Access forbidden.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31852450300357305
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload8-403-Access forbidden.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02846744300040882
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-0-payload8-403-Access forbidden.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.053945157007547095
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload9-201-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20480075498926453
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload9-201-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.12554594699759036
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload9-201-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1040585330047179
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload10-201-None-2]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.24223690100188833
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload10-201-None-2]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.3091644780070055
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload10-201-None-2]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09468669099442195
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload11-201-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.25277542100229766
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload11-201-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.11082792599336244
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection[None-1-payload11-201-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08809692700742744
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_syntax_raises",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0035459810023894534
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_syntax_raises",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.004769775012391619
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_syntax_raises",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0004960150108672678
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_shape_raises",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.002603310000267811
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_shape_raises",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0008155090035870671
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_parse_bbox_invalid_shape_raises",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0009877240081550553
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_inverted_bbox",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26122324899188243
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_inverted_bbox",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.058911959000397474
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_inverted_bbox",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11283942799491342
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_without_active_sequence_stores_nothing",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3113597149931593
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_without_active_sequence_stores_nothing",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1264970979973441
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_without_active_sequence_stores_nothing",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0912115360115422
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_rejects_crops",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2587942690006457
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_rejects_crops",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03780770300363656
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_rejects_crops",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08424902799015399
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_extends_active_sequence",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2574897820013575
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_extends_active_sequence",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 1.1377998100069817
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_empty_bboxes_extends_active_sequence",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1031284000055166
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_continuity_row_for_unmatched_sequence",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26100948998646345
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_continuity_row_for_unmatched_sequence",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.5627992070076289
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_continuity_row_for_unmatched_sequence",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0913524750067154
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_latest",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3691016629891237
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_latest",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.04317960400658194
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_latest",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10896326600050088
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_without_detections",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.32930791898979805
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_without_detections",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023704634004388936
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_without_detections",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10115609200147446
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.29931153800862376
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03136291400005575
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12749799800803885
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_skips_continuity_rows",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2803984170022886
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_skips_continuity_rows",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.030655378999654204
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_last_bbox_for_sequence_skips_continuity_rows",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0904395090037724
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_camera_by_id_adds_missing_sequence_camera",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21747203699487727
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_camera_by_id_adds_missing_sequence_camera",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01057150200358592
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_camera_by_id_adds_missing_sequence_camera",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06600592398899607
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_recent_sequences_appends_missing_sequence",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23794203699799255
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_recent_sequences_appends_missing_sequence",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023985104999155737
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_recent_sequences_appends_missing_sequence",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0774818689969834
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_overlap_records_skips_missing_cone_data",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.274235591001343
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_overlap_records_skips_missing_cone_data",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0118164430023171
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_overlap_records_skips_missing_cone_data",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09711701099877246
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_empty_records_returns_none",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0012896190019091591
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_empty_records_returns_none",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0003707819996634498
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_empty_records_returns_none",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0004271869984222576
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_no_match_returns_none",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.001753019998432137
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_no_match_returns_none",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.031794185997569
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_resolve_groups_and_locations_no_match_returns_none",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0014698949962621555
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left0-right0-0.0-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0023059609957272187
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left0-right0-0.0-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.00041395500011276454
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left0-right0-0.0-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0005614200053969398
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left1-right1-0.0-False]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.002416561997961253
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left1-right1-0.0-False]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.00044374300341587514
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left1-right1-0.0-False]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0024020879936870188
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left2-right2-0.05-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.010097008998855017
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left2-right2-0.05-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0018540179880801588
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left2-right2-0.05-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.001017903006868437
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left3-right3-0.05-False]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0028082250064471737
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left3-right3-0.05-False]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0003426140028750524
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left3-right3-0.05-False]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.001143665998824872
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left4-right4-0.05-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.004380471000331454
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left4-right4-0.05-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0021123509941389784
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_bboxes_overlap_tolerance[left4-right4-0.05-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.002642041989020072
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_empty",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.4493474640039494
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_empty",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0009363350109197199
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_empty",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0918432250036858
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_returns_mapping",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31118275300832465
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_returns_mapping",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05560950801009312
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_alert_mapping_returns_mapping",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10262668300129008
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_updates_fields",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21687687499797903
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_updates_fields",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01942968400544487
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_updates_fields",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08423637200030498
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_widens_bounds_without_location",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2241989150061272
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_widens_bounds_without_location",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03391018000547774
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_maybe_update_alert_widens_bounds_without_location",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07840093898994382
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_reuses_existing_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21991104500193615
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_reuses_existing_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.041679675996419974
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_reuses_existing_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06925824300560635
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_links_for_group_skips_existing_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0011368869891157374
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_links_for_group_skips_existing_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0006009959906805307
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_build_links_for_group_skips_existing_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0011168369965162128
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_within_threshold",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2580339379928773
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_within_threshold",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01018281299911905
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_within_threshold",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08892664399172645
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_drops_alert_beyond_threshold",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.248134110996034
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_drops_alert_beyond_threshold",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022824928993941285
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_drops_alert_beyond_threshold",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12361400500230957
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_with_no_location",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.24487558200780768
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_with_no_location",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.008289862002129667
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_keeps_alert_with_no_location",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06266743798914831
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_returns_unchanged_when_location_missing",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3603787000029115
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_returns_unchanged_when_location_missing",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01533104399277363
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_filter_candidate_returns_unchanged_when_location_missing",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09597635899262968
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_creates_new_when_existing_too_far",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.34138796900515445
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_creates_new_when_existing_too_far",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.041259252990130335
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_creates_new_when_existing_too_far",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.17352269499679096
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_picks_nearby_over_distant",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.4236814379983116
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_picks_nearby_over_distant",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.027082651009550318
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_picks_nearby_over_distant",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1443312839983264
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_merge_alerts_absorbs_duplicates",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.35299735800072085
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_merge_alerts_absorbs_duplicates",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07856369198998436
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_merge_alerts_absorbs_duplicates",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10844681800517719
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_does_not_merge_distant_alerts_without_location",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.4048335289990064
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_does_not_merge_distant_alerts_without_location",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03974402399035171
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_does_not_merge_distant_alerts_without_location",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0868754999974044
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_merges_close_alerts_without_location",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.25308031198801473
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_merges_close_alerts_without_location",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.040650344992172904
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_or_create_alert_id_merges_close_alerts_without_location",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10249915601161774
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_returns_without_overlap_records",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.34509560000151396
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_returns_without_overlap_records",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.028967671998543665
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_returns_without_overlap_records",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08062409701233264
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_detection_counts_split_sequences_and_alerts",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2957807620114181
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_detection_counts_split_sequences_and_alerts",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 1.2519834190024994
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_detection_counts_split_sequences_and_alerts",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12146791799750645
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_telegram_notifications",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.320901668004808
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_telegram_notifications",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.28855821600882336
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_telegram_notifications",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.13949427800253034
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_slack_notifications",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31096349500876386
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_slack_notifications",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.28368279300048016
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_triggers_slack_notifications",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09111864000442438
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_enqueues_validation_on_append",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2862559439963661
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_enqueues_validation_on_append",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.35381963101099245
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_enqueues_validation_on_append",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.15279278699017595
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_flow_direct",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.37008897299529053
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_flow_direct",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.3322237620013766
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_flow_direct",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10580381499312352
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[None-1-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.704113524989225
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[None-1-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010834387998329476
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[None-1-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10518114898877684
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-0-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36460908901062794
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-0-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01658874900022056
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-0-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12237806399934925
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-10-404-Table Detection has no corresponding entry.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3529743930121185
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-10-404-Table Detection has no corresponding entry.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023624987006769516
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-10-404-Table Detection has no corresponding entry.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10526103500160389
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-1-200-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.292951085997629
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-1-200-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01722490599786397
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-1-200-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10000402099103667
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-2-200-None-1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3140843019937165
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-2-200-None-1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014539967000018805
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[0-2-200-None-1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10785722100990824
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-1-200-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.33080155099742115
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-1-200-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.04642131998843979
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-1-200-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.17002652000519447
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-2-200-None-1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.39938230501138605
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-2-200-None-1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02872356100124307
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[1-2-200-None-1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12612434799666516
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[2-1-403-Access forbidden.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3389542079967214
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[2-1-403-Access forbidden.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.024322098004631698
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection[2-1-403-Access forbidden.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.13771964199258946
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[None-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3586858650087379
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[None-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022543715007486753
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[None-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1440251900057774
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[0-200-None-expected_result1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.35778713000763673
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[0-200-None-expected_result1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023095917000318877
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[0-200-None-expected_result1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08160720100568142
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[1-200-None-expected_result2]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3518587629951071
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[1-200-None-expected_result2]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03271706899977289
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_fetch_detections[1-200-None-expected_result2]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1020357109955512
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[None-1-401-Not authenticated]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.39781378098996356
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[None-1-401-Not authenticated]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.026460748005774803
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[None-1-401-Not authenticated]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1458392670028843
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.4284644129947992
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03290579600434285
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10674389600171708
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-1-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3593100510042859
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-1-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05291580699849874
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[0-1-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10989663399232086
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[1-1-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.5129665209969971
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[1-1-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022662933988613077
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[1-1-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09120889299083501
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[2-1-403-Access forbidden.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.29952821499318816
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[2-1-403-Access forbidden.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0156406950118253
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url[2-1-403-Access forbidden.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08079296699725091
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[None-1-401-Not authenticated]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3023898429964902
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[None-1-401-Not authenticated]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022861089993966743
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[None-1-401-Not authenticated]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10441703400283586
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-0-422-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.29042501500225626
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-0-422-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015219541994156316
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-0-422-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12953387000015937
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.32524907299375627
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03015953399881255
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-100-404-Table Detection has no corresponding entry.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12266707100206986
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-1-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.35517637500015553
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-1-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05615274500451051
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-1-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10585805200389586
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-2-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3446942859882256
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-2-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.027750662004109472
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[0-2-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10460945400700439
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-1-403-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3502774839871563
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-1-403-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015911233000224456
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-1-403-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0904672210017452
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-2-403-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3530964480014518
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-2-403-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015694403991801664
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_delete_detection[1-2-403-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08493101099156775
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.29714794299798086
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1362915450008586
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09892842499539256
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence_after_threshold",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26147148899326567
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence_after_threshold",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.22660225800063927
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_creates_sequence_after_threshold",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09662596900307108
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_creates_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31814516900340095
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_creates_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0795730889949482
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_to_alert_creates_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10537900299823377
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_relabel_back_to_wildfire_merges_into_triangulated_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31535443098982796
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_relabel_back_to_wildfire_merges_into_triangulated_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.34541688399622217
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_relabel_back_to_wildfire_merges_into_triangulated_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11514757398981601
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_does_not_bridge_to_distant_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2967919950024225
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_does_not_bridge_to_distant_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1572551390127046
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_does_not_bridge_to_distant_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.093228176003322
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_uses_payload_recorded_at",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2891883889969904
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_uses_payload_recorded_at",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.12205086099856999
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_uses_payload_recorded_at",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12396593700395897
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_converts_aware_recorded_at_to_utc",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30647095100721344
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_converts_aware_recorded_at_to_utc",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.13603623100789264
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_converts_aware_recorded_at_to_utc",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.14195632400515024
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_defaults_recorded_at_to_now",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2920138089975808
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_defaults_recorded_at_to_now",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.10703643399756402
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_defaults_recorded_at_to_now",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10164057200017851
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_first_detection_capture",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3806214979995275
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_first_detection_capture",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.32102933900023345
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_first_detection_capture",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1560609409934841
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_earliest_capture_on_backlog_flush",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30104723099793773
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_earliest_capture_on_backlog_flush",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.3025608580064727
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_sequence_starts_at_earliest_capture_on_backlog_flush",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11766461801016703
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_merges_same_event_alerts",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.35639962600544095
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_merges_same_event_alerts",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.25972754799295217
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_attach_sequence_merges_same_event_alerts",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10055943900079001
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_persists_crop_bucket_key",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.45520098399720155
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_persists_crop_bucket_key",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.14369376399554312
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_persists_crop_bucket_key",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11614549200749025
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_assigns_distinct_crop_per_bbox",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.43027130799600855
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_assigns_distinct_crop_per_bbox",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.2642400879994966
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_assigns_distinct_crop_per_bbox",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12887432498973794
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_crop_bbox_count_mismatch",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3404226290003862
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_crop_bbox_count_mismatch",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06016877699585166
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_rejects_crop_bbox_count_mismatch",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10329455099417828
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_without_crop_leaves_field_null",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3239319650019752
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_without_crop_leaves_field_null",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1402693189884303
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_without_crop_leaves_field_null",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11529757200332824
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_returns_crop_url",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3024954160064226
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_returns_crop_url",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.08135570898593869
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_returns_crop_url",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0780581080034608
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_crop_url_null_without_crop",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23936388701258693
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_crop_url_null_without_crop",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.020396316991536878
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_get_detection_url_crop_url_null_without_crop",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07117538999591488
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_with_identical_crop_bytes_produces_distinct_keys",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26556273899041116
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_with_identical_crop_bytes_produces_distinct_keys",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.13786190300015733
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_with_identical_crop_bytes_produces_distinct_keys",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09977037200587802
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_authorizes_pose_before_uploading",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2588736540055834
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_authorizes_pose_before_uploading",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.034719958988716826
+    },
+    {
+      "test": "tests/endpoints/test_detections.py::test_create_detection_authorizes_pose_before_uploading",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08223792200442404
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[1-0-3]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26775852299761027
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[1-0-3]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022293307003565133
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[1-0-3]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07118289300706238
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[2-1-1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2561794909997843
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[2-1-1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.028391624000505544
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_get_sequence[2-1-1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09268332899955567
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[None-1-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31097276699438225
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[None-1-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03465079900342971
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[None-1-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08899983500305098
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-1-200-None-expected_result1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30937859100231435
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-1-200-None-expected_result1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03238268700079061
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-1-200-None-expected_result1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11375756800407544
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-2-200-None-expected_result2]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2405814709927654
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-2-200-None-expected_result2]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018628453006385826
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-2-200-None-expected_result2]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10253861300589051
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-99-404-Table Sequence has no corresponding entry.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.4303444420074811
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-99-404-Table Sequence has no corresponding entry.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01403261699306313
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[0-99-404-Table Sequence has no corresponding entry.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.059581993002211675
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-1-200-None-expected_result4]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2163124990038341
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-1-200-None-expected_result4]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02723900599812623
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-1-200-None-expected_result4]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09979829400253948
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-2-403-Access forbidden.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22287344798678532
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-2-403-Access forbidden.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.04261018300894648
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[1-2-403-Access forbidden.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.13494820400956087
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-1-403-Access forbidden.-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2987818480032729
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-1-403-Access forbidden.-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023335840000072494
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-1-403-Access forbidden.-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06582322999020107
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-2-200-None-expected_result7]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2735613969998667
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-2-200-None-expected_result7]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0246693060034886
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections[2-2-200-None-expected_result7]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10094883300189395
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[None-1-401-Not authenticated]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2941062989993952
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[None-1-401-Not authenticated]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010618761996738613
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[None-1-401-Not authenticated]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10367681999923661
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-99-404-Table Sequence has no corresponding entry.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.38018453199765645
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-99-404-Table Sequence has no corresponding entry.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.04225032999238465
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-99-404-Table Sequence has no corresponding entry.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11599984200438485
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-1-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.34998408699175343
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-1-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.13484396600688342
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-1-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0901205789996311
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-2-200-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.334067085001152
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-2-200-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.11498076899442822
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[0-2-200-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11393085701274686
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-1-403-Incompatible token scope.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3764640079898527
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-1-403-Incompatible token scope.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.011422440991736948
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-1-403-Incompatible token scope.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10548611599369906
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-2-403-Incompatible token scope.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.29415458999574184
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-2-403-Incompatible token scope.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.012383494002278894
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[1-2-403-Incompatible token scope.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07356197800254449
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-1-403-Incompatible token scope.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2910959959990578
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-1-403-Incompatible token scope.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.009639943004003726
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-1-403-Incompatible token scope.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0791905430087354
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-2-403-Incompatible token scope.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2510241519921692
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-2-403-Incompatible token scope.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01600546001282055
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence[2-2-403-Incompatible token scope.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09282180899754167
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[None-1-payload0-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20959827900514938
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[None-1-payload0-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02934579100110568
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[None-1-payload0-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11668100699898787
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-0-payload1-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.18683798299753107
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-0-payload1-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.017373227994539775
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-0-payload1-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07403382900520228
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-99-payload2-404-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1916867659892887
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-99-payload2-404-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03497802000492811
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-99-payload2-404-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07962405899888836
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload3-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22632848299690522
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload3-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02575915600755252
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload3-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06331128199235536
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload4-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22331706700788345
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload4-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.022743178997188807
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload4-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06960521799919661
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload5-200-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1807383699924685
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload5-200-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.04120868099562358
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-1-payload5-200-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09804350999183953
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-2-payload6-200-None-1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23871158900146838
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-2-payload6-200-None-1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03069755398610141
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[0-2-payload6-200-None-1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0540730920038186
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-1-payload7-200-None-0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20252303800953086
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-1-payload7-200-None-0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.026508982002269477
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-1-payload7-200-None-0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.04738003300735727
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-2-payload8-403-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14541595699847676
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-2-payload8-403-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021481773001141846
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[1-2-payload8-403-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05251332701300271
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-1-payload9-403-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17666320700664073
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-1-payload9-403-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.013529133997508325
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-1-payload9-403-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.058541235004668124
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-2-payload10-403-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1911154879926471
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-2-payload10-403-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021872975994483568
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_label_sequence[2-2-payload10-403-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09327759699954186
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[None-2018-06-06-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.31165960199723486
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[None-2018-06-06-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03094802299165167
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[None-2018-06-06-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11139618199376855
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0--422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3956674259970896
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0--422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.012451784001314081
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0--422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05907982499047648
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-old-date-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3543003450031392
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-old-date-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05496665899408981
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-old-date-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08129821400507353
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-19-20-422-None-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.40229072199144866
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-19-20-422-None-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.15653154400934
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-19-20-422-None-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07458937200135551
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06T00:00:00-200-None-expected_result4]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30587733299762476
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06T00:00:00-200-None-expected_result4]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.045519962994148955
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06T00:00:00-200-None-expected_result4]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0577313589892583
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06-200-None-expected_result5]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2063899690110702
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06-200-None-expected_result5]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01463152100041043
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2018-06-06-200-None-expected_result5]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07379074700293131
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2023-11-07-200-None-expected_result6]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.19023048899543937
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2023-11-07-200-None-expected_result6]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.038981377001618966
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[0-2023-11-07-200-None-expected_result6]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09807928401278332
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[1-2023-11-07-200-None-expected_result7]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22629148699343204
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[1-2023-11-07-200-None-expected_result7]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03709832600725349
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[1-2023-11-07-200-None-expected_result7]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08563741399848368
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[2-2023-11-07-200-None-expected_result8]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2859368019999238
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[2-2023-11-07-200-None-expected_result8]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02472979499725625
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequences_from_date[2-2023-11-07-200-None-expected_result8]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07234849799715448
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[None-401-Not authenticated-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22235001699300483
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[None-401-Not authenticated-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010791095002787188
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[None-401-Not authenticated-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06859506700129714
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[0-200-None-expected_result1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3151328099920647
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[0-200-None-expected_result1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.020654763997299597
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[0-200-None-expected_result1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06519210898841266
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[1-200-None-expected_result2]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20835949599859305
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[1-200-None-expected_result2]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023792849999153987
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[1-200-None-expected_result2]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06188404200656805
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[2-200-None-expected_result3]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.18485085500287823
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[2-200-None-expected_result3]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03398681299586315
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences[2-200-None-expected_result3]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.33930352500465233
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_include_detections_count",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3741519019968109
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_include_detections_count",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07827440999972168
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_include_detections_count",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1172844940010691
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_admin_sees_all_organizations",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.530618897988461
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_admin_sees_all_organizations",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.2677436630037846
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_latest_sequences_admin_sees_all_organizations",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.13680528101394884
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_updates_alerts",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3101999640057329
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_updates_alerts",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.14807483699405566
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_updates_alerts",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1627778320107609
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_keeps_solo_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36228646300151013
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_keeps_solo_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0531732849922264
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_sequence_label_keeps_solo_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10550185300235171
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_cleans_alerts_and_detections",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.44759547199646477
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_cleans_alerts_and_detections",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07303964300081134
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_cleans_alerts_and_detections",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11003089000587352
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_refreshes_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2928180750022875
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_refreshes_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1961040989990579
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_delete_sequence_refreshes_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.19660925399512053
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_other_smoke_refreshes_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0072458180075045675
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_other_smoke_refreshes_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.049808447001851164
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_other_smoke_refreshes_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0005859619996044785
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_relabel_sequence_to_wildfire_smoke_reattaches",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.00287787000706885
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_relabel_sequence_to_wildfire_smoke_reattaches",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.030878623991156928
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_relabel_sequence_to_wildfire_smoke_reattaches",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.000622673993348144
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_solo_alert_keeps_alert",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0018875840032706037
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_solo_alert_keeps_alert",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.09141782400547527
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_solo_alert_keeps_alert",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0024194140132749453
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_wildfire_smoke_does_not_refresh",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0018770900060189888
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_wildfire_smoke_does_not_refresh",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05532285600202158
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_as_wildfire_smoke_does_not_refresh",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0017362389917252585
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_paging",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36346567000146024
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_paging",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.09335582300263923
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_paging",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10144946900254581
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_validation",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3735012500110315
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_validation",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014622753995354287
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_offset_validation",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08615263899264392
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_set_is_independent_of_desc",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23022888699779287
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_set_is_independent_of_desc",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.14519604100496508
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_set_is_independent_of_desc",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07740030900458805
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_one_matches_default",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3578706870030146
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_one_matches_default",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.12051572499331087
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_one_matches_default",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.14856733300257474
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_interval",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.5499883080046857
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_interval",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.11202839600446168
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_interval",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11307866500283126
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3448769020033069
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.2175082960020518
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_spans_the_sampled_set",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09487495500070509
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2681194629985839
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.18875040499551687
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_explicit_limit_still_wins_and_reports_truncation",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08417542900133412
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_unsampled_default_limit_unchanged",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22835751601087395
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_unsampled_default_limit_unchanged",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.10827112301194575
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_unsampled_default_limit_unchanged",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08745506400009617
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22063531499588862
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06414030799351167
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_omitted_limit_handles_degenerate_sampling",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08268988100462593
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_counts_raw_detections",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26577658399764914
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_counts_raw_detections",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.09809603499888908
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_counts_raw_detections",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07952764199580997
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_ignores_desc",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.24636419500166085
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_ignores_desc",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.10883342099259607
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_offset_ignores_desc",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07872723801119719
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2692904629948316
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.29049373300222214
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_pages_by_multiples_of_sampling",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10440459100937005
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=0-422]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2647849429922644
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=0-422]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.011530396994203329
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=0-422]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06224796699825674
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=-1-422]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2501254130038433
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=-1-422]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.008341422988451086
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=-1-422]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08012701700499747
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=1-200]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23771050399227533
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=1-200]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02540654099720996
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=1-200]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08676462998846546
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10000-200]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2612318149913335
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10000-200]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.028970280007342808
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10000-200]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07521204098884482
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10001-422]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.25490212099975906
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10001-422]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010198085001320578
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=10001-422]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09004750799795147
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=9223372036854775808-422]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.25574117100040894
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=9223372036854775808-422]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.009254995995434001
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[sampling=9223372036854775808-422]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09043139300774783
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=500-200]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23876808099157643
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=500-200]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.027265703000011854
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=500-200]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08442629199998919
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=501-422]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.34258448900072835
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=501-422]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014715468001668341
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_sampling_validation[limit=501-422]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08133099699625745
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_reuses_presigned_urls_across_requests",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.32431692999671213
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_reuses_presigned_urls_across_requests",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0465549469954567
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_reuses_presigned_urls_across_requests",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08510722500795964
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_forbidden_for_wrong_org",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0011693330015987158
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_forbidden_for_wrong_org",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01065471800393425
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_label_sequence_forbidden_for_wrong_org",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0004433359863469377
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_includes_crop_url",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21376573700399604
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_includes_crop_url",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06020759898819961
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_includes_crop_url",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0659046539949486
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_with_crop_false_skips_crop_url",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2469621239870321
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_with_crop_false_skips_crop_url",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06354612100403756
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_fetch_sequence_detections_with_crop_false_skips_crop_url",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08650662300351541
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_latest_unlabeled_sequences_uses_risk_score_override",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.00261253300413955
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_latest_unlabeled_sequences_uses_risk_score_override",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.00898873400001321
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_latest_unlabeled_sequences_uses_risk_score_override",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0010887200041906908
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_gets_risk_scores_for_requested_date",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0018962790054501966
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_gets_risk_scores_for_requested_date",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.011577476005186327
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_gets_risk_scores_for_requested_date",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0034210119920317084
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_risk_score_override_bypasses_risk_api",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.002814072009641677
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_risk_score_override_bypasses_risk_api",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.017344223990221508
+    },
+    {
+      "test": "tests/endpoints/test_sequences.py::test_unit_fetch_sequences_from_date_risk_score_override_bypasses_risk_api",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0004919440107187256
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[None-1-401-Not authenticated]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15517890300543513
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[None-1-401-Not authenticated]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.017823984002461657
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[None-1-401-Not authenticated]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09006617299746722
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-999-404-Table Camera has no corresponding entry.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14172947299084626
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-999-404-Table Camera has no corresponding entry.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.024643181008286774
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-999-404-Table Camera has no corresponding entry.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0692014480009675
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-2-403-Access forbidden.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21382713998900726
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-2-403-Access forbidden.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02350536099402234
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-2-403-Access forbidden.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06919098499929532
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-1-403-Access forbidden.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15180813800543547
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-1-403-Access forbidden.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021225870004855096
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-1-403-Access forbidden.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08332850599254016
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2213353039987851
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021085036991280504
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.19082607798918616
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2960916269948939
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018397154999547638
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0478813849913422
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-2-409-Camera device connection is not configured]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11205894600425381
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-2-409-Camera device connection is not configured]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.019377930992050096
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_read_auth[2-2-409-Camera device connection is not configured]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0886866060027387
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[None-1-401-Not authenticated]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.13648409699089825
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[None-1-401-Not authenticated]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.027413692005211487
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[None-1-401-Not authenticated]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06766295499983244
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[2-2-403-Incompatible token scope.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.09982029900129419
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[2-2-403-Incompatible token scope.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010682991007342935
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[2-2-403-Incompatible token scope.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08453204900433775
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-2-403-Access forbidden.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.19313877999957185
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-2-403-Access forbidden.]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02963146301044617
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-2-403-Access forbidden.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08631040499312803
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12365113401028793
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015378269003122114
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[0-1-409-Camera device connection is not configured]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07772240901249461
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.16115317500953097
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02745192601287272
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_write_auth[1-1-409-Camera device connection is not configured]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10328752199711744
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/health]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17906409699935466
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/health]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.044187644991325215
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/health]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06386505700356793
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/cameras_list]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1462557699996978
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/cameras_list]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.016153509001014754
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/cameras_list]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07498362500336953
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/camera_infos]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.10660432299482636
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/camera_infos]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.012908583987154998
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/camera_infos]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06454135201056488
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/capture]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11419255800137762
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/capture]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015604772008373402
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/capture]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05550376100291032
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/latest_image?pose=0]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12947570599499159
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/latest_image?pose=0]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01957982699968852
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/latest_image?pose=0]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07859951800492126
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/presets]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.23210716299945489
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/presets]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.034423550008796155
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/presets]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11797682200267445
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/speed_tables]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1940099060011562
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/speed_tables]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03512462100479752
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/speed_tables]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07678434300760273
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/azimuth]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1687629239895614
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/azimuth]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.026583509999909438
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/control/azimuth]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10639188200002536
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/focus/status]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.18573949599522166
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/focus/status]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.028010340000037104
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/focus/status]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09766020500683226
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/patrol/status]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17138744299882092
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/patrol/status]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02119984501041472
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/patrol/status]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07685378199676052
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/status]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1373511999991024
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/status]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018599622999317944
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/status]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07251091299986001
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/is_running]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.16542436700547114
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/is_running]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03220483200857416
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_get[/cameras/1/stream/is_running]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09609622000425588
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.41964718999224715
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01697024900931865
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0567137790058041
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/goto_preset-json1]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11987129898625426
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/goto_preset-json1]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021118634002050385
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/goto_preset-json1]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.057534131992724724
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/start_move-json2]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.10553556100057904
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/start_move-json2]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.016698152001481503
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/start_move-json2]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07320833799894899
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop_move-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1332608689990593
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop_move-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01331718999426812
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop_move-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.052573508000932634
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_for_duration-json4]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15311469900188968
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_for_duration-json4]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018351120001170784
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_for_duration-json4]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.051518424006644636
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_by_degrees-json5]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.138509893004084
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_by_degrees-json5]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023661422994337045
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/move_by_degrees-json5]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.047458282992010936
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/click_to_move-json6]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1243591579986969
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/click_to_move-json6]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.013649182001245208
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/click_to_move-json6]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.052518923999741673
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11692169000161812
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014906930999131873
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/stop-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07707663001201581
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/preset-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11019454000052065
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/preset-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014447793990257196
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/preset-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.062163132010027766
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/zoom/5-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1823234479961684
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/zoom/5-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.020992874997318722
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/control/zoom/5-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07579432999773417
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/start-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2158682610024698
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/start-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.023794441993231885
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/start-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06612920000043232
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/stop-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12008358599268831
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/stop-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01371784599905368
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/patrol/stop-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07398861600086093
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/start-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15096531699236948
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/start-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01958556700265035
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/start-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05641827901126817
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/stop-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1299096100119641
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/stop-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02026684398879297
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/stream/stop-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05087272000673693
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/manual?position=500-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12418247399909887
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/manual?position=500-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.011999972004559822
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/manual?position=500-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06402664800407365
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/autofocus-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12809202499920502
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/autofocus-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02453018400410656
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/autofocus-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.056041938994894736
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/optimize-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.10505576999275945
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/optimize-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.012299078996875323
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_unconfigured_post[/cameras/1/focus/optimize-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.053329981994465925
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_timeout",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.123558117003995
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_timeout",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01356709300307557
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_timeout",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05516384700604249
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_unreachable",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11426356800075155
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_unreachable",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01591117400676012
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_unreachable",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.04639368299103808
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_error_forwarded",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12546627699339297
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_error_forwarded",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015879715007031336
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_device_error_forwarded",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05013538300408982
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_capture_returns_jpeg",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1264020079979673
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_capture_returns_jpeg",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.016752292998717166
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_capture_returns_jpeg",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.052399588996195234
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_returns_jpeg",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.11968945500848349
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_returns_jpeg",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.029508437000913545
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_returns_jpeg",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0641937749896897
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_no_content",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17299397599708755
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_no_content",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03625088499393314
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_latest_image_no_content",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09779231800348498
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_device_ip_not_leaked_in_camera_response",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17346314901078586
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_device_ip_not_leaked_in_camera_response",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.048259096991387196
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_device_ip_not_leaked_in_camera_response",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06178010399162304
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/health-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1456381719908677
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/health-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03469724499154836
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/health-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07919916600803845
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/cameras_list-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.13507923699216917
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/cameras_list-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02320509299170226
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/cameras_list-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0533329930040054
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/camera_infos-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.10699909600953106
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/camera_infos-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018477402001735754
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/camera_infos-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.047696175999590196
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/presets-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14864058699458838
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/presets-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.016330804995959625
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/presets-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05040603599627502
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/speed_tables-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.13570363300095778
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/speed_tables-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01353748599649407
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/speed_tables-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.056432433004374616
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/azimuth-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.13705294000101276
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/azimuth-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01203648500086274
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/azimuth-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.04408234798756894
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/status-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12111116301093716
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/status-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014770302004762925
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/status-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08146165500511415
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/status-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.16359709500102326
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/status-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01704196499485988
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/status-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05407484200259205
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/status-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1395019140036311
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/status-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.014873134001391008
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/status-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0572737010079436
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/is_running-get-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.13539047600352205
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/is_running-get-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.026598975993692875
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/is_running-get-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05752610199851915
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12419877600041218
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.018993539997609332
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06967194000026211
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/goto_preset-post-json11]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14359200099715963
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/goto_preset-post-json11]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01860181600204669
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/goto_preset-post-json11]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.055571749006048776
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/start_move-post-json12]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14692020800430328
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/start_move-post-json12]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.025853707993519492
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/start_move-post-json12]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06003173399949446
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop_move-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26109604100929573
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop_move-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.08956410599057563
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop_move-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.13818620100209955
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_for_duration-post-json14]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20203460499760695
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_for_duration-post-json14]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.019750438004848547
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_for_duration-post-json14]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06269535100727808
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_by_degrees-post-json15]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.17944367199379485
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_by_degrees-post-json15]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02546770899789408
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/move_by_degrees-post-json15]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0564777760009747
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/click_to_move-post-json16]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.18425648400443606
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/click_to_move-post-json16]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.016503281993209384
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/click_to_move-post-json16]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.047271731004002504
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.18100539800070692
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05524597299518064
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/stop-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1209511849883711
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/preset-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1386448989942437
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/preset-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03661911499511916
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/preset-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07248406599683221
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/zoom/5-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.12087379500735551
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/zoom/5-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.01731791799829807
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/control/zoom/5-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05987551399448421
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/manual?position=500-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.16246812800818589
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/manual?position=500-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02747875000932254
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/manual?position=500-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.05772279000666458
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/autofocus-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14013576299475972
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/autofocus-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.015786393007147126
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/autofocus-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06261069599713665
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/optimize-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15128915199602488
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/optimize-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.045584526989841834
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/focus/optimize-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06755090900696814
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/start-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.16041974199470133
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/start-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02064903499558568
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/start-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06958707400190178
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/stop-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.15835240999876987
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/stop-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.017038466001395136
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/patrol/stop-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06694565300131217
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/start-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.14417189499363303
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/start-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.021701297009713016
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/start-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08788866699615028
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/stop-post-None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.1624987550021615
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/stop-post-None]",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02242852299241349
+    },
+    {
+      "test": "tests/endpoints/test_camera_proxy.py::test_proxy_happy_path[/cameras/10/stream/stop-post-None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06868367700371891
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_distinct_ordered_with_union_roi",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2776949870021781
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_distinct_ordered_with_union_roi",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0396813200059114
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_distinct_ordered_with_union_roi",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.12948425899958238
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_truncates_to_last_n_and_scopes_roi",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.36488779899082147
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_truncates_to_last_n_and_scopes_roi",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.040701554011320695
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_truncates_to_last_n_and_scopes_roi",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08373456800472923
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_is_idempotent_and_fifo_preserving",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2384394870023243
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_is_idempotent_and_fifo_preserving",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.05397916599758901
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_is_idempotent_and_fifo_preserving",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08283762900100555
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_skips_validated_and_window_exhausted",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30097426200518385
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_skips_validated_and_window_exhausted",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0822475739987567
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_enqueue_skips_validated_and_window_exhausted",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08385276600893121
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_leases_and_blocks_concurrent_workers",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.40028536099998746
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_leases_and_blocks_concurrent_workers",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.21773781398951542
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_leases_and_blocks_concurrent_workers",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09439374099019915
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_finish_job_keeps_due_when_frames_changed_during_scoring",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.33814327100117225
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_finish_job_keeps_due_when_frames_changed_during_scoring",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07303472700004932
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_finish_job_keeps_due_when_frames_changed_during_scoring",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10090749099617824
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_returns_false_when_nothing_due",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.35771418300282676
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_returns_false_when_nothing_due",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.010557838002569042
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_returns_false_when_nothing_due",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06708916099159978
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gate_blocks_low_conf",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.28902690899849404
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gate_blocks_low_conf",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.15323181300482247
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gate_blocks_low_conf",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08528375699825119
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_and_triangulates_on_fail_open",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2364216510031838
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_and_triangulates_on_fail_open",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.13760780000302475
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_and_triangulates_on_fail_open",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0829668189981021
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scores_with_fresh_frames_and_roi",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2413470320025226
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scores_with_fresh_frames_and_roi",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.21189485599461477
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scores_with_fresh_frames_and_roi",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.14203119100420736
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_persists_score_below_threshold_without_validating",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2983755059976829
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_persists_score_below_threshold_without_validating",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1018281360011315
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_persists_score_below_threshold_without_validating",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1095880779903382
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_skips_below_min_frames",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3289885050035082
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_skips_below_min_frames",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.09692829000414349
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_skips_below_min_frames",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1214213839994045
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_truncates_never_scored_sequence_past_max_frames",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2823574590001954
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_truncates_never_scored_sequence_past_max_frames",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.19674548700277228
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_truncates_never_scored_sequence_past_max_frames",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.1132236039993586
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_window_exhausted_when_scored_and_past_max_frames",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2952675690030446
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_window_exhausted_when_scored_and_past_max_frames",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.12410287000238895
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_window_exhausted_when_scored_and_past_max_frames",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09795733299688436
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_job_fails_open_explicitly",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2680803149996791
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_job_fails_open_explicitly",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.14877481499570422
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_job_fails_open_explicitly",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09369102299388032
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scoreless_response_does_not_validate",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30968872099765576
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scoreless_response_does_not_validate",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.08098727600008715
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_scoreless_response_does_not_validate",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09835928700340446
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_resumes_post_claim_crash",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3845911699900171
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_resumes_post_claim_crash",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.10463557099865284
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_resumes_post_claim_crash",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07786346599459648
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_nothing_due_for_completed_validated_sequence",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.21427923400187865
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_nothing_due_for_completed_validated_sequence",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.040584548012702726
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_nothing_due_for_completed_validated_sequence",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09428353699331637
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_from_prior_high_score_past_window",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22687033799593337
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_from_prior_high_score_past_window",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1305344559950754
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_validates_from_prior_high_score_past_window",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09669482799654361
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_past_window_does_not_window_exhaust",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26176927199412603
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_past_window_does_not_window_exhaust",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.16477136198955122
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_past_window_does_not_window_exhaust",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07389184199564625
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gates_on_current_max_conf",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.22558889399806503
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gates_on_current_max_conf",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.09765828300442081
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_risk_gates_on_current_max_conf",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.0869526079914067
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_survives_job_error_and_keeps_job_due",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30214653999428265
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_survives_job_error_and_keeps_job_due",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07656675900216214
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_survives_job_error_and_keeps_job_due",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07519447599770501
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_poison_job_dead_letters_after_max_attempts",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3035584750032285
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_poison_job_dead_letters_after_max_attempts",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.24175927900068928
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_poison_job_dead_letters_after_max_attempts",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.06652015300642233
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attempts_reset_on_completed_job",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.20064107900543604
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attempts_reset_on_completed_job",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.14949571299075615
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attempts_reset_on_completed_job",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10458723299962003
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_keeps_verdict_and_resumes",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3094861680001486
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_keeps_verdict_and_resumes",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.21190488900174387
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_attach_failure_keeps_verdict_and_resumes",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.11837759800255299
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_below_min_frames_stays_unvalidated",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.28039003000594676
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_below_min_frames_stays_unvalidated",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.0807394120056415
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_stale_below_min_frames_stays_unvalidated",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07452954699692782
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_validation_is_won_once",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2382387979887426
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_validation_is_won_once",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.02307549699617084
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_claim_validation_is_won_once",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07030580799619202
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_skips_unparseable_bboxes",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30955002500559203
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_skips_unparseable_bboxes",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03206927499559242
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_skips_unparseable_bboxes",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08775052400596905
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_degenerate_roi_is_dropped",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.24721573499846272
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_degenerate_roi_is_dropped",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03937980500631966
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_sequence_frames_degenerate_roi_is_dropped",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08444867099751718
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_without_detections_is_a_noop",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3397723939997377
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_without_detections_is_a_noop",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.03750202200899366
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_without_detections_is_a_noop",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10140364499238785
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_swallows_unexpected_errors",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.3199930510018021
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_swallows_unexpected_errors",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.039325736011960544
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notify_swallows_unexpected_errors",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09341181300987955
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notification_channel_failures_never_abort_the_job",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.30055593099677935
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notification_channel_failures_never_abort_the_job",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.16491589399811346
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_notification_channel_failures_never_abort_the_job",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.10991102599655278
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_handles_vanished_sequence_and_camera",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.26024957800109405
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_handles_vanished_sequence_and_camera",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.07798222800192889
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_handles_vanished_sequence_and_camera",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.08457259500573855
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_fails_open_when_predict_raises_in_flight",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2747508330066921
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_fails_open_when_predict_raises_in_flight",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.1430124979960965
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_fails_open_when_predict_raises_in_flight",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.09071883599972352
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_lost_claim_leaves_job_due_for_resume",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2555621800129302
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_lost_claim_leaves_job_due_for_resume",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.17538446199614555
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_process_lost_claim_leaves_job_due_for_resume",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07865375799883623
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_first_score_past_window_below_threshold_is_terminal",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2725798129977193
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_first_score_past_window_below_threshold_is_terminal",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.08224977798818145
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_first_score_past_window_below_threshold_is_terminal",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07956512901000679
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_risk_gate_finish_keeps_due_when_frames_changed",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.2887478119955631
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_risk_gate_finish_keeps_due_when_frames_changed",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.06386283900064882
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_risk_gate_finish_keeps_due_when_frames_changed",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.07400036801118404
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_validation_worker_loop_survives_errors_and_idles",
+      "phase": "setup",
+      "outcome": "passed",
+      "seconds": 0.0013963540113763884
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_validation_worker_loop_survives_errors_and_idles",
+      "phase": "call",
+      "outcome": "passed",
+      "seconds": 0.006207649988937192
+    },
+    {
+      "test": "tests/endpoints/test_temporal_validation.py::test_validation_worker_loop_survives_errors_and_idles",
+      "phase": "teardown",
+      "outcome": "passed",
+      "seconds": 0.007357902999501675
+    }
+  ]
+}
