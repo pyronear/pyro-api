@@ -1,0 +1,24 @@
+{
+  "baseline_seconds": 133.5426690560016,
+  "parallel_seconds": 87.93901113000175,
+  "reduction_percent": 34.14912870048734,
+  "tests": 681,
+  "api_tests": 288,
+  "remaining_tests": 393,
+  "outcomes": {
+    "baseline": {
+      "passed": 680,
+      "skipped": 1
+    },
+    "api": {
+      "passed": 288
+    },
+    "remaining": {
+      "passed": 392,
+      "skipped": 1
+    }
+  },
+  "baseline_covered_lines": 2671,
+  "shards_covered_lines": 2671,
+  "lost_covered_lines": 0
+}

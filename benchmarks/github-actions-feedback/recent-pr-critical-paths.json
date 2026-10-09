@@ -1,0 +1,147 @@
+{
+  "definition": "First attempt, earliest workflow creation to last job completion; no new classifier or changed queue model",
+  "current_median_seconds": 296.5,
+  "scope_only_median_seconds": 291.0,
+  "cases": [
+    {
+      "sha": "a4832e04da2d74d2753b589417b2d2e6b7115ff7",
+      "current_seconds": 292.0,
+      "scope_only_seconds": 292.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "96f9a51e8c1c898e7408bd45f017a7cf9a9a3395",
+      "current_seconds": 276.0,
+      "scope_only_seconds": 276.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "976bd54a486d89f2514090239113969f2adbf0c2",
+      "current_seconds": 333.0,
+      "scope_only_seconds": 333.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "9f8a514396a392f42cc9f964fec77b51f257891f",
+      "current_seconds": 303.0,
+      "scope_only_seconds": 303.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "3ff82ee8e4a99407431d1449ccd051a9d8bae77c",
+      "current_seconds": 291.0,
+      "scope_only_seconds": 291.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "156681764680777e03db01fb80cd2c7c9f615366",
+      "current_seconds": 291.0,
+      "scope_only_seconds": 291.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "168a255c048bff7b9a983b59e76149c2eaeffb43",
+      "current_seconds": 241.0,
+      "scope_only_seconds": 241.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "ff2f9fe9e859759270ca8b9c24ce106413ed75ce",
+      "current_seconds": 257.0,
+      "scope_only_seconds": 257.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "e0783ad4d30e1f053b5a3d9a88152dfc9f70aa6d",
+      "current_seconds": 313.0,
+      "scope_only_seconds": 313.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "c6d19a77c21817dbdb596673107607fdca3fd6be",
+      "current_seconds": 323.0,
+      "scope_only_seconds": 323.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "756063454b3eb77c048be38bd290cdf7e4bf54d1",
+      "current_seconds": 257.0,
+      "scope_only_seconds": 257.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "3b1365395d78faea1e53cc20dc35093d7f0428be",
+      "current_seconds": 331.0,
+      "scope_only_seconds": 331.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "95046a2fae5adbc6e8092477a9a8daa489fa4100",
+      "current_seconds": 297.0,
+      "scope_only_seconds": 297.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "48eef0e2adaca911754e85c802b62a17733da225",
+      "current_seconds": 290.0,
+      "scope_only_seconds": 290.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "621297934ad7eafe9858eb01c027883edb1b72f3",
+      "current_seconds": 351.0,
+      "scope_only_seconds": 302.0,
+      "critical_job": "client (macos-latest, 3.11)",
+      "removed_critical_seconds": 49.0
+    },
+    {
+      "sha": "fe9e8ee9712f032753dd5d62d5426955e0ee01e6",
+      "current_seconds": 358.0,
+      "scope_only_seconds": 259.0,
+      "critical_job": "client (macos-latest, 3.11)",
+      "removed_critical_seconds": 99.0
+    },
+    {
+      "sha": "4746fa1b77e12bcf5b2e5acf170fe497c39346df",
+      "current_seconds": 364.0,
+      "scope_only_seconds": 248.0,
+      "critical_job": "client (macos-latest, 3.12)",
+      "removed_critical_seconds": 116.0
+    },
+    {
+      "sha": "500b529c44e40d86caa22cd4dacbfba6bd1c324f",
+      "current_seconds": 352.0,
+      "scope_only_seconds": 286.0,
+      "critical_job": "client (macos-latest, 3.12)",
+      "removed_critical_seconds": 66.0
+    },
+    {
+      "sha": "7536cae472b9a4271d8837777924894aa53793a9",
+      "current_seconds": 249.0,
+      "scope_only_seconds": 249.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    },
+    {
+      "sha": "1c2e2baafcbe56582a1b4559098953958250024e",
+      "current_seconds": 296.0,
+      "scope_only_seconds": 296.0,
+      "critical_job": "pytest",
+      "removed_critical_seconds": 0.0
+    }
+  ]
+}
