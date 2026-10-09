@@ -25,10 +25,25 @@ def _fake_httpx_post_client(*, json_data=None, raise_exc=None):
         response.json = MagicMock(return_value=json_data)
         inner.post = AsyncMock(return_value=response)
 
-    cm = MagicMock()
-    cm.__aenter__ = AsyncMock(return_value=inner)
-    cm.__aexit__ = AsyncMock(return_value=None)
-    return MagicMock(return_value=cm), inner
+    inner.aclose = AsyncMock()
+    return MagicMock(return_value=inner), inner
+
+
+@pytest.mark.asyncio
+async def test_predict_reuses_client_until_closed(configured_temporal):
+    service = TemporalModelService()
+    factory, client = _fake_httpx_post_client(json_data={"probability": 0.5})
+    with patch("app.services.temporal.httpx.AsyncClient", factory):
+        for _ in range(2):
+            assert (await service.predict("bucket", ["a.jpg"])).probability == pytest.approx(0.5)
+        factory.assert_called_once_with(timeout=settings.TEMPORAL_API_TIMEOUT)
+        client.aclose.assert_not_awaited()
+        await service.aclose()
+        await service.aclose()  # Shutdown also works without an open client.
+        client.aclose.assert_awaited_once()
+        await service.predict("bucket", ["a.jpg"])
+        assert factory.call_count == 2  # A new lifespan gets a fresh client.
+        await service.aclose()
 
 
 @pytest.fixture
@@ -74,6 +89,7 @@ async def test_predict_tolerates_missing_or_null_version(configured_temporal):
         prediction = await service.predict("bucket", ["a.jpg"])
     assert prediction.api_version is None
     assert prediction.model_version == "0.1.0"
+    await service.aclose()
 
     factory, _ = _fake_httpx_post_client(json_data={"probability": 0.5})  # no version key at all
     with patch("app.services.temporal.httpx.AsyncClient", factory):

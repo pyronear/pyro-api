@@ -65,10 +65,17 @@ class TemporalModelService:
     JITTER_RATIO: float = 0.2
 
     def __init__(self) -> None:
+        self._client: Union[httpx.AsyncClient, None] = None
         self._consecutive_failures: int = 0
         self._open_count: int = 0
         self._paused_until: Union[float, None] = None
         self._half_open: bool = False
+
+    async def aclose(self) -> None:
+        """Close the prediction client after the validation worker stops."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     @property
     def is_configured(self) -> bool:
@@ -130,10 +137,11 @@ class TemporalModelService:
         if roi_xyxyn is not None:
             payload["roi_xyxyn"] = roi_xyxyn
         try:
-            async with httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT) as client:
-                response = await client.post(f"{host}/predict", json=payload, headers=headers)
-                response.raise_for_status()
-                data = response.json()
+            if self._client is None:
+                self._client = httpx.AsyncClient(timeout=settings.TEMPORAL_API_TIMEOUT)
+            response = await self._client.post(f"{host}/predict", json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
         except httpx.HTTPStatusError as exc:
             logger.warning("Temporal API call failed: %r", exc)
             if exc.response.status_code < 500:
