@@ -1,7 +1,6 @@
 import csv
 import io
 from datetime import timedelta
-from unittest.mock import Mock
 
 import pytest
 from sqlalchemy import event
@@ -199,13 +198,3 @@ async def test_detection_default_page_is_bounded_and_remainder_is_accessible(asy
 async def test_list_endpoints_reject_unbounded_or_negative_pages(async_client, endpoint, query):
     response = await async_client.get(f"{endpoint}?{query}", headers=pytest.get_token(1, ["admin"], 1))
     assert response.status_code == 422
-
-
-def test_client_forwards_detection_pagination(monkeypatch):
-    from pyroclient.client import Client
-
-    get = Mock(return_value=Mock(status_code=200))
-    monkeypatch.setattr("pyroclient.client.requests.get", get)
-    client = Client("test-token", host="http://api.test")
-    client.fetch_detections(limit=25, offset=50)
-    assert get.call_args.kwargs["params"] == {"limit": 25, "offset": 50}

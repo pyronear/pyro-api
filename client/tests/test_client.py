@@ -1,4 +1,5 @@
 from datetime import datetime
+from unittest.mock import Mock
 
 import pytest
 import requests
@@ -7,6 +8,14 @@ from requests.exceptions import ReadTimeout
 
 from pyroclient.client import Client
 from pyroclient.exceptions import HTTPRequestError
+
+
+def test_client_forwards_detection_pagination(monkeypatch):
+    get = Mock(return_value=Mock(status_code=200))
+    monkeypatch.setattr("pyroclient.client.requests.get", get)
+    client = Client("test-token", host="http://api.test")
+    client.fetch_detections(limit=25, offset=50)
+    assert get.call_args.kwargs["params"] == {"limit": 25, "offset": 50}
 
 
 @pytest.mark.parametrize(
