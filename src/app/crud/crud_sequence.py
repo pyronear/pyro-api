@@ -26,7 +26,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Sequence)
 
-    async def bump_max_conf(self, sequence_id: int, candidate: float) -> None:
+    async def bump_max_conf(self, sequence_id: int, candidate: float, *, commit: bool = True) -> None:
         """Atomically raise sequences.max_conf to candidate if higher (or set if NULL).
 
         Uses a portable CASE expression so it runs on SQLite as well as Postgres.
@@ -38,7 +38,8 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         )
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(max_conf=bumped)
         await self.session.exec(stmt)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
 
     async def set_temporal_score(
         self,
@@ -83,7 +84,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         await self.session.commit()
         return bool(getattr(result, "rowcount", 0))
 
-    async def enqueue_validation(self, sequence_id: int) -> None:
+    async def enqueue_validation(self, sequence_id: int, *, commit: bool = True) -> None:
         """Mark the sequence as due for temporal validation (the DB-backed queue).
 
         Idempotent and FIFO-preserving: ``COALESCE`` keeps the oldest due timestamp, so a
@@ -101,7 +102,8 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             .values(validation_due_at=func.coalesce(due_col, utcnow()))
         )
         await self.session.exec(stmt)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
 
     async def claim_due_validation(self, lease_seconds: float) -> Union[Sequence, None]:
         """Claim the oldest due sequence for validation, or None when nothing is due.

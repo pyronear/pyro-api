@@ -259,16 +259,16 @@ async def delete_sequence(
     # Unset the sequence_id in the detections
     det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
     for det_id in det_ids.all():
-        await detections.update(det_id, DetectionSequence(sequence_id=None))
+        await detections.update(det_id, DetectionSequence(sequence_id=None), commit=False)
     # Drop alert links for this sequence to avoid FK issues
     delete_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
     await session.exec(delete_stmt)
-    await session.commit()
     # Delete the sequence
-    await sequences.delete(sequence_id)
+    await sequences.delete(sequence_id, commit=False)
     # Refresh affected alerts
     for aid in alert_ids:
-        await refresh_alert_state(aid, session, alerts)
+        await refresh_alert_state(aid, session, alerts, commit=False)
+    await session.commit()
 
 
 @router.patch("/{sequence_id}/label", status_code=status.HTTP_200_OK, summary="Label the nature of the sequence")
@@ -288,7 +288,7 @@ async def label_sequence(
         await verify_org_rights(token_payload.organization_id, sequence.camera_id, cameras)
 
     previous_label = sequence.is_wildfire
-    updated = await sequences.update(sequence_id, payload)
+    updated = await sequences.update(sequence_id, payload, commit=False)
 
     # Reverting a non-wildfire label: re-run cone matching. The sequence keeps its lonely alert
     # until the matching merges it into an overlapping one, so it is never left without an alert.
@@ -300,10 +300,14 @@ async def label_sequence(
     ):
         camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
         async with _organization_alert_lock(camera.organization_id):
-            await _attach_sequence_to_alert(updated, camera, cameras, sequences, alerts, anchor_on_sequence=True)
+            await _attach_sequence_to_alert(
+                updated, camera, cameras, sequences, alerts, anchor_on_sequence=True, commit=False
+            )
+            await session.commit()
         return updated
 
     if payload.is_wildfire is None or payload.is_wildfire == AnnotationType.WILDFIRE_SMOKE:
+        await session.commit()
         return updated
 
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
@@ -320,13 +324,13 @@ async def label_sequence(
         )
         siblings_res = await session.exec(siblings_stmt)
         if siblings_res.first() is None:
+            await session.commit()
             return updated
 
         delete_links: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
         await session.exec(delete_links)
-        await session.commit()
         for aid in alert_ids:
-            await refresh_alert_state(aid, session, alerts)
+            await refresh_alert_state(aid, session, alerts, commit=False)
 
     # Create a fresh alert for this sequence alone
     camera = cast(Camera, await cameras.get(sequence.camera_id, strict=True))
@@ -337,7 +341,8 @@ async def label_sequence(
             last_seen_at=sequence.last_seen_at,
             lat=None,
             lon=None,
-        )
+        ),
+        commit=False,
     )
     session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
     await session.commit()

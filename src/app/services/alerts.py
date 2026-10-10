@@ -17,7 +17,7 @@ from app.services.overlap import compute_overlap
 __all__ = ["refresh_alert_state"]
 
 
-async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: AlertCRUD) -> None:
+async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: AlertCRUD, *, commit: bool = True) -> None:
     """Recompute an alert's bounds and location from its remaining sequences, or delete it if empty."""
     remaining_stmt: Any = (
         select(Sequence, Camera)
@@ -28,7 +28,7 @@ async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Aler
     remaining_res = await session.exec(remaining_stmt)
     rows = remaining_res.all()
     if not rows:
-        await alerts.delete(alert_id)
+        await alerts.delete(alert_id, commit=commit)
         return
 
     seqs = [row[0] for row in rows]
@@ -62,4 +62,5 @@ async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Aler
             lat=loc[0] if loc else None,
             lon=loc[1] if loc else None,
         ),
+        commit=commit,
     )

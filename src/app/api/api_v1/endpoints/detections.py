@@ -145,7 +145,8 @@ async def _create_continuity_detection(
             bbox=EMPTY_BBOXES,
             sequence_id=sequence_id,
             recorded_at=recorded_at,
-        )
+        ),
+        commit=False,
     )
 
 
@@ -171,7 +172,7 @@ async def _attach_continuity_detections(
         created.append(
             await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id, recorded_at)
         )
-        await sequences.enqueue_validation(seq.id)
+        await sequences.enqueue_validation(seq.id, commit=False)
     return created
 
 
@@ -297,6 +298,7 @@ async def _maybe_update_alert(
         await alerts.update(
             target_alert_id,
             AlertUpdate(lat=lat, lon=lon, started_at=new_start_at, last_seen_at=new_last_seen),
+            commit=False,
         )
 
 
@@ -357,7 +359,7 @@ async def _merge_alerts(
     await session.exec(delete_links_stmt)
     delete_alerts_stmt: Any = delete(Alert).where(cast(Any, Alert.id).in_(list(absorbed_ids)))
     await session.exec(delete_alerts_stmt)
-    await session.commit()
+    await session.flush()
 
 
 def _rewrite_after_merge(
@@ -435,7 +437,8 @@ async def _get_or_create_alert_id(
             lon=location[1] if isinstance(location, tuple) else None,
             started_at=start_at,
             last_seen_at=last_seen_at,
-        )
+        ),
+        commit=False,
     )
     return alert.id, set()
 
@@ -462,6 +465,8 @@ async def _attach_sequence_to_alert(
     sequences: SequenceCRUD,
     alerts: AlertCRUD,
     anchor_on_sequence: bool = False,
+    *,
+    commit: bool = True,
 ) -> Optional[int]:
     """Assign the given sequence to an alert based on cone/time overlap."""
     camera_by_id = await _get_camera_by_id(camera, cameras, sequence_.camera_id)
@@ -507,7 +512,10 @@ async def _attach_sequence_to_alert(
 
     if to_link:
         session.add_all(to_link)
+    if commit:
         await session.commit()
+    else:
+        await session.flush()
 
     return alert_id
 
@@ -589,6 +597,7 @@ async def create_detection(
         continuity_dets = await _attach_continuity_detections(
             detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key, effective_recorded_at
         )
+        await detections.session.commit()
         return DetectionRead(**continuity_dets[0].model_dump())
 
     # Upload media
@@ -619,7 +628,8 @@ async def create_detection(
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
                 recorded_at=effective_recorded_at,
-            )
+            ),
+            commit=False,
         )
 
         det_bbox = _parse_bbox(bbox_str)
@@ -645,12 +655,12 @@ async def create_detection(
                 break
 
         if matched_sequence is not None:
-            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at))
-            det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id))
+            await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at), commit=False)
+            det = await detections.update(det.id, DetectionSequence(sequence_id=matched_sequence.id), commit=False)
             # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
-                await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+                await sequences.bump_max_conf(matched_sequence.id, det_max_conf, commit=False)
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
@@ -694,10 +704,13 @@ async def create_detection(
                         started_at=first_det.recorded_at,
                         last_seen_at=det.created_at,
                         max_conf=seq_max_conf,
-                    )
+                    ),
+                    commit=False,
                 )
                 for det_ in overlapping_dets:
-                    updated = await detections.update(det_.id, DetectionSequence(sequence_id=sequence_.id))
+                    updated = await detections.update(
+                        det_.id, DetectionSequence(sequence_id=sequence_.id), commit=False
+                    )
                     if det_.id == det.id:
                         det = updated
                 affected_sequences.add(sequence_.id)
@@ -724,7 +737,10 @@ async def create_detection(
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
     # notification channels (webhooks, Telegram, Slack) fire only once validated.
     for seq_id in affected_sequences:
-        await sequences.enqueue_validation(seq_id)
+        await sequences.enqueue_validation(seq_id, commit=False)
+
+    # Detection rows, sequence membership/confidence and validation jobs become visible together.
+    await detections.session.commit()
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
     return DetectionRead(**first_det.model_dump())
