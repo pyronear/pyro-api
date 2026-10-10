@@ -12,6 +12,7 @@ from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
 from app.core.time import utcnow
+from app.core.types import ResourceName
 
 __all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
 
@@ -50,7 +51,7 @@ class Camera(SQLModel, table=True):
     __tablename__ = "cameras"
     id: int = Field(None, primary_key=True)
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
-    name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
+    name: ResourceName = Field(..., nullable=False, unique=True)
     angle_of_view: float = Field(..., gt=0, le=360, nullable=False)
     elevation: float = Field(..., gt=0, lt=10000, nullable=False)
     lat: float = Field(..., gt=-90, lt=90)
@@ -243,7 +244,7 @@ class AlertSequence(SQLModel, table=True):
 class Organization(SQLModel, table=True):
     __tablename__ = "organizations"
     id: int = Field(None, primary_key=True)
-    name: str = Field(..., min_length=5, max_length=100, nullable=False, unique=True)
+    name: ResourceName = Field(..., nullable=False, unique=True)
     telegram_id: Union[str, None] = Field(None, nullable=True)
     slack_hook: Union[str, None] = Field(None, nullable=True)
 

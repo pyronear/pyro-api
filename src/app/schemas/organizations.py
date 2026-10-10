@@ -7,24 +7,22 @@ from typing import Union
 
 from pydantic import BaseModel, Field
 
+from app.core.types import ResourceName
+
 __all__ = ["OrganizationCreate", "OrganizationUpdate"]
 
 
 class OrganizationCreate(BaseModel):
-    name: str = Field(
+    name: ResourceName = Field(
         ...,
-        min_length=3,
-        max_length=50,
         description="name of the organization",
         json_schema_extra={"examples": ["pyro-org-01"]},
     )
 
 
 class OrganizationUpdate(BaseModel):
-    name: str = Field(
+    name: ResourceName = Field(
         ...,
-        min_length=3,
-        max_length=50,
         description="name of the organization",
         json_schema_extra={"examples": ["pyro-org-01"]},
     )

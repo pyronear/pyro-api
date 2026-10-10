@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.core.time import utcnow
+from app.core.types import ResourceName
 from app.schemas.poses import PoseReadWithoutImgInfo
 
 __all__ = [
@@ -38,10 +39,8 @@ class CameraEdit(BaseModel):
 
 class CameraCreate(CameraEdit):
     organization_id: int = Field(..., gt=0)
-    name: str = Field(
+    name: ResourceName = Field(
         ...,
-        min_length=3,
-        max_length=50,
         description="name of the camera",
         json_schema_extra={"examples": ["pyro-camera-01"]},
     )
@@ -56,7 +55,7 @@ class CameraCreate(CameraEdit):
 
 
 class CameraName(BaseModel):
-    name: str = Field(..., min_length=5, max_length=100, description="name of the camera")
+    name: ResourceName = Field(..., description="name of the camera")
 
 
 class CameraTrustable(BaseModel):
