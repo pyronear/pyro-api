@@ -4,6 +4,32 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.services.storage import s3_service
+
+
+@pytest.mark.parametrize("name_length", [3, 51, 100])
+@pytest.mark.asyncio
+async def test_organization_name_create_and_read_round_trip(
+    async_client, organization_session, name_length, monkeypatch
+):
+    monkeypatch.setattr(s3_service, "create_bucket", lambda _name: True)
+    auth = pytest.get_token(1, ["admin"], 1)
+    name = "o" * name_length
+    response = await async_client.post("/organizations", headers=auth, json={"name": name})
+    assert response.status_code == 201, response.text
+    organization_id = response.json()["id"]
+    response = await async_client.get(f"/organizations/{organization_id}", headers=auth)
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == name
+
+
+@pytest.mark.parametrize("name_length", [2, 101])
+@pytest.mark.asyncio
+async def test_invalid_organization_name_is_rejected(async_client, organization_session, name_length):
+    auth = pytest.get_token(1, ["admin"], 1)
+    response = await async_client.post("/organizations", headers=auth, json={"name": "o" * name_length})
+    assert response.status_code == 422
+
 
 @pytest.mark.parametrize(
     ("user_idx", "payload", "status_code", "status_detail"),
