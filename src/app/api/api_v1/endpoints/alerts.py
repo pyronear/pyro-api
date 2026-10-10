@@ -7,11 +7,11 @@
 import csv
 import io
 from datetime import date, datetime, time, timedelta
-from typing import Any, Dict, Iterable, Iterator, List, Tuple, Union, cast
+from typing import Any, AsyncIterator, Dict, Iterable, Iterator, List, Tuple, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, tuple_
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -20,7 +20,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.api.dependencies import get_alert_crud, get_camera_crud, get_jwt, get_sequence_crud
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, SequenceCRUD
-from app.db import get_session
+from app.db import get_session, session_factory
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Sequence, UserRole
 from app.schemas.alerts import AlertCount, AlertCreate, AlertReadWithSequences
 from app.schemas.login import TokenPayload
@@ -32,6 +32,7 @@ from app.services.sequence_counts import get_detection_counts_by_sequence_ids
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+_ALERT_EXPORT_BATCH_SIZE = 100
 
 
 def verify_org_rights(organization_id: int, alert: Alert) -> None:
@@ -188,14 +189,6 @@ _WILDFIRE_LABELS: Dict[Union[AnnotationType, None], str] = {
 }
 
 
-async def _fetch_camera_names_by_ids(session: AsyncSession, camera_ids: Iterable[int]) -> Dict[int, str]:
-    ids = list(set(camera_ids))
-    if not ids:
-        return {}
-    stmt: Any = select(Camera.id, Camera.name).where(cast(Any, Camera.id).in_(ids))
-    return {cid: name for cid, name in (await session.exec(stmt)).all()}
-
-
 def _alert_cells(alert: Alert) -> List[Any]:
     return [
         alert.id,
@@ -226,6 +219,8 @@ def _iter_alerts_csv(
     alerts: Iterable[Alert],
     seq_map: Dict[int, List[Sequence]],
     camera_names_by_id: Dict[int, str],
+    *,
+    include_header: bool = True,
 ) -> Iterator[str]:
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -236,8 +231,9 @@ def _iter_alerts_csv(
         buf.truncate(0)
         return value
 
-    writer.writerow(_ALERT_EXPORT_COLUMNS)
-    yield drain()
+    if include_header:
+        writer.writerow(_ALERT_EXPORT_COLUMNS)
+        yield drain()
 
     for alert in alerts:
         alert_cells = _alert_cells(alert)
@@ -248,20 +244,44 @@ def _iter_alerts_csv(
             yield drain()
 
 
-def _build_alerts_csv_response(
-    alerts: List[Alert],
-    seq_map: Dict[int, List[Sequence]],
-    camera_names_by_id: Dict[int, str],
-    from_date: date,
-    to_date: date,
-) -> StreamingResponse:
-    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
-    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return StreamingResponse(
-        _iter_alerts_csv(alerts, seq_map, camera_names_by_id),
-        media_type="text/csv",
-        headers=headers,
+async def _stream_alerts_csv(start_dt: datetime, end_dt: datetime, organization_id: int | None) -> AsyncIterator[str]:
+    # Own short-lived sessions: streaming can outlive request dependency cleanup and a
+    # slow download should not retain a database connection between batches.
+    cursor: tuple[datetime, int, datetime, int] | None = None
+    yield next(_iter_alerts_csv([], {}, {}))
+    order = (
+        cast(Any, Alert.started_at),
+        cast(Any, Alert.id),
+        cast(Any, Sequence.started_at),
+        cast(Any, Sequence.id),
     )
+    while True:
+        stmt: Any = (
+            select(Alert, Sequence, Camera.name)
+            .join(AlertSequence, cast(Any, AlertSequence.alert_id) == Alert.id)
+            .join(Sequence, cast(Any, Sequence.id) == AlertSequence.sequence_id)
+            .outerjoin(Camera, cast(Any, Camera.id) == Sequence.camera_id)
+            .where(Alert.started_at >= start_dt, Alert.started_at <= end_dt)
+            .order_by(*order)
+            .limit(_ALERT_EXPORT_BATCH_SIZE)
+        )
+        if organization_id is not None:
+            stmt = stmt.where(Alert.organization_id == organization_id)
+        if cursor is not None:
+            stmt = stmt.where(tuple_(*order) > tuple_(*cursor))
+        async with session_factory() as session:
+            rows = (await session.exec(stmt)).all()
+        if not rows:
+            return
+        for alert, sequence, camera_name in rows:
+            for line in _iter_alerts_csv(
+                [alert], {alert.id: [sequence]}, {sequence.camera_id: camera_name or ""}, include_header=False
+            ):
+                yield line
+        last_alert, last_sequence, _ = rows[-1]
+        cursor = (last_alert.started_at, last_alert.id, last_sequence.started_at, last_sequence.id)
+        if len(rows) < _ALERT_EXPORT_BATCH_SIZE:
+            return
 
 
 @router.get(
@@ -273,7 +293,6 @@ def _build_alerts_csv_response(
 async def export_alerts_csv(
     from_date: date = Query(..., description="Inclusive lower bound on started_at (UTC date)"),
     to_date: date = Query(..., description="Inclusive upper bound on started_at (UTC date)"),
-    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> StreamingResponse:
     telemetry_client.capture(
@@ -292,22 +311,12 @@ async def export_alerts_csv(
     start_dt = datetime.combine(from_date, time.min)
     end_dt = datetime.combine(to_date, time.max)
 
-    stmt: Any = (
-        select(Alert)
-        .where(Alert.started_at >= start_dt)
-        .where(Alert.started_at <= end_dt)
-        .order_by(Alert.started_at.asc())  # type: ignore[attr-defined]
+    filename = f"alerts_{from_date.isoformat()}_{to_date.isoformat()}.csv"
+    return StreamingResponse(
+        _stream_alerts_csv(start_dt, end_dt, None if token_payload.is_admin else token_payload.organization_id),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-    # Admins export every organization's alerts
-    if not token_payload.is_admin:
-        stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
-    alerts = list((await session.exec(stmt)).all())
-    seq_map = await _fetch_sequences_by_alert_ids(session, [alert.id for alert in alerts])
-    camera_names_by_id = await _fetch_camera_names_by_ids(
-        session,
-        (sequence.camera_id for sequences in seq_map.values() for sequence in sequences),
-    )
-    return _build_alerts_csv_response(alerts, seq_map, camera_names_by_id, from_date, to_date)
 
 
 @router.get("/{alert_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific alert")
@@ -363,8 +372,8 @@ async def fetch_alert_sequences(
     summary="Fetch all the alerts with unlabeled sequences from the last 24 hours",
 )
 async def fetch_latest_unlabeled_alerts(
-    limit: Union[int, None] = Query(15, ge=1, description="Maximum number of alerts to fetch"),
-    offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
+    limit: int = Query(15, ge=1, le=100, description="Maximum number of alerts to fetch"),
+    offset: int = Query(0, ge=0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
         None,
         description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
@@ -378,7 +387,7 @@ async def fetch_latest_unlabeled_alerts(
     alerts_stmt, seq_filter = await _build_unlabeled_alerts_stmt(
         session, token_payload.organization_id, risk_score, is_admin=is_admin
     )
-    alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
+    alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc(), cast(Any, Alert.id).desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
     return await _serialize_alerts_page(session, alerts_stmt, seq_filter)
 
 
@@ -407,8 +416,8 @@ async def count_latest_unlabeled_alerts(
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the alerts for a specific date")
 async def fetch_alerts_from_date(
     from_date: date = Query(),
-    limit: Union[int, None] = Query(15, description="Maximum number of alerts to fetch"),
-    offset: Union[int, None] = Query(0, description="Number of alerts to skip before starting to fetch"),
+    limit: int = Query(15, ge=1, le=100, description="Maximum number of alerts to fetch"),
+    offset: int = Query(0, ge=0, description="Number of alerts to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
         None,
         description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
@@ -422,7 +431,7 @@ async def fetch_alerts_from_date(
     alerts_stmt, seq_filter = await _build_alerts_from_date_stmt(
         session, token_payload.organization_id, from_date, risk_score, is_admin=is_admin
     )
-    alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
+    alerts_stmt = alerts_stmt.order_by(Alert.started_at.desc(), cast(Any, Alert.id).desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
     return await _serialize_alerts_page(session, alerts_stmt, seq_filter)
 
 

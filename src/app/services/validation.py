@@ -20,7 +20,7 @@ the (slow) model call never holds a DB session.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, List, Optional, Set, Tuple, cast
+from typing import AsyncIterator, Dict, List, Optional, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
@@ -112,18 +112,9 @@ async def _sequence_frames_and_roi(
     # Imported lazily: the endpoints module imports services at module load.
     from app.api.api_v1.endpoints.detections import _extract_bbox_strings, _parse_bbox
 
-    dets = await detections.fetch_all(
-        filters=("sequence_id", sequence_id),
-        order_by="created_at",
-        order_desc=False,
-    )
-    frames: List[str] = []
-    seen: Set[str] = set()
+    total, kept, dets = await detections.fetch_frame_window(sequence_id, last_n)
     corners_by_frame: Dict[str, List[Tuple[float, float, float, float]]] = {}
     for det in dets:
-        if det.bucket_key not in seen:
-            seen.add(det.bucket_key)
-            frames.append(det.bucket_key)
         bbox_strs = _extract_bbox_strings(det.bbox)
         if bbox_strs:
             try:
@@ -131,8 +122,6 @@ async def _sequence_frames_and_roi(
                 corners_by_frame.setdefault(det.bucket_key, []).append((xmin, ymin, xmax, ymax))
             except HTTPException:
                 logger.debug("Skipping unparseable bbox on detection %s", det.id)
-    total = len(frames)
-    kept = frames if last_n is None or total <= last_n else frames[-last_n:]
     corners = [c for frame in kept for c in corners_by_frame.get(frame, [])]
     if not corners:
         return total, kept, None
