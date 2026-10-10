@@ -18,6 +18,7 @@ from fastapi import (
     Form,
     HTTPException,
     Path,
+    Query,
     Response,
     Security,
     UploadFile,
@@ -636,11 +637,13 @@ async def create_detection(
             order_desc=True,
         )
         matched_sequence: Optional[Sequence] = None
+        latest_detections = await detections.get_latest_bboxes([seq.id for seq in candidate_sequences])
         for seq in candidate_sequences:
-            if seq.id is None:
+            latest = latest_detections.get(seq.id)
+            if latest is None:
                 continue
-            last_bbox = await _get_last_bbox_for_sequence(detections, seq.id)
-            if last_bbox is not None and _bboxes_overlap(last_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
+            bbox_strs = _extract_bbox_strings(latest.bbox)
+            if bbox_strs and _bboxes_overlap(_parse_bbox(bbox_strs[0]), det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
                 matched_sequence = seq
                 break
 
@@ -771,22 +774,21 @@ async def get_detection_url(
     return DetectionUrl(url=bucket.get_public_url(detection.bucket_key, verify_exists=False), crop_url=crop_url)
 
 
-@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the detections")
+@router.get("/", status_code=status.HTTP_200_OK, summary="Fetch a page of detections")
 async def fetch_detections(
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of detections to fetch"),
+    offset: int = Query(0, ge=0, description="Number of detections to skip"),
     detections: DetectionCRUD = Depends(get_detection_crud),
-    cameras: CameraCRUD = Depends(get_camera_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[DetectionRead]:
     telemetry_client.capture(token_payload.sub, event="detections-fetch")
-    if token_payload.is_admin:
-        return [DetectionRead(**elt.model_dump()) for elt in await detections.fetch_all(order_by="id")]
-
-    cameras_list = await cameras.fetch_all(filters=("organization_id", token_payload.organization_id))
-    camera_ids = [camera.id for camera in cameras_list]
-
     return [
         DetectionRead(**elt.model_dump())
-        for elt in await detections.fetch_all(in_pair=("camera_id", camera_ids), order_by="id")
+        for elt in await detections.fetch_page(
+            organization_id=None if token_payload.is_admin else token_payload.organization_id,
+            limit=limit,
+            offset=offset,
+        )
     ]
 
 
