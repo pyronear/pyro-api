@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.crud import AlertCRUD
 from app.models import AlertSequence, Camera, Sequence
 from app.schemas.alerts import AlertUpdate
-from app.services.overlap import compute_overlap
+from app.services.overlap import compute_overlap_async
 
 __all__ = ["refresh_alert_state"]
 
@@ -51,7 +51,7 @@ async def refresh_alert_state(alert_id: int, session: AsyncSession, alerts: Aler
                 "started_at": seq.started_at,
                 "last_seen_at": seq.last_seen_at,
             })
-        result = compute_overlap(records)
+        result = await compute_overlap_async(records)
         loc = next((loc for row in result for loc in row["event_smoke_locations"] if loc is not None), None)
 
     await alerts.update(
