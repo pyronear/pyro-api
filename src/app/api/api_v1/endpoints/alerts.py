@@ -493,15 +493,14 @@ async def unmatch_alert_sequence(
         .where(cast(Any, AlertSequence.sequence_id) == sequence_id)
     )
     await session.exec(delete_stmt)
-    await session.commit()
-
-    await refresh_alert_state(alert_id, session, alerts)
+    await refresh_alert_state(alert_id, session, alerts, commit=False)
 
     other_links_stmt: Any = (
         select(func.count()).select_from(AlertSequence).where(AlertSequence.sequence_id == sequence_id)
     )
     other_links = int((await session.exec(other_links_stmt)).one())
     if other_links > 0:
+        await session.commit()
         return None
 
     sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
@@ -518,7 +517,8 @@ async def unmatch_alert_sequence(
             last_seen_at=sequence.last_seen_at,
             lat=None,
             lon=None,
-        )
+        ),
+        commit=False,
     )
     session.add(AlertSequence(alert_id=new_alert.id, sequence_id=sequence_id))
     await session.commit()
@@ -543,6 +543,6 @@ async def delete_alert(
     # Delete associations
     delete_stmt: Any = delete(AlertSequence).where(AlertSequence.alert_id == cast(Any, alert_id))
     await session.exec(delete_stmt)
-    await session.commit()
     # Delete alert
-    await alerts.delete(alert_id)
+    await alerts.delete(alert_id, commit=False)
+    await session.commit()

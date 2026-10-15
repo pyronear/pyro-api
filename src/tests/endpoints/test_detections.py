@@ -5,6 +5,7 @@ from ast import literal_eval
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
+from unittest.mock import AsyncMock
 
 import pytest  # type: ignore
 from fastapi import HTTPException, UploadFile
@@ -34,6 +35,7 @@ from app.api.api_v1.endpoints.sequences import label_sequence
 from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
+from app.db import session_factory
 from app.models import (
     Alert,
     AlertSequence,
@@ -2319,3 +2321,30 @@ async def test_create_detection_authorizes_pose_before_uploading(
     assert response.status_code == 403, response.text
     assert response.json()["detail"] == "Access forbidden."
     assert upload_calls == []
+
+
+@pytest.mark.asyncio
+async def test_ingestion_rolls_back_on_late_queue_failure(async_client, detection_session, monkeypatch):
+    sequence = await detection_session.get(Sequence, 1)
+    sequence.last_seen_at, sequence.max_conf, sequence.is_validated = utcnow(), 0.1, False
+    await detection_session.commit()
+    before = sequence.model_dump()
+    original_ids = (await detection_session.exec(select(Detection.id))).all()
+    enqueue = SequenceCRUD.enqueue_validation
+
+    async def fail_enqueue(self, sequence_id, **kwargs):
+        await enqueue(self, sequence_id, **kwargs)
+        raise RuntimeError("late queue failure")
+
+    monkeypatch.setattr(detections_api, "upload_file", AsyncMock(return_value="new-frame"))
+    monkeypatch.setattr(SequenceCRUD, "enqueue_validation", fail_enqueue)
+    with pytest.raises(RuntimeError, match="late queue failure"):
+        await async_client.post(
+            "/detections",
+            headers=pytest.get_token(1, ["camera"], 1),
+            data={"pose_id": 1, "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"},
+            files={"file": ("frame.jpg", b"frame", "image/jpeg")},
+        )
+    async with session_factory() as observer:
+        assert (await observer.exec(select(Detection.id))).all() == original_ids
+        assert (await observer.get(Sequence, 1)).model_dump() == before
