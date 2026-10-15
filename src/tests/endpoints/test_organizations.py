@@ -4,6 +4,24 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.services.storage import s3_service
+
+
+@pytest.mark.parametrize("name_length", [2, 3, 51, 100, 101])
+@pytest.mark.asyncio
+async def test_organization_name_create_and_read_round_trip(
+    async_client, organization_session, name_length, monkeypatch
+):
+    monkeypatch.setattr(s3_service, "create_bucket", lambda _name: True)
+    auth = pytest.get_token(1, ["admin"], 1)
+    name = "o" * name_length
+    response = await async_client.post("/organizations", headers=auth, json={"name": name})
+    assert response.status_code == (201 if 3 <= name_length <= 100 else 422), response.text
+    if response.status_code == 201:
+        response = await async_client.get(f"/organizations/{response.json()['id']}", headers=auth)
+        assert response.status_code == 200, response.text
+        assert response.json()["name"] == name
+
 
 @pytest.mark.parametrize(
     ("user_idx", "payload", "status_code", "status_detail"),
