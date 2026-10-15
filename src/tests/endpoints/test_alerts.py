@@ -865,6 +865,24 @@ def org1_agent_auth() -> Dict[str, str]:
     return pytest.get_token(user["id"], user["role"].split(), user["organization_id"])
 
 
+@pytest.mark.parametrize(("scope", "count"), [("admin", 5), ("agent", 4)])
+@pytest.mark.asyncio
+async def test_export_batches_ties_and_large_alerts(
+    async_client, detection_session, export_base_dt, monkeypatch, select_queries, scope, count
+):
+    monkeypatch.setattr("app.api.api_v1.endpoints.alerts._ALERT_EXPORT_BATCH_SIZE", 2)
+    pairs = []
+    for org, size in [(1, 3), (1, 1), (2, 1)]:
+        alert = await _create_alert(detection_session, org, export_base_dt, export_base_dt)
+        for _ in range(size):
+            sequence = await _attach_sequence(detection_session, alert, camera_id=org)
+            pairs.append((alert.id, sequence.id))
+    select_queries.clear()
+    _, rows = await _get_export(async_client, pytest.get_token(1, [scope], 1), "2026-04-10", "2026-04-10")
+    assert [(int(row["alert_id"]), int(row["sequence_id"])) for row in rows] == pairs[:count]
+    assert [size for sql, size in select_queries if "FROM alerts" in sql] == [2, 2, count % 2]
+
+
 @pytest.mark.asyncio
 async def test_alerts_export_happy_path(
     async_client: AsyncClient,
@@ -976,21 +994,3 @@ async def test_alerts_export_invalid_range(
 async def test_alerts_export_unauthenticated(async_client: AsyncClient, detection_session: AsyncSession):
     resp = await async_client.get("/alerts/export?from_date=2026-04-10&to_date=2026-04-12")
     assert resp.status_code == 401, resp.text
-
-
-@pytest.mark.parametrize(("scope", "count"), [("admin", 5), ("agent", 4)])
-@pytest.mark.asyncio
-async def test_export_batches_ties_and_large_alerts(
-    async_client, detection_session, export_base_dt, monkeypatch, select_queries, scope, count
-):
-    monkeypatch.setattr("app.api.api_v1.endpoints.alerts._ALERT_EXPORT_BATCH_SIZE", 2)
-    pairs = []
-    for org, size in [(1, 3), (1, 1), (2, 1)]:
-        alert = await _create_alert(detection_session, org, export_base_dt, export_base_dt)
-        for _ in range(size):
-            sequence = await _attach_sequence(detection_session, alert, camera_id=org)
-            pairs.append((alert.id, sequence.id))
-    select_queries.clear()
-    _, rows = await _get_export(async_client, pytest.get_token(1, [scope], 1), "2026-04-10", "2026-04-10")
-    assert [(int(row["alert_id"]), int(row["sequence_id"])) for row in rows] == pairs[:count]
-    assert [size for sql, size in select_queries if "FROM alerts" in sql] == [2, 2, count % 2]

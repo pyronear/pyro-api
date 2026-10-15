@@ -1249,6 +1249,54 @@ async def test_get_detection(
         assert response.json() == pytest.detection_table[expected_idx]
 
 
+@pytest.mark.parametrize(("scope", "expected_ids"), [("admin", [1, 2, 3, 4]), ("user", [1, 2, 3])])
+@pytest.mark.asyncio
+async def test_detection_pagination_applies_organization_filter_before_offset(
+    async_client, detection_session, scope, expected_ids
+):
+    auth = pytest.get_token(1, [scope], 1)
+    pages = []
+    for offset in range(0, len(expected_ids), 2):
+        response = await async_client.get("/detections", headers=auth, params={"limit": 2, "offset": offset})
+        assert response.status_code == 200, response.text
+        pages.extend(row["id"] for row in response.json())
+    assert pages == expected_ids
+
+
+@pytest.mark.asyncio
+async def test_detection_default_page_is_bounded_and_remainder_is_accessible(async_client, detection_session):
+    detection_session.add_all([
+        Detection(camera_id=1, pose_id=1, bucket_key=f"page-frame-{i}", bbox="[]") for i in range(101)
+    ])
+    await detection_session.commit()
+    auth = pytest.get_token(1, ["admin"], 1)
+    first = await async_client.get("/detections", headers=auth)
+    second = await async_client.get("/detections", headers=auth, params={"offset": 100})
+    assert first.status_code == second.status_code == 200
+    assert len(first.json()) == 100
+    assert len(second.json()) == 5
+    assert [row["id"] for row in first.json() + second.json()] == list(range(1, 106))
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "query"),
+    [
+        ("/detections", "limit=501"),
+        ("/detections", "limit=0"),
+        ("/detections", "offset=-1"),
+        ("/alerts/unlabeled/latest", "limit=101"),
+        ("/alerts/unlabeled/latest", "offset=-1"),
+        ("/alerts/all/fromdate", "from_date=2026-10-10&limit=101"),
+        ("/sequences/all/fromdate", "from_date=2026-10-10&limit=101"),
+        ("/sequences/all/fromdate", "from_date=2026-10-10&offset=-1"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_list_endpoints_reject_unbounded_or_negative_pages(async_client, endpoint, query):
+    response = await async_client.get(f"{endpoint}?{query}", headers=pytest.get_token(1, ["admin"], 1))
+    assert response.status_code == 422
+
+
 @pytest.mark.parametrize(
     ("user_idx", "status_code", "status_detail", "expected_result"),
     [
@@ -2195,51 +2243,3 @@ async def test_create_detection_authorizes_pose_before_uploading(
     assert response.status_code == 403, response.text
     assert response.json()["detail"] == "Access forbidden."
     assert upload_calls == []
-
-
-@pytest.mark.parametrize(("scope", "expected_ids"), [("admin", [1, 2, 3, 4]), ("user", [1, 2, 3])])
-@pytest.mark.asyncio
-async def test_detection_pagination_applies_organization_filter_before_offset(
-    async_client, detection_session, scope, expected_ids
-):
-    auth = pytest.get_token(1, [scope], 1)
-    pages = []
-    for offset in range(0, len(expected_ids), 2):
-        response = await async_client.get("/detections", headers=auth, params={"limit": 2, "offset": offset})
-        assert response.status_code == 200, response.text
-        pages.extend(row["id"] for row in response.json())
-    assert pages == expected_ids
-
-
-@pytest.mark.asyncio
-async def test_detection_default_page_is_bounded_and_remainder_is_accessible(async_client, detection_session):
-    detection_session.add_all([
-        Detection(camera_id=1, pose_id=1, bucket_key=f"page-frame-{i}", bbox="[]") for i in range(101)
-    ])
-    await detection_session.commit()
-    auth = pytest.get_token(1, ["admin"], 1)
-    first = await async_client.get("/detections", headers=auth)
-    second = await async_client.get("/detections", headers=auth, params={"offset": 100})
-    assert first.status_code == second.status_code == 200
-    assert len(first.json()) == 100
-    assert len(second.json()) == 5
-    assert [row["id"] for row in first.json() + second.json()] == list(range(1, 106))
-
-
-@pytest.mark.parametrize(
-    ("endpoint", "query"),
-    [
-        ("/detections", "limit=501"),
-        ("/detections", "limit=0"),
-        ("/detections", "offset=-1"),
-        ("/alerts/unlabeled/latest", "limit=101"),
-        ("/alerts/unlabeled/latest", "offset=-1"),
-        ("/alerts/all/fromdate", "from_date=2026-10-10&limit=101"),
-        ("/sequences/all/fromdate", "from_date=2026-10-10&limit=101"),
-        ("/sequences/all/fromdate", "from_date=2026-10-10&offset=-1"),
-    ],
-)
-@pytest.mark.asyncio
-async def test_list_endpoints_reject_unbounded_or_negative_pages(async_client, endpoint, query):
-    response = await async_client.get(f"{endpoint}?{query}", headers=pytest.get_token(1, ["admin"], 1))
-    assert response.status_code == 422
