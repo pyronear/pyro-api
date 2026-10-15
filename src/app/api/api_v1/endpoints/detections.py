@@ -93,21 +93,6 @@ def _bboxes_overlap(
     return inter_w > -tolerance and inter_h > -tolerance
 
 
-async def _get_last_bbox_for_sequence(
-    detections: DetectionCRUD,
-    sequence_id: int,
-) -> Optional[Tuple[float, float, float, float, float]]:
-    # Continuity rows (empty bbox) are skipped: spatial matching must compare against the
-    # last real evidence, not against a frame where nothing was detected.
-    det = await detections.get_latest_with_bbox(sequence_id)
-    if det is None:
-        return None
-    bbox_strs = _extract_bbox_strings(det.bbox)
-    if not bbox_strs:
-        return None
-    return _parse_bbox(bbox_strs[0])
-
-
 async def _get_continuity_sequences(
     sequences: SequenceCRUD,
     camera_id: int,

@@ -5,6 +5,7 @@ from ast import literal_eval
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
+from unittest.mock import AsyncMock
 
 import pytest  # type: ignore
 from fastapi import HTTPException, UploadFile
@@ -21,7 +22,6 @@ from app.api.api_v1.endpoints.detections import (
     _fetch_alert_mapping,
     _filter_candidate_alert_ids,
     _get_camera_by_id,
-    _get_last_bbox_for_sequence,
     _get_or_create_alert_id,
     _get_recent_sequences,
     _maybe_update_alert,
@@ -383,163 +383,39 @@ async def test_create_detection_continuity_row_for_unmatched_sequence(
 
 
 @pytest.mark.asyncio
-async def test_get_last_bbox_for_sequence_returns_latest(detection_session: AsyncSession):
-    detections = DetectionCRUD(detection_session)
+async def test_latest_bbox_batch_skips_continuity_and_breaks_ties(sequence_session, select_queries):
     now = utcnow()
-    camera_id = pytest.camera_table[0]["id"]
-
-    pose = Pose(camera_id=camera_id, azimuth=50.0)
-    detection_session.add(pose)
-    await detection_session.commit()
-    await detection_session.refresh(pose)
-
-    sequence = Sequence(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        camera_azimuth=50.0,
-        sequence_azimuth=50.0,
-        cone_angle=10.0,
-        started_at=now - timedelta(seconds=10),
-        last_seen_at=now,
-    )
-    detection_session.add(sequence)
-    await detection_session.commit()
-    await detection_session.refresh(sequence)
-
-    det1 = Detection(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        sequence_id=sequence.id,
-        bucket_key="bbox-1",
-        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
-        created_at=now - timedelta(seconds=5),
-    )
-    det2 = Detection(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        sequence_id=sequence.id,
-        bucket_key="bbox-2",
-        bbox="[(0.3,0.3,0.4,0.4,0.9)]",
-        created_at=now,
-    )
-    detection_session.add(det1)
-    detection_session.add(det2)
-    await detection_session.commit()
-
-    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
-    assert last_bbox == (0.3, 0.3, 0.4, 0.4, 0.9)
+    sequence_session.add_all([
+        Detection(
+            camera_id=1, pose_id=1, sequence_id=1, bucket_key=key, bbox=box, created_at=now + timedelta(seconds=age)
+        )
+        for key, box, age in [("old", "[(.1,.1,.2,.2,.1)]", 0), ("new", "[(.2,.2,.3,.3,.9)]", 0), ("empty", "[]", 1)]
+    ])
+    await sequence_session.commit()
+    latest = await DetectionCRUD(sequence_session).get_latest_bboxes([1, 2])
+    assert set(latest) == {1}
+    assert latest[1].bucket_key == "new"
+    assert sum("FROM detections" in sql for sql, _ in select_queries) == 1
+    assert await DetectionCRUD(sequence_session).get_latest_bboxes([]) == {}
 
 
+@pytest.mark.parametrize("stored_bbox", [None, "[]", "invalid", "[(.1,.1,.2,.2,.9)]"])
 @pytest.mark.asyncio
-async def test_get_last_bbox_for_sequence_returns_none_without_detections(detection_session: AsyncSession):
-    detections = DetectionCRUD(detection_session)
-    now = utcnow()
-    camera_id = pytest.camera_table[0]["id"]
-    pose = Pose(camera_id=camera_id, azimuth=60.0)
-    detection_session.add(pose)
-    await detection_session.commit()
-    await detection_session.refresh(pose)
-
-    sequence = Sequence(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        camera_azimuth=60.0,
-        sequence_azimuth=60.0,
-        cone_angle=10.0,
-        started_at=now - timedelta(seconds=10),
-        last_seen_at=now,
+async def test_matching_uses_latest_real_bbox(async_client, sequence_session, monkeypatch, stored_bbox):
+    sequence = await sequence_session.get(Sequence, 1)
+    sequence.last_seen_at = utcnow()
+    if stored_bbox is not None:
+        sequence_session.add(Detection(camera_id=1, pose_id=1, sequence_id=1, bucket_key="before", bbox=stored_bbox))
+    await sequence_session.commit()
+    monkeypatch.setattr(detections_api, "upload_file", AsyncMock(return_value="new-frame"))
+    response = await async_client.post(
+        "/detections",
+        headers=pytest.get_token(1, ["camera"], 1),
+        data={"pose_id": 1, "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]"},
+        files={"file": ("frame.jpg", b"frame", "image/jpeg")},
     )
-    detection_session.add(sequence)
-    await detection_session.commit()
-    await detection_session.refresh(sequence)
-
-    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
-    assert last_bbox is None
-
-
-@pytest.mark.asyncio
-async def test_get_last_bbox_for_sequence_returns_none_for_invalid_bbox(detection_session: AsyncSession):
-    detections = DetectionCRUD(detection_session)
-    now = utcnow()
-    camera_id = pytest.camera_table[0]["id"]
-    pose = Pose(camera_id=camera_id, azimuth=70.0)
-    detection_session.add(pose)
-    await detection_session.commit()
-    await detection_session.refresh(pose)
-
-    sequence = Sequence(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        camera_azimuth=70.0,
-        sequence_azimuth=70.0,
-        cone_angle=10.0,
-        started_at=now - timedelta(seconds=10),
-        last_seen_at=now,
-    )
-    detection_session.add(sequence)
-    await detection_session.commit()
-    await detection_session.refresh(sequence)
-
-    det = Detection(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        sequence_id=sequence.id,
-        bucket_key="bbox-invalid",
-        bbox="[]",
-        created_at=now,
-    )
-    detection_session.add(det)
-    await detection_session.commit()
-
-    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
-    assert last_bbox is None
-
-
-@pytest.mark.asyncio
-async def test_get_last_bbox_for_sequence_skips_continuity_rows(detection_session: AsyncSession):
-    detections = DetectionCRUD(detection_session)
-    now = utcnow()
-    camera_id = pytest.camera_table[0]["id"]
-    pose = Pose(camera_id=camera_id, azimuth=80.0)
-    detection_session.add(pose)
-    await detection_session.commit()
-    await detection_session.refresh(pose)
-
-    sequence = Sequence(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        camera_azimuth=80.0,
-        sequence_azimuth=80.0,
-        cone_angle=10.0,
-        started_at=now - timedelta(seconds=10),
-        last_seen_at=now,
-    )
-    detection_session.add(sequence)
-    await detection_session.commit()
-    await detection_session.refresh(sequence)
-
-    real_det = Detection(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        sequence_id=sequence.id,
-        bucket_key="bbox-real",
-        bbox="[(0.1,0.1,0.2,0.2,0.9)]",
-        created_at=now - timedelta(seconds=5),
-    )
-    continuity_det = Detection(
-        camera_id=camera_id,
-        pose_id=pose.id,
-        sequence_id=sequence.id,
-        bucket_key="bbox-continuity",
-        bbox="[]",
-        created_at=now,
-    )
-    detection_session.add(real_det)
-    detection_session.add(continuity_det)
-    await detection_session.commit()
-
-    last_bbox = await _get_last_bbox_for_sequence(detections, sequence.id)
-    assert last_bbox == (0.1, 0.1, 0.2, 0.2, 0.9)
+    assert response.status_code == 201, response.text
+    assert response.json()["sequence_id"] == (1 if stored_bbox and stored_bbox.startswith("[(") else None)
 
 
 @pytest.mark.asyncio
@@ -2319,3 +2195,51 @@ async def test_create_detection_authorizes_pose_before_uploading(
     assert response.status_code == 403, response.text
     assert response.json()["detail"] == "Access forbidden."
     assert upload_calls == []
+
+
+@pytest.mark.parametrize(("scope", "expected_ids"), [("admin", [1, 2, 3, 4]), ("user", [1, 2, 3])])
+@pytest.mark.asyncio
+async def test_detection_pagination_applies_organization_filter_before_offset(
+    async_client, detection_session, scope, expected_ids
+):
+    auth = pytest.get_token(1, [scope], 1)
+    pages = []
+    for offset in range(0, len(expected_ids), 2):
+        response = await async_client.get("/detections", headers=auth, params={"limit": 2, "offset": offset})
+        assert response.status_code == 200, response.text
+        pages.extend(row["id"] for row in response.json())
+    assert pages == expected_ids
+
+
+@pytest.mark.asyncio
+async def test_detection_default_page_is_bounded_and_remainder_is_accessible(async_client, detection_session):
+    detection_session.add_all([
+        Detection(camera_id=1, pose_id=1, bucket_key=f"page-frame-{i}", bbox="[]") for i in range(101)
+    ])
+    await detection_session.commit()
+    auth = pytest.get_token(1, ["admin"], 1)
+    first = await async_client.get("/detections", headers=auth)
+    second = await async_client.get("/detections", headers=auth, params={"offset": 100})
+    assert first.status_code == second.status_code == 200
+    assert len(first.json()) == 100
+    assert len(second.json()) == 5
+    assert [row["id"] for row in first.json() + second.json()] == list(range(1, 106))
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "query"),
+    [
+        ("/detections", "limit=501"),
+        ("/detections", "limit=0"),
+        ("/detections", "offset=-1"),
+        ("/alerts/unlabeled/latest", "limit=101"),
+        ("/alerts/unlabeled/latest", "offset=-1"),
+        ("/alerts/all/fromdate", "from_date=2026-10-10&limit=101"),
+        ("/sequences/all/fromdate", "from_date=2026-10-10&limit=101"),
+        ("/sequences/all/fromdate", "from_date=2026-10-10&offset=-1"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_list_endpoints_reject_unbounded_or_negative_pages(async_client, endpoint, query):
+    response = await async_client.get(f"{endpoint}?{query}", headers=pytest.get_token(1, ["admin"], 1))
+    assert response.status_code == 422

@@ -20,7 +20,7 @@ the (slow) model call never holds a DB session.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, List, Optional, Tuple, cast
+from typing import AsyncIterator, List, Optional, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
@@ -113,16 +113,15 @@ async def _sequence_frames_and_roi(
     from app.api.api_v1.endpoints.detections import _extract_bbox_strings, _parse_bbox
 
     total, kept, dets = await detections.fetch_frame_window(sequence_id, last_n)
-    corners_by_frame: Dict[str, List[Tuple[float, float, float, float]]] = {}
+    corners: List[Tuple[float, float, float, float]] = []
     for det in dets:
         bbox_strs = _extract_bbox_strings(det.bbox)
         if bbox_strs:
             try:
                 xmin, ymin, xmax, ymax, _ = _parse_bbox(bbox_strs[0])
-                corners_by_frame.setdefault(det.bucket_key, []).append((xmin, ymin, xmax, ymax))
+                corners.append((xmin, ymin, xmax, ymax))
             except HTTPException:
                 logger.debug("Skipping unparseable bbox on detection %s", det.id)
-    corners = [c for frame in kept for c in corners_by_frame.get(frame, [])]
     if not corners:
         return total, kept, None
     roi = [
