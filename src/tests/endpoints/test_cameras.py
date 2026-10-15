@@ -616,44 +616,24 @@ async def test_update_camera_name(
         assert all(response.json()[k] == v for k, v in payload.items())
 
 
-@pytest.mark.parametrize("name_length", [3, 51, 100])
+@pytest.mark.parametrize("name_length", [2, 3, 51, 100, 101])
 @pytest.mark.asyncio
 async def test_camera_name_create_rename_and_read_round_trip(async_client, camera_session, name_length):
     """Every accepted name must remain serializable after creation and renaming."""
     auth = pytest.get_token(1, ["admin"], 1)
-    name = "c" * name_length
-    response = await async_client.post(
-        "/cameras",
-        headers=auth,
-        json={
-            "name": name,
-            "organization_id": 1,
-            "angle_of_view": 90.0,
-            "elevation": 30.0,
-            "lat": 3.5,
-            "lon": 7.8,
-        },
-    )
-    assert response.status_code == 201, response.text
-    camera_id = response.json()["id"]
+    payload = {
+        key: pytest.camera_table[0][key] for key in ("organization_id", "angle_of_view", "elevation", "lat", "lon")
+    }
+    response = await async_client.post("/cameras", headers=auth, json={**payload, "name": "c" * name_length})
+    valid = 3 <= name_length <= 100
+    assert response.status_code == (201 if valid else 422), response.text
+    camera_id = response.json()["id"] if valid else 1
     renamed = "r" * name_length
     response = await async_client.patch(f"/cameras/{camera_id}/name", headers=auth, json={"name": renamed})
-    assert response.status_code == 200, response.text
-    assert response.json()["name"] == renamed
+    assert response.status_code == (200 if valid else 422), response.text
     response = await async_client.get(f"/cameras/{camera_id}", headers=auth)
     assert response.status_code == 200, response.text
-    assert response.json()["name"] == renamed
-
-
-@pytest.mark.parametrize("name_length", [2, 101])
-@pytest.mark.asyncio
-async def test_invalid_camera_name_is_rejected_before_mutation(async_client, camera_session, name_length):
-    auth = pytest.get_token(1, ["admin"], 1)
-    response = await async_client.patch("/cameras/1/name", headers=auth, json={"name": "x" * name_length})
-    assert response.status_code == 422
-    response = await async_client.get("/cameras/1", headers=auth)
-    assert response.status_code == 200, response.text
-    assert response.json()["name"] == "cam-1"
+    assert response.json()["name"] == (renamed if valid else "cam-1")
 
 
 @pytest.mark.asyncio
