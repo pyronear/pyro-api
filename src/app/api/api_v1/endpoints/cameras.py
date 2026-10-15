@@ -6,6 +6,7 @@
 import asyncio
 from typing import Any, List, cast
 
+from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
 from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
@@ -32,6 +33,20 @@ from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
+_image_url_limiter = CapacityLimiter(8)
+
+
+async def _last_image_url(organization_id: int, last_image: str | None) -> str | None:
+    if not last_image:
+        return None
+    bucket = await to_thread.run_sync(
+        s3_service.get_bucket, s3_service.resolve_bucket_name(organization_id), limiter=_image_url_limiter
+    )
+    exists = await to_thread.run_sync(bucket.check_file_existence, last_image, limiter=_image_url_limiter)
+    if not exists:
+        return None
+    # Presigning is local; keep its mutable URL cache on the event loop.
+    return bucket.get_public_url(last_image, verify_exists=False)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Register a new camera")
@@ -70,11 +85,7 @@ async def get_camera(
     )
     pose_reads = [PoseReadWithoutImgInfo(**p.model_dump()) for p in cam_poses]
 
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    try:
-        last_image_url = bucket.get_public_url(camera.last_image) if camera.last_image else None
-    except HTTPException:
-        last_image_url = None
+    last_image_url = await _last_image_url(camera.organization_id, camera.last_image)
     return CameraRead(**camera.model_dump(), last_image_url=last_image_url, poses=pose_reads)
 
 
@@ -91,46 +102,28 @@ async def fetch_cameras(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[CameraRead]:
     telemetry_client.capture(token_payload.sub, event="cameras-fetch")
-    trustable_filter: list[tuple[str, Any]] | None = None if include_non_trustable else [("is_trustable", True)]
-    if token_payload.is_admin:
-        cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=trustable_filter)]
+    filters: list[tuple[str, Any]] = []
+    if not include_non_trustable:
+        filters.append(("is_trustable", True))
+    if not token_payload.is_admin:
+        filters.append(("organization_id", token_payload.organization_id))
+    cams = await cameras.fetch_all(order_by="id", filters=filters)
+    if not cams:
+        return []
 
-        async def get_url_for_cam(cam: Camera) -> str | None:  # ruff:ignore[unused-async]
-            if cam.last_image:
-                bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam.organization_id))
-                try:
-                    return bucket.get_public_url(cam.last_image)
-                except HTTPException:
-                    return None
-            return None
+    # One query for every camera; an AsyncSession cannot run concurrent pose queries.
+    active_poses = await poses.fetch_all(
+        filters=("active", True), in_pair=("camera_id", [cam.id for cam in cams]), order_by="id"
+    )
+    poses_by_camera: dict[int, list[PoseReadWithoutImgInfo]] = {}
+    for pose in active_poses:
+        poses_by_camera.setdefault(pose.camera_id, []).append(PoseReadWithoutImgInfo(**pose.model_dump()))
 
-        urls = await asyncio.gather(*[get_url_for_cam(cam) for cam in cams])
-    else:
-        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id))
-        org_filters: list[tuple[str, Any]] = [("organization_id", token_payload.organization_id)]
-        if not include_non_trustable:
-            org_filters.append(("is_trustable", True))
-        cams = [elt for elt in await cameras.fetch_all(order_by="id", filters=org_filters)]
-
-        async def get_url_for_cam_single_bucket(cam: Camera) -> str | None:  # ruff:ignore[unused-async]
-            if cam.last_image:
-                try:
-                    return bucket.get_public_url(cam.last_image)
-                except HTTPException:
-                    return None
-            return None
-
-        urls = await asyncio.gather(*[get_url_for_cam_single_bucket(cam) for cam in cams])
-
-    async def get_poses(cam: Camera) -> list[PoseReadWithoutImgInfo]:
-        p = await poses.fetch_all(filters=[("camera_id", cam.id), ("active", True)])
-        return [PoseReadWithoutImgInfo(**pose.model_dump()) for pose in p]
-
-    poses_list = await asyncio.gather(*[get_poses(cam) for cam in cams])
-
+    # S3 existence checks are blocking I/O; keep them off the event loop and cap concurrency.
+    urls = await asyncio.gather(*[_last_image_url(cam.organization_id, cam.last_image) for cam in cams])
     return [
-        CameraRead(**cam.model_dump(), last_image_url=url, poses=cam_poses)
-        for cam, url, cam_poses in zip(cams, urls, poses_list, strict=False)
+        CameraRead(**cam.model_dump(), last_image_url=url, poses=poses_by_camera.get(cam.id, []))
+        for cam, url in zip(cams, urls, strict=True)
     ]
 
 

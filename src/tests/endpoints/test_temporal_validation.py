@@ -135,19 +135,20 @@ async def test_sequence_frames_distinct_ordered_with_union_roi(detection_session
 
 
 @pytest.mark.asyncio
-async def test_sequence_frames_truncates_to_last_n_and_scopes_roi(detection_session: AsyncSession):
-    """Truncation keeps the most recent frames and the ROI only covers kept frames."""
-    seq = await _seed_sequence(detection_session, 12)
-    # Widen the ROI on the OLDEST frame only: it must be excluded once truncated away.
-    dets = await DetectionCRUD(detection_session).fetch_all(filters=("sequence_id", seq.id), order_by="created_at")
-    dets[0].bbox = "[(.0,.0,.99,.99,.9)]"
-    detection_session.add(dets[0])
+async def test_sequence_frames_truncates_to_last_n_and_scopes_roi(detection_session: AsyncSession, select_queries):
+    """Only kept frames are hydrated; late duplicates must not make old frames recent."""
+    seq = await _seed_sequence(detection_session, 100)
+    detection_session.add_all([
+        Detection(camera_id=1, pose_id=1, sequence_id=seq.id, bucket_key=key, bbox=box)
+        for key, box in [("frame-0.jpg", "[(.0,.0,.99,.99,.9)]"), ("frame-99.jpg", "[(.2,.2,.3,.3,.5)]")]
+    ])
     await detection_session.commit()
-
-    total, frames, roi = await _sequence_frames_and_roi(DetectionCRUD(detection_session), cast(int, seq.id), last_n=10)
-    assert total == 12
-    assert frames == [f"frame-{i}.jpg" for i in range(2, 12)]  # the last 10
-    assert roi == [pytest.approx(0.1), pytest.approx(0.1), pytest.approx(0.7), pytest.approx(0.8)]
+    select_queries.clear()
+    total, frames, roi = await _sequence_frames_and_roi(DetectionCRUD(detection_session), seq.id, last_n=10)
+    assert total == 100
+    assert frames == [f"frame-{i}.jpg" for i in range(90, 100)]
+    assert roi == pytest.approx([0.1, 0.1, 0.7, 0.8])
+    assert max(size for sql, size in select_queries if "FROM detections" in sql) == 11
 
 
 # --- enqueue / claim / finish: the DB-backed queue ---------------------------
