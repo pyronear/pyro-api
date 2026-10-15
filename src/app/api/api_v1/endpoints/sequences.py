@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from typing import Any, List, Union, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Security, status
-from sqlmodel import delete, func, select
+from sqlmodel import delete, func, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.detections import _attach_sequence_to_alert
@@ -19,7 +19,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
 from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
 from app.schemas.alerts import AlertCreate
-from app.schemas.detections import DetectionSequence, DetectionWithUrl
+from app.schemas.detections import DetectionWithUrl
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceLabel, SequenceRead
 from app.services.alerts import refresh_alert_state
@@ -248,7 +248,6 @@ async def fetch_sequences_from_date(
 async def delete_sequence(
     sequence_id: int = Path(..., gt=0),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
-    detections: DetectionCRUD = Depends(get_detection_crud),
     alerts: AlertCRUD = Depends(get_alert_crud),
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
@@ -257,9 +256,8 @@ async def delete_sequence(
     alert_ids_res = await session.exec(select(AlertSequence.alert_id).where(AlertSequence.sequence_id == sequence_id))
     alert_ids = list(alert_ids_res.all())
     # Unset the sequence_id in the detections
-    det_ids = await session.exec(select(Detection.id).where(Detection.sequence_id == sequence_id))
-    for det_id in det_ids.all():
-        await detections.update(det_id, DetectionSequence(sequence_id=None), commit=False)
+    unlink: Any = update(Detection).where(cast(Any, Detection.sequence_id) == sequence_id).values(sequence_id=None)
+    await session.exec(unlink)
     # Drop alert links for this sequence to avoid FK issues
     delete_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.sequence_id) == sequence_id)
     await session.exec(delete_stmt)

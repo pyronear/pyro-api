@@ -23,29 +23,25 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.session = session
         self.model = model
 
-    async def create(self, payload: CreateSchemaType, *, commit: bool = True) -> ModelType:
-        """Insert a row, optionally leaving the transaction to the caller.
+    async def _save(self, entry: ModelType, *, commit: bool) -> ModelType:
+        self.session.add(entry)
+        await self.session.flush()
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(entry)
+        return entry
 
-        Deferred writes are flushed so generated IDs/defaults and subsequent queries work.
-        The caller must commit the complete workflow; session cleanup rolls it back on error.
-        """
+    async def create(self, payload: CreateSchemaType, *, commit: bool = True) -> ModelType:
+        """Flush a new row; pass commit=False to include it in a larger transaction."""
         entry = self.model(**payload.model_dump())
         try:
-            self.session.add(entry)
-            if commit:
-                await self.session.commit()
-            else:
-                await self.session.flush()
+            return await self._save(entry, commit=commit)
         except exc.IntegrityError as error:
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"An entry with the same index already exists : {error!s}",
             )
-        if commit:
-            await self.session.refresh(entry)
-
-        return entry
 
     async def get(self, entry_id: int, strict: bool = False) -> Union[ModelType, None]:
         entry: Union[ModelType, None] = await self.session.get(self.model, entry_id)
@@ -121,14 +117,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for k, v in values.items():
             setattr(access, k, v)
 
-        self.session.add(access)
-        if commit:
-            await self.session.commit()
-            await self.session.refresh(access)
-        else:
-            await self.session.flush()
-
-        return access
+        return await self._save(access, commit=commit)
 
     async def delete(self, entry_id: int, *, commit: bool = True) -> None:
         await self.get(entry_id, strict=True)
