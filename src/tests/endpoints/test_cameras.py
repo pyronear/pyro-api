@@ -616,6 +616,49 @@ async def test_update_camera_name(
         assert all(response.json()[k] == v for k, v in payload.items())
 
 
+@pytest.mark.parametrize(
+    ("user_idx", "cam_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 1, {"angle_of_view": 51.36}, 401, "Not authenticated"),
+        (0, 1, {"angle_of_view": 0}, 422, None),
+        (0, 1, {"angle_of_view": 360.5}, 422, None),
+        (0, 1, {}, 422, None),
+        (0, 999, {"angle_of_view": 51.36}, 404, "Table Camera has no corresponding entry."),
+        (0, 1, {"angle_of_view": 51.36}, 200, None),
+        (0, 2, {"angle_of_view": 360}, 200, None),
+        (1, 1, {"angle_of_view": 51.36}, 403, "Incompatible token scope."),
+        (2, 2, {"angle_of_view": 51.36}, 403, "Incompatible token scope."),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_camera_angle_of_view(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    user_idx: Union[int, None],
+    cam_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/cameras/{cam_id}/angle_of_view", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        assert response.json()["angle_of_view"] == payload["angle_of_view"]
+        # Only the angle of view changes
+        before = next(cam for cam in pytest.camera_table if cam["id"] == cam_id)
+        assert all(response.json()[k] == before[k] for k in ("name", "lat", "lon", "elevation"))
+
+
 @pytest.mark.asyncio
 async def test_update_camera_trustable(
     async_client: AsyncClient,

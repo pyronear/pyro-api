@@ -16,6 +16,7 @@ from app.crud import CameraCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
 from app.schemas.cameras import (
+    CameraAngleOfView,
     CameraCreate,
     CameraDeviceConfig,
     CameraEdit,
@@ -195,6 +196,24 @@ async def update_camera_name(
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> CameraOut:
     telemetry_client.capture(token_payload.sub, event="cameras-update-name", properties={"camera_id": camera_id})
+    camera = await cameras.update(camera_id, payload)
+    return CameraOut(**camera.model_dump())
+
+
+@router.patch(
+    "/{camera_id}/angle_of_view", status_code=status.HTTP_200_OK, summary="Update the angle of view of a camera"
+)
+async def update_camera_angle_of_view(
+    payload: CameraAngleOfView,
+    camera_id: int = Path(..., gt=0),
+    cameras: CameraCRUD = Depends(get_camera_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> CameraOut:
+    telemetry_client.capture(
+        token_payload.sub,
+        event="cameras-update-angle-of-view",
+        properties={"camera_id": camera_id, "angle_of_view": payload.angle_of_view},
+    )
     camera = await cameras.update(camera_id, payload)
     return CameraOut(**camera.model_dump())
 
