@@ -59,7 +59,7 @@ updates:
         patterns:
           - "*"
   # Compose manifests live at the root; Dockerfiles live under src/.
-  # Update uv in the Dockerfiles together with every workflow's UV_VERSION manually.
+  # Keep the Dockerfile uv image tags at the lower bound in pyproject.toml.
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:

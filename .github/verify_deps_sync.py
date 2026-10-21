@@ -23,7 +23,6 @@ DOCKERFILES = ["src/Dockerfile", "src/Dockerfile.test"]
 PRECOMMIT_CONFIG = ".pre-commit-config.yaml"
 PYPROJECTS = ["./pyproject.toml", "./client/pyproject.toml"]
 TRACKED_DEPS = ("uv", "ruff", "ty", "prek")
-UV_REQUIRED_VERSION = ">=0.13.4,<1.0.0"
 UV_REQUIRED_VERSION_PROJECTS = {"./pyproject.toml"}
 
 logger = logging.getLogger(__name__)
@@ -54,6 +53,14 @@ def add_dep(deps: dict[str, list[dict[str, str]]], dep: str, file: str, group: s
         deps[pkg].append({"file": file, "version": parsed["version"], "group": group})
 
 
+def uv_lower_bound(required_version: str, source: str, troubles: list[str]) -> str | None:
+    versions = re.findall(r"(?:^|,)\s*>=\s*(\d+(?:\.\d+){1,2})(?=\s*(?:,|$))", required_version)
+    if len(versions) != 1:
+        troubles.append(f"{source}: [tool.uv].required-version must have one >= lower bound, found {required_version!r}")
+        return None
+    return versions[0]
+
+
 def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: str, troubles: list[str]) -> None:
     with Path(pyproject_path).open("rb") as f:
         pyproject: dict[str, Any] = tomllib.load(f)
@@ -62,11 +69,12 @@ def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: st
     uv_config = tool_config.get("uv") if isinstance(tool_config, dict) else None
     if pyproject_path in UV_REQUIRED_VERSION_PROJECTS or uv_config is not None:
         required_version = uv_config.get("required-version") if isinstance(uv_config, dict) else None
-        if required_version != UV_REQUIRED_VERSION:
-            found = repr(required_version) if required_version is not None else "missing"
-            troubles.append(
-                f"{pyproject_path}: [tool.uv].required-version expected {UV_REQUIRED_VERSION!r}, found {found}"
-            )
+        if isinstance(required_version, str):
+            lower_bound = uv_lower_bound(required_version, pyproject_path, troubles)
+            if lower_bound is not None:
+                deps["uv"].append({"file": pyproject_path, "version": f"=={lower_bound}", "group": "required-version"})
+        else:
+            troubles.append(f"{pyproject_path}: [tool.uv].required-version is missing")
 
     project = pyproject.get("project", {})
     if isinstance(project, dict):
@@ -93,6 +101,7 @@ def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: st
 def main() -> None:
     deps: dict[str, list[dict[str, str]]] = {dep: [] for dep in TRACKED_DEPS}
     troubles = []
+    setup_action_calls = 0
 
     for dockerfile in DOCKERFILES:
         dockerfile_content = Path(dockerfile).read_text(encoding="utf-8")
@@ -121,15 +130,32 @@ def main() -> None:
         add_pyproject_deps(deps, pyproject_path, troubles)
 
     for workflow_file in Path(".github/workflows").glob("*.yml"):
-        with workflow_file.open("r", encoding="utf-8") as f:
-            workflow = yaml.safe_load(f) or {}
-        env = workflow.get("env", {})
-        if "UV_VERSION" in env:
-            deps["uv"].append({
-                "file": str(workflow_file),
-                "version": f"=={env['UV_VERSION'].lstrip('v')}",
-                "group": "workflow",
-            })
+        workflow_content = workflow_file.read_text(encoding="utf-8")
+        if "astral-sh/setup-uv@" in workflow_content:
+            troubles.append(f"{workflow_file}: use the shared .github/actions/setup-uv action")
+        setup_action_calls += workflow_content.count("./.github/actions/setup-uv")
+
+    action_path = Path(".github/actions/setup-uv/action.yml")
+    action = yaml.safe_load(action_path.read_text(encoding="utf-8"))
+    setup_steps = [
+        step for step in action.get("runs", {}).get("steps", [])
+        if str(step.get("uses", "")).startswith("astral-sh/setup-uv@")
+    ]
+    if setup_action_calls == 0:
+        troubles.append(".github/workflows: no shared .github/actions/setup-uv calls found")
+    if len(setup_steps) != 1:
+        troubles.append(f"{action_path}: expected one astral-sh/setup-uv step")
+    else:
+        setup = setup_steps[0].get("with", {})
+        if "version" in setup or setup.get("version-file") != "pyproject.toml" or setup.get("resolution-strategy") != "lowest":
+            troubles.append(f"{action_path}: install uv from pyproject.toml with resolution-strategy: lowest")
+        else:
+            root = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+            required = root.get("tool", {}).get("uv", {}).get("required-version")
+            if isinstance(required, str):
+                lower_bound = uv_lower_bound(required, "pyproject.toml", troubles)
+                if lower_bound is not None:
+                    deps["uv"].append({"file": str(action_path), "version": f"=={lower_bound}", "group": "setup-uv"})
 
     for dep, versions in deps.items():
         if not versions:

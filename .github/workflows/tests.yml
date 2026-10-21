@@ -8,7 +8,6 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  UV_VERSION: "0.13.4"
 
 jobs:
   pytest:
@@ -19,9 +18,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
+      - uses: ./.github/actions/setup-uv
       # Build while PostgreSQL and S3 download and become healthy.
       - parallel:
           - name: Start test services
@@ -81,9 +78,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
+      - uses: ./.github/actions/setup-uv
       - name: Run client tests
         env:
           SUPERADMIN_LOGIN: dummy_login
