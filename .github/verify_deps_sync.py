@@ -23,6 +23,8 @@ DOCKERFILES = ["src/Dockerfile", "src/Dockerfile.test"]
 PRECOMMIT_CONFIG = ".pre-commit-config.yaml"
 PYPROJECTS = ["./pyproject.toml", "./client/pyproject.toml"]
 TRACKED_DEPS = ("uv", "ruff", "ty", "prek")
+UV_REQUIRED_VERSION = ">=0.13.4,<1.0.0"
+UV_REQUIRED_VERSION_PROJECTS = {"./pyproject.toml"}
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -52,9 +54,21 @@ def add_dep(deps: dict[str, list[dict[str, str]]], dep: str, file: str, group: s
         deps[pkg].append({"file": file, "version": parsed["version"], "group": group})
 
 
-def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: str) -> None:
+def add_pyproject_deps(
+    deps: dict[str, list[dict[str, str]]], pyproject_path: str, troubles: list[str]
+) -> None:
     with Path(pyproject_path).open("rb") as f:
         pyproject: dict[str, Any] = tomllib.load(f)
+
+    tool_config = pyproject.get("tool", {})
+    uv_config = tool_config.get("uv") if isinstance(tool_config, dict) else None
+    if pyproject_path in UV_REQUIRED_VERSION_PROJECTS or uv_config is not None:
+        required_version = uv_config.get("required-version") if isinstance(uv_config, dict) else None
+        if required_version != UV_REQUIRED_VERSION:
+            found = repr(required_version) if required_version is not None else "missing"
+            troubles.append(
+                f"{pyproject_path}: [tool.uv].required-version expected {UV_REQUIRED_VERSION!r}, found {found}"
+            )
 
     project = pyproject.get("project", {})
     if isinstance(project, dict):
@@ -80,6 +94,7 @@ def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: st
 
 def main() -> None:
     deps: dict[str, list[dict[str, str]]] = {dep: [] for dep in TRACKED_DEPS}
+    troubles = []
 
     for dockerfile in DOCKERFILES:
         dockerfile_content = Path(dockerfile).read_text(encoding="utf-8")
@@ -105,7 +120,7 @@ def main() -> None:
                 })
 
     for pyproject_path in PYPROJECTS:
-        add_pyproject_deps(deps, pyproject_path)
+        add_pyproject_deps(deps, pyproject_path, troubles)
 
     for workflow_file in Path(".github/workflows").glob("*.yml"):
         with workflow_file.open("r", encoding="utf-8") as f:
@@ -118,7 +133,6 @@ def main() -> None:
                 "group": "workflow",
             })
 
-    troubles = []
     for dep, versions in deps.items():
         if not versions:
             troubles.append(f"{dep}: no tracked version found")
