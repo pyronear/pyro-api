@@ -54,9 +54,7 @@ def add_dep(deps: dict[str, list[dict[str, str]]], dep: str, file: str, group: s
         deps[pkg].append({"file": file, "version": parsed["version"], "group": group})
 
 
-def add_pyproject_deps(
-    deps: dict[str, list[dict[str, str]]], pyproject_path: str, troubles: list[str]
-) -> None:
+def add_pyproject_deps(deps: dict[str, list[dict[str, str]]], pyproject_path: str, troubles: list[str]) -> None:
     with Path(pyproject_path).open("rb") as f:
         pyproject: dict[str, Any] = tomllib.load(f)
 
