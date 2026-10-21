@@ -8,7 +8,6 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  UV_VERSION: "0.11.14"
 
 jobs:
   end-to-end:
@@ -19,9 +18,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: ${{ env.UV_VERSION }}
+      - uses: ./.github/actions/setup-uv
       - name: Run the backend & the test
         env:
           SUPERUSER_LOGIN: dummy_login
