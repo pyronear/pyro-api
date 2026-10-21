@@ -56,7 +56,9 @@ def add_dep(deps: dict[str, list[dict[str, str]]], dep: str, file: str, group: s
 def uv_lower_bound(required_version: str, source: str, troubles: list[str]) -> str | None:
     versions = re.findall(r"(?:^|,)\s*>=\s*(\d+(?:\.\d+){1,2})(?=\s*(?:,|$))", required_version)
     if len(versions) != 1:
-        troubles.append(f"{source}: [tool.uv].required-version must have one >= lower bound, found {required_version!r}")
+        troubles.append(
+            f"{source}: [tool.uv].required-version must have one >= lower bound, found {required_version!r}"
+        )
         return None
     return versions[0]
 
@@ -138,7 +140,8 @@ def main() -> None:
     action_path = Path(".github/actions/setup-uv/action.yml")
     action = yaml.safe_load(action_path.read_text(encoding="utf-8"))
     setup_steps = [
-        step for step in action.get("runs", {}).get("steps", [])
+        step
+        for step in action.get("runs", {}).get("steps", [])
         if str(step.get("uses", "")).startswith("astral-sh/setup-uv@")
     ]
     if setup_action_calls == 0:
@@ -147,7 +150,11 @@ def main() -> None:
         troubles.append(f"{action_path}: expected one astral-sh/setup-uv step")
     else:
         setup = setup_steps[0].get("with", {})
-        if "version" in setup or setup.get("version-file") != "pyproject.toml" or setup.get("resolution-strategy") != "lowest":
+        if (
+            "version" in setup
+            or setup.get("version-file") != "pyproject.toml"
+            or setup.get("resolution-strategy") != "lowest"
+        ):
             troubles.append(f"{action_path}: install uv from pyproject.toml with resolution-strategy: lowest")
         else:
             root = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
