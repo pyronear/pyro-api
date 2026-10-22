@@ -16,7 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.time import utcnow
 from app.crud import DetectionCRUD, SequenceCRUD
 from app.db import session_factory
-from app.models import AlertSequence, Detection, Sequence
+from app.models import TEMPORAL_SCORE_SOURCE_ENGINE, AlertSequence, Detection, Sequence
 from app.services import validation as validation_service
 from app.services.risk import risk_service
 from app.services.temporal import TemporalPrediction, temporal_service
@@ -481,6 +481,81 @@ async def test_process_validates_from_prior_high_score_past_window(detection_ses
     assert seq.validation_status == VALIDATED_BY_MODEL
     assert seq.temporal_model_score == pytest.approx(0.90)
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_engine_score_above_threshold_validates_without_model(
+    detection_session: AsyncSession, monkeypatch
+):
+    """A score sent by the device is judged on the threshold alone: no model call, no
+    MIN_FRAMES rule (the engine scored its own window), reachable service or not."""
+    seq = await _seed_sequence(detection_session, 2, max_conf=0.30)  # below MIN_FRAMES on purpose
+    crud = SequenceCRUD(detection_session)
+    await crud.set_temporal_score(cast(int, seq.id), 0.60, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+    await _enqueue(detection_session, cast(int, seq.id))
+    predict = AsyncMock(return_value=_prediction(0.9))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _process_one_due() is True
+
+    predict.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert seq.temporal_model_score == pytest.approx(0.60)  # the device's score is kept as is
+    assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_engine_score_below_threshold_waits_for_next_frame(detection_session: AsyncSession, monkeypatch):
+    """Below threshold the sequence stays in the DB unvalidated and is never window-exhausted:
+    the device keeps scoring a sliding window, so the next frame brings a fresh verdict."""
+    seq = await _seed_sequence(detection_session, 12, max_conf=0.30)  # past MAX_FRAMES on purpose
+    crud = SequenceCRUD(detection_session)
+    await crud.set_temporal_score(cast(int, seq.id), 0.20, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+    await _enqueue(detection_session, cast(int, seq.id))
+    predict = AsyncMock(return_value=_prediction(0.9))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _process_one_due() is True
+
+    predict.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False
+    assert seq.validation_status is None  # not window_exhausted: still eligible to re-enqueue
+    assert seq.validation_due_at is None  # retried when the next detection re-enqueues
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+
+    # The next frame carries a higher device score: validated on re-enqueue, still no model call.
+    await crud.set_temporal_score(cast(int, seq.id), 0.70, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+    await _enqueue(detection_session, cast(int, seq.id))
+    assert await _process_one_due() is True
+    predict.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+
+
+@pytest.mark.asyncio
+async def test_process_engine_score_still_behind_risk_gate(detection_session: AsyncSession, monkeypatch):
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    await SequenceCRUD(detection_session).set_temporal_score(
+        cast(int, seq.id), 0.90, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
+    )
+    await _enqueue(detection_session, cast(int, seq.id))
+    monkeypatch.setattr(risk_service, "_scores", {1: "very_low"})  # 0.6 threshold > 0.30
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+
+    assert await _process_one_due() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False
+    assert seq.validation_due_at is None
 
 
 @pytest.mark.asyncio
