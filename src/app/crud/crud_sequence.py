@@ -47,7 +47,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
     async def set_temporal_score(
         self,
         sequence_id: int,
-        score: float,
+        score: Union[float, None],
         model_version: Union[str, None] = None,
         api_version: Union[str, None] = None,
     ) -> None:
@@ -55,7 +55,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
 
         The versions are written unconditionally in the same UPDATE: they describe the
         stored score, so the triple always moves together (a re-score by a newer release
-        overwrites all three).
+        overwrites all three). A None score resets the sequence to never scored.
         """
         stmt: Any = (
             update(Sequence)
