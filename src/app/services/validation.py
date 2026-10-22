@@ -34,6 +34,7 @@ from app.db import engine, session_factory
 from app.models import (
     FAIL_OPEN_STALE,
     FAIL_OPEN_UNAVAILABLE,
+    TEMPORAL_SCORE_SOURCE_ENGINE,
     VALIDATED_BY_MODEL,
     VALIDATION_FAILED,
     WINDOW_EXHAUSTED,
@@ -245,6 +246,18 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
     prediction: Optional[TemporalPrediction] = None
     validation_status: Optional[str] = None
 
+    # Scored on the device: the engine already ran the temporal model and sent its latest
+    # score with the detection, so only the threshold is applied here. No frame window
+    # either: the engine scores a sliding window and sends a new score with every frame,
+    # so a sequence below threshold just waits for the next one instead of exhausting.
+    prior_score = sequence_.temporal_model_score
+    if prior_score is not None and sequence_.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
+        if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
+            await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)
+        else:
+            await _finish_job(sequence_id, frame_count=total_frames)
+        return
+
     # Window rules past MAX_FRAMES, decided on the stored score. Declined (score <=
     # threshold after its in-window chances) is terminal: don't call the model again and
     # never resurrect via a later fail-open. Scored ABOVE threshold means a previous run
@@ -252,7 +265,6 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
     # validate from the stored score — a high score must never decay into a drop. Never
     # scored (backlog, model freshly configured): score the last MAX_FRAMES anyway —
     # backlog must delay sequences, never silently drop them.
-    prior_score = sequence_.temporal_model_score
     if total_frames > temporal_service.MAX_FRAMES and prior_score is not None:
         if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
             await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)

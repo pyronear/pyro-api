@@ -63,6 +63,16 @@ def test_create_detection_forwards_recorded_at(monkeypatch):
     captured.clear()
     api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1)
     assert "recorded_at" not in captured["data"]
+    assert "temporal_model_scores" not in captured["data"]
+
+    captured.clear()
+    api_client.create_detection(
+        b"img", [(0.1, 0.1, 0.5, 0.8, 0.5), (0.6, 0.6, 0.7, 0.7, 0.4)], pose_id=1, temporal_model_scores=[0.6234, 0.15]
+    )
+    assert captured["data"]["temporal_model_scores"] == "[0.623,0.150]"
+
+    with pytest.raises(ValueError, match="same length"):
+        api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, temporal_model_scores=[0.6, 0.1])
 
 
 def test_get_current_poses_camera(cam_token, cam_pose_id):

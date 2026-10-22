@@ -358,6 +358,7 @@ class Client:
         pose_id: int,
         crops: List[bytes] | None = None,
         recorded_at: str | None = None,
+        temporal_model_scores: List[float] | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -377,6 +378,9 @@ class Client:
                 Each crop frames a single object, so its length must equal that of `bboxes`.
             recorded_at: optional ISO 8601 timestamp of when the image was captured on-device.
                 Timezone-aware values are converted to UTC server-side; defaults to server now if omitted.
+            temporal_model_scores: optional smoke probabilities (0 to 1) from the temporal model run on the
+                device, one per bbox (must align with `bboxes`). When given, the API applies its own
+                threshold to them instead of scoring the sequences itself.
 
         Returns:
             HTTP response
@@ -385,12 +389,19 @@ class Client:
             raise ValueError("bboxes must be a list of tuples with a maximum of 5 boxes")
         if crops is not None and len(crops) != len(bboxes):
             raise ValueError("crops must have the same length as bboxes")
+        if temporal_model_scores is not None:
+            if len(temporal_model_scores) != len(bboxes):
+                raise ValueError("temporal_model_scores must have the same length as bboxes")
+            if any(score > 1 or score < 0 for score in temporal_model_scores):
+                raise ValueError("temporal_model_scores are expected to be probabilities")
         data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),
         }
         data["pose_id"] = str(pose_id)
         if recorded_at is not None:
             data["recorded_at"] = recorded_at
+        if temporal_model_scores is not None:
+            data["temporal_model_scores"] = f"[{','.join(_to_str(score) for score in temporal_model_scores)}]"
         # Use a list of tuples (not a dict) so the repeated "crop" key is preserved per bbox.
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", ("frame.jpg", media, "image/jpeg"))]
         if crops is not None:
