@@ -1926,7 +1926,8 @@ async def test_create_detection_stores_engine_temporal_score(
     async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
 ):
     """A score computed on the device lands on the sequence with 'engine' provenance; the
-    latest upload wins so the worker always judges the device's most recent verdict."""
+    latest upload wins so the worker always judges the device's most recent verdict, and a
+    frame without one (device failed open) resets the sequence so the API scores it itself."""
     monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
     auth = pytest.get_token(
         pytest.camera_table[0]["id"],
@@ -1957,6 +1958,18 @@ async def test_create_detection_stores_engine_temporal_score(
     assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
     assert seq.temporal_model_version is None
     assert seq.validation_due_at is not None  # still queued: the worker applies the threshold
+
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": pose.id, "bboxes": "[(0.12,0.12,0.22,0.22,0.9)]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["sequence_id"] == seq.id
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score is None
+    assert seq.temporal_api_version is None
 
 
 @pytest.mark.parametrize("score", ["-0.1", "1.5", "nan"])
