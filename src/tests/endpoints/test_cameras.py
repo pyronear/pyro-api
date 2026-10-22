@@ -521,7 +521,7 @@ async def test_update_camera_location(
         (
             0,
             1,
-            {"name": "cam"},  # name too short
+            {"name": "ca"},  # name too short
             422,
             None,
         ),
@@ -657,6 +657,26 @@ async def test_update_camera_angle_of_view(
         # Only the angle of view changes
         before = next(cam for cam in pytest.camera_table if cam["id"] == cam_id)
         assert all(response.json()[k] == before[k] for k in ("name", "lat", "lon", "elevation"))
+
+
+@pytest.mark.parametrize("name_length", [2, 3, 51, 100, 101])
+@pytest.mark.asyncio
+async def test_camera_name_create_rename_and_read_round_trip(async_client, camera_session, name_length):
+    """Every accepted name must remain serializable after creation and renaming."""
+    auth = pytest.get_token(1, ["admin"], 1)
+    payload = {
+        key: pytest.camera_table[0][key] for key in ("organization_id", "angle_of_view", "elevation", "lat", "lon")
+    }
+    response = await async_client.post("/cameras", headers=auth, json={**payload, "name": "c" * name_length})
+    valid = 3 <= name_length <= 100
+    assert response.status_code == (201 if valid else 422), response.text
+    camera_id = response.json()["id"] if valid else 1
+    renamed = "r" * name_length
+    response = await async_client.patch(f"/cameras/{camera_id}/name", headers=auth, json={"name": renamed})
+    assert response.status_code == (200 if valid else 422), response.text
+    response = await async_client.get(f"/cameras/{camera_id}", headers=auth)
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == (renamed if valid else "cam-1")
 
 
 @pytest.mark.asyncio
