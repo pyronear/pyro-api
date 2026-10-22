@@ -213,6 +213,14 @@
         <article role="main">
           <section id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this heading">#</a></h1>
+<section id="unreleased">
+<h2>Unreleased<a class="headerlink" href="#unreleased" title="Permalink to this heading">#</a></h2>
+<p>Detection listing is paginated: <code class="docutils literal notranslate"><span class="pre">Client.fetch_detections(limit=100,</span> <span class="pre">offset=0)</span></code>
+returns up to 100 detections by default, with a maximum page size of 500. Advance
+<code class="docutils literal notranslate"><span class="pre">offset</span></code> by the number of rows returned until a page is empty to retrieve the
+full list. Alert and sequence date-list endpoints accept page sizes from 1 to
+100 and nonnegative offsets.</p>
+</section>
 <section id="v0-1-2-2022-07-01">
 <h2>v0.1.2 (2022-07-01)<a class="headerlink" href="#v0-1-2-2022-07-01" title="Permalink to this heading">#</a></h2>
 <p>Release note: <a class="reference external" href="https://github.com/pyronear/pyro-api/releases/tag/v0.1.2">v0.1.2</a></p>
@@ -282,6 +290,7 @@
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Changelog</a><ul>
+<li><a class="reference internal" href="#unreleased">Unreleased</a></li>
 <li><a class="reference internal" href="#v0-1-2-2022-07-01">v0.1.2 (2022-07-01)</a></li>
 <li><a class="reference internal" href="#v0-1-1-2020-12-24">v0.1.1 (2020-12-24)</a></li>
 <li><a class="reference internal" href="#v0-1-0-2020-11-26">v0.1.0 (2020-11-26)</a></li>
