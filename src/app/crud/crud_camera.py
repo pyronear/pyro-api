@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.crud.base import BaseCRUD
 from app.models import Camera
 from app.schemas.cameras import (
+    CameraAngleOfView,
     CameraCreate,
     CameraDeviceConfig,
     CameraEdit,
@@ -20,7 +21,11 @@ __all__ = ["CameraCRUD"]
 
 
 class CameraCRUD(
-    BaseCRUD[Camera, CameraCreate, LastActive | CameraEdit | CameraName | CameraDeviceConfig | CameraTrustable]
+    BaseCRUD[
+        Camera,
+        CameraCreate,
+        LastActive | CameraEdit | CameraName | CameraAngleOfView | CameraDeviceConfig | CameraTrustable,
+    ]
 ):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Camera)

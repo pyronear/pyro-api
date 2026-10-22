@@ -58,6 +58,16 @@ class CameraName(BaseModel):
     name: ResourceName = Field(..., description="name of the camera")
 
 
+class CameraAngleOfView(BaseModel):
+    angle_of_view: float = Field(
+        ...,
+        gt=0,
+        le=360,
+        description="angle between left and right camera view",
+        json_schema_extra={"examples": [51.36]},
+    )
+
+
 class CameraTrustable(BaseModel):
     is_trustable: bool = Field(..., description="whether the detection from this camera can be trusted")
 
