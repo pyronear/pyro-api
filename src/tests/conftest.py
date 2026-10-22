@@ -10,7 +10,7 @@ import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import update
+from sqlalchemy import event, update
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -528,3 +528,17 @@ def pytest_configure():
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in WEBHOOK_TABLE
     ]
+
+
+@pytest.fixture
+def select_queries():
+    """Record SQL and result sizes without changing how the queries execute."""
+    queries = []
+
+    def capture(_conn, cursor, statement, _params, _context, _many):
+        if statement.startswith("SELECT"):
+            queries.append((statement, cursor.rowcount))
+
+    event.listen(engine.sync_engine, "after_cursor_execute", capture)
+    yield queries
+    event.remove(engine.sync_engine, "after_cursor_execute", capture)

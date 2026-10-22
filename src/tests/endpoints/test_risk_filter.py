@@ -385,7 +385,7 @@ async def test_sequences_fromdate_risk_score_moderate_disables_filter(
         pytest.user_table[2]["organization_id"],
     )
     response = await async_client.get(
-        f"/sequences/all/fromdate?from_date={target_date}&limit=200&risk_score=moderate", headers=auth
+        f"/sequences/all/fromdate?from_date={target_date}&limit=100&risk_score=moderate", headers=auth
     )
     assert response.status_code == 200, print(response.__dict__)
     returned_ids = {item["id"] for item in response.json()}

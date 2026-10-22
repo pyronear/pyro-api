@@ -859,3 +859,13 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     cameras = response.json()
     camera_1 = next(c for c in cameras if c["id"] == 1)
     assert camera_1["last_image_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_camera_list_batches_active_poses(async_client, pose_session, select_queries):
+    response = await async_client.get("/cameras", headers=pytest.get_token(1, ["admin"], 1))
+    assert response.status_code == 200, response.text
+    for camera in response.json():
+        expected = [pose["id"] for pose in pytest.pose_table if pose["camera_id"] == camera["id"] and pose["active"]]
+        assert [pose["id"] for pose in camera["poses"]] == expected
+    assert sum("FROM poses" in sql for sql, _ in select_queries) == 1

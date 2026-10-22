@@ -422,8 +422,10 @@ class Client:
             timeout=self.timeout,
         )
 
-    def fetch_detections(self) -> Response:
-        """List the detections accessible to the authenticated user
+    def fetch_detections(self, limit: int = 100, offset: int = 0) -> Response:
+        """List a page of detections accessible to the authenticated user.
+
+        Pages default to 100 rows (maximum 500), ordered by ID. Advance offset to fetch more.
 
         >>> from pyroclient import client
         >>> api_client = Client("MY_USER_TOKEN")
@@ -434,6 +436,7 @@ class Client:
         """
         return requests.get(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_FETCH),
+            params={"limit": limit, "offset": offset},
             headers=self.headers,
             timeout=self.timeout,
         )
