@@ -11,7 +11,15 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.models import AnnotationType, Detection
 
-__all__ = ["EMPTY_BBOXES", "DetectionCreate", "DetectionLabel", "DetectionRead", "DetectionUrl", "DetectionWithUrl"]
+__all__ = [
+    "EMPTY_BBOXES",
+    "SCORES_PATTERN",
+    "DetectionCreate",
+    "DetectionLabel",
+    "DetectionRead",
+    "DetectionUrl",
+    "DetectionWithUrl",
+]
 
 
 class DetectionLabel(BaseModel):
@@ -23,6 +31,8 @@ FLOAT_PATTERN = r"(0?\.[0-9]{1,3}|0|1)"
 BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN}\)"
 # An empty list is valid: a frame with no detection (kept for sequence continuity).
 BOXES_PATTERN = rf"^\[({BOX_PATTERN}(,{BOX_PATTERN})*)?\]$"
+# Temporal-model scores computed on the device, one per bbox in the same order.
+SCORES_PATTERN = rf"^\[({FLOAT_PATTERN}(,{FLOAT_PATTERN})*)?\]$"
 
 # Stored bbox of a continuity detection: a frame attached to a sequence with no detection on it.
 EMPTY_BBOXES = "[]"
