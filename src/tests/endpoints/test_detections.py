@@ -35,6 +35,7 @@ from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
     Alert,
     AlertSequence,
     AnnotationType,
@@ -1164,6 +1165,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_score=None,
         file=upload,
         crop_files=None,
         detections=detections,
@@ -1199,6 +1201,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_score=None,
         file=upload_again,
         crop_files=None,
         detections=detections,
@@ -1916,6 +1919,67 @@ async def test_create_detection_sequence_starts_at_earliest_capture_on_backlog_f
     seq = await detection_session.get(Sequence, seq_id)
     assert seq is not None
     assert seq.started_at == earliest_capture
+
+
+@pytest.mark.asyncio
+async def test_create_detection_stores_engine_temporal_score(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """A score computed on the device lands on the sequence with 'engine' provenance; the
+    latest upload wins so the worker always judges the device's most recent verdict."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    for idx, score in enumerate(("0.15", "0.62")):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "temporal_model_score": score,
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq = await detection_session.get(Sequence, response.json()["sequence_id"])
+    assert seq is not None
+    assert seq.temporal_model_score == pytest.approx(0.62)
+    assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
+    assert seq.temporal_model_version is None
+    assert seq.validation_due_at is not None  # still queued: the worker applies the threshold
+
+
+@pytest.mark.parametrize("score", ["-0.1", "1.5", "nan"])
+@pytest.mark.asyncio
+async def test_create_detection_rejects_out_of_range_temporal_score(
+    async_client: AsyncClient, mock_img: bytes, score: str
+):
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+            "temporal_model_score": score,
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
 
 
 @pytest.mark.asyncio

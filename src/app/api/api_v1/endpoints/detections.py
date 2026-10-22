@@ -37,7 +37,17 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
+from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
+    Alert,
+    AlertSequence,
+    Camera,
+    Detection,
+    Pose,
+    Role,
+    Sequence,
+    UserRole,
+)
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
@@ -522,6 +532,15 @@ async def create_detection(
             "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
         ),
     ),
+    temporal_model_score: Optional[float] = Form(
+        None,
+        ge=0,
+        le=1,
+        description=(
+            "Smoke probability from the temporal model run on the device for the event this frame belongs to. "
+            "When given, the API applies its own threshold to it instead of scoring the sequence itself."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -711,7 +730,11 @@ async def create_detection(
     # whichever uvicorn worker received the detection). The per-process validation worker
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
     # notification channels (webhooks, Telegram, Slack) fire only once validated.
+    # A score computed on the device is stored first, so the worker finds it when it claims
+    # the job and skips its own model call.
     for seq_id in affected_sequences:
+        if temporal_model_score is not None:
+            await sequences.set_temporal_score(seq_id, temporal_model_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
         await sequences.enqueue_validation(seq_id)
 
     first_det = cast(Detection, await detections.get(created[0].id, strict=True))
