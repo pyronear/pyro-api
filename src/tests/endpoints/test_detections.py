@@ -480,11 +480,13 @@ async def test_build_overlap_records_skips_missing_cone_data(detection_session: 
     assert records == []
 
 
-def test_resolve_groups_and_locations_empty_records_returns_none():
-    assert _resolve_groups_and_locations([], 1) is None
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_empty_records_returns_none():
+    assert await _resolve_groups_and_locations([], 1) is None
 
 
-def test_resolve_groups_and_locations_no_match_returns_none():
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_no_match_returns_none():
     now = utcnow()
     records = [
         {
@@ -498,7 +500,7 @@ def test_resolve_groups_and_locations_no_match_returns_none():
             "last_seen_at": now,
         }
     ]
-    assert _resolve_groups_and_locations(records, 999) is None
+    assert await _resolve_groups_and_locations(records, 999) is None
 
 
 @pytest.mark.parametrize(
