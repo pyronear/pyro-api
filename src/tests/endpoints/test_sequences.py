@@ -753,11 +753,11 @@ async def test_unit_label_sequence_as_other_smoke_refreshes_alert(
 
     # 3. Assertions
     mock_sequences_crud.get.assert_called_once_with(1, strict=True)
-    mock_sequences_crud.update.assert_called_once_with(1, payload)
+    mock_sequences_crud.update.assert_called_once_with(1, payload, commit=False)
 
     # Three session.exec calls: alert_ids lookup, siblings probe, delete links
     assert mock_session.exec.call_count == 3
-    mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud)
+    mock_refresh_alert_state.assert_called_once_with(101, mock_session, mock_alerts_crud, commit=False)
 
     # Verify a new alert was created for this sequence
     mock_alerts_crud.create.assert_called_once()
@@ -813,6 +813,7 @@ async def test_unit_relabel_sequence_to_wildfire_smoke_reattaches(
         mock_sequences_crud,
         mock_alerts_crud,
         anchor_on_sequence=True,
+        commit=False,
     )
     mock_session.exec.assert_not_called()
     mock_alerts_crud.create.assert_not_called()
@@ -899,7 +900,7 @@ async def test_unit_label_sequence_as_wildfire_smoke_does_not_refresh():
     )
 
     # 3. Assertions
-    mock_sequences_crud.update.assert_called_once_with(1, payload)
+    mock_sequences_crud.update.assert_called_once_with(1, payload, commit=False)
     mock_session.exec.assert_not_called()
     mock_alerts_crud.create.assert_not_called()
 

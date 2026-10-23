@@ -7,6 +7,7 @@ import csv
 import io
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple, cast
+from unittest.mock import AsyncMock
 
 import pytest  # type: ignore
 from httpx import AsyncClient
@@ -16,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints.alerts import _ALERT_EXPORT_COLUMNS, _iter_alerts_csv
 from app.core.config import settings
 from app.core.time import utcnow
+from app.db import session_factory
 from app.models import Alert, AlertSequence, AnnotationType, Camera, Detection, Organization, Pose, Sequence
 from app.services.overlap import compute_overlap
 
@@ -994,3 +996,34 @@ async def test_alerts_export_invalid_range(
 async def test_alerts_export_unauthenticated(async_client: AsyncClient, detection_session: AsyncSession):
     resp = await async_client.get("/alerts/export?from_date=2026-04-10&to_date=2026-04-12")
     assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "failure"),
+    [
+        ("PATCH", "/sequences/{sid}/label", "app.crud.AlertCRUD.create"),
+        ("POST", "/alerts/{aid}/sequences/{sid}/unmatch", "app.crud.AlertCRUD.create"),
+        ("DELETE", "/sequences/{sid}", "app.api.api_v1.endpoints.sequences.refresh_alert_state"),
+        ("DELETE", "/alerts/{aid}", "app.crud.AlertCRUD.delete"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_alert_changes_roll_back_on_late_failure(
+    async_client, detection_session, monkeypatch, method, path, failure
+):
+    alert, sequence_ids, counts = await _create_alert_with_sequences(detection_session, 1, 1, 48, 2)
+    sid = sequence_ids[0]
+    before = (await detection_session.get(Sequence, sid)).model_dump()
+    monkeypatch.setattr(failure, AsyncMock(side_effect=RuntimeError("late failure")))
+    kwargs = {"json": {"is_wildfire": "other_smoke"}} if method == "PATCH" else {}
+    with pytest.raises(RuntimeError, match="late failure"):
+        await async_client.request(
+            method, path.format(aid=alert.id, sid=sid), headers=pytest.get_token(1, ["admin"], 1), **kwargs
+        )
+    async with session_factory() as observer:
+        assert await observer.get(Alert, alert.id) is not None
+        assert (await observer.get(Sequence, sid)).model_dump() == before
+        links = (await observer.exec(select(AlertSequence.sequence_id).where(AlertSequence.alert_id == alert.id))).all()
+        assert set(links) == set(sequence_ids)
+        detections = (await observer.exec(select(Detection).where(Detection.sequence_id == sid))).all()
+        assert len(detections) == counts[0]

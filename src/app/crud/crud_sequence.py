@@ -8,7 +8,7 @@ import logging
 from datetime import timedelta
 from typing import Any, Union, cast
 
-from sqlalchemy import case, distinct, func, null, or_, select, update
+from sqlalchemy import case, distinct, func, null, or_, select, text, update
 from sqlmodel import select as select_model
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -26,8 +26,13 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Sequence)
 
+    async def lock_pose(self, pose_id: int) -> None:
+        """Serialize sequence assembly for this pose until the caller commits or rolls back."""
+        # Advisory-lock namespace 7342 is reserved for ingestion (7341 is alert attachment).
+        await self.session.exec(text("SELECT pg_advisory_xact_lock(7342, :pose_id)"), params={"pose_id": pose_id})
+
     async def bump_max_conf(self, sequence_id: int, candidate: float) -> None:
-        """Atomically raise sequences.max_conf to candidate if higher (or set if NULL).
+        """Raise sequences.max_conf if higher (or set if NULL), in the caller's transaction.
 
         Uses a portable CASE expression so it runs on SQLite as well as Postgres.
         """
@@ -38,7 +43,6 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         )
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(max_conf=bumped)
         await self.session.exec(stmt)
-        await self.session.commit()
 
     async def set_temporal_score(
         self,
@@ -84,7 +88,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         return bool(getattr(result, "rowcount", 0))
 
     async def enqueue_validation(self, sequence_id: int) -> None:
-        """Mark the sequence as due for temporal validation (the DB-backed queue).
+        """Mark the sequence due for validation (the DB-backed queue), in the caller's transaction.
 
         Idempotent and FIFO-preserving: ``COALESCE`` keeps the oldest due timestamp, so a
         sequence already queued is NOT re-queued (one entry per sequence, whichever worker
@@ -101,7 +105,6 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             .values(validation_due_at=func.coalesce(due_col, utcnow()))
         )
         await self.session.exec(stmt)
-        await self.session.commit()
 
     async def claim_due_validation(self, lease_seconds: float) -> Union[Sequence, None]:
         """Claim the oldest due sequence for validation, or None when nothing is due.
