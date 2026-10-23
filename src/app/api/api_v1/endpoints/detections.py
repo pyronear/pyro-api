@@ -158,7 +158,7 @@ async def _attach_continuity_detections(
         created.append(
             await _create_continuity_detection(detections, camera_id, pose_id, bucket_key, seq.id, recorded_at)
         )
-        await sequences.enqueue_validation(seq.id, commit=False)
+        await sequences.enqueue_validation(seq.id)
     return created
 
 
@@ -580,6 +580,11 @@ async def create_detection(
         if not continuity_sequences:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+        await sequences.lock_pose(pose_id)
+        # Uploading and waiting may change which sequences still need continuity.
+        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.sub, pose_id)
+        if not continuity_sequences:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
         continuity_dets = await _attach_continuity_detections(
             detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key, effective_recorded_at
         )
@@ -596,6 +601,8 @@ async def create_detection(
             crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
 
+    # Keep media I/O outside the lock; serialize matching and every write for this pose.
+    await sequences.lock_pose(pose_id)
     created: List[Detection] = []
     camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
     # sequences touched by this request, to mark due for validation (DB-backed queue).
@@ -648,7 +655,7 @@ async def create_detection(
             # Only the primary bbox tracks the sequence; siblings in others_bboxes are unrelated detections.
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
-                await sequences.bump_max_conf(matched_sequence.id, det_max_conf, commit=False)
+                await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
@@ -725,7 +732,7 @@ async def create_detection(
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
     # notification channels (webhooks, Telegram, Slack) fire only once validated.
     for seq_id in affected_sequences:
-        await sequences.enqueue_validation(seq_id, commit=False)
+        await sequences.enqueue_validation(seq_id)
 
     # Detection rows, sequence membership/confidence and validation jobs become visible together.
     await detections.session.commit()

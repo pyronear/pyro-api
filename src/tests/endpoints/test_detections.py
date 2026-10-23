@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock
 import pytest  # type: ignore
 from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
-from sqlmodel import select
+from sqlmodel import select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import detections as detections_api
@@ -2271,3 +2271,98 @@ async def test_ingestion_rolls_back_on_late_queue_failure(async_client, detectio
     async with session_factory() as observer:
         assert (await observer.exec(select(Detection.id))).all() == original_ids
         assert (await observer.get(Sequence, 1)).model_dump() == before
+        await observer.exec(text("SET LOCAL lock_timeout = '1s'"))
+        await SequenceCRUD(observer).lock_pose(1)  # Rollback released the transaction lock.
+
+
+@pytest.mark.parametrize(
+    "second_boxes",
+    [
+        "[(0.8,0.8,0.9,0.9,0.8),(0.1,0.1,0.2,0.2,0.9)]",
+        "[(0.8,0.8,0.9,0.9,0.8)]",
+        "[]",
+    ],
+    ids=["opposite-order", "matched-and-continuity", "empty-continuity"],
+)
+@pytest.mark.asyncio
+async def test_concurrent_ingestion_serializes_only_the_same_pose(
+    async_client, detection_session, monkeypatch, second_boxes
+):
+    sequence = await detection_session.get(Sequence, 1)
+    sequence.last_seen_at, sequence.is_validated = utcnow(), False
+    other = Sequence(**(sequence.model_dump() | {"id": None}))
+    detection_session.add(other)
+    await detection_session.flush()
+    detection_session.add(
+        Detection(
+            camera_id=1,
+            pose_id=1,
+            sequence_id=other.id,
+            bucket_key="other-seed",
+            bbox="[(0.8,0.8,0.9,0.9,0.8)]",
+        )
+    )
+    await detection_session.commit()
+    monkeypatch.setattr(settings, "SEQUENCE_BBOX_TOLERANCE", 0.0)
+    monkeypatch.setattr(
+        detections_api,
+        "upload_file",
+        AsyncMock(side_effect=["first-frame", "second-frame", "other-pose"]),
+    )
+    paused, resume = asyncio.Event(), asyncio.Event()
+    update_sequence = SequenceCRUD.update
+    holder_pid = 0
+
+    async def pause_after_first_update(self, sequence_id, payload, **kwargs):
+        nonlocal holder_pid
+        result = await update_sequence(self, sequence_id, payload, **kwargs)
+        if sequence_id == 1 and not paused.is_set():
+            holder_pid = (await self.session.exec(text("SELECT pg_backend_pid()"))).scalar_one()
+            paused.set()
+            await resume.wait()
+        return result
+
+    monkeypatch.setattr(SequenceCRUD, "update", pause_after_first_update)
+
+    async def post(boxes, pose_id=1):
+        return await async_client.post(
+            "/detections",
+            headers=pytest.get_token(1, ["camera"], 1),
+            data={"pose_id": pose_id, "bboxes": boxes},
+            files={"file": ("frame.jpg", b"frame", "image/jpeg")},
+        )
+
+    tasks = []
+    try:
+        async with asyncio.timeout(10):
+            tasks.append(asyncio.create_task(post("[(0.1,0.1,0.2,0.2,0.9),(0.8,0.8,0.9,0.9,0.8)]")))
+            await paused.wait()  # First request holds sequence A while the second starts with B.
+            tasks.append(asyncio.create_task(post(second_boxes)))
+            async with session_factory() as observer:
+                # Wait for a real database lock wait, not a scheduler-dependent sleep.
+                while not (
+                    await observer.exec(
+                        text(
+                            "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' "
+                            "AND NOT granted AND :holder = ANY(pg_blocking_pids(pid)))"
+                        ),
+                        params={"holder": holder_pid},
+                    )
+                ).scalar_one():
+                    pass
+                assert not tasks[1].done()
+                assert (await post("[(0.1,0.1,0.2,0.2,0.9)]", pose_id=2)).status_code == 201
+            resume.set()
+            assert [r.status_code for r in await asyncio.gather(*tasks)] == [201, 201]
+    finally:
+        resume.set()
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    async with session_factory() as observer:
+        for key in ("first-frame", "second-frame"):
+            rows = (await observer.exec(select(Detection).where(Detection.bucket_key == key))).all()
+            assert len(rows) == 2
+            assert {row.sequence_id for row in rows} == {1, other.id}
