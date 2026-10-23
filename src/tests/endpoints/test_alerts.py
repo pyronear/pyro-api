@@ -6,7 +6,8 @@
 import csv
 import io
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Dict, List, Tuple, Union, cast
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
 from httpx import AsyncClient
@@ -320,6 +321,126 @@ async def test_alerts_count_unauthenticated(async_client: AsyncClient):
 
     resp = await async_client.get("/alerts/all/fromdate/count?from_date=2019-01-01")
     assert resp.status_code == 401, resp.text
+
+
+async def _create_alert_started_at(
+    session: AsyncSession, org_id: int, started_at: datetime, camera_id: Union[int, None] = None, max_conf: float = 0.9
+) -> Alert:
+    alert = Alert(organization_id=org_id, started_at=started_at, last_seen_at=started_at + timedelta(minutes=5))
+    session.add(alert)
+    await session.commit()
+    await session.refresh(alert)
+    if camera_id is not None:
+        seq = Sequence(
+            camera_id=camera_id,
+            pose_id=None,
+            camera_azimuth=180.0,
+            sequence_azimuth=175.0,
+            cone_angle=5.0,
+            is_wildfire=None,
+            started_at=started_at,
+            last_seen_at=started_at + timedelta(minutes=5),
+            max_conf=max_conf,
+        )
+        session.add(seq)
+        await session.commit()
+        await session.refresh(seq)
+        session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+        await session.commit()
+    return alert
+
+
+def _user_auth(user_idx: int) -> Dict[str, str]:
+    user = pytest.user_table[user_idx]
+    return pytest.get_token(user["id"], user["role"].split(), user["organization_id"])
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day(async_client: AsyncClient, camera_session: AsyncSession):
+    day = datetime(2025, 7, 14)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=10))
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=23, minutes=30))
+    await _create_alert_started_at(camera_session, 1, day + timedelta(days=2, hours=12))
+    await _create_alert_started_at(camera_session, 2, day + timedelta(hours=10))
+    period = "from_date=2025-07-14&to_date=2025-07-16"
+
+    # Agent: its organization only, days without alerts are omitted
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=_user_auth(1))
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == [{"date": "2025-07-14", "count": 2}, {"date": "2025-07-16", "count": 1}]
+    # Consistent with the single-date count
+    resp = await async_client.get("/alerts/all/fromdate/count?from_date=2025-07-14", headers=_user_auth(1))
+    assert resp.json() == {"count": 2}
+
+    # Admin: every organization
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=_user_auth(0))
+    assert resp.json() == [{"date": "2025-07-14", "count": 3}, {"date": "2025-07-16", "count": 1}]
+
+    # 23:30 UTC is already the next day in Paris (UTC+2 in July)
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}&tz=Europe/Paris", headers=_user_auth(1))
+    assert resp.json() == [
+        {"date": "2025-07-14", "count": 1},
+        {"date": "2025-07-15", "count": 1},
+        {"date": "2025-07-16", "count": 1},
+    ]
+
+    resp = await async_client.get(
+        "/alerts/all/fromdate/count-per-day?from_date=2025-07-15&to_date=2025-07-15", headers=_user_auth(1)
+    )
+    assert resp.json() == []
+
+
+@pytest.mark.parametrize(
+    ("query", "status_code"),
+    [
+        ("from_date=2025-07-16&to_date=2025-07-14", 422),
+        ("from_date=2025-07-01&to_date=2025-09-01", 422),  # 63 days
+        ("from_date=2025-07-01&to_date=2025-08-31", 200),  # 62 days
+        ("from_date=2025-07-01&to_date=2025-07-31&tz=Mars/Olympus_Mons", 422),
+        ("from_date=2025-07-01", 422),
+    ],
+)
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_validation(
+    async_client: AsyncClient, camera_session: AsyncSession, query: str, status_code: int
+):
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{query}", headers=_user_auth(1))
+    assert resp.status_code == status_code, resp.text
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_unauthenticated(async_client: AsyncClient):
+    resp = await async_client.get("/alerts/all/fromdate/count-per-day?from_date=2025-07-14&to_date=2025-07-16")
+    assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_risk_scores_per_day(async_client: AsyncClient, camera_session: AsyncSession):
+    camera_id = pytest.camera_table[0]["id"]
+    day = datetime(2025, 7, 14)
+    # Two low-confidence alerts, but only the first day is low risk (threshold above 0.2)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=10), camera_id, max_conf=0.2)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(days=1, hours=10), camera_id, max_conf=0.2)
+    period = "from_date=2025-07-14&to_date=2025-07-15"
+
+    def scores_for_date(target_date, organization_id=None):
+        return {camera_id: "low"} if target_date == day.date() else {}
+
+    scores_mock = AsyncMock(side_effect=scores_for_date)
+    with patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=scores_mock):
+        resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=_user_auth(1))
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == [{"date": "2025-07-15", "count": 1}]
+        assert scores_mock.await_count == 2
+        assert {call.kwargs["organization_id"] for call in scores_mock.await_args_list} == {1}
+
+        # A risk score override applies to every day and skips the risk API
+        scores_mock.reset_mock()
+        resp = await async_client.get(
+            f"/alerts/all/fromdate/count-per-day?{period}&risk_score=moderate", headers=_user_auth(1)
+        )
+        assert resp.json() == [{"date": "2025-07-14", "count": 1}, {"date": "2025-07-15", "count": 1}]
+        scores_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
