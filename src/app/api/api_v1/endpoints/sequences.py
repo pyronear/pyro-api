@@ -207,8 +207,8 @@ async def fetch_latest_unlabeled_sequences(
 @router.get("/all/fromdate", status_code=status.HTTP_200_OK, summary="Fetch all the sequences for a specific date")
 async def fetch_sequences_from_date(
     from_date: date = Query(),
-    limit: Union[int, None] = Query(15, description="Maximum number of sequences to fetch"),
-    offset: Union[int, None] = Query(0, description="Number of sequences to skip before starting to fetch"),
+    limit: int = Query(15, ge=1, le=100, description="Maximum number of sequences to fetch"),
+    offset: int = Query(0, ge=0, description="Number of sequences to skip before starting to fetch"),
     risk_score: Union[FwiClass, None] = Query(
         None,
         description="Override FWI class applied to every sequence; bypasses risk-api lookup. Ignored for admins.",
@@ -237,7 +237,7 @@ async def fetch_sequences_from_date(
         seq_filter = max_conf_filter_clause(classes)
         if seq_filter is not None:
             stmt = stmt.where(seq_filter)
-    stmt = stmt.order_by(Sequence.started_at.desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
+    stmt = stmt.order_by(Sequence.started_at.desc(), cast(Any, Sequence.id).desc()).limit(limit).offset(offset)  # type: ignore[attr-defined]
 
     fetched_sequences = (await session.exec(stmt)).all()
     counts = await get_detection_counts_by_sequence_ids(session, [sequence.id for sequence in fetched_sequences])

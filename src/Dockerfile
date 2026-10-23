@@ -15,7 +15,7 @@ RUN apt-get -y update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.14 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /bin/uv
 
 COPY pyproject.toml uv.lock /app/
 COPY client/pyproject.toml /app/client/pyproject.toml

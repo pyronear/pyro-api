@@ -521,7 +521,7 @@ async def test_update_camera_location(
         (
             0,
             1,
-            {"name": "cam"},  # name too short
+            {"name": "ca"},  # name too short
             422,
             None,
         ),
@@ -614,6 +614,69 @@ async def test_update_camera_name(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert all(response.json()[k] == v for k, v in payload.items())
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "cam_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 1, {"angle_of_view": 51.36}, 401, "Not authenticated"),
+        (0, 1, {"angle_of_view": 0}, 422, None),
+        (0, 1, {"angle_of_view": 360.5}, 422, None),
+        (0, 1, {}, 422, None),
+        (0, 999, {"angle_of_view": 51.36}, 404, "Table Camera has no corresponding entry."),
+        (0, 1, {"angle_of_view": 51.36}, 200, None),
+        (0, 2, {"angle_of_view": 360}, 200, None),
+        (1, 1, {"angle_of_view": 51.36}, 403, "Incompatible token scope."),
+        (2, 2, {"angle_of_view": 51.36}, 403, "Incompatible token scope."),
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_camera_angle_of_view(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    user_idx: Union[int, None],
+    cam_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/cameras/{cam_id}/angle_of_view", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        assert response.json()["angle_of_view"] == payload["angle_of_view"]
+        # Only the angle of view changes
+        before = next(cam for cam in pytest.camera_table if cam["id"] == cam_id)
+        assert all(response.json()[k] == before[k] for k in ("name", "lat", "lon", "elevation"))
+
+
+@pytest.mark.parametrize("name_length", [2, 3, 51, 100, 101])
+@pytest.mark.asyncio
+async def test_camera_name_create_rename_and_read_round_trip(async_client, camera_session, name_length):
+    """Every accepted name must remain serializable after creation and renaming."""
+    auth = pytest.get_token(1, ["admin"], 1)
+    payload = {
+        key: pytest.camera_table[0][key] for key in ("organization_id", "angle_of_view", "elevation", "lat", "lon")
+    }
+    response = await async_client.post("/cameras", headers=auth, json={**payload, "name": "c" * name_length})
+    valid = 3 <= name_length <= 100
+    assert response.status_code == (201 if valid else 422), response.text
+    camera_id = response.json()["id"] if valid else 1
+    renamed = "r" * name_length
+    response = await async_client.patch(f"/cameras/{camera_id}/name", headers=auth, json={"name": renamed})
+    assert response.status_code == (200 if valid else 422), response.text
+    response = await async_client.get(f"/cameras/{camera_id}", headers=auth)
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] == (renamed if valid else "cam-1")
 
 
 @pytest.mark.asyncio
@@ -796,3 +859,13 @@ async def test_fetch_cameras_s3_unavailable_returns_null_url(
     cameras = response.json()
     camera_1 = next(c for c in cameras if c["id"] == 1)
     assert camera_1["last_image_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_camera_list_batches_active_poses(async_client, pose_session, select_queries):
+    response = await async_client.get("/cameras", headers=pytest.get_token(1, ["admin"], 1))
+    assert response.status_code == 200, response.text
+    for camera in response.json():
+        expected = [pose["id"] for pose in pytest.pose_table if pose["camera_id"] == camera["id"] and pose["active"]]
+        assert [pose["id"] for pose in camera["poses"]] == expected
+    assert sum("FROM poses" in sql for sql, _ in select_queries) == 1
