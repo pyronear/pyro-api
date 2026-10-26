@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 import logging
 from datetime import date
 from typing import Literal, Union, cast
@@ -62,8 +63,19 @@ class RiskService:
     Fail-open: if the API is unreachable or a camera is unknown, no filter is applied.
     """
 
+    # Bounds concurrent calls, e.g. one score lookup per day of a calendar month
+    MAX_CONCURRENT_REQUESTS: int = 8
+
     def __init__(self) -> None:
         self._scores: dict[int, str] = {}
+        self._client: Union[httpx.AsyncClient, None] = None
+        self._semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_REQUESTS)
+
+    async def aclose(self) -> None:
+        """Close the HTTP client on shutdown."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     @property
     def is_configured(self) -> bool:
@@ -89,14 +101,16 @@ class RiskService:
             return None
         host = risk_api_url.rstrip("/")
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(
+            async with self._semaphore:
+                if self._client is None:
+                    self._client = httpx.AsyncClient(timeout=5.0)
+                response = await self._client.get(
                     f"{host}/{path.lstrip('/')}",
                     params=params,
                     auth=(risk_api_login, risk_api_pwd),
                 )
-                response.raise_for_status()
-                return response.json()
+            response.raise_for_status()
+            return response.json()
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("Risk API call %s failed (%s)", path, exc)
             return None

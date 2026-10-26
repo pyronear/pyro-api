@@ -7,14 +7,14 @@
 import asyncio
 import csv
 import io
-from datetime import date, datetime, time, timedelta
-from typing import Any, AsyncIterator, Dict, Iterable, Iterator, List, Tuple, Union, cast
+from datetime import date, datetime, time, timedelta, timezone
+from typing import Any, AsyncIterator, Dict, Iterable, Iterator, List, Tuple, TypeVar, Union, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import asc, desc, tuple_
-from sqlalchemy.sql import ColumnElement
+from sqlalchemy import and_, asc, case, desc, tuple_
+from sqlalchemy.sql import ColumnElement, Select
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.sql.expression import SelectOfScalar
@@ -127,13 +127,23 @@ async def _build_alerts_from_date_stmt(
     alerts_stmt: Any = select(Alert).where(func.date(Alert.started_at) == from_date)
     if not is_admin:
         alerts_stmt = alerts_stmt.where(Alert.organization_id == organization_id)
-    if seq_filter is not None:
-        seq_match: Any = select(AlertSequence.alert_id).join(
-            Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
-        )
-        seq_match = seq_match.where(seq_filter)
-        alerts_stmt = alerts_stmt.where(cast(Any, Alert.id).in_(seq_match))
-    return alerts_stmt, seq_filter
+    return _filter_alerts_by_sequences(alerts_stmt, seq_filter), seq_filter
+
+
+_SelectT = TypeVar("_SelectT", bound=Select)
+
+
+def _filter_alerts_by_sequences(alerts_stmt: _SelectT, seq_filter: Union[ColumnElement[bool], None]) -> _SelectT:
+    """Keep the alerts with at least one sequence passing ``seq_filter`` (no-op when None)."""
+    if seq_filter is None:
+        return alerts_stmt
+    seq_match: Any = select(AlertSequence.alert_id).join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+    return alerts_stmt.where(cast(Any, Alert.id).in_(seq_match.where(seq_filter)))
+
+
+def _utc_start_of_day(day: date, zone: ZoneInfo) -> datetime:
+    """Start of ``day`` in ``zone``, as a naive UTC datetime like the stored timestamps."""
+    return datetime.combine(day, time.min, tzinfo=zone).astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
@@ -480,26 +490,33 @@ async def count_alerts_per_day(
     session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, UserRole.USER]),
 ) -> List[AlertDayCount]:
-    telemetry_client.capture(
-        token_payload.sub,
-        event="alerts-count-per-day",
-        properties={"from_date": from_date.isoformat(), "to_date": to_date.isoformat(), "tz": tz},
-    )
     if to_date < from_date:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="to_date must be on or after from_date",
         )
-    days = [from_date + timedelta(days=offset) for offset in range((to_date - from_date).days + 1)]
-    if len(days) > MAX_COUNT_PER_DAY_PERIOD:
+    if (to_date - from_date).days >= MAX_COUNT_PER_DAY_PERIOD:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"The period cannot exceed {MAX_COUNT_PER_DAY_PERIOD} days",
         )
     try:
-        ZoneInfo(tz)
+        zone = ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown timezone: {tz}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown timezone: {tz}"
+        ) from None
+    telemetry_client.capture(
+        token_payload.sub,
+        event="alerts-count-per-day",
+        properties={"from_date": from_date.isoformat(), "to_date": to_date.isoformat(), "tz": tz},
+    )
+
+    # Days after today cannot have alerts yet: skip them, and their risk lookups
+    last_day = min(to_date, datetime.now(zone).date())
+    days = [from_date + timedelta(days=offset) for offset in range((last_day - from_date).days + 1)]
+    if not days:
+        return []
 
     # Same alerts as /all/fromdate/count, each day with its own risk scores: days sharing the
     # same scores are counted by a single query.
@@ -518,20 +535,26 @@ async def count_alerts_per_day(
         for day, scores in zip(days, scores_per_day, strict=True):
             days_by_scores.setdefault(tuple(sorted(scores.items())), []).append(day)
 
-    # started_at is a naive UTC datetime: convert it to the requested timezone before taking its day
-    local_day: Any = func.date(func.timezone(tz, func.timezone("UTC", Alert.started_at)))
     counts: Dict[date, int] = {}
     for scores_key, scores_days in days_by_scores.items():
-        stmt: Any = select(local_day, func.count()).where(local_day.in_(scores_days)).group_by(local_day)
+        # Day boundaries are computed here with the validated timezone, so the query only filters
+        # started_at on UTC ranges: index-friendly, and no timezone conversion in the database.
+        bounds = [
+            (day, _utc_start_of_day(day, zone), _utc_start_of_day(day + timedelta(days=1), zone)) for day in scores_days
+        ]
+        local_day: Any = cast(Any, case)(
+            *((and_(Alert.started_at >= start, Alert.started_at < end), day) for day, start, end in bounds)
+        ).label("day")
+        stmt: Any = (
+            select(local_day, func.count())
+            .where(Alert.started_at >= bounds[0][1], Alert.started_at < bounds[-1][2])
+            .group_by("day")
+        )
         if not token_payload.is_admin:
             stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
-        seq_filter = max_conf_filter_clause(dict(scores_key))
-        if seq_filter is not None:
-            seq_match: Any = select(AlertSequence.alert_id).join(
-                Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id)
-            )
-            stmt = stmt.where(cast(Any, Alert.id).in_(seq_match.where(seq_filter)))
-        counts.update((day, count) for day, count in (await session.exec(stmt)).all())
+        stmt = _filter_alerts_by_sequences(stmt, max_conf_filter_clause(dict(scores_key)))
+        # Days of the range counted by another query (other risk scores) fall outside the CASE
+        counts.update((day, count) for day, count in (await session.exec(stmt)).all() if day is not None)
     return [AlertDayCount(date=day, count=count) for day, count in sorted(counts.items())]
 
 
