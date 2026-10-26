@@ -23,20 +23,25 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.session = session
         self.model = model
 
-    async def create(self, payload: CreateSchemaType) -> ModelType:
+    async def _save(self, entry: ModelType, *, commit: bool) -> ModelType:
+        self.session.add(entry)
+        await self.session.flush()
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(entry)
+        return entry
+
+    async def create(self, payload: CreateSchemaType, *, commit: bool = True) -> ModelType:
+        """Flush a new row; pass commit=False to include it in a larger transaction."""
         entry = self.model(**payload.model_dump())
         try:
-            self.session.add(entry)
-            await self.session.commit()
+            return await self._save(entry, commit=commit)
         except exc.IntegrityError as error:
             await self.session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"An entry with the same index already exists : {error!s}",
             )
-        await self.session.refresh(entry)
-
-        return entry
 
     async def get(self, entry_id: int, strict: bool = False) -> Union[ModelType, None]:
         entry: Union[ModelType, None] = await self.session.get(self.model, entry_id)
@@ -105,25 +110,22 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await self.session.exec(statement=statement)
         return [r for r in result]
 
-    async def update(self, entry_id: int, payload: UpdateSchemaType) -> ModelType:
+    async def update(self, entry_id: int, payload: UpdateSchemaType, *, commit: bool = True) -> ModelType:
         access = cast(ModelType, await self.get(entry_id, strict=True))
         values = payload.model_dump(exclude_unset=True)
 
         for k, v in values.items():
             setattr(access, k, v)
 
-        self.session.add(access)
-        await self.session.commit()
-        await self.session.refresh(access)
+        return await self._save(access, commit=commit)
 
-        return access
-
-    async def delete(self, entry_id: int) -> None:
+    async def delete(self, entry_id: int, *, commit: bool = True) -> None:
         await self.get(entry_id, strict=True)
         statement = delete(self.model).where(cast(Any, self.model).id == entry_id)  # ty: ignore[invalid-argument-type]
 
         await self.session.exec(statement=statement)  # type: ignore[call-overload]
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
 
     async def get_in(self, list_: List[Any], field_name: str) -> List[ModelType]:
         statement: Any = select(self.model).where(getattr(self.model, field_name).in_(list_))

@@ -78,6 +78,7 @@ async def _seed_sequence(
 
 async def _enqueue(session: AsyncSession, sequence_id: int) -> None:
     await SequenceCRUD(session).enqueue_validation(sequence_id)
+    await session.commit()
 
 
 async def _backdate_due(seconds: float = 60.0) -> None:
@@ -159,12 +160,14 @@ async def test_enqueue_is_idempotent_and_fifo_preserving(detection_session: Asyn
     seq = await _seed_sequence(detection_session, 5)
     crud = SequenceCRUD(detection_session)
     await crud.enqueue_validation(cast(int, seq.id))
+    await detection_session.commit()
     await detection_session.refresh(seq)
     first_due = seq.validation_due_at
     assert first_due is not None
 
     await asyncio.sleep(0.01)
     await crud.enqueue_validation(cast(int, seq.id))  # second detection while queued
+    await detection_session.commit()
     await detection_session.refresh(seq)
     assert seq.validation_due_at == first_due  # one entry per sequence, oldest due kept
 
@@ -175,12 +178,14 @@ async def test_enqueue_skips_validated_and_window_exhausted(detection_session: A
     crud = SequenceCRUD(detection_session)
     await crud.claim_validation(cast(int, seq.id))
     await crud.enqueue_validation(cast(int, seq.id))
+    await detection_session.commit()
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None  # validated: nothing to do
 
     seq2 = await _seed_sequence(detection_session, 5)
     await crud.finish_validation_job(cast(int, seq2.id), validation_status=WINDOW_EXHAUSTED)
     await crud.enqueue_validation(cast(int, seq2.id))
+    await detection_session.commit()
     await detection_session.refresh(seq2)
     assert seq2.validation_due_at is None  # terminal: never resurrected
 
@@ -377,6 +382,7 @@ async def test_process_window_exhausted_when_scored_and_past_max_frames(detectio
 
     # Terminal: a later fail-open or enqueue can't resurrect it.
     await crud.enqueue_validation(cast(int, seq.id))
+    await detection_session.commit()
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None
 
@@ -585,6 +591,7 @@ async def test_poison_job_dead_letters_after_max_attempts(detection_session: Asy
 
     # Terminal: new detections can't resurrect it, the worker sees nothing due.
     await crud.enqueue_validation(cast(int, seq.id))
+    await detection_session.commit()
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None
     assert await _process_one_due() is False
@@ -897,6 +904,7 @@ async def test_first_score_past_window_below_threshold_is_terminal(detection_ses
 
     # Terminal: a later enqueue can't resurrect it.
     await SequenceCRUD(detection_session).enqueue_validation(cast(int, seq.id))
+    await detection_session.commit()
     await detection_session.refresh(seq)
     assert seq.validation_due_at is None
 
