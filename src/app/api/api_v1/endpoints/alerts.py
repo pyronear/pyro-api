@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Security, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import and_, asc, case, desc, tuple_
+from sqlalchemy import asc, desc, tuple_
 from sqlalchemy.sql import ColumnElement, Select
 from sqlmodel import delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -495,7 +495,7 @@ async def count_alerts_per_day(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="to_date must be on or after from_date",
         )
-    if (to_date - from_date).days >= MAX_COUNT_PER_DAY_PERIOD:
+    if (to_date - from_date).days + 1 > MAX_COUNT_PER_DAY_PERIOD:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"The period cannot exceed {MAX_COUNT_PER_DAY_PERIOD} days",
@@ -537,24 +537,21 @@ async def count_alerts_per_day(
 
     counts: Dict[date, int] = {}
     for scores_key, scores_days in days_by_scores.items():
-        # Day boundaries are computed here with the validated timezone, so the query only filters
-        # started_at on UTC ranges: index-friendly, and no timezone conversion in the database.
-        bounds = [
-            (day, _utc_start_of_day(day, zone), _utc_start_of_day(day + timedelta(days=1), zone)) for day in scores_days
-        ]
-        local_day: Any = cast(Any, case)(
-            *((and_(Alert.started_at >= start, Alert.started_at < end), day) for day, start, end in bounds)
-        ).label("day")
-        stmt: Any = (
-            select(local_day, func.count())
-            .where(Alert.started_at >= bounds[0][1], Alert.started_at < bounds[-1][2])
-            .group_by("day")
+        # The database returns the alerts of a plain UTC range of started_at (index-friendly), and
+        # they are counted per local day here: the timezone is only handled by zoneinfo.
+        stmt: Any = select(Alert.started_at).where(
+            Alert.started_at >= _utc_start_of_day(scores_days[0], zone),
+            Alert.started_at < _utc_start_of_day(scores_days[-1] + timedelta(days=1), zone),
         )
         if not token_payload.is_admin:
             stmt = stmt.where(Alert.organization_id == token_payload.organization_id)
         stmt = _filter_alerts_by_sequences(stmt, max_conf_filter_clause(dict(scores_key)))
-        # Days of the range counted by another query (other risk scores) fall outside the CASE
-        counts.update((day, count) for day, count in (await session.exec(stmt)).all() if day is not None)
+        for started_at in (await session.exec(stmt)).all():
+            # started_at is a naive UTC datetime: its day in the requested timezone
+            day = started_at.replace(tzinfo=timezone.utc).astimezone(zone).date()
+            # The range may include days counted by another query (other risk scores)
+            if day in scores_days:
+                counts[day] = counts.get(day, 0) + 1
     return [AlertDayCount(date=day, count=count) for day, count in sorted(counts.items())]
 
 
