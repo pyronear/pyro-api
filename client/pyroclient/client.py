@@ -48,6 +48,8 @@ class ClientRoute(str, Enum):
 
 def _to_str(coord: float) -> str:
     """Format string conditionally"""
+    # Round first so values like 0.9996 dump as "1", not "1.000" (rejected by the API pattern)
+    coord = round(coord, 3)
     return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
 
 

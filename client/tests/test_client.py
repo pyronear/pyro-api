@@ -6,8 +6,12 @@ import requests
 from requests.exceptions import ConnectionError as ConnError
 from requests.exceptions import ReadTimeout
 
-from pyroclient.client import Client
+from pyroclient.client import Client, _dump_bbox_to_json
 from pyroclient.exceptions import HTTPRequestError
+
+
+def test_dump_bbox_to_json_rounds_near_bounds():
+    assert _dump_bbox_to_json([(0.0004, 0.099, 0.9996, 0.278, 0.5)]) == "[(0,0.099,1,0.278,0.500)]"
 
 
 def test_client_forwards_detection_pagination(monkeypatch):
