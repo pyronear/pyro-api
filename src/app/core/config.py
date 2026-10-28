@@ -9,7 +9,7 @@ import secrets
 import socket
 from typing import Union
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["settings"]
@@ -52,6 +52,34 @@ class Settings(BaseSettings):
         # Compose passes an empty value when no secret is configured. Normalize it
         # after settings loading so it cannot replace the generated default.
         return v or secrets.token_urlsafe(32)
+
+    KEYCLOAK_ISSUER: Union[str, None] = os.environ.get("KEYCLOAK_ISSUER") or None
+    KEYCLOAK_BACKCHANNEL_URL: Union[str, None] = os.environ.get("KEYCLOAK_BACKCHANNEL_URL") or None
+    KEYCLOAK_CLIENT_ID: str = os.environ.get("KEYCLOAK_CLIENT_ID") or "pyro-api"
+    JWKS_CACHE_SECONDS: int = int(os.environ.get("JWKS_CACHE_SECONDS") or 3600)
+    JWT_LEEWAY_SECONDS: int = int(os.environ.get("JWT_LEEWAY_SECONDS") or 30)
+
+    @field_validator("KEYCLOAK_ISSUER", "KEYCLOAK_BACKCHANNEL_URL")
+    @classmethod
+    def keycloak_value_can_be_blank(cls, v: Union[str, None]) -> Union[str, None]:
+        return v or None
+
+    @field_validator("KEYCLOAK_CLIENT_ID", "JWKS_CACHE_SECONDS", "JWT_LEEWAY_SECONDS", mode="before")
+    @classmethod
+    def blank_keycloak_settings_use_defaults(cls, v: object, info: ValidationInfo) -> object:
+        if v == "" and info.field_name is not None:
+            return cls.model_fields[info.field_name].default
+        return v
+
+    @property
+    def keycloak_backchannel_url(self) -> Union[str, None]:
+        url = self.KEYCLOAK_BACKCHANNEL_URL or self.KEYCLOAK_ISSUER
+        return url.rstrip("/") if url else None
+
+    @property
+    def keycloak_jwks_url(self) -> Union[str, None]:
+        base = self.keycloak_backchannel_url
+        return f"{base}/protocol/openid-connect/certs" if base else None
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5

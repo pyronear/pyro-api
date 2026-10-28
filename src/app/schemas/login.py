@@ -3,7 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,6 +28,7 @@ class TokenPayload(BaseModel):
     sub: str = Field(..., min_length=1, description="Keycloak user id, or the user/camera id for API-issued tokens")
     scopes: List[Role] = Field([], description="scopes of the token")
     organization_id: int = Field(..., gt=0)
+    auth_source: Literal["keycloak", "api"] = Field("api", description="issuer of the token")
 
     @property
     def is_admin(self) -> bool:

@@ -49,3 +49,44 @@ def test_settings_accept_valid_sequence_windows(caplog):
     with caplog.at_level(logging.WARNING, logger="uvicorn.error"):
         Settings(SEQUENCE_CONTINUITY_SECONDS=120, SEQUENCE_RELAXATION_SECONDS=7200)
     assert "continuity frames" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("issuer", "backchannel_url", "expected_base"),
+    [
+        (None, None, None),
+        ("http://localhost:9310/realms/pyronear/", None, "http://localhost:9310/realms/pyronear"),
+        (
+            "http://localhost:9310/realms/pyronear",
+            "http://keycloak:9310/realms/pyronear",
+            "http://keycloak:9310/realms/pyronear",
+        ),
+    ],
+)
+def test_settings_keycloak_urls(monkeypatch, issuer, backchannel_url, expected_base):
+    for name, value in (("KEYCLOAK_ISSUER", issuer), ("KEYCLOAK_BACKCHANNEL_URL", backchannel_url)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    settings = Settings()
+    if expected_base is None:
+        assert settings.keycloak_jwks_url is None
+    else:
+        assert settings.keycloak_jwks_url == f"{expected_base}/protocol/openid-connect/certs"
+    assert issuer == settings.KEYCLOAK_ISSUER
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("KEYCLOAK_CLIENT_ID", "pyro-api"),
+        ("JWKS_CACHE_SECONDS", 3600),
+        ("JWT_LEEWAY_SECONDS", 30),
+        ("KEYCLOAK_ISSUER", None),
+        ("KEYCLOAK_BACKCHANNEL_URL", None),
+    ],
+)
+def test_settings_blank_keycloak_values_use_defaults(monkeypatch, name, expected):
+    monkeypatch.setenv(name, "")
+    assert getattr(Settings(), name) == expected

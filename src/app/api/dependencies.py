@@ -9,12 +9,18 @@ from typing import Any, Dict, Union
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from httpx import AsyncClient, HTTPStatusError
-from jwt import ExpiredSignatureError, PyJWTError
+from jwt import ExpiredSignatureError, PyJWTError, get_unverified_header
 from jwt import decode as jwt_decode
 from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
+from app.core.keycloak import (
+    KeycloakUnavailableError,
+    decode_keycloak_token,
+    map_keycloak_roles,
+)
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
@@ -27,7 +33,7 @@ __all__ = ["get_user_crud"]
 
 bearer_scheme = HTTPBearer(
     auto_error=False,
-    description="API-issued access token.",
+    description="Keycloak access token, or an API-issued camera token.",
 )
 
 
@@ -75,10 +81,33 @@ def _unauthorized(detail: str, authenticate_value: str) -> HTTPException:
     )
 
 
+async def _decode_keycloak(token: str, authenticate_value: str) -> TokenPayload:
+    if settings.KEYCLOAK_ISSUER is None:
+        raise _unauthorized("Invalid token.", authenticate_value)
+    try:
+        claims = await run_in_threadpool(decode_keycloak_token, token)
+        try:
+            token_payload = TokenPayload.model_validate({
+                "sub": claims["sub"],
+                "scopes": map_keycloak_roles(claims.get("roles")),
+                "organization_id": claims.get("organization_id"),
+                "auth_source": "keycloak",
+            })
+        except ValidationError:
+            raise _unauthorized("Invalid token payload.", authenticate_value)
+    except KeycloakUnavailableError:
+        logger.exception("Keycloak is unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable.",
+        )
+    return token_payload
+
+
 def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
     payload: Dict[str, Any] = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     try:
-        token_payload = TokenPayload.model_validate(payload)
+        token_payload = TokenPayload.model_validate({**payload, "auth_source": "api"})
     except ValidationError:
         raise _unauthorized("Invalid token payload.", authenticate_value)
     if not token_payload.sub.isdigit() or int(token_payload.sub) <= 0:
@@ -86,23 +115,33 @@ def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
     return token_payload
 
 
-def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayload:
+async def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayload:
+    """Verify a bearer token and normalize it, whichever issuer it comes from.
+
+    The verification path is picked from the unverified `alg` header, and each path only accepts its own
+    algorithm, so a token can't pick its own key (e.g. an HS256 token signed with the realm public key).
+    """
     try:
-        return _decode_api(token, authenticate_value)
+        alg = get_unverified_header(token).get("alg")
+        if alg == "RS256":
+            return await _decode_keycloak(token, authenticate_value)
+        if alg == settings.JWT_ALGORITHM:
+            return _decode_api(token, authenticate_value)
     except ExpiredSignatureError:
         raise _unauthorized("Token has expired.", authenticate_value)
     except PyJWTError:
         raise _unauthorized("Invalid token.", authenticate_value)
+    raise _unauthorized("Invalid token.", authenticate_value)
 
 
-def get_jwt(
+async def get_jwt(
     security_scopes: SecurityScopes,
     credentials: Union[HTTPAuthorizationCredentials, None] = Depends(bearer_scheme),
 ) -> TokenPayload:
     authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else "Bearer"
     if credentials is None:
         raise _unauthorized("Not authenticated", authenticate_value)
-    jwt_payload = process_token(credentials.credentials, authenticate_value)
+    jwt_payload = await process_token(credentials.credentials, authenticate_value)
     if set(jwt_payload.scopes).isdisjoint(security_scopes.scopes):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
