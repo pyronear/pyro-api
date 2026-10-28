@@ -4,7 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, Dict
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
@@ -19,7 +19,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Seq
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.db import get_session
-from app.models import User, UserRole
+from app.models import UserRole
 from app.schemas.login import TokenPayload
 
 logger = logging.getLogger("uvicorn.error")
@@ -111,16 +111,6 @@ def get_jwt(
             headers={"WWW-Authenticate": authenticate_value},
         )
     return jwt_payload
-
-
-async def get_current_user(
-    security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
-    users: UserCRUD = Depends(get_user_crud),
-) -> User:
-    """Dependency to use as fastapi.security.Security with scopes"""
-    token_payload = get_jwt(security_scopes, token)
-    return cast(User, await users.get(token_payload.sub, strict=True))
 
 
 async def dispatch_webhook(url: str, payload: BaseModel) -> None:
