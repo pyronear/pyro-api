@@ -240,6 +240,27 @@ async def test_malformed_token_does_not_trip_backoff():
 
 
 @pytest.mark.parametrize(
+    ("token", "required", "error_code"),
+    [
+        ({"sub": "1", "scopes": ["admin"], "organization_id": 1}, ["admin"], 401),
+        ({"sub": "1", "scopes": ["user"], "organization_id": 1}, ["user"], 401),
+        ({"sub": "1", "scopes": ["camera"], "organization_id": 1}, ["camera"], None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_jwt_legacy_user_tokens_disabled(monkeypatch, token, required, error_code):
+    monkeypatch.setattr(settings, "LEGACY_USER_TOKENS_ENABLED", False)
+    creds = _creds(create_access_token(token))
+    if error_code is None:
+        assert (await get_jwt(SecurityScopes(required), creds)).scopes == [Role.CAMERA]
+    else:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_jwt(SecurityScopes(required), creds)
+        assert exc_info.value.status_code == error_code
+    assert (await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))).auth_source == "keycloak"
+
+
+@pytest.mark.parametrize(
     ("roles", "expected"),
     [
         (["admin", "operator", "viewer"], [Role.ADMIN, Role.AGENT, Role.USER]),

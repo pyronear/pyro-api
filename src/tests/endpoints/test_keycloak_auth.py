@@ -4,6 +4,8 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.config import settings
+
 
 def _camera_auth(cam_idx: int) -> Dict[str, str]:
     return pytest.get_token(
@@ -81,6 +83,20 @@ async def test_create_pose_accepts_both_auths(
     assert response.status_code == status_code, print(response.__dict__)
     if status_code == 201:
         assert response.json()["camera_id"] == payload["camera_id"]
+
+
+@pytest.mark.asyncio
+async def test_legacy_user_tokens_disabled(async_client: AsyncClient, camera_session: AsyncSession, monkeypatch):
+    monkeypatch.setattr(settings, "LEGACY_USER_TOKENS_ENABLED", False)
+    legacy_user_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.get("/cameras/1", headers=legacy_user_auth)
+    assert response.status_code == 401
+    response = await async_client.patch("/cameras/heartbeat", headers=_camera_auth(0))
+    assert response.status_code == 200, print(response.__dict__)
+    response = await async_client.get("/cameras/1", headers=pytest.get_keycloak_token(["viewer"], 1))
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio

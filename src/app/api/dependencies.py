@@ -26,6 +26,7 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Seq
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.db import get_session
+from app.models import Role
 from app.schemas.login import TokenPayload
 
 logger = logging.getLogger("uvicorn.error")
@@ -118,6 +119,8 @@ def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
         raise _unauthorized("Invalid token payload.", authenticate_value)
     if not token_payload.sub.isdigit() or int(token_payload.sub) <= 0:
         raise _unauthorized("Invalid token payload.", authenticate_value)
+    if not settings.LEGACY_USER_TOKENS_ENABLED and token_payload.scopes != [Role.CAMERA]:
+        raise _unauthorized("API-issued user tokens are disabled, sign in with Keycloak.", authenticate_value)
     return token_payload
 
 

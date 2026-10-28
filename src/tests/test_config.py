@@ -96,6 +96,7 @@ def test_settings_keycloak_requires_client_secret(monkeypatch):
         ("KEYCLOAK_CLIENT_ID", "pyro-api"),
         ("JWKS_CACHE_SECONDS", 3600),
         ("JWT_LEEWAY_SECONDS", 30),
+        ("LEGACY_USER_TOKENS_ENABLED", True),
         ("KEYCLOAK_ISSUER", None),
         ("KEYCLOAK_BACKCHANNEL_URL", None),
         ("KEYCLOAK_CLIENT_SECRET", None),
@@ -104,3 +105,12 @@ def test_settings_keycloak_requires_client_secret(monkeypatch):
 def test_settings_blank_keycloak_values_use_defaults(monkeypatch, name, expected):
     monkeypatch.setenv(name, "")
     assert getattr(Settings(), name) == expected
+
+
+@pytest.mark.parametrize(("value", "expected"), [(None, True), ("true", True), ("false", False)])
+def test_settings_legacy_user_tokens_flag(monkeypatch, value, expected):
+    if value is None:
+        monkeypatch.delenv("LEGACY_USER_TOKENS_ENABLED", raising=False)
+    else:
+        monkeypatch.setenv("LEGACY_USER_TOKENS_ENABLED", value)
+    assert Settings().LEGACY_USER_TOKENS_ENABLED is expected
