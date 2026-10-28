@@ -551,7 +551,7 @@ async def create_detection(
 
     # Authorize before any S3 upload to avoid orphan objects on 403
     pose = cast(Pose, await poses.get(pose_id, strict=True))
-    if pose.camera_id != token_payload.sub:
+    if pose.camera_id != token_payload.camera_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     if not pose.active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Pose is not active.")
@@ -576,35 +576,41 @@ async def create_detection(
     # the pose. Without one, store nothing at all — empty frames must never seed a sequence
     # (the historical placeholder bboxes did, creating phantom sequences).
     if not bbox_strings:
-        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.sub, pose_id)
+        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.camera_id, pose_id)
         if not continuity_sequences:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+        bucket_key = await upload_file(file, token_payload.organization_id, token_payload.camera_id)
         await sequences.lock_pose(pose_id)
         # Uploading and waiting may change which sequences still need continuity.
-        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.sub, pose_id)
+        continuity_sequences = await _get_continuity_sequences(sequences, token_payload.camera_id, pose_id)
         if not continuity_sequences:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         continuity_dets = await _attach_continuity_detections(
-            detections, sequences, continuity_sequences, token_payload.sub, pose_id, bucket_key, effective_recorded_at
+            detections,
+            sequences,
+            continuity_sequences,
+            token_payload.camera_id,
+            pose_id,
+            bucket_key,
+            effective_recorded_at,
         )
         await detections.session.commit()
         return DetectionRead(**continuity_dets[0].model_dump())
 
     # Upload media
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.camera_id)
     crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
     for idx, crop in enumerate(crops):
         # Prefix with the bbox index so byte-identical crops in the same request still get
         # distinct keys; each detection then owns its crop object (safe to delete independently).
         crop_bucket_keys[idx] = await upload_file(
-            crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
+            crop, token_payload.organization_id, token_payload.camera_id, key_prefix=f"crop_{idx}_"
         )
 
     # Keep media I/O outside the lock; serialize matching and every write for this pose.
     await sequences.lock_pose(pose_id)
     created: List[Detection] = []
-    camera = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    camera = cast(Camera, await cameras.get(token_payload.camera_id, strict=True))
     # sequences touched by this request, to mark due for validation (DB-backed queue).
     affected_sequences: Set[int] = set()
 
@@ -614,7 +620,7 @@ async def create_detection(
         others_bboxes = _bbox_list_to_str(other_bbox_strings) if other_bbox_strings else None
         det = await detections.create(
             DetectionCreate(
-                camera_id=token_payload.sub,
+                camera_id=token_payload.camera_id,
                 pose_id=pose_id,
                 bucket_key=bucket_key,
                 crop_bucket_key=crop_bucket_keys[idx],
@@ -629,7 +635,7 @@ async def create_detection(
         # Sequence handling
         # Check if there is a sequence that was seen recently
         candidate_sequences = await sequences.fetch_all(
-            filters=[("camera_id", token_payload.sub), ("pose_id", pose_id)],
+            filters=[("camera_id", token_payload.camera_id), ("pose_id", pose_id)],
             inequality_pair=(
                 "last_seen_at",
                 ">",
@@ -659,7 +665,7 @@ async def create_detection(
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
-                ("camera_id", token_payload.sub),
+                ("camera_id", token_payload.camera_id),
                 ("pose_id", pose_id),
                 ("sequence_id", None),
             ]
@@ -691,7 +697,7 @@ async def create_detection(
                 seq_max_conf = max_conf_from_bboxes(*[d.bbox for d in overlapping_dets])
                 sequence_ = await sequences.create(
                     Sequence(
-                        camera_id=token_payload.sub,
+                        camera_id=token_payload.camera_id,
                         pose_id=pose_id,
                         camera_azimuth=pose.azimuth,
                         sequence_azimuth=cone_azimuth,
@@ -719,8 +725,8 @@ async def create_detection(
     await _attach_continuity_detections(
         detections,
         sequences,
-        await _get_continuity_sequences(sequences, token_payload.sub, pose_id),
-        token_payload.sub,
+        await _get_continuity_sequences(sequences, token_payload.camera_id, pose_id),
+        token_payload.camera_id,
         pose_id,
         bucket_key,
         effective_recorded_at,

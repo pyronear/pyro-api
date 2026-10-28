@@ -18,7 +18,7 @@ from app.services.telemetry import telemetry_client
 router = APIRouter()
 
 
-async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union[int, None] = None) -> User:
+async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union[str, None] = None) -> User:
     # Check for unicity
     if (await users.get_by_login(payload.login, strict=False)) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Login already taken")
@@ -38,7 +38,7 @@ async def _create_user(payload: UserCreate, users: UserCRUD, requester_id: Union
 
     # Assume the requester is the new user if none was specified
     telemetry_client.capture(
-        requester_id if isinstance(requester_id, int) else user.id,
+        requester_id if requester_id is not None else user.id,
         event="user-creation",
         properties={"created_user_id": user.id},
     )

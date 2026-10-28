@@ -84,9 +84,12 @@ def _unauthorized(detail: str, authenticate_value: str) -> HTTPException:
 def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
     payload: Dict[str, Any] = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     try:
-        return TokenPayload.model_validate(payload)
+        token_payload = TokenPayload.model_validate(payload)
     except ValidationError:
         raise _unauthorized("Invalid token payload.", authenticate_value)
+    if not token_payload.sub.isdigit() or int(token_payload.sub) <= 0:
+        raise _unauthorized("Invalid token payload.", authenticate_value)
+    return token_payload
 
 
 def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayload:

@@ -721,7 +721,7 @@ async def test_update_camera_trustable(
     assert mock_cameras.update.await_args.args[0] == 1
     assert mock_cameras.update.await_args.args[1].is_trustable is False
     capture.assert_called_once_with(
-        1,
+        "1",
         event="cameras-update-trustable",
         properties={"camera_id": 1, "is_trustable": False},
     )
