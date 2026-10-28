@@ -5,7 +5,9 @@ import time
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, AsyncGenerator, Dict, Iterable, Union, cast
+from urllib.parse import parse_qsl
 
+import httpx
 import jwt
 import pytest
 import pytest_asyncio
@@ -507,10 +509,32 @@ class StaticJWKSClient:
         return SimpleNamespace(key=KEYCLOAK_PRIVATE_KEY.public_key())
 
 
+KEYCLOAK_CLIENT_SECRET = "pyro-api-test-secret"  # ruff:ignore[hardcoded-password-string]
+
+
+class FakeIntrospection:
+    """Keycloak's introspection endpoint: tokens are active until revoked."""
+
+    def __init__(self) -> None:
+        self.revoked: set = set()
+        self.calls: list = []
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        form = dict(parse_qsl(request.content.decode()))
+        self.calls.append(form)
+        if (form.get("client_id"), form.get("client_secret")) != (settings.KEYCLOAK_CLIENT_ID, KEYCLOAK_CLIENT_SECRET):
+            return httpx.Response(401, json={"error": "invalid_client"})
+        return httpx.Response(200, json={"active": form.get("token") not in self.revoked})
+
+
 @pytest.fixture(autouse=True)
 def keycloak_realm(monkeypatch):
+    introspection = FakeIntrospection()
     monkeypatch.setattr(settings, "KEYCLOAK_ISSUER", KEYCLOAK_ISSUER)
+    monkeypatch.setattr(settings, "KEYCLOAK_CLIENT_SECRET", KEYCLOAK_CLIENT_SECRET)
     monkeypatch.setattr(keycloak, "get_jwks_client", StaticJWKSClient)
+    monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(introspection.handler))
+    return introspection
 
 
 def make_keycloak_token(

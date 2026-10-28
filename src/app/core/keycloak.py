@@ -5,6 +5,7 @@
 
 from typing import Any, Dict, List, Union
 
+import httpx
 import jwt
 from jwt import PyJWK, PyJWKClient, PyJWKClientConnectionError
 
@@ -15,6 +16,7 @@ __all__ = [
     "KEYCLOAK_ROLE_MAPPING",
     "KeycloakUnavailableError",
     "decode_keycloak_token",
+    "introspect_keycloak_token",
     "map_keycloak_roles",
 ]
 
@@ -82,6 +84,40 @@ def decode_keycloak_token(token: str) -> Dict[str, Any]:
         leeway=settings.JWT_LEEWAY_SECONDS,
         options={"require": ["exp", "iat", "iss", "aud", "sub"]},
     )
+
+
+_http_transport: Union[httpx.AsyncBaseTransport, None] = None
+
+
+async def introspect_keycloak_token(token: str) -> bool:
+    """Ask Keycloak whether the token is still active.
+
+    Keycloak answers inactive as soon as the session is revoked, the user is disabled or logs out, even if the
+    token is not expired yet. Called on every request, after the local checks have passed.
+
+    Raises:
+        KeycloakUnavailableError: Keycloak could not answer
+    """
+    if settings.keycloak_introspection_url is None or settings.KEYCLOAK_CLIENT_SECRET is None:
+        raise RuntimeError("KEYCLOAK_ISSUER and KEYCLOAK_CLIENT_SECRET are not configured")
+    try:
+        async with httpx.AsyncClient(timeout=KEYCLOAK_TIMEOUT_SECONDS, transport=_http_transport) as client:
+            response = await client.post(
+                settings.keycloak_introspection_url,
+                data={
+                    "token": token,
+                    "token_type_hint": "access_token",
+                    "client_id": settings.KEYCLOAK_CLIENT_ID,
+                    "client_secret": settings.KEYCLOAK_CLIENT_SECRET,
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError("introspection response is not a JSON object")
+    except (httpx.HTTPError, ValueError) as e:
+        raise KeycloakUnavailableError(f"Token introspection failed: {e}") from e
+    return payload.get("active") is True
 
 
 def map_keycloak_roles(roles: object) -> List[Role]:

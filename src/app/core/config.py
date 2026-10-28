@@ -56,10 +56,11 @@ class Settings(BaseSettings):
     KEYCLOAK_ISSUER: Union[str, None] = os.environ.get("KEYCLOAK_ISSUER") or None
     KEYCLOAK_BACKCHANNEL_URL: Union[str, None] = os.environ.get("KEYCLOAK_BACKCHANNEL_URL") or None
     KEYCLOAK_CLIENT_ID: str = os.environ.get("KEYCLOAK_CLIENT_ID") or "pyro-api"
+    KEYCLOAK_CLIENT_SECRET: Union[str, None] = os.environ.get("KEYCLOAK_CLIENT_SECRET") or None
     JWKS_CACHE_SECONDS: int = int(os.environ.get("JWKS_CACHE_SECONDS") or 3600)
     JWT_LEEWAY_SECONDS: int = int(os.environ.get("JWT_LEEWAY_SECONDS") or 30)
 
-    @field_validator("KEYCLOAK_ISSUER", "KEYCLOAK_BACKCHANNEL_URL")
+    @field_validator("KEYCLOAK_ISSUER", "KEYCLOAK_BACKCHANNEL_URL", "KEYCLOAK_CLIENT_SECRET")
     @classmethod
     def keycloak_value_can_be_blank(cls, v: Union[str, None]) -> Union[str, None]:
         return v or None
@@ -71,6 +72,12 @@ class Settings(BaseSettings):
             return cls.model_fields[info.field_name].default
         return v
 
+    @model_validator(mode="after")
+    def keycloak_needs_client_secret(self) -> "Settings":
+        if self.KEYCLOAK_ISSUER is not None and self.KEYCLOAK_CLIENT_SECRET is None:
+            raise ValueError("KEYCLOAK_CLIENT_SECRET is required when KEYCLOAK_ISSUER is set")
+        return self
+
     @property
     def keycloak_backchannel_url(self) -> Union[str, None]:
         url = self.KEYCLOAK_BACKCHANNEL_URL or self.KEYCLOAK_ISSUER
@@ -80,6 +87,11 @@ class Settings(BaseSettings):
     def keycloak_jwks_url(self) -> Union[str, None]:
         base = self.keycloak_backchannel_url
         return f"{base}/protocol/openid-connect/certs" if base else None
+
+    @property
+    def keycloak_introspection_url(self) -> Union[str, None]:
+        base = self.keycloak_backchannel_url
+        return f"{base}/protocol/openid-connect/token/introspect" if base else None
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5

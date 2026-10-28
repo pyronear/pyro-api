@@ -64,6 +64,7 @@ def test_settings_accept_valid_sequence_windows(caplog):
     ],
 )
 def test_settings_keycloak_urls(monkeypatch, issuer, backchannel_url, expected_base):
+    monkeypatch.setenv("KEYCLOAK_CLIENT_SECRET", "secret")
     for name, value in (("KEYCLOAK_ISSUER", issuer), ("KEYCLOAK_BACKCHANNEL_URL", backchannel_url)):
         if value is None:
             monkeypatch.delenv(name, raising=False)
@@ -72,9 +73,21 @@ def test_settings_keycloak_urls(monkeypatch, issuer, backchannel_url, expected_b
     settings = Settings()
     if expected_base is None:
         assert settings.keycloak_jwks_url is None
+        assert settings.keycloak_introspection_url is None
     else:
         assert settings.keycloak_jwks_url == f"{expected_base}/protocol/openid-connect/certs"
+        assert settings.keycloak_introspection_url == f"{expected_base}/protocol/openid-connect/token/introspect"
     assert issuer == settings.KEYCLOAK_ISSUER
+
+
+def test_settings_keycloak_requires_client_secret(monkeypatch):
+    monkeypatch.setenv("KEYCLOAK_ISSUER", "http://localhost:9310/realms/pyronear")
+    monkeypatch.delenv("KEYCLOAK_CLIENT_SECRET", raising=False)
+    with pytest.raises(ValidationError, match="KEYCLOAK_CLIENT_SECRET"):
+        Settings()
+    monkeypatch.setenv("KEYCLOAK_CLIENT_SECRET", "")
+    with pytest.raises(ValidationError, match="KEYCLOAK_CLIENT_SECRET"):
+        Settings()
 
 
 @pytest.mark.parametrize(
@@ -85,6 +98,7 @@ def test_settings_keycloak_urls(monkeypatch, issuer, backchannel_url, expected_b
         ("JWT_LEEWAY_SECONDS", 30),
         ("KEYCLOAK_ISSUER", None),
         ("KEYCLOAK_BACKCHANNEL_URL", None),
+        ("KEYCLOAK_CLIENT_SECRET", None),
     ],
 )
 def test_settings_blank_keycloak_values_use_defaults(monkeypatch, name, expected):

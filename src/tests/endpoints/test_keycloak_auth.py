@@ -81,3 +81,17 @@ async def test_create_pose_accepts_both_auths(
     assert response.status_code == status_code, print(response.__dict__)
     if status_code == 201:
         assert response.json()["camera_id"] == payload["camera_id"]
+
+
+@pytest.mark.asyncio
+async def test_revoked_session_is_rejected_on_next_request(
+    async_client: AsyncClient, camera_session: AsyncSession, keycloak_realm
+):
+    token = pytest.make_keycloak_token(["viewer"], 1)
+    auth = {"Authorization": f"Bearer {token}"}
+    response = await async_client.get("/cameras/1", headers=auth)
+    assert response.status_code == 200
+    keycloak_realm.revoked.add(token)
+    response = await async_client.get("/cameras/1", headers=auth)
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Token is no longer active."

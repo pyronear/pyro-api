@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 
+import httpx
 import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
@@ -216,3 +217,72 @@ async def test_get_jwt_keycloak_unreachable(monkeypatch, fetch_error):
 )
 def test_map_keycloak_roles(roles, expected):
     assert map_keycloak_roles(roles) == expected
+
+
+@pytest.mark.asyncio
+async def test_keycloak_token_is_introspected(keycloak_realm):
+    token = pytest.make_keycloak_token(roles=["viewer"], organization_id=2)
+    payload = await get_jwt(SecurityScopes(["user"]), _creds(token))
+    assert payload.auth_source == "keycloak"
+    assert len(keycloak_realm.calls) == 1
+    assert keycloak_realm.calls[0]["token"] == token
+    assert keycloak_realm.calls[0]["token_type_hint"] == "access_token"  # ruff:ignore[hardcoded-password-string]
+
+
+@pytest.mark.asyncio
+async def test_revoked_keycloak_token_is_rejected(keycloak_realm):
+    token = pytest.make_keycloak_token()
+    assert (await get_jwt(SecurityScopes(["user"]), _creds(token))).auth_source == "keycloak"
+    keycloak_realm.revoked.add(token)
+    with pytest.raises(HTTPException) as exc_info:
+        await get_jwt(SecurityScopes(["user"]), _creds(token))
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Token is no longer active."
+
+
+@pytest.mark.parametrize(
+    "token_factory",
+    [
+        lambda: pytest.make_keycloak_token(expires_in=-120),
+        lambda: pytest.make_keycloak_token(aud="account"),
+        lambda: pytest.make_keycloak_token(headers={"kid": "rotated-away"}),
+        lambda: pytest.make_keycloak_token(organization_id=None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_locally_rejected_tokens_skip_introspection(keycloak_realm, token_factory):
+    with pytest.raises(HTTPException) as exc_info:
+        await get_jwt(SecurityScopes(["user"]), _creds(token_factory()))
+    assert exc_info.value.status_code == 401
+    assert keycloak_realm.calls == []
+
+
+@pytest.mark.asyncio
+async def test_api_tokens_skip_introspection(keycloak_realm):
+    camera_token = create_access_token({"sub": "1", "scopes": ["camera"], "organization_id": 1})
+    assert (await get_jwt(SecurityScopes(["camera"]), _creds(camera_token))).camera_id == 1
+    assert keycloak_realm.calls == []
+
+
+def _raise_connect_error(request):
+    raise httpx.ConnectError("Connection refused", request=request)
+
+
+@pytest.mark.parametrize(
+    "handler",
+    [
+        _raise_connect_error,
+        lambda _request: httpx.Response(401, json={"error": "invalid_client"}),
+        lambda _request: httpx.Response(502, text="Bad Gateway"),
+        lambda _request: httpx.Response(200, text="<html>maintenance</html>"),
+        lambda _request: httpx.Response(200, json=["not", "an", "object"]),
+    ],
+)
+@pytest.mark.asyncio
+async def test_introspection_failure_is_unavailable(monkeypatch, handler):
+    monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(handler))
+    with pytest.raises(HTTPException) as exc_info:
+        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
+    assert exc_info.value.status_code == 503
+    camera_token = create_access_token({"sub": "1", "scopes": ["camera"], "organization_id": 1})
+    assert (await get_jwt(SecurityScopes(["camera"]), _creds(camera_token))).camera_id == 1

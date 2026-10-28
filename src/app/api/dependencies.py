@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.keycloak import (
     KeycloakUnavailableError,
     decode_keycloak_token,
+    introspect_keycloak_token,
     map_keycloak_roles,
 )
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
@@ -82,6 +83,9 @@ def _unauthorized(detail: str, authenticate_value: str) -> HTTPException:
 
 
 async def _decode_keycloak(token: str, authenticate_value: str) -> TokenPayload:
+    """Local checks first (signature, expiry, issuer, audience, claims), so bad tokens never reach Keycloak.
+    Then introspection, so a revoked session or disabled user is rejected on its next request.
+    """
     if settings.KEYCLOAK_ISSUER is None:
         raise _unauthorized("Invalid token.", authenticate_value)
     try:
@@ -95,6 +99,8 @@ async def _decode_keycloak(token: str, authenticate_value: str) -> TokenPayload:
             })
         except ValidationError:
             raise _unauthorized("Invalid token payload.", authenticate_value)
+        if not await introspect_keycloak_token(token):
+            raise _unauthorized("Token is no longer active.", authenticate_value)
     except KeycloakUnavailableError:
         logger.exception("Keycloak is unavailable")
         raise HTTPException(
