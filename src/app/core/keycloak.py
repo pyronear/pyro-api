@@ -3,6 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import threading
+import time
 from typing import Any, Dict, List, Union
 
 import httpx
@@ -21,6 +23,7 @@ __all__ = [
 ]
 
 KEYCLOAK_TIMEOUT_SECONDS = 5
+KEYCLOAK_FAILURE_BACKOFF_SECONDS = 10
 
 KEYCLOAK_ROLE_MAPPING: Dict[str, Role] = {
     "admin": Role.ADMIN,
@@ -31,6 +34,19 @@ KEYCLOAK_ROLE_MAPPING: Dict[str, Role] = {
 
 class KeycloakUnavailableError(Exception):
     """Keycloak couldn't be reached or answered unexpectedly, so the token's validity is unknown."""
+
+
+_unavailable_until = 0.0
+
+
+def _check_backoff() -> None:
+    if time.monotonic() < _unavailable_until:
+        raise KeycloakUnavailableError("Keycloak unavailable, retrying shortly")
+
+
+def _start_backoff() -> None:
+    global _unavailable_until
+    _unavailable_until = time.monotonic() + KEYCLOAK_FAILURE_BACKOFF_SECONDS
 
 
 _jwks_client: Union[PyJWKClient, None] = None
@@ -54,15 +70,25 @@ def get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
+_fetch_lock = threading.Lock()
+
+
 def _get_signing_key(token: str) -> PyJWK:
+    """PyJWKClient fetches under its own lock with no failure backoff, so during a Keycloak outage every
+    RS256 request would queue for a 5s timeout and starve the threadpool that camera requests share.
+    The backoff is checked after acquiring the lock, so requests queued behind a failed fetch fail fast too.
+    """
     kid = jwt.get_unverified_header(token).get("kid")
     if not isinstance(kid, str):
         raise jwt.InvalidTokenError("Token has no key id")
     client = get_jwks_client()
-    try:
-        return client.get_signing_key(kid)  # ty: ignore[missing-argument]
-    except (PyJWKClientConnectionError, ValueError) as e:
-        raise KeycloakUnavailableError(f"Unable to fetch the Keycloak signing keys: {e}") from e
+    with _fetch_lock:
+        _check_backoff()
+        try:
+            return client.get_signing_key(kid)  # ty: ignore[missing-argument]
+        except (PyJWKClientConnectionError, ValueError) as e:
+            _start_backoff()
+            raise KeycloakUnavailableError(f"Unable to fetch the Keycloak signing keys: {e}") from e
 
 
 def decode_keycloak_token(token: str) -> Dict[str, Any]:
@@ -100,6 +126,7 @@ async def introspect_keycloak_token(token: str) -> bool:
     """
     if settings.keycloak_introspection_url is None or settings.KEYCLOAK_CLIENT_SECRET is None:
         raise RuntimeError("KEYCLOAK_ISSUER and KEYCLOAK_CLIENT_SECRET are not configured")
+    _check_backoff()
     try:
         async with httpx.AsyncClient(timeout=KEYCLOAK_TIMEOUT_SECONDS, transport=_http_transport) as client:
             response = await client.post(
@@ -116,6 +143,7 @@ async def introspect_keycloak_token(token: str) -> bool:
         if not isinstance(payload, dict):
             raise ValueError("introspection response is not a JSON object")
     except (httpx.HTTPError, ValueError) as e:
+        _start_backoff()
         raise KeycloakUnavailableError(f"Token introspection failed: {e}") from e
     return payload.get("active") is True
 

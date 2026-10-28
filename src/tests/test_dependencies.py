@@ -192,16 +192,51 @@ async def test_get_jwt_keycloak_not_configured(monkeypatch):
 )
 @pytest.mark.asyncio
 async def test_get_jwt_keycloak_unreachable(monkeypatch, fetch_error):
+    calls = []
+
     class UnreachableJWKSClient:
-        def get_signing_key(self, _kid):
+        def get_signing_key(self, kid):
+            calls.append(kid)
             raise fetch_error
 
     monkeypatch.setattr(keycloak, "get_jwks_client", UnreachableJWKSClient)
-    with pytest.raises(HTTPException) as exc_info:
-        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
-    assert exc_info.value.status_code == 503
+    for _ in range(3):
+        with pytest.raises(HTTPException) as exc_info:
+            await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
+        assert exc_info.value.status_code == 503
+    assert len(calls) == 1
     camera_token = create_access_token({"sub": "1", "scopes": ["camera"], "organization_id": 1})
     assert (await get_jwt(SecurityScopes(["camera"]), _creds(camera_token))).camera_id == 1
+
+
+@pytest.mark.asyncio
+async def test_get_jwt_keycloak_backoff_expires(monkeypatch):
+    class FlakyJWKSClient:
+        fail = True
+
+        def get_signing_key(self, kid):
+            if FlakyJWKSClient.fail:
+                raise jwt.PyJWKClientConnectionError("Fail to fetch data from the url")
+            return pytest.StaticJWKSClient().get_signing_key(kid)
+
+    clock = [1000.0]
+    monkeypatch.setattr(keycloak.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(keycloak, "get_jwks_client", FlakyJWKSClient)
+    with pytest.raises(HTTPException):
+        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
+    FlakyJWKSClient.fail = False
+    with pytest.raises(HTTPException):
+        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
+    clock[0] += keycloak.KEYCLOAK_FAILURE_BACKOFF_SECONDS + 1
+    assert (await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))).auth_source == "keycloak"
+
+
+@pytest.mark.asyncio
+async def test_malformed_token_does_not_trip_backoff():
+    with pytest.raises(HTTPException) as exc_info:
+        await get_jwt(SecurityScopes(["user"]), _creds("eyJhbGciOiJSUzI1NiJ9.!!!.sig"))
+    assert exc_info.value.status_code == 401
+    assert keycloak.time.monotonic() >= keycloak._unavailable_until
 
 
 @pytest.mark.parametrize(
@@ -280,9 +315,17 @@ def _raise_connect_error(request):
 )
 @pytest.mark.asyncio
 async def test_introspection_failure_is_unavailable(monkeypatch, handler):
-    monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(handler))
-    with pytest.raises(HTTPException) as exc_info:
-        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
-    assert exc_info.value.status_code == 503
+    calls = []
+
+    def counting_handler(request):
+        calls.append(request)
+        return handler(request)
+
+    monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(counting_handler))
+    for _ in range(3):
+        with pytest.raises(HTTPException) as exc_info:
+            await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
+        assert exc_info.value.status_code == 503
+    assert len(calls) == 1
     camera_token = create_access_token({"sub": "1", "scopes": ["camera"], "organization_id": 1})
     assert (await get_jwt(SecurityScopes(["camera"]), _creds(camera_token))).camera_id == 1
