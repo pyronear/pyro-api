@@ -4,12 +4,12 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import Dict, Type, TypeVar, Union, cast
+from typing import Any, Dict, cast
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from httpx import AsyncClient, HTTPStatusError
-from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
+from jwt import ExpiredSignatureError, PyJWTError
 from jwt import decode as jwt_decode
 from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,7 +22,6 @@ from app.db import get_session
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
 
-JWTTemplate = TypeVar("JWTTemplate")
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["get_user_crud"]
@@ -74,37 +73,29 @@ def get_alert_crud(session: AsyncSession = Depends(get_session)) -> AlertCRUD:
     return AlertCRUD(session=session)
 
 
-def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:
-    try:
-        payload = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except (ExpiredSignatureError, InvalidSignatureError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
-    except DecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail="Invalid token.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
-    return payload
+def _unauthorized(detail: str, authenticate_value: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": authenticate_value},
+    )
 
 
-def process_token(
-    token: str, jwt_template: Type[JWTTemplate], authenticate_value: Union[str, None] = None
-) -> JWTTemplate:
-    payload = decode_token(token)
-    # Verify the JWT template
+def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
+    payload: Dict[str, Any] = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     try:
-        return jwt_template(**payload)
+        return TokenPayload.model_validate(payload)
     except ValidationError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid token payload.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
+        raise _unauthorized("Invalid token payload.", authenticate_value)
+
+
+def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayload:
+    try:
+        return _decode_api(token, authenticate_value)
+    except ExpiredSignatureError:
+        raise _unauthorized("Token has expired.", authenticate_value)
+    except PyJWTError:
+        raise _unauthorized("Invalid token.", authenticate_value)
 
 
 def get_jwt(
@@ -112,7 +103,7 @@ def get_jwt(
     token: str = Depends(oauth2_scheme),
 ) -> TokenPayload:
     authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else "Bearer"
-    jwt_payload = process_token(token, TokenPayload)
+    jwt_payload = process_token(token, authenticate_value)
     if set(jwt_payload.scopes).isdisjoint(security_scopes.scopes):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
