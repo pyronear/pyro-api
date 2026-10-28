@@ -4,10 +4,10 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from httpx import AsyncClient, HTTPStatusError
 from jwt import ExpiredSignatureError, PyJWTError
 from jwt import decode as jwt_decode
@@ -19,21 +19,15 @@ from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, Seq
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.db import get_session
-from app.models import UserRole
 from app.schemas.login import TokenPayload
 
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["get_user_crud"]
 
-# Scope definition
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/creds",
-    scopes={
-        UserRole.ADMIN: "Admin rights on all routes.",
-        UserRole.AGENT: "Read access on available information and write access on owned resources.",
-        UserRole.USER: "Read access on available information.",
-    },
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    description="API-issued access token.",
 )
 
 
@@ -103,10 +97,12 @@ def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayloa
 
 def get_jwt(
     security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
+    credentials: Union[HTTPAuthorizationCredentials, None] = Depends(bearer_scheme),
 ) -> TokenPayload:
     authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else "Bearer"
-    jwt_payload = process_token(token, authenticate_value)
+    if credentials is None:
+        raise _unauthorized("Not authenticated", authenticate_value)
+    jwt_payload = process_token(credentials.credentials, authenticate_value)
     if set(jwt_payload.scopes).isdisjoint(security_scopes.scopes):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
