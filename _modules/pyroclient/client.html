@@ -252,6 +252,8 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_to_str</span><span class="p">(</span><span class="n">coord</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Format string conditionally"""</span>
+    <span class="c1"># Round first so values like 0.9996 dump as "1", not "1.000" (rejected by the API pattern)</span>
+    <span class="n">coord</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">coord</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span>
 
 
