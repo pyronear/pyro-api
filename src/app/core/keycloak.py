@@ -3,13 +3,14 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-import threading
+import asyncio
 import time
 from typing import Any, Dict, List, Union
 
 import httpx
 import jwt
 from jwt import PyJWK, PyJWKClient, PyJWKClientError, PyJWKSetError
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.models import Role
@@ -85,37 +86,38 @@ def get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
-_fetch_lock = threading.Lock()
+_fetch_lock = asyncio.Lock()
 
 
-def _get_signing_key(token: str) -> PyJWK:
+async def _get_signing_key(token: str) -> PyJWK:
     """PyJWKClient fetches under its own lock with no failure backoff, so during a Keycloak outage every
-    RS256 request would queue for a 5s timeout and starve the threadpool that camera requests share.
+    RS256 request would queue for a 5s timeout. They queue on an asyncio lock instead, so waiting requests
+    don't hold the threadpool that camera requests share; only the request fetching uses a thread.
     The backoff is checked after acquiring the lock, so requests queued behind a failed fetch fail fast too.
     """
     kid = jwt.get_unverified_header(token).get("kid")
     if not isinstance(kid, str):
         raise jwt.InvalidTokenError("Token has no key id")
     client = get_jwks_client()
-    with _fetch_lock:
+    async with _fetch_lock:
         _check_backoff()
         try:
-            return client.get_signing_key(kid)  # ty: ignore[missing-argument]
+            return await run_in_threadpool(client.get_signing_key, kid)  # ty: ignore[invalid-argument-type]
         except KeycloakUnavailableError:
             _start_backoff()
             raise
 
 
-def decode_keycloak_token(token: str) -> Dict[str, Any]:
+async def decode_keycloak_token(token: str) -> Dict[str, Any]:
     """Verify a Keycloak access token's signature and claims locally, without asking Keycloak.
 
-    Blocking: the first call, and the hourly key refresh, fetch the realm keys over the network.
+    The first call, and the hourly key refresh, fetch the realm keys over the network.
 
     Raises:
         KeycloakUnavailableError: the realm signing keys could not be fetched
         jwt.PyJWTError: the token is invalid or expired
     """
-    signing_key = _get_signing_key(token)
+    signing_key = await _get_signing_key(token)
     return jwt.decode(
         token,
         signing_key.key,

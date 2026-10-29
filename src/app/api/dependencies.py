@@ -13,7 +13,6 @@ from jwt import ExpiredSignatureError, PyJWTError, get_unverified_header
 from jwt import decode as jwt_decode
 from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.keycloak import (
@@ -90,7 +89,7 @@ async def _decode_keycloak(token: str, authenticate_value: str) -> TokenPayload:
     if settings.KEYCLOAK_ISSUER is None:
         raise _unauthorized("Invalid token.", authenticate_value)
     try:
-        claims = await run_in_threadpool(decode_keycloak_token, token)
+        claims = await decode_keycloak_token(token)
         try:
             token_payload = TokenPayload.model_validate({
                 "sub": claims["sub"],

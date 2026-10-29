@@ -1,8 +1,11 @@
+import asyncio
 import base64
 import hashlib
 import hmac
 import json
+import threading
 
+import anyio
 import httpx
 import jwt
 import pytest
@@ -258,6 +261,29 @@ async def test_get_jwt_keycloak_backoff_expires(monkeypatch):
         await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
     clock[0] += keycloak.KEYCLOAK_FAILURE_BACKOFF_SECONDS + 1
     assert (await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))).auth_source == "keycloak"
+
+
+@pytest.mark.asyncio
+async def test_stalled_key_fetch_holds_one_thread(monkeypatch):
+    release = threading.Event()
+
+    def stalled_fetch():
+        release.wait(5)
+        return pytest.keycloak_jwks
+
+    monkeypatch.setattr(keycloak, "get_jwks_client", _jwks_client(stalled_fetch))
+    threads = anyio.to_thread.current_default_thread_limiter()
+    requests = [
+        asyncio.create_task(get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))) for _ in range(5)
+    ]
+    for _ in range(100):
+        if threads.borrowed_tokens > 0:
+            break
+        await asyncio.sleep(0.01)
+    await asyncio.sleep(0.05)
+    assert threads.borrowed_tokens == 1
+    release.set()
+    assert all(payload.auth_source == "keycloak" for payload in await asyncio.gather(*requests))
 
 
 @pytest.mark.asyncio

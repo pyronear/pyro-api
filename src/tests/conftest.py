@@ -539,6 +539,8 @@ def keycloak_realm(monkeypatch):
     monkeypatch.setattr(settings, "KEYCLOAK_CLIENT_SECRET", KEYCLOAK_CLIENT_SECRET)
     monkeypatch.setattr(keycloak, "get_jwks_client", StaticJWKSClient)
     monkeypatch.setattr(keycloak, "_unavailable_until", 0.0)
+    # A contended asyncio lock binds to the running loop, and each test runs its own
+    monkeypatch.setattr(keycloak, "_fetch_lock", asyncio.Lock())
     monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(introspection.handler))
     return introspection
 
