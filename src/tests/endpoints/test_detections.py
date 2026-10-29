@@ -36,6 +36,7 @@ from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.db import session_factory
 from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
     Alert,
     AlertSequence,
     AnnotationType,
@@ -1165,6 +1166,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_scores=None,
         file=upload,
         crop_files=None,
         detections=detections,
@@ -1200,6 +1202,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_scores=None,
         file=upload_again,
         crop_files=None,
         detections=detections,
@@ -1917,6 +1920,113 @@ async def test_create_detection_sequence_starts_at_earliest_capture_on_backlog_f
     seq = await detection_session.get(Sequence, seq_id)
     assert seq is not None
     assert seq.started_at == earliest_capture
+
+
+@pytest.mark.asyncio
+async def test_create_detection_stores_engine_temporal_score(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """A score computed on the device lands on the sequence with 'engine' provenance; the
+    latest upload wins so the worker always judges the device's most recent verdict, and a
+    frame without one (device failed open) resets the sequence so the API scores it itself."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    for idx, score in enumerate(("[0.15]", "[0.62]")):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "temporal_model_scores": score,
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq = await detection_session.get(Sequence, response.json()["sequence_id"])
+    assert seq is not None
+    assert seq.temporal_model_score == pytest.approx(0.62)
+    assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
+    assert seq.temporal_model_version is None
+    assert seq.validation_due_at is not None  # still queued: the worker applies the threshold
+
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": pose.id, "bboxes": "[(0.12,0.12,0.22,0.22,0.9)]"},
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["sequence_id"] == seq.id
+    await detection_session.refresh(seq)
+    assert seq.temporal_model_score is None
+    assert seq.temporal_api_version is None
+
+
+@pytest.mark.asyncio
+async def test_create_detection_scores_each_bbox_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """Two objects on one frame: each sequence gets the score of its own bbox."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pose.id,
+            "bboxes": "[(0.1,0.1,0.2,0.2,0.9),(0.6,0.6,0.7,0.7,0.8)]",
+            "temporal_model_scores": "[0.62,0.15]",
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+
+    res = await detection_session.exec(select(Sequence).where(Sequence.pose_id == pose.id).order_by(Sequence.id))
+    assert sorted(seq.temporal_model_score for seq in res.all()) == pytest.approx([0.15, 0.62])
+
+
+@pytest.mark.parametrize("scores", ["[-0.1]", "[1.5]", "[nan]", "0.5", "[0.5,0.6]", "[]"])
+@pytest.mark.asyncio
+async def test_create_detection_rejects_invalid_temporal_scores(
+    async_client: AsyncClient, mock_img: bytes, scores: str
+):
+    """Out-of-range or malformed scores fail the pattern; a count mismatch with bboxes is a 422 too."""
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+            "temporal_model_scores": scores,
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
 
 
 @pytest.mark.asyncio
