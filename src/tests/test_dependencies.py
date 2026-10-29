@@ -375,6 +375,16 @@ async def test_api_tokens_skip_introspection(keycloak_realm):
     assert keycloak_realm.calls == []
 
 
+@pytest.mark.asyncio
+async def test_introspection_reuses_one_client(monkeypatch):
+    monkeypatch.setattr(keycloak, "_http_client", None)
+    client = keycloak._get_http_client()
+    assert keycloak._get_http_client() is client
+    await keycloak.close_http_client()
+    assert client.is_closed
+    assert keycloak._http_client is None
+
+
 def _raise_connect_error(request):
     raise httpx.ConnectError("Connection refused", request=request)
 
@@ -397,7 +407,7 @@ async def test_introspection_failure_is_unavailable(monkeypatch, handler):
         calls.append(request)
         return handler(request)
 
-    monkeypatch.setattr(keycloak, "_http_transport", httpx.MockTransport(counting_handler))
+    monkeypatch.setattr(keycloak, "_http_client", httpx.AsyncClient(transport=httpx.MockTransport(counting_handler)))
     for _ in range(3):
         with pytest.raises(HTTPException) as exc_info:
             await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))

@@ -18,6 +18,7 @@ from app.models import Role
 __all__ = [
     "KEYCLOAK_ROLE_MAPPING",
     "KeycloakUnavailableError",
+    "close_http_client",
     "decode_keycloak_token",
     "introspect_keycloak_token",
     "map_keycloak_roles",
@@ -129,7 +130,23 @@ async def decode_keycloak_token(token: str) -> Dict[str, Any]:
     )
 
 
-_http_transport: Union[httpx.AsyncBaseTransport, None] = None
+_http_client: Union[httpx.AsyncClient, None] = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    """One client per process, so introspection reuses its connections to Keycloak."""
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=KEYCLOAK_TIMEOUT_SECONDS)
+    return _http_client
+
+
+async def close_http_client() -> None:
+    """Close the introspection client on shutdown."""
+    global _http_client
+    if _http_client is not None:
+        await _http_client.aclose()
+        _http_client = None
 
 
 async def introspect_keycloak_token(token: str) -> bool:
@@ -145,18 +162,17 @@ async def introspect_keycloak_token(token: str) -> bool:
         raise RuntimeError("KEYCLOAK_ISSUER and KEYCLOAK_CLIENT_SECRET are not configured")
     _check_backoff()
     try:
-        async with httpx.AsyncClient(timeout=KEYCLOAK_TIMEOUT_SECONDS, transport=_http_transport) as client:
-            response = await client.post(
-                settings.keycloak_introspection_url,
-                data={
-                    "token": token,
-                    "token_type_hint": "access_token",
-                    "client_id": settings.KEYCLOAK_CLIENT_ID,
-                    "client_secret": settings.KEYCLOAK_CLIENT_SECRET,
-                },
-            )
-            response.raise_for_status()
-            payload = response.json()
+        response = await _get_http_client().post(
+            settings.keycloak_introspection_url,
+            data={
+                "token": token,
+                "token_type_hint": "access_token",
+                "client_id": settings.KEYCLOAK_CLIENT_ID,
+                "client_secret": settings.KEYCLOAK_CLIENT_SECRET,
+            },
+        )
+        response.raise_for_status()
+        payload = response.json()
         if not isinstance(payload, dict):
             raise ValueError("introspection response is not a JSON object")
     except (httpx.HTTPError, ValueError) as e:
