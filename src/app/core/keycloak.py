@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union
 
 import httpx
 import jwt
-from jwt import PyJWK, PyJWKClient, PyJWKClientConnectionError
+from jwt import PyJWK, PyJWKClient, PyJWKClientError, PyJWKSetError
 
 from app.core.config import settings
 from app.models import Role
@@ -49,6 +49,21 @@ def _start_backoff() -> None:
     _unavailable_until = time.monotonic() + KEYCLOAK_FAILURE_BACKOFF_SECONDS
 
 
+class _RealmJWKSClient(PyJWKClient):
+    """Tells a Keycloak outage apart from an invalid token.
+
+    PyJWT reports a malformed key set with the same exceptions as an unknown `kid`, and lets socket errors
+    raised while reading the response escape. Fetching the key set never involves the token, so every
+    failure here means Keycloak answered badly; an unknown `kid` is raised afterwards and stays a PyJWKClientError.
+    """
+
+    def get_signing_keys(self, refresh: bool = False) -> List[PyJWK]:
+        try:
+            return super().get_signing_keys(refresh)
+        except (PyJWKClientError, PyJWKSetError, OSError, ValueError) as e:
+            raise KeycloakUnavailableError(f"Unable to fetch the Keycloak signing keys: {e}") from e
+
+
 _jwks_client: Union[PyJWKClient, None] = None
 
 
@@ -61,7 +76,7 @@ def get_jwks_client() -> PyJWKClient:
     if _jwks_client is None:
         if settings.keycloak_jwks_url is None:
             raise RuntimeError("KEYCLOAK_ISSUER is not configured")
-        _jwks_client = PyJWKClient(
+        _jwks_client = _RealmJWKSClient(
             settings.keycloak_jwks_url,
             cache_jwk_set=True,
             lifespan=settings.JWKS_CACHE_SECONDS,
@@ -86,9 +101,9 @@ def _get_signing_key(token: str) -> PyJWK:
         _check_backoff()
         try:
             return client.get_signing_key(kid)  # ty: ignore[missing-argument]
-        except (PyJWKClientConnectionError, ValueError) as e:
+        except KeycloakUnavailableError:
             _start_backoff()
-            raise KeycloakUnavailableError(f"Unable to fetch the Keycloak signing keys: {e}") from e
+            raise
 
 
 def decode_keycloak_token(token: str) -> Dict[str, Any]:

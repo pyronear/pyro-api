@@ -183,23 +183,44 @@ async def test_get_jwt_keycloak_not_configured(monkeypatch):
     assert exc_info.value.status_code == 401
 
 
+def _jwks_client(fetch):
+    """The real JWKS client, with the network fetch replaced."""
+
+    class FakeFetchJWKSClient(keycloak._RealmJWKSClient):
+        def fetch_data(self):
+            return fetch()
+
+    client = FakeFetchJWKSClient(f"{pytest.keycloak_issuer}/protocol/openid-connect/certs")
+    return lambda: client
+
+
+def _raise(error):
+    def fetch():
+        raise error
+
+    return fetch
+
+
 @pytest.mark.parametrize(
-    "fetch_error",
+    "fetch",
     [
-        jwt.PyJWKClientConnectionError("Fail to fetch data from the url"),
-        json.JSONDecodeError("Expecting value", "<html>", 0),
+        _raise(jwt.PyJWKClientConnectionError("Fail to fetch data from the url")),
+        _raise(json.JSONDecodeError("Expecting value", "<html>", 0)),
+        _raise(ConnectionResetError("Connection reset by peer")),
+        lambda: ["not", "an", "object"],
+        lambda: {"error": "temporarily_unavailable"},
+        lambda: {"keys": [{"kty": "oct", "k": "c2VjcmV0", "use": "enc", "kid": "enc-key"}]},
     ],
 )
 @pytest.mark.asyncio
-async def test_get_jwt_keycloak_unreachable(monkeypatch, fetch_error):
+async def test_get_jwt_keycloak_unreachable(monkeypatch, fetch):
     calls = []
 
-    class UnreachableJWKSClient:
-        def get_signing_key(self, kid):
-            calls.append(kid)
-            raise fetch_error
+    def counting_fetch():
+        calls.append(1)
+        return fetch()
 
-    monkeypatch.setattr(keycloak, "get_jwks_client", UnreachableJWKSClient)
+    monkeypatch.setattr(keycloak, "get_jwks_client", _jwks_client(counting_fetch))
     for _ in range(3):
         with pytest.raises(HTTPException) as exc_info:
             await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
@@ -210,21 +231,29 @@ async def test_get_jwt_keycloak_unreachable(monkeypatch, fetch_error):
 
 
 @pytest.mark.asyncio
-async def test_get_jwt_keycloak_backoff_expires(monkeypatch):
-    class FlakyJWKSClient:
-        fail = True
+async def test_get_jwt_keycloak_unknown_kid_does_not_trip_backoff(monkeypatch):
+    monkeypatch.setattr(keycloak, "get_jwks_client", _jwks_client(lambda: pytest.keycloak_jwks))
+    with pytest.raises(HTTPException) as exc_info:
+        await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token(headers={"kid": "rotated-away"})))
+    assert exc_info.value.status_code == 401
+    assert (await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))).auth_source == "keycloak"
 
-        def get_signing_key(self, kid):
-            if FlakyJWKSClient.fail:
-                raise jwt.PyJWKClientConnectionError("Fail to fetch data from the url")
-            return pytest.StaticJWKSClient().get_signing_key(kid)
+
+@pytest.mark.asyncio
+async def test_get_jwt_keycloak_backoff_expires(monkeypatch):
+    fail = [True]
+
+    def flaky_fetch():
+        if fail[0]:
+            raise jwt.PyJWKClientConnectionError("Fail to fetch data from the url")
+        return pytest.keycloak_jwks
 
     clock = [1000.0]
     monkeypatch.setattr(keycloak.time, "monotonic", lambda: clock[0])
-    monkeypatch.setattr(keycloak, "get_jwks_client", FlakyJWKSClient)
+    monkeypatch.setattr(keycloak, "get_jwks_client", _jwks_client(flaky_fetch))
     with pytest.raises(HTTPException):
         await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
-    FlakyJWKSClient.fail = False
+    fail[0] = False
     with pytest.raises(HTTPException):
         await get_jwt(SecurityScopes(["user"]), _creds(pytest.make_keycloak_token()))
     clock[0] += keycloak.KEYCLOAK_FAILURE_BACKOFF_SECONDS + 1

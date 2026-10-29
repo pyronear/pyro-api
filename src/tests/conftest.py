@@ -500,6 +500,11 @@ def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str
 KEYCLOAK_ISSUER = "http://keycloak.test/realms/pyronear"
 KEYCLOAK_KID = "test-signing-key"
 KEYCLOAK_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+KEYCLOAK_JWKS = {
+    "keys": [
+        {**jwt.algorithms.RSAAlgorithm.to_jwk(KEYCLOAK_PRIVATE_KEY.public_key(), as_dict=True), "kid": KEYCLOAK_KID}
+    ]
+}
 
 
 class StaticJWKSClient:
@@ -579,6 +584,7 @@ def pytest_configure():
     pytest.make_keycloak_token = make_keycloak_token
     pytest.keycloak_issuer = KEYCLOAK_ISSUER
     pytest.keycloak_private_key = KEYCLOAK_PRIVATE_KEY
+    pytest.keycloak_jwks = KEYCLOAK_JWKS
     pytest.StaticJWKSClient = StaticJWKSClient
     pytest.drain_validation_queue = drain_validation_queue
     # Table
