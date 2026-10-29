@@ -4,37 +4,37 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import logging
-from typing import Dict, Type, TypeVar, Union, cast
+from typing import Any, Dict, Union
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from httpx import AsyncClient, HTTPStatusError
-from jwt import DecodeError, ExpiredSignatureError, InvalidSignatureError
+from jwt import ExpiredSignatureError, PyJWTError, get_unverified_header
 from jwt import decode as jwt_decode
 from pydantic import BaseModel, ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.keycloak import (
+    KeycloakUnavailableError,
+    decode_keycloak_token,
+    introspect_keycloak_token,
+    map_keycloak_roles,
+)
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, SequenceCRUD, UserCRUD, WebhookCRUD
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.db import get_session
-from app.models import User, UserRole
+from app.models import Role
 from app.schemas.login import TokenPayload
 
-JWTTemplate = TypeVar("JWTTemplate")
 logger = logging.getLogger("uvicorn.error")
 
 __all__ = ["get_user_crud"]
 
-# Scope definition
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/creds",
-    scopes={
-        UserRole.ADMIN: "Admin rights on all routes.",
-        UserRole.AGENT: "Read access on available information and write access on owned resources.",
-        UserRole.USER: "Read access on available information.",
-    },
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    description="Keycloak access token, or an API-issued camera token.",
 )
 
 
@@ -74,45 +74,82 @@ def get_alert_crud(session: AsyncSession = Depends(get_session)) -> AlertCRUD:
     return AlertCRUD(session=session)
 
 
-def decode_token(token: str, authenticate_value: Union[str, None] = None) -> Dict[str, str]:
-    try:
-        payload = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except (ExpiredSignatureError, InvalidSignatureError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
-    except DecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail="Invalid token.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
-    return payload
+def _unauthorized(detail: str, authenticate_value: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": authenticate_value},
+    )
 
 
-def process_token(
-    token: str, jwt_template: Type[JWTTemplate], authenticate_value: Union[str, None] = None
-) -> JWTTemplate:
-    payload = decode_token(token)
-    # Verify the JWT template
+async def _decode_keycloak(token: str, authenticate_value: str) -> TokenPayload:
+    """Local checks first (signature, expiry, issuer, audience, claims), so bad tokens never reach Keycloak.
+    Then introspection, so a revoked session or disabled user is rejected on its next request.
+    """
+    if settings.KEYCLOAK_ISSUER is None:
+        raise _unauthorized("Invalid token.", authenticate_value)
     try:
-        return jwt_template(**payload)
+        claims = await decode_keycloak_token(token)
+        try:
+            token_payload = TokenPayload.model_validate({
+                "sub": claims["sub"],
+                "scopes": map_keycloak_roles(claims.get("roles")),
+                "organization_id": claims.get("organization_id"),
+                "auth_source": "keycloak",
+            })
+        except ValidationError:
+            raise _unauthorized("Invalid token payload.", authenticate_value)
+        if not await introspect_keycloak_token(token):
+            raise _unauthorized("Token is no longer active.", authenticate_value)
+    except KeycloakUnavailableError:
+        logger.exception("Keycloak is unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable.",
+        )
+    return token_payload
+
+
+def _decode_api(token: str, authenticate_value: str) -> TokenPayload:
+    payload: Dict[str, Any] = jwt_decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    try:
+        token_payload = TokenPayload.model_validate({**payload, "auth_source": "api"})
     except ValidationError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid token payload.",
-            headers={"WWW-Authenticate": authenticate_value} if authenticate_value else None,
-        )
+        raise _unauthorized("Invalid token payload.", authenticate_value)
+    if not token_payload.sub.isdigit() or int(token_payload.sub) <= 0:
+        raise _unauthorized("Invalid token payload.", authenticate_value)
+    if not settings.LEGACY_USER_TOKENS_ENABLED and token_payload.scopes != [Role.CAMERA]:
+        raise _unauthorized("API-issued user tokens are disabled, sign in with Keycloak.", authenticate_value)
+    return token_payload
 
 
-def get_jwt(
+async def process_token(token: str, authenticate_value: str = "Bearer") -> TokenPayload:
+    """Verify a bearer token and normalize it, whichever issuer it comes from.
+
+    The verification path is picked from the unverified `alg` header, and each path only accepts its own
+    algorithm, so a token can't pick its own key (e.g. an HS256 token signed with the realm public key).
+    """
+    try:
+        alg = get_unverified_header(token).get("alg")
+        if alg == "RS256":
+            return await _decode_keycloak(token, authenticate_value)
+        if alg == settings.JWT_ALGORITHM:
+            return _decode_api(token, authenticate_value)
+    except ExpiredSignatureError:
+        raise _unauthorized("Token has expired.", authenticate_value)
+    except PyJWTError:
+        raise _unauthorized("Invalid token.", authenticate_value)
+    raise _unauthorized("Invalid token.", authenticate_value)
+
+
+async def get_jwt(
     security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
+    credentials: Union[HTTPAuthorizationCredentials, None] = Depends(bearer_scheme),
 ) -> TokenPayload:
     authenticate_value = f'Bearer scope="{security_scopes.scope_str}"' if security_scopes.scopes else "Bearer"
-    jwt_payload = process_token(token, TokenPayload)
+    if credentials is None:
+        raise _unauthorized("Not authenticated", authenticate_value)
+    jwt_payload = await process_token(credentials.credentials, authenticate_value)
     if set(jwt_payload.scopes).isdisjoint(security_scopes.scopes):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -120,16 +157,6 @@ def get_jwt(
             headers={"WWW-Authenticate": authenticate_value},
         )
     return jwt_payload
-
-
-async def get_current_user(
-    security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme),
-    users: UserCRUD = Depends(get_user_crud),
-) -> User:
-    """Dependency to use as fastapi.security.Security with scopes"""
-    token_payload = get_jwt(security_scopes, token)
-    return cast(User, await users.get(token_payload.sub, strict=True))
 
 
 async def dispatch_webhook(url: str, payload: BaseModel) -> None:

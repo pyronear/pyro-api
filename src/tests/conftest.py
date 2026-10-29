@@ -3,12 +3,17 @@ import io
 import os
 import time
 from datetime import datetime, timedelta
-from typing import Any, AsyncGenerator, Dict, cast
+from types import SimpleNamespace
+from typing import Any, AsyncGenerator, Dict, Iterable, Union, cast
+from urllib.parse import parse_qsl
 
+import httpx
+import jwt
 import pytest
 import pytest_asyncio
 import requests
 from botocore.exceptions import ClientError
+from cryptography.hazmat.primitives.asymmetric import rsa
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event, update
 from sqlalchemy.orm import sessionmaker
@@ -16,6 +21,7 @@ from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import login, users
+from app.core import keycloak
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.time import utcnow
@@ -491,9 +497,99 @@ def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str
     return {"Authorization": f"Bearer {token}"}
 
 
+KEYCLOAK_ISSUER = "http://keycloak.test/realms/pyronear"
+KEYCLOAK_KID = "test-signing-key"
+KEYCLOAK_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+KEYCLOAK_JWKS = {
+    "keys": [
+        {**jwt.algorithms.RSAAlgorithm.to_jwk(KEYCLOAK_PRIVATE_KEY.public_key(), as_dict=True), "kid": KEYCLOAK_KID}
+    ]
+}
+
+
+class StaticJWKSClient:
+    def get_signing_key(self, kid: Union[str, None]) -> SimpleNamespace:
+        if kid != KEYCLOAK_KID:
+            raise jwt.PyJWKClientError("Unable to find a signing key that matches the token")
+        return SimpleNamespace(key=KEYCLOAK_PRIVATE_KEY.public_key())
+
+
+KEYCLOAK_CLIENT_SECRET = "pyro-api-test-secret"  # ruff:ignore[hardcoded-password-string]
+
+
+class FakeIntrospection:
+    """Keycloak's introspection endpoint: tokens are active until revoked."""
+
+    def __init__(self) -> None:
+        self.revoked: set = set()
+        self.calls: list = []
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        form = dict(parse_qsl(request.content.decode()))
+        self.calls.append(form)
+        if (form.get("client_id"), form.get("client_secret")) != (settings.KEYCLOAK_CLIENT_ID, KEYCLOAK_CLIENT_SECRET):
+            return httpx.Response(401, json={"error": "invalid_client"})
+        return httpx.Response(200, json={"active": form.get("token") not in self.revoked})
+
+
+@pytest.fixture(autouse=True)
+def keycloak_realm(monkeypatch):
+    introspection = FakeIntrospection()
+    monkeypatch.setattr(settings, "KEYCLOAK_ISSUER", KEYCLOAK_ISSUER)
+    monkeypatch.setattr(settings, "KEYCLOAK_CLIENT_SECRET", KEYCLOAK_CLIENT_SECRET)
+    monkeypatch.setattr(keycloak, "get_jwks_client", StaticJWKSClient)
+    monkeypatch.setattr(keycloak, "_unavailable_until", 0.0)
+    # A contended asyncio lock binds to the running loop, and each test runs its own
+    monkeypatch.setattr(keycloak, "_fetch_lock", asyncio.Lock())
+    monkeypatch.setattr(
+        keycloak, "_http_client", httpx.AsyncClient(transport=httpx.MockTransport(introspection.handler))
+    )
+    return introspection
+
+
+def make_keycloak_token(
+    roles: Iterable[str] = ("viewer",),
+    organization_id: Union[int, str, None] = 1,
+    sub: Union[str, None] = "8f14e45f-ceea-467a-9575-2b5a1e3e1a11",
+    expires_in: int = 300,
+    signing_key: Union[rsa.RSAPrivateKey, None] = None,
+    headers: Union[Dict[str, Any], None] = None,
+    **claims: object,
+) -> str:
+    """Access token shaped like the envdev realm's. Pass a claim as None to leave it out."""
+    now = int(time.time())
+    payload = {
+        "iss": KEYCLOAK_ISSUER,
+        "aud": [settings.KEYCLOAK_CLIENT_ID, "account"],
+        "sub": sub,
+        "iat": now,
+        "exp": now + expires_in,
+        "azp": "new-pyro-platform",
+        "roles": list(roles),
+        "organization_id": organization_id,
+        **claims,
+    }
+    return jwt.encode(
+        {k: v for k, v in payload.items() if v is not None},
+        signing_key or KEYCLOAK_PRIVATE_KEY,
+        algorithm="RS256",
+        headers={"kid": KEYCLOAK_KID, **(headers or {})},
+    )
+
+
+def get_keycloak_token(roles: Iterable[str], organization_id: int, **kwargs: object) -> Dict[str, str]:
+    return {"Authorization": f"Bearer {make_keycloak_token(roles, organization_id, **kwargs)}"}
+
+
 def pytest_configure():
     # api.security patching
     pytest.get_token = get_token
+    pytest.get_keycloak_token = get_keycloak_token
+    pytest.make_keycloak_token = make_keycloak_token
+    pytest.keycloak_issuer = KEYCLOAK_ISSUER
+    pytest.keycloak_private_key = KEYCLOAK_PRIVATE_KEY
+    pytest.keycloak_jwks = KEYCLOAK_JWKS
+    pytest.StaticJWKSClient = StaticJWKSClient
     pytest.drain_validation_queue = drain_validation_queue
     # Table
     pytest.organization_table = [

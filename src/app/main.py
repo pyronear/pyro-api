@@ -21,6 +21,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from app.api.api_v1.router import api_router
+from app.core import keycloak
 from app.core.config import settings
 from app.schemas.base import Status
 from app.services.risk import risk_service
@@ -88,6 +89,7 @@ async def lifespan(_: FastAPI):
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
         await temporal_service.aclose()
+        await keycloak.close_http_client()
 
 
 app = FastAPI(

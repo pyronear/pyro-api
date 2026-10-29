@@ -9,7 +9,7 @@ import secrets
 import socket
 from typing import Union
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["settings"]
@@ -52,6 +52,58 @@ class Settings(BaseSettings):
         # Compose passes an empty value when no secret is configured. Normalize it
         # after settings loading so it cannot replace the generated default.
         return v or secrets.token_urlsafe(32)
+
+    KEYCLOAK_ISSUER: Union[str, None] = os.environ.get("KEYCLOAK_ISSUER") or None
+    KEYCLOAK_BACKCHANNEL_URL: Union[str, None] = os.environ.get("KEYCLOAK_BACKCHANNEL_URL") or None
+    KEYCLOAK_CLIENT_ID: str = os.environ.get("KEYCLOAK_CLIENT_ID") or "pyro-api"
+    KEYCLOAK_CLIENT_SECRET: Union[str, None] = os.environ.get("KEYCLOAK_CLIENT_SECRET") or None
+    JWKS_CACHE_SECONDS: int = int(os.environ.get("JWKS_CACHE_SECONDS") or 3600)
+    JWT_LEEWAY_SECONDS: int = int(os.environ.get("JWT_LEEWAY_SECONDS") or 30)
+    LEGACY_USER_TOKENS_ENABLED: bool = os.environ.get("LEGACY_USER_TOKENS_ENABLED", "").lower() != "false"
+
+    @field_validator(
+        "KEYCLOAK_ISSUER",
+        "KEYCLOAK_BACKCHANNEL_URL",
+        "KEYCLOAK_CLIENT_ID",
+        "KEYCLOAK_CLIENT_SECRET",
+        "JWKS_CACHE_SECONDS",
+        "JWT_LEEWAY_SECONDS",
+        "LEGACY_USER_TOKENS_ENABLED",
+        mode="before",
+    )
+    @classmethod
+    def blank_keycloak_settings_use_defaults(cls, v: object, info: ValidationInfo) -> object:
+        # Compose passes an empty value for every unset variable
+        if v == "" and info.field_name is not None:
+            return cls.model_fields[info.field_name].default
+        return v
+
+    @field_validator("KEYCLOAK_ISSUER")
+    @classmethod
+    def keycloak_issuer_has_no_trailing_slash(cls, v: Union[str, None]) -> Union[str, None]:
+        # Keycloak's `iss` claim never ends with a slash, and it's compared exactly
+        return v.rstrip("/") if v else v
+
+    @model_validator(mode="after")
+    def keycloak_needs_client_secret(self) -> "Settings":
+        if self.KEYCLOAK_ISSUER is not None and self.KEYCLOAK_CLIENT_SECRET is None:
+            raise ValueError("KEYCLOAK_CLIENT_SECRET is required when KEYCLOAK_ISSUER is set")
+        return self
+
+    @property
+    def keycloak_backchannel_url(self) -> Union[str, None]:
+        url = self.KEYCLOAK_BACKCHANNEL_URL or self.KEYCLOAK_ISSUER
+        return url.rstrip("/") if url else None
+
+    @property
+    def keycloak_jwks_url(self) -> Union[str, None]:
+        base = self.keycloak_backchannel_url
+        return f"{base}/protocol/openid-connect/certs" if base else None
+
+    @property
+    def keycloak_introspection_url(self) -> Union[str, None]:
+        base = self.keycloak_backchannel_url
+        return f"{base}/protocol/openid-connect/token/introspect" if base else None
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5

@@ -134,7 +134,7 @@ async def heartbeat(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
-    camera = await cameras.update(token_payload.sub, LastActive(last_active_at=utcnow()))
+    camera = await cameras.update(token_payload.camera_id, LastActive(last_active_at=utcnow()))
     return CameraOut(**camera.model_dump())
 
 
@@ -145,13 +145,13 @@ async def update_image(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
-    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    cam = cast(Camera, await cameras.get(token_payload.camera_id, strict=True))
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.camera_id)
     # If the upload succeeds, delete the previous image
     if isinstance(cam.last_image, str):
         s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
-    camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=utcnow()))
+    camera = await cameras.update(token_payload.camera_id, LastImage(last_image=bucket_key, last_active_at=utcnow()))
     return CameraOut(**camera.model_dump())
 
 
