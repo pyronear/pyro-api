@@ -77,7 +77,7 @@ def test_settings_keycloak_urls(monkeypatch, issuer, backchannel_url, expected_b
     else:
         assert settings.keycloak_jwks_url == f"{expected_base}/protocol/openid-connect/certs"
         assert settings.keycloak_introspection_url == f"{expected_base}/protocol/openid-connect/token/introspect"
-    assert issuer == settings.KEYCLOAK_ISSUER
+    assert (issuer.rstrip("/") if issuer else None) == settings.KEYCLOAK_ISSUER
 
 
 def test_settings_keycloak_requires_client_secret(monkeypatch):

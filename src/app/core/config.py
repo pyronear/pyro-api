@@ -78,6 +78,12 @@ class Settings(BaseSettings):
             return cls.model_fields[info.field_name].default
         return v
 
+    @field_validator("KEYCLOAK_ISSUER")
+    @classmethod
+    def keycloak_issuer_has_no_trailing_slash(cls, v: Union[str, None]) -> Union[str, None]:
+        # Keycloak's `iss` claim never ends with a slash, and it's compared exactly
+        return v.rstrip("/") if v else v
+
     @model_validator(mode="after")
     def keycloak_needs_client_secret(self) -> "Settings":
         if self.KEYCLOAK_ISSUER is not None and self.KEYCLOAK_CLIENT_SECRET is None:
