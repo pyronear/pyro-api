@@ -420,6 +420,44 @@ async def test_matching_uses_latest_real_bbox(async_client, sequence_session, mo
 
 
 @pytest.mark.asyncio
+async def test_matching_prefers_best_overlap_over_most_recent(async_client, sequence_session, monkeypatch):
+    # Two fires on one pose (#662). A plume-wide bbox covers fire B and only touches fire A's last bbox,
+    # within tolerance. Fire A's sequence was seen one second later, so first-match attached the box to it.
+    now = utcnow()
+    fire_a = await sequence_session.get(Sequence, 1)
+    fire_a.last_seen_at = now - timedelta(minutes=4)
+    fire_b = Sequence(
+        camera_id=1,
+        pose_id=1,
+        camera_azimuth=fire_a.camera_azimuth,
+        sequence_azimuth=fire_a.sequence_azimuth,
+        cone_angle=fire_a.cone_angle,
+        started_at=now - timedelta(hours=1),
+        last_seen_at=now - timedelta(minutes=4, seconds=1),
+    )
+    sequence_session.add(fire_b)
+    await sequence_session.commit()
+    fire_b_id = fire_b.id
+    sequence_session.add_all([
+        Detection(camera_id=1, pose_id=1, sequence_id=1, bucket_key="fire-a", bbox="[(0.308,0.524,0.318,0.538,0.21)]"),
+        Detection(camera_id=1, pose_id=1, sequence_id=fire_b_id, bucket_key="fire-b", bbox="[(0.48,0.2,0.6,0.5,0.6)]"),
+    ])
+    await sequence_session.commit()
+    monkeypatch.setattr(detections_api, "upload_file", AsyncMock(side_effect=["giant-frame", "next-frame"]))
+
+    # The giant bbox, then fire B's next bbox: once attached, the giant box must not re-anchor fire A onto B
+    for frame, bbox in [(b"giant", "[(0.348,0.070,0.684,0.524,0.5)]"), (b"next", "[(0.49,0.21,0.61,0.5,0.6)]")]:
+        response = await async_client.post(
+            "/detections",
+            headers=pytest.get_token(1, ["camera"], 1),
+            data={"pose_id": 1, "bboxes": bbox},
+            files={"file": ("frame.jpg", frame, "image/jpeg")},
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["sequence_id"] == fire_b_id, bbox
+
+
+@pytest.mark.asyncio
 async def test_get_camera_by_id_adds_missing_sequence_camera(detection_session: AsyncSession):
     cam_crud = CameraCRUD(detection_session)
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
