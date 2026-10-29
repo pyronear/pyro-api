@@ -61,16 +61,19 @@ class Settings(BaseSettings):
     JWT_LEEWAY_SECONDS: int = int(os.environ.get("JWT_LEEWAY_SECONDS") or 30)
     LEGACY_USER_TOKENS_ENABLED: bool = os.environ.get("LEGACY_USER_TOKENS_ENABLED", "").lower() != "false"
 
-    @field_validator("KEYCLOAK_ISSUER", "KEYCLOAK_BACKCHANNEL_URL", "KEYCLOAK_CLIENT_SECRET")
-    @classmethod
-    def keycloak_value_can_be_blank(cls, v: Union[str, None]) -> Union[str, None]:
-        return v or None
-
     @field_validator(
-        "KEYCLOAK_CLIENT_ID", "JWKS_CACHE_SECONDS", "JWT_LEEWAY_SECONDS", "LEGACY_USER_TOKENS_ENABLED", mode="before"
+        "KEYCLOAK_ISSUER",
+        "KEYCLOAK_BACKCHANNEL_URL",
+        "KEYCLOAK_CLIENT_ID",
+        "KEYCLOAK_CLIENT_SECRET",
+        "JWKS_CACHE_SECONDS",
+        "JWT_LEEWAY_SECONDS",
+        "LEGACY_USER_TOKENS_ENABLED",
+        mode="before",
     )
     @classmethod
     def blank_keycloak_settings_use_defaults(cls, v: object, info: ValidationInfo) -> object:
+        # Compose passes an empty value for every unset variable
         if v == "" and info.field_name is not None:
             return cls.model_fields[info.field_name].default
         return v
