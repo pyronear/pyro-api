@@ -178,7 +178,7 @@ async def proxy_latest_image(
     if image is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     buf = io.BytesIO()
-    image.save(buf, format="JPEG")
+    image.save(buf, format="JPEG", quality=quality)
     return Response(content=buf.getvalue(), media_type="image/jpeg")
 
 
