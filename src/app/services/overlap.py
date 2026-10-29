@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx
 import numpy as np
+from anyio import CapacityLimiter, to_thread
 from pyproj import Geod, Transformer
 from shapely import transform as shapely_transform
 from shapely.geometry import Polygon
@@ -28,6 +29,8 @@ _GEOD = Geod(ellps="WGS84")
 _TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 _TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
 _PairCentroids = Dict[Tuple[int, int], Optional[Tuple[float, float]]]
+# Keep geometry jobs serial per process without blocking unrelated API requests.
+_TRIANGULATION_LIMITER = CapacityLimiter(1)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -413,6 +416,11 @@ def _attach_groups_to_records(
     for row in sequences:
         row["event_groups"] = seq_to_groups.get(row["id"], [(row["id"],)])
         row["event_smoke_locations"] = seq_to_smokes.get(row["id"], [])
+
+
+async def compute_overlap_async(api_sequences: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Run overlap computation in a bounded worker thread."""
+    return await to_thread.run_sync(compute_overlap, api_sequences, limiter=_TRIANGULATION_LIMITER)
 
 
 def compute_overlap(

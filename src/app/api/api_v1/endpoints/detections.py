@@ -51,7 +51,7 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
-from app.services.overlap import compute_overlap, haversine_km
+from app.services.overlap import compute_overlap_async, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -220,13 +220,14 @@ def _build_overlap_records(
     return records
 
 
-def _resolve_groups_and_locations(
+async def _resolve_groups_and_locations(
     records: List[Dict[str, Any]],
     sequence_id: int,
 ) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
         return None
-    row = next((row for row in compute_overlap(records) if row["id"] == int(sequence_id)), None)
+    result = await compute_overlap_async(records)
+    row = next((row for row in result if row["id"] == int(sequence_id)), None)
     if row is None:
         return None
     groups = [tuple(g) for g in row["event_groups"]]
@@ -462,7 +463,7 @@ async def _attach_sequence_to_alert(
 
     # Build records for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
-    resolved = _resolve_groups_and_locations(records, int(sequence_.id))
+    resolved = await _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:
         return None
     groups, group_locations = resolved
