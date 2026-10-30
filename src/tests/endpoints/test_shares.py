@@ -45,7 +45,7 @@ async def test_create_share(
     status_detail: Union[str, None],
 ):
     response = await async_client.post("/shares", json={"alert_id": alert_id}, headers=_auth(user_idx))
-    assert response.status_code == status_code, print(response.__dict__)
+    assert response.status_code == status_code, response.text
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code == 201:
@@ -82,7 +82,7 @@ async def test_fetch_shares(
 ):
     params = {} if alert_id is None else {"alert_id": alert_id}
     response = await async_client.get("/shares", params=params, headers=_auth(user_idx))
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.text
     payload = response.json()
     assert [entry["id"] for entry in payload] == expected_ids
     statuses = {1: "active", 2: "expired", 3: "revoked", 4: "active"}
@@ -118,7 +118,7 @@ async def test_revoke_share(
     status_detail: Union[str, None],
 ):
     response = await async_client.delete(f"/shares/{share_id}", headers=_auth(user_idx))
-    assert response.status_code == status_code, print(response.__dict__)
+    assert response.status_code == status_code, response.text
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code == 200:
@@ -133,7 +133,7 @@ async def test_revoke_share(
 @pytest.mark.asyncio
 async def test_public_shared_alert(async_client: AsyncClient, share_session: AsyncSession):
     response = await async_client.get(f"/shares/public/{pytest.share_tokens[0]}")
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "no-store"
     payload = response.json()
     assert set(payload) == {"started_at", "last_seen_at", "lat", "lon", "expires_at", "sequences"}
@@ -174,16 +174,19 @@ async def test_public_shared_alert_unavailable(
     async_client: AsyncClient, share_session: AsyncSession, token: str, status_code: int, status_detail: str
 ):
     response = await async_client.get(f"/shares/public/{token}")
-    assert response.status_code == status_code, print(response.__dict__)
+    assert response.status_code == status_code, response.text
     assert response.json()["detail"] == status_detail
 
 
 @pytest.mark.asyncio
 async def test_public_shared_alert_after_revoke(async_client: AsyncClient, share_session: AsyncSession):
     token = pytest.share_tokens[0]
-    assert (await async_client.get(f"/shares/public/{token}")).status_code == 200
-    assert (await async_client.delete("/shares/1", headers=_auth(1))).status_code == 200
-    assert (await async_client.get(f"/shares/public/{token}")).status_code == 410
+    before = await async_client.get(f"/shares/public/{token}")
+    assert before.status_code == 200
+    revoked = await async_client.delete("/shares/1", headers=_auth(1))
+    assert revoked.status_code == 200
+    after = await async_client.get(f"/shares/public/{token}")
+    assert after.status_code == 410
 
 
 @pytest.mark.asyncio
@@ -209,10 +212,11 @@ async def test_public_shared_alert_skips_continuity_frames(async_client: AsyncCl
 @pytest.mark.asyncio
 async def test_deleting_shared_alert_removes_its_shares(async_client: AsyncClient, share_session: AsyncSession):
     response = await async_client.delete("/alerts/1", headers=_auth(0))
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.text
     remaining = (await share_session.exec(select(AlertShare.id))).all()
     assert sorted(remaining) == [4]
-    assert (await async_client.get(f"/shares/public/{pytest.share_tokens[0]}")).status_code == 404
+    public = await async_client.get(f"/shares/public/{pytest.share_tokens[0]}")
+    assert public.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -230,6 +234,6 @@ async def test_merge_moves_shares_to_surviving_alert(async_client: AsyncClient, 
     shares = (await share_session.exec(select(AlertShare).where(AlertShare.organization_id == 1))).all()
     assert {share.alert_id for share in shares} == {target.id}
     response = await async_client.get(f"/shares/public/{pytest.share_tokens[0]}")
-    assert response.status_code == 200, print(response.__dict__)
+    assert response.status_code == 200, response.text
     # The merged alert carries the absorbed alert's sequence
     assert len(response.json()["sequences"]) == 1
