@@ -4,6 +4,8 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.models import User, UserRole
+
 
 @pytest.mark.parametrize(
     ("user_idx", "payload", "status_code", "status_detail"),
@@ -172,6 +174,95 @@ async def test_delete_user(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+
+
+@pytest.mark.parametrize(
+    ("user_idx", "user_id", "payload", "status_code", "status_detail"),
+    [
+        (None, 2, {"role": "user"}, 401, "Not authenticated"),
+        (1, 3, {"role": "agent"}, 403, "Incompatible token scope."),
+        (2, 2, {"role": "user"}, 403, "Incompatible token scope."),
+        (0, 0, {"role": "user"}, 422, None),
+        (0, 2, {"role": "admin"}, 422, None),
+        (0, 2, {}, 422, None),
+        (0, 400, {"role": "user"}, 404, "Table User has no corresponding entry."),
+        (0, 1, {"role": "user"}, 403, "Admins cannot change their own role: it would lock them out"),
+        (0, 2, {"role": "camera"}, 422, None),
+        (0, 2, {"role": "user"}, 200, None),
+        (0, 3, {"role": "agent"}, 200, None),
+        (0, 3, {"role": "user"}, 200, None),  # setting role to the actual role
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_user_role(
+    async_client: AsyncClient,
+    user_session: AsyncSession,
+    user_idx: Union[int, None],
+    user_id: int,
+    payload: Dict[str, Any],
+    status_code: int,
+    status_detail: Union[str, None],
+):
+    auth = None
+    if isinstance(user_idx, int):
+        auth = pytest.get_token(
+            pytest.user_table[user_idx]["id"],
+            pytest.user_table[user_idx]["role"].split(),
+            pytest.user_table[user_idx]["organization_id"],
+        )
+
+    response = await async_client.patch(f"/users/{user_id}/role", json=payload, headers=auth)
+    assert response.status_code == status_code, print(response.__dict__)
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if response.status_code // 100 == 2:
+        expected = next(entry for entry in pytest.user_table if entry["id"] == user_id)
+        assert response.json() == {**expected, "role": payload["role"]}
+
+
+@pytest.mark.asyncio
+async def test_update_user_role_camera_token(async_client: AsyncClient, user_session: AsyncSession):
+    auth = pytest.get_token(1, ["camera"], 1)
+    response = await async_client.patch("/users/2/role", json={"role": "user"}, headers=auth)
+    assert response.status_code == 403, print(response.__dict__)
+    assert response.json()["detail"] == "Incompatible token scope."
+
+
+@pytest.mark.asyncio
+async def test_update_user_role_admin_target(async_client: AsyncClient, user_session: AsyncSession):
+    # It promote the user 2 to admin in the DB :  then check that the endpoint refuses to touch it
+    db_user = await user_session.get(User, 2)
+    db_user.role = UserRole.ADMIN
+    user_session.add(db_user)
+    await user_session.commit()
+
+    auth = pytest.get_token(1, ["admin"], 1)
+    response = await async_client.patch("/users/2/role", json={"role": "user"}, headers=auth)
+    assert response.status_code == 403, print(response.__dict__)
+    assert response.json()["detail"] == "Cannot change an admin's role"
+
+
+@pytest.mark.asyncio
+async def test_update_user_role_takes_effect_on_next_login(async_client: AsyncClient, user_session: AsyncSession):
+    auth = pytest.get_token(1, ["admin"], 1)
+
+    async def login_scopes(login: str, password: str) -> list:
+        creds = await async_client.post("/login/creds", data={"username": login, "password": password})
+        token = creds.json()["access_token"]
+        validate = await async_client.get("/login/validate", headers={"Authorization": f"Bearer {token}"})
+        return validate.json()["scopes"]
+
+    assert await login_scopes("third_login", "third_pwd") == ["user"]
+
+    # promote and then check that the patch is persistent
+    patch = await async_client.patch("/users/3/role", json={"role": "agent"}, headers=auth)
+    assert patch.status_code == 200, print(patch.__dict__)
+    assert patch.json()["role"] == "agent"
+
+    get = await async_client.get("/users/3", headers=auth)
+    assert get.json()["role"] == "agent"
+
+    assert await login_scopes("third_login", "third_pwd") == ["agent"]
 
 
 @pytest.mark.parametrize(
