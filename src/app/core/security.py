@@ -3,6 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import hashlib
+import secrets
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
@@ -12,7 +14,7 @@ import jwt
 from app.core.config import settings
 from app.core.time import utcnow
 
-__all__ = ["create_access_token", "hash_password", "verify_password"]
+__all__ = ["create_access_token", "generate_share_token", "hash_password", "hash_share_token", "verify_password"]
 
 
 def create_access_token(content: Dict[str, Any], expires_minutes: Optional[int] = None) -> str:
@@ -40,3 +42,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(_encode_password(password), bcrypt.gensalt()).decode("utf-8")
+
+
+def generate_share_token() -> str:
+    """Random 256-bit URL-safe token, never derived from the shared resource."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_share_token(token: str) -> str:
+    # A fast hash is enough: the token is high-entropy random, and lookups go by hash.
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

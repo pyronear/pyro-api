@@ -6,6 +6,7 @@
 import asyncio
 import contextlib
 import logging
+import re
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -19,6 +20,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
+from sentry_sdk.types import Event, Hint
 
 from app.api.api_v1.router import api_router
 from app.core.config import settings
@@ -29,10 +31,27 @@ from app.services.validation import validation_worker_loop
 
 logger = logging.getLogger("uvicorn.error")
 
+_SHARE_TOKEN_PATTERN = re.compile(r"(/shares/public/)[^/?#]+")
+
+
+def scrub_share_token(event: Event, _hint: Hint) -> Event:
+    """Keep public share tokens out of Sentry: they grant access to an alert until they expire."""
+    request = event.get("request")
+    url = request.get("url") if isinstance(request, dict) else None
+    if isinstance(request, dict) and isinstance(url, str) and "/shares/public/" in url:
+        request["url"] = _SHARE_TOKEN_PATTERN.sub(r"\1[Filtered]", url)
+        # The page that opened the link carries the token in its own URL
+        headers = request.get("headers")
+        if isinstance(headers, dict):
+            request["headers"] = {k: v for k, v in headers.items() if k.lower() != "referer"}
+    return event
+
+
 # Sentry
 if isinstance(settings.SENTRY_DSN, str):
     sentry_sdk.init(
         settings.SENTRY_DSN,
+        before_send=scrub_share_token,
         enable_tracing=False,
         traces_sample_rate=0.0,
         integrations=[

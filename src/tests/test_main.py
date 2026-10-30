@@ -13,7 +13,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from app.main import _risk_refresh_loop, _seconds_until_next_utc_hour, lifespan
+from app.main import _risk_refresh_loop, _seconds_until_next_utc_hour, lifespan, scrub_share_token
 
 
 class _CancelledTask:
@@ -169,3 +169,18 @@ async def test_sampling_headers_are_exposed_to_browsers(async_client: AsyncClien
     response = await async_client.get("/status", headers={"Origin": "http://localhost:5173"})
     exposed = {h.strip() for h in response.headers.get("access-control-expose-headers", "").split(",")}
     assert {"X-Sampled-Total", "X-Sampled-Truncated"} <= exposed
+
+
+def test_scrub_share_token():
+    event = {
+        "request": {
+            "url": "http://api.localhost:8050/api/v1/shares/public/secret-token?foo=bar",
+            "headers": {"Referer": "https://platform.localhost/share/secret-token", "Accept": "*/*"},
+        }
+    }
+    scrubbed = scrub_share_token(event, {})
+    assert scrubbed["request"]["url"] == "http://api.localhost:8050/api/v1/shares/public/[Filtered]?foo=bar"
+    assert scrubbed["request"]["headers"] == {"Accept": "*/*"}
+    # Other routes are left untouched
+    other = {"request": {"url": "http://api.localhost:8050/api/v1/alerts/1", "headers": {"Referer": "x"}}}
+    assert scrub_share_token(other, {}) == other
