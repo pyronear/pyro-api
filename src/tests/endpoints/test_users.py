@@ -5,6 +5,10 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def _without_hash(user: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in user.items() if k != "hashed_password"}
+
+
 @pytest.mark.parametrize(
     ("user_idx", "payload", "status_code", "status_detail"),
     [
@@ -31,6 +35,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
             {"login": "first_login", "password": "bar", "role": "user", "organization_id": 1},
             409,
             "Login already taken",
+        ),
+        (
+            0,
+            {"login": "pyro_user", "password": "bar", "role": "user", "organization_id": 1},
+            201,
+            None,
         ),
         (
             0,
@@ -64,8 +74,8 @@ async def test_create_user(
     if response.status_code // 100 == 2:
         assert {k: v for k, v in response.json().items() if k != "created_at"} == {
             "login": payload["login"],
-            "hashed_password": f"hashed_{payload['password']}",
             "role": payload["role"],
+            "organization_id": payload["organization_id"],
             "id": max(entry["id"] for entry in pytest.user_table) + 1,
         }
 
@@ -104,7 +114,7 @@ async def test_get_user(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == pytest.user_table[expected_idx]
+        assert response.json() == _without_hash(pytest.user_table[expected_idx])
 
 
 @pytest.mark.parametrize(
@@ -136,7 +146,7 @@ async def test_fetch_users(
     if isinstance(status_detail, str):
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
-        assert response.json() == pytest.user_table
+        assert response.json() == [_without_hash(user) for user in pytest.user_table]
 
 
 @pytest.mark.parametrize(
@@ -213,7 +223,6 @@ async def test_update_user_password(
             "id": pytest.user_table[expected_idx]["id"],
             "created_at": pytest.user_table[expected_idx]["created_at"],
             "login": pytest.user_table[expected_idx]["login"],
-            "hashed_password": f"hashed_{payload['password']}",
             "role": pytest.user_table[expected_idx]["role"],
             "organization_id": pytest.user_table[expected_idx]["organization_id"],
         }
