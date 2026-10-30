@@ -24,6 +24,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import update
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -37,7 +38,7 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
+from app.models import Alert, AlertSequence, AlertShare, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
@@ -343,6 +344,13 @@ async def _merge_alerts(
 
     delete_links_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(list(absorbed_ids)))
     await session.exec(delete_links_stmt)
+    # Public links follow the merge, otherwise a link sent just before it would die with the absorbed alert
+    repoint_shares_stmt: Any = (
+        update(AlertShare)
+        .where(cast(Any, AlertShare.alert_id).in_(list(absorbed_ids)))
+        .values(alert_id=target_alert_id)
+    )
+    await session.exec(repoint_shares_stmt)
     delete_alerts_stmt: Any = delete(Alert).where(cast(Any, Alert.id).in_(list(absorbed_ids)))
     await session.exec(delete_alerts_stmt)
     await session.flush()

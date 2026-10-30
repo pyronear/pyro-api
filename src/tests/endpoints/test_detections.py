@@ -400,6 +400,23 @@ async def test_latest_bbox_batch_skips_continuity_and_breaks_ties(sequence_sessi
     assert await DetectionCRUD(sequence_session).get_latest_bboxes([]) == {}
 
 
+@pytest.mark.asyncio
+async def test_latest_bboxes_per_sequence_limits_and_orders(sequence_session, select_queries):
+    now = utcnow()
+    sequence_session.add_all([
+        Detection(
+            camera_id=1, pose_id=1, sequence_id=1, bucket_key=key, bbox=box, created_at=now + timedelta(seconds=age)
+        )
+        for key, box, age in [("old", "[(.1,.1,.2,.2,.1)]", 0), ("new", "[(.2,.2,.3,.3,.9)]", 0), ("empty", "[]", 1)]
+    ])
+    await sequence_session.commit()
+    latest = await DetectionCRUD(sequence_session).fetch_latest_with_bbox([1, 2], limit_per_sequence=2)
+    assert set(latest) == {1}
+    assert [det.bucket_key for det in latest[1]] == ["new", "old"]
+    assert sum("FROM detections" in sql for sql, _ in select_queries) == 1
+    assert await DetectionCRUD(sequence_session).fetch_latest_with_bbox([], limit_per_sequence=2) == {}
+
+
 @pytest.mark.parametrize("stored_bbox", [None, "[]", "invalid", "[(.1,.1,.2,.2,.9)]"])
 @pytest.mark.asyncio
 async def test_matching_uses_latest_real_bbox(async_client, sequence_session, monkeypatch, stored_bbox):

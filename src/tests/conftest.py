@@ -17,11 +17,23 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints import login, users
 from app.core.config import settings
-from app.core.security import create_access_token
+from app.core.security import create_access_token, hash_share_token
 from app.core.time import utcnow
 from app.db import engine, session_factory
 from app.main import app
-from app.models import Camera, Detection, OcclusionMask, Organization, Pose, Sequence, User, Webhook
+from app.models import (
+    Alert,
+    AlertSequence,
+    AlertShare,
+    Camera,
+    Detection,
+    OcclusionMask,
+    Organization,
+    Pose,
+    Sequence,
+    User,
+    Webhook,
+)
 from app.services import storage
 from app.services.storage import s3_service
 from app.services.validation import process_next_due_validation
@@ -233,6 +245,76 @@ SEQ_TABLE = [
         "temporal_model_version": None,
         "temporal_api_version": None,
         "is_validated": True,
+    },
+]
+
+ALERT_TABLE = [
+    {
+        "id": 1,
+        "organization_id": 1,
+        "lat": 3.7,
+        "lon": -45.1,
+        "started_at": datetime.strptime("2023-11-07T15:08:19.226673", dt_format),
+        "last_seen_at": datetime.strptime("2023-11-07T15:28:19.226673", dt_format),
+    },
+    {
+        "id": 2,
+        "organization_id": 2,
+        "lat": None,
+        "lon": None,
+        "started_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+        "last_seen_at": datetime.strptime("2023-11-07T16:08:19.226673", dt_format),
+    },
+]
+
+ALERT_SEQUENCE_TABLE = [
+    {"alert_id": 1, "sequence_id": 1},
+    {"alert_id": 2, "sequence_id": 2},
+]
+
+# Plaintext tokens of the seeded share links: only their hashes are stored
+SHARE_TOKENS = ["active-token-org-1", "expired-token-org-1", "revoked-token-org-1", "active-token-org-2"]
+
+SHARE_TABLE = [
+    {
+        "id": 1,
+        "alert_id": 1,
+        "organization_id": 1,
+        "created_by": 2,
+        "token_hash": hash_share_token(SHARE_TOKENS[0]),
+        "created_at": datetime.strptime("2023-11-07T15:30:00.000000", dt_format),
+        "expires_at": datetime.strptime("2100-01-01T00:00:00.000000", dt_format),
+        "revoked_at": None,
+    },
+    {
+        "id": 2,
+        "alert_id": 1,
+        "organization_id": 1,
+        "created_by": 2,
+        "token_hash": hash_share_token(SHARE_TOKENS[1]),
+        "created_at": datetime.strptime("2023-11-07T15:31:00.000000", dt_format),
+        "expires_at": datetime.strptime("2023-11-09T15:31:00.000000", dt_format),
+        "revoked_at": None,
+    },
+    {
+        "id": 3,
+        "alert_id": 1,
+        "organization_id": 1,
+        "created_by": 1,
+        "token_hash": hash_share_token(SHARE_TOKENS[2]),
+        "created_at": datetime.strptime("2023-11-07T15:32:00.000000", dt_format),
+        "expires_at": datetime.strptime("2100-01-01T00:00:00.000000", dt_format),
+        "revoked_at": datetime.strptime("2023-11-07T15:40:00.000000", dt_format),
+    },
+    {
+        "id": 4,
+        "alert_id": 2,
+        "organization_id": 2,
+        "created_by": 3,
+        "token_hash": hash_share_token(SHARE_TOKENS[3]),
+        "created_at": datetime.strptime("2023-11-07T16:10:00.000000", dt_format),
+        "expires_at": datetime.strptime("2100-01-01T00:00:00.000000", dt_format),
+        "revoked_at": None,
     },
 ]
 
@@ -485,6 +567,39 @@ async def detection_session(pose_session: AsyncSession, sequence_session: AsyncS
         pass
 
 
+@pytest_asyncio.fixture(loop_scope="session")
+async def alert_session(detection_session: AsyncSession):
+    for entry in ALERT_TABLE:
+        detection_session.add(Alert(**entry))
+    await detection_session.commit()
+    for entry in ALERT_SEQUENCE_TABLE:
+        detection_session.add(AlertSequence(**entry))
+    await detection_session.commit()
+    await detection_session.exec(
+        text(
+            f"ALTER SEQUENCE {Alert.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in ALERT_TABLE) + 1}"
+        )
+    )
+    await detection_session.commit()
+    yield detection_session
+    await detection_session.rollback()
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def share_session(alert_session: AsyncSession):
+    for entry in SHARE_TABLE:
+        alert_session.add(AlertShare(**entry))
+    await alert_session.commit()
+    await alert_session.exec(
+        text(
+            f"ALTER SEQUENCE {AlertShare.__tablename__}_id_seq RESTART WITH {max(entry['id'] for entry in SHARE_TABLE) + 1}"
+        )
+    )
+    await alert_session.commit()
+    yield alert_session
+    await alert_session.rollback()
+
+
 def get_token(access_id: int, scopes: str, organizationid: int) -> Dict[str, str]:
     token_data = {"sub": str(access_id), "scopes": scopes, "organization_id": organizationid}
     token = create_access_token(token_data)
@@ -524,6 +639,15 @@ def pytest_configure():
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in SEQ_TABLE
     ]
+    pytest.alert_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in ALERT_TABLE
+    ]
+    pytest.share_table = [
+        {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
+        for entry in SHARE_TABLE
+    ]
+    pytest.share_tokens = SHARE_TOKENS
     pytest.webhook_table = [
         {k: datetime.strftime(v, dt_format) if isinstance(v, datetime) else v for k, v in entry.items()}
         for entry in WEBHOOK_TABLE

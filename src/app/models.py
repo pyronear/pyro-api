@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.time import utcnow
 from app.core.types import ResourceName
 
-__all__ = ["Alert", "AlertSequence", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
+__all__ = ["Alert", "AlertSequence", "AlertShare", "Camera", "Detection", "Organization", "Pose", "Sequence", "User"]
 
 
 class UserRole(str, Enum):
@@ -239,6 +239,25 @@ class AlertSequence(SQLModel, table=True):
     __tablename__ = "alerts_sequences"
     alert_id: int = Field(primary_key=True, foreign_key="alerts.id")
     sequence_id: int = Field(primary_key=True, foreign_key="sequences.id")
+
+
+class AlertShare(SQLModel, table=True):
+    """A link granting read access to an alert outside its organization.
+
+    Only the SHA-256 of the token is stored, so a link cannot be shown again after creation.
+    """
+
+    __tablename__ = "alert_shares"
+    id: int = Field(None, primary_key=True)
+    # Cascade: alerts are also deleted by bulk statements (merges, emptied alerts) that skip the ORM.
+    alert_id: int = Field(..., foreign_key="alerts.id", ondelete="CASCADE", index=True, nullable=False)
+    # Organization owning the alert, copied at creation so listing and cancelling need no join
+    organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
+    created_by: Union[int, None] = Field(None, foreign_key="users.id", ondelete="SET NULL", nullable=True)
+    token_hash: str = Field(..., max_length=64, unique=True, index=True, nullable=False)
+    created_at: datetime = Field(default_factory=utcnow, nullable=False)
+    expires_at: datetime = Field(..., nullable=False)
+    revoked_at: Union[datetime, None] = Field(None, nullable=True)
 
 
 class Organization(SQLModel, table=True):

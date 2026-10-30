@@ -8,3 +8,4 @@ from .organizations import *
 from .sequences import *
 from .webhooks import *
 from .alerts import *
+from .shares import *
