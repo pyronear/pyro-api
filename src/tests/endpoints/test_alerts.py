@@ -6,8 +6,8 @@
 import csv
 import io
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple, cast
-from unittest.mock import AsyncMock
+from typing import Any, Dict, List, Tuple, Union, cast
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
 from httpx import AsyncClient
@@ -322,6 +322,134 @@ async def test_alerts_count_unauthenticated(async_client: AsyncClient):
 
     resp = await async_client.get("/alerts/all/fromdate/count?from_date=2019-01-01")
     assert resp.status_code == 401, resp.text
+
+
+async def _create_alert_started_at(
+    session: AsyncSession, org_id: int, started_at: datetime, camera_id: Union[int, None] = None, max_conf: float = 0.9
+) -> Alert:
+    alert = Alert(organization_id=org_id, started_at=started_at, last_seen_at=started_at + timedelta(minutes=5))
+    session.add(alert)
+    await session.commit()
+    await session.refresh(alert)
+    if camera_id is not None:
+        seq = Sequence(
+            camera_id=camera_id,
+            pose_id=None,
+            camera_azimuth=180.0,
+            sequence_azimuth=175.0,
+            cone_angle=5.0,
+            is_wildfire=None,
+            started_at=started_at,
+            last_seen_at=started_at + timedelta(minutes=5),
+            max_conf=max_conf,
+        )
+        session.add(seq)
+        await session.commit()
+        await session.refresh(seq)
+        session.add(AlertSequence(alert_id=alert.id, sequence_id=seq.id))
+        await session.commit()
+    return alert
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day(async_client: AsyncClient, camera_session: AsyncSession):
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    day = datetime(2025, 7, 14)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=10))
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=23, minutes=30))
+    await _create_alert_started_at(camera_session, 1, day + timedelta(days=2, hours=12))
+    await _create_alert_started_at(camera_session, 2, day + timedelta(hours=10))
+    period = "from_date=2025-07-14&to_date=2025-07-16"
+
+    # Agent: its organization only, days without alerts are omitted
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == [{"date": "2025-07-14", "count": 2}, {"date": "2025-07-16", "count": 1}]
+    # Consistent with the single-date count
+    resp = await async_client.get("/alerts/all/fromdate/count?from_date=2025-07-14", headers=agent_auth)
+    assert resp.json() == {"count": 2}
+
+    # Admin: every organization
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=admin_auth)
+    assert resp.json() == [{"date": "2025-07-14", "count": 3}, {"date": "2025-07-16", "count": 1}]
+
+    # 23:30 UTC is already the next day in Paris (UTC+2 in July)
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}&tz=Europe/Paris", headers=agent_auth)
+    assert resp.json() == [
+        {"date": "2025-07-14", "count": 1},
+        {"date": "2025-07-15", "count": 1},
+        {"date": "2025-07-16", "count": 1},
+    ]
+
+    resp = await async_client.get(
+        "/alerts/all/fromdate/count-per-day?from_date=2025-07-15&to_date=2025-07-15", headers=agent_auth
+    )
+    assert resp.json() == []
+
+
+@pytest.mark.parametrize(
+    ("query", "status_code"),
+    [
+        ("from_date=2025-07-16&to_date=2025-07-14", 422),
+        ("from_date=2025-07-01&to_date=2025-09-01", 422),  # 63 days
+        ("from_date=2025-07-01&to_date=2025-08-31", 200),  # 62 days
+        ("from_date=0001-01-01&to_date=9999-12-31", 422),  # rejected before listing the days
+        ("from_date=2025-07-01&to_date=2025-07-31&tz=Mars/Olympus_Mons", 422),
+        ("from_date=2025-07-01", 422),
+    ],
+)
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_validation(
+    async_client: AsyncClient, camera_session: AsyncSession, query: str, status_code: int
+):
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{query}", headers=agent_auth)
+    assert resp.status_code == status_code, resp.text
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_unauthenticated(async_client: AsyncClient):
+    resp = await async_client.get("/alerts/all/fromdate/count-per-day?from_date=2025-07-14&to_date=2025-07-16")
+    assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_risk_scores_per_day(async_client: AsyncClient, camera_session: AsyncSession):
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    camera_id = pytest.camera_table[0]["id"]
+    day = datetime(2025, 7, 14)
+    # Two low-confidence alerts, but only the first day is low risk (threshold above 0.2)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(hours=10), camera_id, max_conf=0.2)
+    await _create_alert_started_at(camera_session, 1, day + timedelta(days=1, hours=10), camera_id, max_conf=0.2)
+    period = "from_date=2025-07-14&to_date=2025-07-15"
+
+    def scores_for_date(target_date, organization_id=None):
+        return {camera_id: "low"} if target_date == day.date() else {}
+
+    scores_mock = AsyncMock(side_effect=scores_for_date)
+    with patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=scores_mock):
+        resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=agent_auth)
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == [{"date": "2025-07-15", "count": 1}]
+        assert scores_mock.await_count == 2
+        assert {call.kwargs["organization_id"] for call in scores_mock.await_args_list} == {1}
+
+        # A risk score override applies to every day and skips the risk API
+        scores_mock.reset_mock()
+        resp = await async_client.get(
+            f"/alerts/all/fromdate/count-per-day?{period}&risk_score=moderate", headers=agent_auth
+        )
+        assert resp.json() == [{"date": "2025-07-14", "count": 1}, {"date": "2025-07-15", "count": 1}]
+        scores_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -1027,3 +1155,34 @@ async def test_alert_changes_roll_back_on_late_failure(
         assert set(links) == set(sequence_ids)
         detections = (await observer.exec(select(Detection).where(Detection.sequence_id == sid))).all()
         assert len(detections) == counts[0]
+
+
+@pytest.mark.asyncio
+async def test_alerts_count_per_day_skips_future_days(async_client: AsyncClient, camera_session: AsyncSession):
+    agent_auth = pytest.get_token(
+        pytest.user_table[1]["id"], pytest.user_table[1]["role"].split(), pytest.user_table[1]["organization_id"]
+    )
+    today = utcnow().date()
+    # Midnight today: always in the past and always today, whenever the test runs
+    await _create_alert_started_at(camera_session, 1, datetime.combine(today, datetime.min.time()))
+    period = f"from_date={(today - timedelta(days=2)).isoformat()}&to_date={(today + timedelta(days=10)).isoformat()}"
+
+    scores_mock = AsyncMock(return_value={})
+    with patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=scores_mock):
+        resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{period}", headers=agent_auth)
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == [{"date": today.isoformat(), "count": 1}]
+    # Risk scores are only fetched up to today
+    assert sorted(call.args[0] for call in scores_mock.await_args_list) == [
+        today - timedelta(days=2),
+        today - timedelta(days=1),
+        today,
+    ]
+
+    # A period entirely in the future is empty, without any lookup
+    scores_mock.reset_mock()
+    future = f"from_date={(today + timedelta(days=1)).isoformat()}&to_date={(today + timedelta(days=5)).isoformat()}"
+    with patch("app.api.api_v1.endpoints.alerts.risk_service.get_scores_for_date", new=scores_mock):
+        resp = await async_client.get(f"/alerts/all/fromdate/count-per-day?{future}", headers=agent_auth)
+    assert resp.json() == []
+    scores_mock.assert_not_awaited()

@@ -227,6 +227,8 @@ class Sequence(SQLModel, table=True):
 
 class Alert(SQLModel, table=True):
     __tablename__ = "alerts"
+    # Alerts of an organization over a period (History, per-day counts)
+    __table_args__ = (Index("ix_alerts_organization_id_started_at", "organization_id", "started_at"),)
     id: int = Field(None, primary_key=True)
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
     lat: Union[float, None] = Field(default=None, gt=-90, lt=90, nullable=True)

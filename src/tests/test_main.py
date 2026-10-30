@@ -115,7 +115,7 @@ async def test_risk_refresh_loop_swallows_refresh_errors_and_continues():
 
 @pytest.mark.asyncio
 async def test_lifespan_refreshes_and_cancels_background_tasks_when_risk_api_configured():
-    fake_service = SimpleNamespace(is_configured=True, refresh=AsyncMock())
+    fake_service = SimpleNamespace(is_configured=True, refresh=AsyncMock(), aclose=AsyncMock())
     fake_tasks = [_CancelledTask(), _CancelledTask()]
 
     def fake_create_task(coro):
@@ -133,11 +133,12 @@ async def test_lifespan_refreshes_and_cancels_background_tasks_when_risk_api_con
             assert all(task.cancel_called is False for task in fake_tasks)
 
     assert all(task.cancel_called is True for task in fake_tasks)
+    fake_service.aclose.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_lifespan_skips_risk_refresh_but_starts_validation_worker_when_risk_api_not_configured():
-    fake_service = SimpleNamespace(is_configured=False, refresh=AsyncMock())
+    fake_service = SimpleNamespace(is_configured=False, refresh=AsyncMock(), aclose=AsyncMock())
     fake_task = _CancelledTask()
 
     def fake_create_task(coro):
@@ -157,6 +158,7 @@ async def test_lifespan_skips_risk_refresh_but_starts_validation_worker_when_ris
 
     assert fake_task.cancel_called is True
     close_client.assert_awaited_once()
+    fake_service.aclose.assert_awaited_once()
 
 
 @pytest.mark.asyncio

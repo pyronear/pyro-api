@@ -88,6 +88,7 @@ async def lifespan(_: FastAPI):
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
         await temporal_service.aclose()
+        await risk_service.aclose()
 
 
 app = FastAPI(
