@@ -5,7 +5,7 @@ from ast import literal_eval
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
 from fastapi import HTTPException, UploadFile
@@ -1403,6 +1403,65 @@ async def test_delete_detection(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_frame_until_last_reference(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    cam = pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"},
+        files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    bucket_key = response.json()["bucket_key"]
+    dets = (await detection_session.exec(select(Detection).where(Detection.bucket_key == bucket_key))).all()  # type: ignore[attr-defined]
+    assert len(dets) == 2
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    # The sibling detection still uses the frame
+    response = await async_client.delete(f"/detections/{dets[0].id}", headers=admin_auth)
+    assert response.status_code == 200
+    assert bucket.check_file_existence(bucket_key)
+    response = await async_client.delete(f"/detections/{dets[1].id}", headers=admin_auth)
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(bucket_key)
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_camera_image(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    """A detection frame and a last image with the same bytes in the same second share a key"""
+    cam = pytest.camera_table[0]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        response = await async_client.post(
+            "/detections",
+            data={"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+            files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+            headers=cam_auth,
+        )
+        assert response.status_code == 201, response.text
+        detection = response.json()
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("frame.jpg", mock_img, "image/jpeg")}, headers=cam_auth
+        )
+        assert response.status_code == 200
+    assert response.json()["last_image"] == detection["bucket_key"]
+    response = await async_client.delete(f"/detections/{detection['id']}", headers=admin_auth)
+    assert response.status_code == 200
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(detection["bucket_key"])
 
 
 @pytest.mark.asyncio

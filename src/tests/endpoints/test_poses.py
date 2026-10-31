@@ -1,8 +1,20 @@
+from datetime import datetime
 from typing import Any, Dict, Union
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.services.storage import s3_service
+
+# Every upload inside `patch(FROZEN_CLOCK, ...)` falls in the same second, as back-to-back requests do
+FROZEN_CLOCK = "app.services.storage.utcnow"
+FROZEN_NOW = datetime(2026, 7, 29, 12, 0, 5)
+
+
+def _stored(organization_id: int, bucket_key: str) -> bool:
+    return s3_service.get_bucket(s3_service.resolve_bucket_name(organization_id)).check_file_existence(bucket_key)
 
 
 @pytest.mark.parametrize(
@@ -565,7 +577,7 @@ async def test_update_pose_image_twice(
     assert response1.status_code == 200
     assert response1.json()["image"] is not None
 
-    # Second upload - this covers the deletion of old image (line 121 in poses.py)
+    # Second upload - this covers the deletion of old image
     response2 = await async_client.patch(
         f"/poses/{pose_id}/image",
         files={"file": ("image2.png", mock_img, "image/png")},
@@ -573,3 +585,101 @@ async def test_update_pose_image_twice(
     )
     assert response2.status_code == 200
     assert response2.json()["image"] is not None
+    assert _stored(pytest.user_table[0]["organization_id"], response2.json()["image"])
+
+
+@pytest.mark.asyncio
+async def test_update_pose_image_same_bytes_same_second(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """A retry within the same second gets the same key: it must not delete the image it just stored"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    with patch(FROZEN_CLOCK, return_value=FROZEN_NOW):
+        for _ in range(2):
+            response = await async_client.patch(
+                "/poses/1/image", files={"file": ("image.jpg", mock_img, "image/jpeg")}, headers=auth
+            )
+            assert response.status_code == 200
+    assert _stored(cam["organization_id"], response.json()["image"])
+
+
+@pytest.mark.asyncio
+async def test_update_pose_image_deletes_previous_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    keys = []
+    for payload in (mock_img, mock_img + b"next"):
+        response = await async_client.patch(
+            "/poses/1/image", files={"file": ("image.jpg", payload, "image/jpeg")}, headers=auth
+        )
+        assert response.status_code == 200
+        keys.append(response.json()["image"])
+    assert keys[0] != keys[1]
+    assert not _stored(cam["organization_id"], keys[0])
+    assert _stored(cam["organization_id"], keys[1])
+
+
+@pytest.mark.asyncio
+async def test_pose_images_with_same_bytes_are_independent(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """Two poses of one camera given the same image in the same second: replacing one keeps the other"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    with patch(FROZEN_CLOCK, return_value=FROZEN_NOW):
+        for pose_id in (1, 2):
+            response = await async_client.patch(
+                f"/poses/{pose_id}/image", files={"file": ("image.jpg", mock_img, "image/jpeg")}, headers=auth
+            )
+            assert response.status_code == 200
+    pose_2_key = response.json()["image"]
+    response = await async_client.patch(
+        "/poses/1/image", files={"file": ("image.jpg", mock_img + b"next", "image/jpeg")}, headers=auth
+    )
+    assert response.status_code == 200
+    assert _stored(cam["organization_id"], pose_2_key)
+
+
+@pytest.mark.asyncio
+async def test_camera_image_update_keeps_pose_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    pose_session: AsyncSession,
+    mock_img: bytes,
+):
+    """The engine sends one frame as last image then as daily pose image: the next last image keeps the pose image"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    with patch(FROZEN_CLOCK, return_value=FROZEN_NOW):
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("frame.jpg", mock_img, "image/jpeg")}, headers=auth
+        )
+        assert response.status_code == 200
+        response = await async_client.patch(
+            "/poses/1/image", files={"file": ("frame.jpg", mock_img, "image/jpeg")}, headers=auth
+        )
+        assert response.status_code == 200
+    pose_key = response.json()["image"]
+    response = await async_client.patch(
+        "/cameras/image", files={"file": ("frame.jpg", mock_img + b"next", "image/jpeg")}, headers=auth
+    )
+    assert response.status_code == 200
+    assert _stored(cam["organization_id"], pose_key)
+    # Once the pose moves on too, nothing references the shared object anymore
+    response = await async_client.patch(
+        "/poses/1/image", files={"file": ("frame.jpg", mock_img + b"pose", "image/jpeg")}, headers=auth
+    )
+    assert response.status_code == 200
+    assert not _stored(cam["organization_id"], pose_key)
