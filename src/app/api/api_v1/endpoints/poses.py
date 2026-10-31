@@ -6,14 +6,15 @@ from typing import List, cast
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_jwt, get_occlusion_mask_crud, get_pose_crud
-from app.crud import CameraCRUD
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_occlusion_mask_crud, get_pose_crud
+from app.crud import CameraCRUD, DetectionCRUD
 from app.crud.crud_occlusion_mask import OcclusionMaskCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Pose, Role, UserRole
 from app.schemas.login import TokenPayload
 from app.schemas.occlusion_masks import OcclusionMaskRead
 from app.schemas.poses import PoseCreate, PoseImage, PoseRead, PoseUpdate
+from app.services.images import delete_unreferenced_image
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
@@ -104,6 +105,7 @@ async def update_pose_image(
     file: UploadFile = File(..., alias="file"),
     poses: PoseCRUD = Depends(get_pose_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN, UserRole.AGENT, Role.CAMERA]),
 ) -> Pose:
     # telemetry_client.capture(token_payload.sub, event="poses-update-image", properties={"pose_id": pose_id})
@@ -118,15 +120,19 @@ async def update_pose_image(
     elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
+    # Read before the update, which mutates the same instance
+    previous_image = pose.image
     # Upload the file using the camera_id (poses belong to cameras)
     bucket_key = await upload_file(file, camera.organization_id, pose.camera_id)
 
-    # If the upload succeeds, delete the previous image
-    if isinstance(pose.image, str):
-        s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id)).delete_file(pose.image)
-
     # Update the DB entry
-    return await poses.update(pose_id, PoseImage(image=bucket_key))
+    updated = await poses.update(pose_id, PoseImage(image=bucket_key))
+
+    # Then delete the previous image, unless the key is still in use (same key re-sent, last image, detection frame)
+    if isinstance(previous_image, str):
+        await delete_unreferenced_image(camera.organization_id, previous_image, cameras, poses, detections)
+
+    return updated
 
 
 @router.delete("/{pose_id}", status_code=status.HTTP_200_OK, summary="Delete a pose")

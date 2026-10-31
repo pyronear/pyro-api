@@ -51,6 +51,7 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
+from app.services.images import delete_unreferenced_image
 from app.services.overlap import compute_overlap, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
@@ -805,17 +806,18 @@ async def delete_detection(
     detection_id: int = Path(..., gt=0),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
-    # continuity rows): only delete it once no other row references it. Crops are per-row.
-    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key), limit=2)
-    if all(d.id == detection_id for d in sharing):
-        bucket.delete_file(detection.bucket_key)
     if detection.crop_bucket_key:
-        bucket.delete_file(detection.crop_bucket_key)
+        s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id)).delete_file(
+            detection.crop_bucket_key
+        )
     await detections.delete(detection_id)
+    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
+    # continuity rows), and can back a last image or a pose image: only delete it once no row
+    # references it. Crops are per-row.
+    await delete_unreferenced_image(camera.organization_id, detection.bucket_key, cameras, poses, detections)

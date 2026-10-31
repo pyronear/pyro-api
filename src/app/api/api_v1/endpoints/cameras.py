@@ -9,11 +9,11 @@ from typing import Any, List, cast
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
 
-from app.api.dependencies import get_camera_crud, get_jwt, get_pose_crud
+from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_pose_crud
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.time import utcnow
-from app.crud import CameraCRUD
+from app.crud import CameraCRUD, DetectionCRUD
 from app.crud.crud_pose import PoseCRUD
 from app.models import Camera, Role, UserRole
 from app.schemas.cameras import (
@@ -30,6 +30,7 @@ from app.schemas.cameras import (
 )
 from app.schemas.login import Token, TokenPayload
 from app.schemas.poses import PoseReadWithoutImgInfo
+from app.services.images import delete_unreferenced_image
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
@@ -142,16 +143,20 @@ async def heartbeat(
 async def update_image(
     file: UploadFile = File(..., alias="file"),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
     cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    # Read before the update, which mutates the same instance
+    previous_image = cam.last_image
     bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
-    # If the upload succeeds, delete the previous image
-    if isinstance(cam.last_image, str):
-        s3_service.get_bucket(s3_service.resolve_bucket_name(token_payload.organization_id)).delete_file(cam.last_image)
     # Update the DB entry
     camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=utcnow()))
+    # Then delete the previous image, unless the key is still in use (same key re-sent, pose image, detection frame)
+    if isinstance(previous_image, str):
+        await delete_unreferenced_image(token_payload.organization_id, previous_image, cameras, poses, detections)
     return CameraOut(**camera.model_dump())
 
 
