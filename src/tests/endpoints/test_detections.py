@@ -1465,6 +1465,34 @@ async def test_delete_detection_keeps_camera_image(
 
 
 @pytest.mark.asyncio
+async def test_delete_detection_deletes_crop(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    cam = pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    detection = response.json()
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(detection["crop_bucket_key"])
+    response = await async_client.delete(f"/detections/{detection['id']}", headers=admin_auth)
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(detection["crop_bucket_key"])
+    assert not bucket.check_file_existence(detection["bucket_key"])
+
+
+@pytest.mark.asyncio
 async def test_create_detection_creates_sequence(
     async_client: AsyncClient, detection_session: AsyncSession, monkeypatch
 ):
