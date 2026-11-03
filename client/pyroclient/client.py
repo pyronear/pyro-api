@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
+import math
 from enum import Enum
 from typing import Any, Dict, List, MutableMapping, Tuple, Union
 from urllib.parse import urljoin
@@ -394,7 +395,8 @@ class Client:
         if temporal_model_scores is not None:
             if len(temporal_model_scores) != len(bboxes):
                 raise ValueError("temporal_model_scores must have the same length as bboxes")
-            if any(score > 1 or score < 0 for score in temporal_model_scores):
+            # NaN passes both comparisons, so check finiteness explicitly
+            if any(not math.isfinite(score) or score > 1 or score < 0 for score in temporal_model_scores):
                 raise ValueError("temporal_model_scores are expected to be probabilities")
         data: Dict[str, str] = {
             "bboxes": _dump_bbox_to_json(bboxes),

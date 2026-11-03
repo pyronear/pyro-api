@@ -380,6 +380,16 @@ async def test_process_window_exhausted_when_scored_and_past_max_frames(detectio
     assert seq.temporal_model_score == pytest.approx(0.20)  # the real score is not overwritten
     assert seq.validation_due_at is None
 
+    # The device starts scoring the sequence the API gave up on: reopened and judged on its score.
+    await crud.set_temporal_score(cast(int, seq.id), 0.70, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+    await detection_session.commit()
+    await _enqueue(detection_session, cast(int, seq.id))
+    assert await _process_one_due() is True
+    predict.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+
     # Terminal: a later fail-open or enqueue can't resurrect it.
     await crud.enqueue_validation(cast(int, seq.id))
     await detection_session.commit()
@@ -481,6 +491,29 @@ async def test_process_validates_from_prior_high_score_past_window(detection_ses
     assert seq.validation_status == VALIDATED_BY_MODEL
     assert seq.temporal_model_score == pytest.approx(0.90)
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.asyncio
+async def test_process_validates_from_prior_high_score_in_window(detection_session: AsyncSession, monkeypatch):
+    """In-window retry after a run scored high and died before claiming: the model is called
+    again, but the verdict follows the stored (highest) score, whose provenance is kept."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    crud = SequenceCRUD(detection_session)
+    await crud.set_temporal_score(cast(int, seq.id), 0.90, model_version="m1", api_version="v1")
+    await _enqueue(detection_session, cast(int, seq.id))
+    predict = AsyncMock(return_value=_prediction(0.2))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _process_one_due() is True
+
+    predict.assert_awaited_once()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert seq.temporal_model_score == pytest.approx(0.90)  # the lower re-score lost the max
+    assert (seq.temporal_model_version, seq.temporal_api_version) == ("m1", "v1")
 
 
 @pytest.mark.asyncio

@@ -75,6 +75,15 @@ def test_create_detection_forwards_recorded_at(monkeypatch):
     )
     assert captured["data"]["temporal_model_scores"] == "[0.623,0.150]"
 
+    captured.clear()
+    api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, temporal_model_scores=[0.9996])
+    assert captured["data"]["temporal_model_scores"] == "[1]"  # rounded before dumping: "1.000" fails the API pattern
+
+    with pytest.raises(ValueError, match="probabilities"):
+        api_client.create_detection(
+            b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, temporal_model_scores=[float("nan")]
+        )
+
     with pytest.raises(ValueError, match="same length"):
         api_client.create_detection(b"img", [(0.1, 0.1, 0.5, 0.8, 0.5)], pose_id=1, temporal_model_scores=[0.6, 0.1])
 

@@ -688,14 +688,12 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            # A frame without a score (the device skipped its model on this frame) keeps the
+            # previous device verdict: it is never reset to the API path.
             if device_score is not None:
                 await sequences.set_temporal_score(
                     matched_sequence.id, device_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
                 )
-            elif matched_sequence.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
-                # The device stopped sending scores (its temporal service failed open): drop its
-                # stale verdict so the worker scores the sequence itself again.
-                await sequences.set_temporal_score(matched_sequence.id, None)
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
