@@ -5,14 +5,23 @@
 
 import logging
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.crud import CameraCRUD, DetectionCRUD, PoseCRUD
 from app.services.storage import s3_service
 
-__all__ = ["delete_unreferenced_image"]
+__all__ = ["delete_unreferenced_crop", "delete_unreferenced_image"]
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def _delete_object(organization_id: int, bucket_key: str) -> None:
+    try:
+        s3_service.get_bucket(s3_service.resolve_bucket_name(organization_id)).delete_file(bucket_key)
+    except (ClientError, BotoCoreError, ValueError) as e:
+        # The row is already committed: a leftover object is harmless, a failed request is not.
+        # ValueError: S3Bucket raises it when a bucket that is not cached yet can't be reached.
+        logger.warning(f"Could not delete unreferenced object {bucket_key}: {e}")
 
 
 async def delete_unreferenced_image(
@@ -31,8 +40,11 @@ async def delete_unreferenced_image(
         or await detections.fetch_all(filters=("bucket_key", bucket_key), limit=1)
     ):
         return
-    try:
-        s3_service.get_bucket(s3_service.resolve_bucket_name(organization_id)).delete_file(bucket_key)
-    except ClientError as e:
-        # The row already points to the new image: a leftover object is harmless, a failed request is not
-        logger.warning(f"Could not delete unreferenced image {bucket_key}: {e}")
+    _delete_object(organization_id, bucket_key)
+
+
+async def delete_unreferenced_crop(organization_id: int, crop_bucket_key: str, detections: DetectionCRUD) -> None:
+    """Delete a crop object once no detection references its key, to call after the row deletion"""
+    # Same key format, with a crop prefix: only another crop can share it
+    if not await detections.fetch_all(filters=("crop_bucket_key", crop_bucket_key), limit=1):
+        _delete_object(organization_id, crop_bucket_key)

@@ -51,7 +51,7 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
-from app.services.images import delete_unreferenced_image
+from app.services.images import delete_unreferenced_crop, delete_unreferenced_image
 from app.services.overlap import compute_overlap, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
@@ -597,7 +597,7 @@ async def create_detection(
     crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
     for idx, crop in enumerate(crops):
         # Prefix with the bbox index so byte-identical crops in the same request still get
-        # distinct keys; each detection then owns its crop object (safe to delete independently).
+        # distinct keys. Two requests in the same second can still share one: see delete_unreferenced_crop.
         crop_bucket_keys[idx] = await upload_file(
             crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
@@ -812,12 +812,10 @@ async def delete_detection(
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    if detection.crop_bucket_key:
-        s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id)).delete_file(
-            detection.crop_bucket_key
-        )
     await detections.delete(detection_id)
+    if detection.crop_bucket_key:
+        await delete_unreferenced_crop(camera.organization_id, detection.crop_bucket_key, detections)
     # The frame object is shared by every detection of the same upload (multi-bbox siblings,
     # continuity rows), and can back a last image or a pose image: only delete it once no row
-    # references it. Crops are per-row.
+    # references it.
     await delete_unreferenced_image(camera.organization_id, detection.bucket_key, cameras, poses, detections)
