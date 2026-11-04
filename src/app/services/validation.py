@@ -333,6 +333,15 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
                 api_version=prediction.api_version,
             )
             await session.commit()
+    # A device score that landed during phase 2 (the model call, or its failure) and won the
+    # max owns the sequence now: leave the verdict to the device branch on the next run (the
+    # frame that carried the score keeps the job due) instead of failing open, validating or
+    # window-exhausting on the API's verdict here.
+    async with session_factory() as session:
+        current = await SequenceCRUD(session).get(sequence_id)
+    if current is not None and current.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
+        await _finish_job(sequence_id, frame_count=total_frames)
+        return
     if not validated:
         if total_frames > temporal_service.MAX_FRAMES:
             # The model just had its LAST chance (first scoring past the window, on the

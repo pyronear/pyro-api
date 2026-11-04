@@ -19,7 +19,7 @@ from app.db import session_factory
 from app.models import TEMPORAL_SCORE_SOURCE_ENGINE, AlertSequence, Detection, Sequence
 from app.services import validation as validation_service
 from app.services.risk import risk_service
-from app.services.temporal import TemporalPrediction, temporal_service
+from app.services.temporal import TemporalPrediction, TemporalUnavailableError, temporal_service
 from app.services.validation import (
     FAIL_OPEN_STALE,
     FAIL_OPEN_UNAVAILABLE,
@@ -589,6 +589,110 @@ async def test_process_engine_score_still_behind_risk_gate(detection_session: As
     await detection_session.refresh(seq)
     assert seq.is_validated is False
     assert seq.validation_due_at is None
+
+
+@pytest.mark.parametrize("api_available", [True, False])
+@pytest.mark.asyncio
+async def test_process_engine_scored_sequence_ignores_scoreless_frame_past_window(
+    detection_session: AsyncSession, monkeypatch, api_available: bool
+):
+    """A frame without a device score keeps the device verdict: past MAX_FRAMES the worker
+    neither calls the model, nor fails open when it is unreachable, nor window-exhausts."""
+    seq = await _seed_sequence(detection_session, 12, max_conf=0.30)
+    crud = SequenceCRUD(detection_session)
+    await crud.set_temporal_score(cast(int, seq.id), 0.20, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+    await _enqueue(detection_session, cast(int, seq.id))  # the scoreless frame re-enqueued it as is
+    predict = AsyncMock(return_value=_prediction(0.9))
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: api_available)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _process_one_due() is True
+
+    predict.assert_not_awaited()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False  # no fail-open either
+    assert seq.validation_status is None  # not window_exhausted
+    assert seq.validation_due_at is None
+    assert (seq.temporal_model_score, seq.temporal_api_version) == (pytest.approx(0.20), TEMPORAL_SCORE_SOURCE_ENGINE)
+    assert await _has_alert_link(detection_session, cast(int, seq.id)) is False
+
+
+@pytest.mark.parametrize("n_frames", [5, 12])  # in window, past MAX_FRAMES
+@pytest.mark.parametrize("api_outcome", ["declines", "unavailable"])
+@pytest.mark.asyncio
+async def test_process_device_score_landing_during_model_call_is_kept(
+    detection_session: AsyncSession, monkeypatch, n_frames: int, api_outcome: str
+):
+    """A higher device score stored (with its frame) while the API model runs wins the max
+    with its provenance. Whether the API then declines or fails, the worker neither
+    overwrites it, nor fails open, nor window-exhausts: the frame kept the job due and the
+    next run judges the device score without calling the model."""
+    seq = await _seed_sequence(detection_session, n_frames, max_conf=0.30)
+    seq_id = cast(int, seq.id)
+    await _enqueue(detection_session, seq_id)
+
+    async def predict_while_device_scores(*_args, **_kwargs):
+        async with session_factory() as session:
+            session.add(
+                Detection(
+                    camera_id=1, pose_id=1, sequence_id=seq_id, bucket_key="frame-device.jpg", bbox="[(.1,.1,.7,.8,.9)]"
+                )
+            )
+            await SequenceCRUD(session).set_temporal_score(seq_id, 0.90, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+            await session.commit()
+        if api_outcome == "unavailable":
+            raise TemporalUnavailableError("down")
+        return _prediction(0.2)
+
+    predict = AsyncMock(side_effect=predict_while_device_scores)
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", predict)
+
+    assert await _process_one_due() is True
+
+    predict.assert_awaited_once()
+    await detection_session.refresh(seq)
+    assert seq.is_validated is False  # no fail-open on the device's sequence
+    assert seq.validation_status is None  # not window_exhausted on the API's declined verdict
+    assert seq.temporal_model_score == pytest.approx(0.90)
+    assert (seq.temporal_model_version, seq.temporal_api_version) == (None, TEMPORAL_SCORE_SOURCE_ENGINE)
+    assert seq.validation_due_at is not None  # the device frame kept the job due
+
+    assert await _process_one_due() is True
+    predict.assert_awaited_once()  # still one model call
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+
+
+@pytest.mark.asyncio
+async def test_process_api_score_beating_device_score_validates_normally(detection_session: AsyncSession, monkeypatch):
+    """A device score below the API's lands during the call: the API verdict keeps its
+    provenance and validates as usual."""
+    seq = await _seed_sequence(detection_session, 5, max_conf=0.30)
+    seq_id = cast(int, seq.id)
+    await _enqueue(detection_session, seq_id)
+
+    async def predict_while_device_scores(*_args, **_kwargs):
+        async with session_factory() as session:
+            await SequenceCRUD(session).set_temporal_score(seq_id, 0.50, api_version=TEMPORAL_SCORE_SOURCE_ENGINE)
+            await session.commit()
+        return _prediction(0.9)
+
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: True)
+    monkeypatch.setattr(temporal_service, "predict", AsyncMock(side_effect=predict_while_device_scores))
+
+    assert await _process_one_due() is True
+
+    await detection_session.refresh(seq)
+    assert seq.is_validated is True
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert seq.temporal_model_score == pytest.approx(0.9)
+    assert seq.temporal_api_version == "1.4.0"  # the API run's provenance, not the device's
+    assert await _has_alert_link(detection_session, seq_id) is True
 
 
 @pytest.mark.asyncio
