@@ -213,21 +213,19 @@
         <article role="main">
           <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">#</a></h1>
-<p>Python 3.8 (or higher) and [pip](<a class="reference external" href="https://pip.pypa.io/en/stable/">https://pip.pypa.io/en/stable/</a>) are required to install the client of the alert API.</p>
-<section id="via-python-package">
-<h2>Via Python Package<a class="headerlink" href="#via-python-package" title="Permalink to this heading">#</a></h2>
-<p>Install the last stable release of the package using pip:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pyroclient
-</pre></div>
-</div>
-</section>
+<p>Python 3.10 (or higher) and <a class="reference external" href="https://pip.pypa.io/en/stable/">pip</a> are required to install the client of the alert API.</p>
 <section id="via-git">
 <h2>Via Git<a class="headerlink" href="#via-git" title="Permalink to this heading">#</a></h2>
-<p>Install the library in developper mode:</p>
+<p>The client is installed from the repository. Pin a tag or commit:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/pyronear/pyro-api.git@v1.0.9#subdirectory=client"</span>
+</pre></div>
+</div>
+<p>For development, install it in editable mode:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/pyronear/pyro-api.git
 pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>pyro-api/client/.
 </pre></div>
 </div>
+<p>The <code class="docutils literal notranslate"><span class="pre">pyroclient</span></code> package on PyPI is a legacy distribution and is no longer updated.</p>
 </section>
 </section>
 
@@ -294,7 +292,6 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Installation</a><ul>
-<li><a class="reference internal" href="#via-python-package">Via Python Package</a></li>
 <li><a class="reference internal" href="#via-git">Via Git</a></li>
 </ul>
 </li>
