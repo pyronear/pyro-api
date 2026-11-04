@@ -12,7 +12,7 @@ from app.core.security import hash_password
 from app.crud import UserCRUD
 from app.models import User, UserRole
 from app.schemas.login import TokenPayload
-from app.schemas.users import Cred, CredHash, UserCreate
+from app.schemas.users import Cred, CredHash, UserCreate, UserRead
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -50,8 +50,9 @@ async def create_user(
     payload: UserCreate,
     users: UserCRUD = Depends(get_user_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> User:
-    return await _create_user(payload, users, token_payload.sub)
+) -> UserRead:
+    user = await _create_user(payload, users, token_payload.sub)
+    return UserRead(**user.model_dump())
 
 
 @router.get("/{user_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific user")
@@ -59,18 +60,19 @@ async def get_user(
     user_id: int = Path(..., gt=0),
     users: UserCRUD = Depends(get_user_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> User:
+) -> UserRead:
     telemetry_client.capture(token_payload.sub, event="user-get", properties={"user_id": user_id})
-    return cast(User, await users.get(user_id, strict=True))
+    user = cast(User, await users.get(user_id, strict=True))
+    return UserRead(**user.model_dump())
 
 
 @router.get("/", status_code=status.HTTP_200_OK, summary="Fetch all the users")
 async def fetch_users(
     users: UserCRUD = Depends(get_user_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> List[User]:
+) -> List[UserRead]:
     telemetry_client.capture(token_payload.sub, event="user-fetch")
-    return [elt for elt in await users.fetch_all()]
+    return [UserRead(**elt.model_dump()) for elt in await users.fetch_all()]
 
 
 @router.patch("/{user_id}", status_code=status.HTTP_200_OK, summary="Updates a user's password")
@@ -79,10 +81,11 @@ async def update_user_password(
     user_id: int = Path(..., gt=0),
     users: UserCRUD = Depends(get_user_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
-) -> User:
+) -> UserRead:
     telemetry_client.capture(token_payload.sub, event="user-pwd", properties={"user_id": user_id})
     pwd = hash_password(payload.password)
-    return await users.update(user_id, CredHash(hashed_password=pwd))
+    user = await users.update(user_id, CredHash(hashed_password=pwd))
+    return UserRead(**user.model_dump())
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK, summary="Delete a user")
