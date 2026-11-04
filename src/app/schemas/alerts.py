@@ -22,9 +22,9 @@ class AlertBase(BaseModel):
 
 
 class AlertCreate(AlertBase):
-    organization_id: int = Field(..., gt=0)
-    started_at: datetime
-    last_seen_at: datetime
+    organization_id: int = Field(..., gt=0)  # ty: ignore[invalid-mutable-override]
+    started_at: datetime  # ty: ignore[invalid-mutable-override]
+    last_seen_at: datetime  # ty: ignore[invalid-mutable-override]
 
 
 class AlertUpdate(AlertBase):
