@@ -11,13 +11,6 @@
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" alt="black">
   </a>
 </p>
-<p align="center">
-  <a href="https://pypi.org/project/pyroclient/">
-    <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
-  </a>
-  <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
-  <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
-</p>
 
 Client for the [Alert management API](https://github.com/pyronear/pyro-api)
 
@@ -59,24 +52,24 @@ response = cam_client.create_detection(image, 123.2)
 
 ### Prerequisites
 
-Python 3.8 (or higher) and [pip](https://pip.pypa.io/en/stable/) are required to install the client of the alert API.
+Python 3.10 (or higher) and [pip](https://pip.pypa.io/en/stable/) are required to install the client of the alert API.
 
-### Latest stable release
+### Installation
 
-You can install the last stable release of the package using [pypi](https://pypi.org/project/pyroclient/) as follows:
+The client is installed from this repository *(install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) first)*. Pin a tag or commit:
 
 ```shell
-pip install pyroclient
+pip install "git+https://github.com/pyronear/pyro-api.git@v1.0.9#subdirectory=client"
 ```
 
-### Developer mode
-
-Alternatively, if you wish to use the latest features of the project that haven't made their way to a release yet, you can install the package from source *(install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) first)*:
+For development, install it in editable mode:
 
 ```shell
 git clone https://github.com/pyronear/pyro-api.git
-$pip install -e pyro-api/client/.
+pip install -e pyro-api/client/.
 ```
+
+The `pyroclient` package on PyPI is a legacy distribution and is no longer updated.
 
 ### Getting an access to the API
 
