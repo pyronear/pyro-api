@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,7 +15,7 @@ from app.services.risk import FWI_MIN_CONF, RiskService, min_confidence_for_clas
 
 
 def _fake_httpx_client(*, json_data=None, raise_exc=None, side_effect_per_call=None):
-    """Return a context manager replacing ``app.services.risk.httpx.AsyncClient``.
+    """Return a factory replacing ``app.services.risk.httpx.AsyncClient``, and the client it builds.
 
     Either pass ``json_data`` (single response), ``raise_exc`` (raised on get()), or
     ``side_effect_per_call`` (list of (json_or_exc) values returned in order).
@@ -40,11 +41,9 @@ def _fake_httpx_client(*, json_data=None, raise_exc=None, side_effect_per_call=N
     else:
         inner.get = AsyncMock(return_value=response)
 
-    cm = MagicMock()
-    cm.__aenter__ = AsyncMock(return_value=inner)
-    cm.__aexit__ = AsyncMock(return_value=None)
+    inner.aclose = AsyncMock()
 
-    factory = MagicMock(return_value=cm)
+    factory = MagicMock(return_value=inner)
     return factory, inner
 
 
@@ -176,3 +175,39 @@ async def test_get_scores_for_date_no_org_param_when_none(configured_risk):
         await service.get_scores_for_date(date(2026, 5, 5))
     _, kwargs = inner.get.await_args
     assert kwargs["params"] is None
+
+
+@pytest.mark.asyncio
+async def test_risk_client_is_shared_and_closed(configured_risk):
+    service = RiskService()
+    factory, inner = _fake_httpx_client(json_data=[])
+    with patch("app.services.risk.httpx.AsyncClient", factory):
+        await service.get_scores_for_date(date(2026, 5, 5))
+        await service.get_scores_for_date(date(2026, 5, 6))
+        await service.aclose()
+    factory.assert_called_once()
+    assert inner.get.await_count == 2
+    inner.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_risk_concurrent_requests_are_bounded(configured_risk):
+    service = RiskService()
+    factory, inner = _fake_httpx_client(json_data=[])
+    in_flight, peak = 0, 0
+
+    async def slow_get(*args, **kwargs):
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        await asyncio.sleep(0.01)
+        in_flight -= 1
+        response = MagicMock()
+        response.json = MagicMock(return_value=[])
+        return response
+
+    inner.get = AsyncMock(side_effect=slow_get)
+    with patch("app.services.risk.httpx.AsyncClient", factory):
+        await asyncio.gather(*(service.get_scores_for_date(date(2026, 5, day)) for day in range(1, 31)))
+    assert inner.get.await_count == 30
+    assert peak == RiskService.MAX_CONCURRENT_REQUESTS
