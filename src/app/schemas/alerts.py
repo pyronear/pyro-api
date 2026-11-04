@@ -3,6 +3,7 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import datetime as dt
 from datetime import datetime
 from typing import List, Optional
 
@@ -10,7 +11,15 @@ from pydantic import BaseModel, Field
 
 from app.schemas.sequences import SequenceRead
 
-__all__ = ["AlertBase", "AlertCount", "AlertCreate", "AlertRead", "AlertReadWithSequences", "AlertUpdate"]
+__all__ = [
+    "AlertBase",
+    "AlertCount",
+    "AlertCreate",
+    "AlertDayCount",
+    "AlertRead",
+    "AlertReadWithSequences",
+    "AlertUpdate",
+]
 
 
 class AlertBase(BaseModel):
@@ -41,3 +50,9 @@ class AlertReadWithSequences(AlertRead):
 
 class AlertCount(BaseModel):
     count: int
+
+
+class AlertDayCount(BaseModel):
+    # Module-qualified type: a field named `date` would shadow `datetime.date`
+    date: dt.date = Field(..., description="Day, in the requested timezone")
+    count: int = Field(..., ge=1, description="Number of alerts started that day")
