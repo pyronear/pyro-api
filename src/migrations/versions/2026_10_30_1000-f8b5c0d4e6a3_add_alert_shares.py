@@ -1,7 +1,7 @@
 """add alert shares
 
 Revision ID: f8b5c0d4e6a3
-Revises: e7a4b9c3d5f2
+Revises: ff5b6d1f9e3f
 Create Date: 2026-10-30 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "f8b5c0d4e6a3"
-down_revision: Union[str, None] = "e7a4b9c3d5f2"
+down_revision: Union[str, None] = "ff5b6d1f9e3f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
