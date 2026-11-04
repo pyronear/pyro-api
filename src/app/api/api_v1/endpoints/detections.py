@@ -93,6 +93,44 @@ def _bboxes_overlap(
     return inter_w > -tolerance and inter_h > -tolerance
 
 
+def _bbox_match_score(
+    seq_bbox: Tuple[float, float, float, float, float],
+    det_bbox: Tuple[float, float, float, float, float],
+) -> float:
+    # IoU minus the squared distance between the centers, in squared diagonals of the new box.
+    # The distance ranks boxes matched only through the tolerance gap (IoU 0). Its unit is the new
+    # box, the same for every candidate: with the box enclosing both (DIoU) the unit grows next to a
+    # plume-wide box, which would then outrank a small smoke's own neighbouring box.
+    sx_min, sy_min, sx_max, sy_max, _ = seq_bbox
+    dx_min, dy_min, dx_max, dy_max, _ = det_bbox
+    inter_w = min(sx_max, dx_max) - max(sx_min, dx_min)
+    inter_h = min(sy_max, dy_max) - max(sy_min, dy_min)
+    # Two gaps would multiply into a positive area
+    inter = inter_w * inter_h if inter_w > 0 and inter_h > 0 else 0.0
+    union = (sx_max - sx_min) * (sy_max - sy_min) + (dx_max - dx_min) * (dy_max - dy_min) - inter
+    iou = inter / union if union > 0 else 0.0
+    center_gap2 = ((sx_min + sx_max - dx_min - dx_max) ** 2 + (sy_min + sy_max - dy_min - dy_max) ** 2) / 4
+    diagonal2 = (dx_max - dx_min) ** 2 + (dy_max - dy_min) ** 2
+    return iou - center_gap2 / diagonal2 if diagonal2 > 0 else iou
+
+
+def _best_matching_sequence(
+    candidates: List[Tuple[Sequence, Tuple[float, float, float, float, float]]],
+    det_bbox: Tuple[float, float, float, float, float],
+) -> Optional[Sequence]:
+    # Among the candidates within tolerance (most recent first), the one whose last real bbox
+    # matches best. Best match, not first match: see #662.
+    best: Optional[Tuple[Sequence, float]] = None
+    for seq, seq_bbox in candidates:
+        if not _bboxes_overlap(seq_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
+            continue
+        score = _bbox_match_score(seq_bbox, det_bbox)
+        # Strict: on an exact tie the most recent sequence keeps the box, as first-match did
+        if best is None or score > best[1]:
+            best = (seq, score)
+    return best[0] if best is not None else None
+
+
 async def _get_continuity_sequences(
     sequences: SequenceCRUD,
     camera_id: int,
@@ -638,16 +676,14 @@ async def create_detection(
             order_by="last_seen_at",
             order_desc=True,
         )
-        matched_sequence: Optional[Sequence] = None
         latest_detections = await detections.get_latest_bboxes([seq.id for seq in candidate_sequences])
+        candidate_bboxes: List[Tuple[Sequence, Tuple[float, float, float, float, float]]] = []
         for seq in candidate_sequences:
             latest = latest_detections.get(seq.id)
-            if latest is None:
-                continue
-            bbox_strs = _extract_bbox_strings(latest.bbox)
-            if bbox_strs and _bboxes_overlap(_parse_bbox(bbox_strs[0]), det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
-                matched_sequence = seq
-                break
+            bbox_strs = _extract_bbox_strings(latest.bbox) if latest is not None else []
+            if bbox_strs:
+                candidate_bboxes.append((seq, _parse_bbox(bbox_strs[0])))
+        matched_sequence = _best_matching_sequence(candidate_bboxes, det_bbox)
 
         if matched_sequence is not None:
             await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at), commit=False)
