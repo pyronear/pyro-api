@@ -56,12 +56,20 @@ Python 3.10 (or higher) and [pip](https://pip.pypa.io/en/stable/) are required t
 
 ### Installation
 
-The client is not published on PyPI. Install it from source *(install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) first)*:
+The client is installed from this repository *(install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) first)*. Pin a tag or commit:
+
+```shell
+pip install "git+https://github.com/pyronear/pyro-api.git@v1.0.9#subdirectory=client"
+```
+
+For development, install it in editable mode:
 
 ```shell
 git clone https://github.com/pyronear/pyro-api.git
 pip install -e pyro-api/client/.
 ```
+
+The `pyroclient` package on PyPI is a legacy distribution and is no longer updated.
 
 ### Getting an access to the API
 
