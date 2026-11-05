@@ -20,7 +20,7 @@ the (slow) model call never holds a DB session.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, List, Optional, Tuple, cast
+from typing import AsyncGenerator, List, Optional, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
@@ -76,7 +76,7 @@ _ALERT_LOCK_NAMESPACE = 7341
 
 
 @asynccontextmanager
-async def _organization_alert_lock(organization_id: int) -> AsyncIterator[None]:
+async def _organization_alert_lock(organization_id: int) -> AsyncGenerator[None, None]:
     """Cross-process mutex serializing alert attachment within an organization.
 
     Uses a Postgres session-level advisory lock on a dedicated connection (the attachment
