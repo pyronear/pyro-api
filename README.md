@@ -13,14 +13,9 @@
   <a href="https://www.codacy.com/gh/pyronear/pyro-api/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=pyronear/pyro-api&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/3bea1a63e4aa44258cfd08831d713478"/></a>
 </p>
 <p align="center">
-  <a href="https://pypi.org/project/pyroclient/">
-    <img src="https://img.shields.io/pypi/v/pyroclient.svg?logo=python&logoColor=fff&style=flat-square" alt="PyPi Status">
-  </a>
   <a href="https://hub.docker.com/r/pyronear/alert-api">
     <img alt="Docker Image Version" src="https://img.shields.io/docker/v/pyronear/alert-api?style=flat-square&logo=Docker&logoColor=white&label=docker">
   </a>
-  <img src="https://img.shields.io/pypi/pyversions/pyroclient.svg?style=flat-square" alt="pyversions">
-  <img src="https://img.shields.io/pypi/l/pyroclient.svg?style=flat-square" alt="license">
 </p>
 
 

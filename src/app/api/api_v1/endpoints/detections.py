@@ -38,12 +38,25 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
-from app.models import Alert, AlertSequence, AlertShare, Camera, Detection, Pose, Role, Sequence, UserRole
+from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
+    Alert,
+    AlertSequence,
+    AlertShare,
+    Camera,
+    Detection,
+    Pose,
+    Role,
+    Sequence,
+    UserRole,
+)
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
     BOXES_PATTERN,
     EMPTY_BBOXES,
+    FLOAT_PATTERN,
+    SCORES_PATTERN,
     DetectionCreate,
     DetectionRead,
     DetectionSequence,
@@ -92,6 +105,44 @@ def _bboxes_overlap(
     inter_w = min(lx_max, rx_max) - max(lx_min, rx_min)
     inter_h = min(ly_max, ry_max) - max(ly_min, ry_min)
     return inter_w > -tolerance and inter_h > -tolerance
+
+
+def _bbox_match_score(
+    seq_bbox: Tuple[float, float, float, float, float],
+    det_bbox: Tuple[float, float, float, float, float],
+) -> float:
+    # IoU minus the squared distance between the centers, in squared diagonals of the new box.
+    # The distance ranks boxes matched only through the tolerance gap (IoU 0). Its unit is the new
+    # box, the same for every candidate: with the box enclosing both (DIoU) the unit grows next to a
+    # plume-wide box, which would then outrank a small smoke's own neighbouring box.
+    sx_min, sy_min, sx_max, sy_max, _ = seq_bbox
+    dx_min, dy_min, dx_max, dy_max, _ = det_bbox
+    inter_w = min(sx_max, dx_max) - max(sx_min, dx_min)
+    inter_h = min(sy_max, dy_max) - max(sy_min, dy_min)
+    # Two gaps would multiply into a positive area
+    inter = inter_w * inter_h if inter_w > 0 and inter_h > 0 else 0.0
+    union = (sx_max - sx_min) * (sy_max - sy_min) + (dx_max - dx_min) * (dy_max - dy_min) - inter
+    iou = inter / union if union > 0 else 0.0
+    center_gap2 = ((sx_min + sx_max - dx_min - dx_max) ** 2 + (sy_min + sy_max - dy_min - dy_max) ** 2) / 4
+    diagonal2 = (dx_max - dx_min) ** 2 + (dy_max - dy_min) ** 2
+    return iou - center_gap2 / diagonal2 if diagonal2 > 0 else iou
+
+
+def _best_matching_sequence(
+    candidates: List[Tuple[Sequence, Tuple[float, float, float, float, float]]],
+    det_bbox: Tuple[float, float, float, float, float],
+) -> Optional[Sequence]:
+    # Among the candidates within tolerance (most recent first), the one whose last real bbox
+    # matches best. Best match, not first match: see #662.
+    best: Optional[Tuple[Sequence, float]] = None
+    for seq, seq_bbox in candidates:
+        if not _bboxes_overlap(seq_bbox, det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
+            continue
+        score = _bbox_match_score(seq_bbox, det_bbox)
+        # Strict: on an exact tie the most recent sequence keeps the box, as first-match did
+        if best is None or score > best[1]:
+            best = (seq, score)
+    return best[0] if best is not None else None
 
 
 async def _get_continuity_sequences(
@@ -538,6 +589,16 @@ async def create_detection(
             "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
         ),
     ),
+    temporal_model_scores: Optional[str] = Form(
+        None,
+        pattern=SCORES_PATTERN,
+        max_length=settings.MAX_BBOX_STR_LENGTH,
+        description=(
+            "string representation of the list of smoke probabilities (max 3 decimals) from the temporal model "
+            "run on the device, one per bbox in the same order. When given, the API applies its own threshold "
+            "to them instead of scoring the sequences itself."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -572,6 +633,15 @@ async def create_detection(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Number of crops must match the number of bboxes.",
         )
+    # Same alignment rule for the device's temporal scores: one per bbox.
+    scores: Optional[List[float]] = None
+    if temporal_model_scores is not None:
+        scores = [float(value) for value in re.findall(FLOAT_PATTERN, temporal_model_scores)]
+        if len(scores) != len(bbox_strings):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Number of temporal model scores must match the number of bboxes.",
+            )
 
     # The engine may report when the image was actually captured; fall back to now when it doesn't.
     # This is the event time the platform displays, and it sets the sequence's started_at; liveness
@@ -634,6 +704,7 @@ async def create_detection(
         )
 
         det_bbox = _parse_bbox(bbox_str)
+        device_score = scores[idx] if scores is not None else None
         # Sequence handling
         # Check if there is a sequence that was seen recently
         candidate_sequences = await sequences.fetch_all(
@@ -646,16 +717,14 @@ async def create_detection(
             order_by="last_seen_at",
             order_desc=True,
         )
-        matched_sequence: Optional[Sequence] = None
         latest_detections = await detections.get_latest_bboxes([seq.id for seq in candidate_sequences])
+        candidate_bboxes: List[Tuple[Sequence, Tuple[float, float, float, float, float]]] = []
         for seq in candidate_sequences:
             latest = latest_detections.get(seq.id)
-            if latest is None:
-                continue
-            bbox_strs = _extract_bbox_strings(latest.bbox)
-            if bbox_strs and _bboxes_overlap(_parse_bbox(bbox_strs[0]), det_bbox, settings.SEQUENCE_BBOX_TOLERANCE):
-                matched_sequence = seq
-                break
+            bbox_strs = _extract_bbox_strings(latest.bbox) if latest is not None else []
+            if bbox_strs:
+                candidate_bboxes.append((seq, _parse_bbox(bbox_strs[0])))
+        matched_sequence = _best_matching_sequence(candidate_bboxes, det_bbox)
 
         if matched_sequence is not None:
             await sequences.update(matched_sequence.id, SequenceUpdate(last_seen_at=det.created_at), commit=False)
@@ -664,6 +733,12 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            # A frame without a score (the device skipped its model on this frame) keeps the
+            # previous device verdict: it is never reset to the API path.
+            if device_score is not None:
+                await sequences.set_temporal_score(
+                    matched_sequence.id, device_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
+                )
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
@@ -716,6 +791,10 @@ async def create_detection(
                     )
                     if det_.id == det.id:
                         det = updated
+                if device_score is not None:
+                    await sequences.set_temporal_score(
+                        sequence_.id, device_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
+                    )
                 affected_sequences.add(sequence_.id)
 
         created.append(det)
@@ -738,7 +817,8 @@ async def create_detection(
     # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
     # whichever uvicorn worker received the detection). The per-process validation worker
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
-    # notification channels (webhooks, Telegram, Slack) fire only once validated.
+    # notification channels (webhooks, Telegram, Slack) fire only once validated. A score
+    # computed on the device was stored above, so the worker skips its own model call.
     for seq_id in affected_sequences:
         await sequences.enqueue_validation(seq_id)
 

@@ -243,6 +243,21 @@ async def test_proxy_latest_image_returns_jpeg(async_client: AsyncClient, config
 
 
 @pytest.mark.asyncio
+async def test_proxy_latest_image_honors_quality(async_client: AsyncClient, configured_camera_session: AsyncSession):
+    """The JPEG re-encode must use the requested quality, not Pillow's default."""
+    img = Image.effect_mandelbrot((256, 256), (-3, -2.5, 2, 2.5), 100).convert("RGB")
+    sizes: dict[int, int] = {}
+    for quality in (10, 95):
+        with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value=img)):
+            response = await async_client.get(
+                f"/cameras/{CONFIGURED_CAM_ID}/latest_image?pose=0&quality={quality}", headers=_auth(0)
+            )
+        assert response.status_code == 200
+        sizes[quality] = len(response.content)
+    assert sizes[10] < sizes[95]
+
+
+@pytest.mark.asyncio
 async def test_proxy_latest_image_no_content(async_client: AsyncClient, configured_camera_session: AsyncSession):
     """When the device has no cached image for the requested pose it returns 204."""
     with patch(f"{_PROXY_MODULE}._run_sync", new=AsyncMock(return_value=None)):

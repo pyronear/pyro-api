@@ -121,6 +121,9 @@ WINDOW_EXHAUSTED = "window_exhausted"
 VALIDATION_FAILED = "failed"
 # Terminal states: the queue must never resurrect these.
 TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
+# sequences.temporal_api_version value for a score computed on the device and sent with the
+# detection: the worker applies the threshold to it instead of calling the model.
+TEMPORAL_SCORE_SOURCE_ENGINE = "engine"
 
 
 class Sequence(SQLModel, table=True):
@@ -168,7 +171,10 @@ class Sequence(SQLModel, table=True):
         None,
         nullable=True,
         max_length=32,
-        description="Temporal API serving-code version (Docker image tag) that produced temporal_model_score.",
+        description=(
+            "Temporal API serving-code version (Docker image tag) that produced temporal_model_score, "
+            "or 'engine' when the device scored the sequence itself and sent the score with the detection."
+        ),
     )
     is_validated: bool = Field(
         default=False,

@@ -16,7 +16,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.api_v1.endpoints import detections as detections_api
 from app.api.api_v1.endpoints.detections import (
     _attach_sequence_to_alert,
+    _bbox_match_score,
     _bboxes_overlap,
+    _best_matching_sequence,
     _build_links_for_group,
     _build_overlap_records,
     _fetch_alert_mapping,
@@ -36,6 +38,7 @@ from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, OrganizationCRUD, PoseCRUD, SequenceCRUD
 from app.db import session_factory
 from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
     Alert,
     AlertSequence,
     AnnotationType,
@@ -437,6 +440,45 @@ async def test_matching_uses_latest_real_bbox(async_client, sequence_session, mo
 
 
 @pytest.mark.asyncio
+async def test_matching_prefers_best_overlap_over_most_recent(async_client, sequence_session, monkeypatch):
+    # Two fires on one pose (#662). A plume-wide bbox covers fire B and only touches fire A's last bbox,
+    # within tolerance. Fire A's sequence was seen one second later, so first-match attached the box to it.
+    now = utcnow()
+    fire_a = await sequence_session.get(Sequence, 1)
+    fire_a.last_seen_at = now - timedelta(minutes=4)
+    fire_b = Sequence(
+        camera_id=1,
+        pose_id=1,
+        camera_azimuth=fire_a.camera_azimuth,
+        sequence_azimuth=fire_a.sequence_azimuth,
+        cone_angle=fire_a.cone_angle,
+        started_at=now - timedelta(hours=1),
+        last_seen_at=now - timedelta(minutes=4, seconds=1),
+    )
+    sequence_session.add(fire_b)
+    await sequence_session.commit()
+    fire_b_id = fire_b.id
+    sequence_session.add_all([
+        Detection(camera_id=1, pose_id=1, sequence_id=1, bucket_key="fire-a", bbox="[(0.308,0.524,0.318,0.538,0.21)]"),
+        Detection(camera_id=1, pose_id=1, sequence_id=fire_b_id, bucket_key="fire-b", bbox="[(0.48,0.2,0.6,0.5,0.6)]"),
+    ])
+    await sequence_session.commit()
+    monkeypatch.setattr(detections_api, "upload_file", AsyncMock(side_effect=["giant-frame", "next-frame"]))
+
+    # The giant bbox, then fire B's next bbox. On main the giant bbox re-anchored fire A's sequence onto
+    # fire B, so fire B's next bbox went to fire A too.
+    for frame, bbox in [(b"giant", "[(0.348,0.070,0.684,0.524,0.5)]"), (b"next", "[(0.49,0.21,0.61,0.5,0.6)]")]:
+        response = await async_client.post(
+            "/detections",
+            headers=pytest.get_token(1, ["camera"], 1),
+            data={"pose_id": 1, "bboxes": bbox},
+            files={"file": ("frame.jpg", frame, "image/jpeg")},
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["sequence_id"] == fire_b_id, bbox
+
+
+@pytest.mark.asyncio
 async def test_get_camera_by_id_adds_missing_sequence_camera(detection_session: AsyncSession):
     cam_crud = CameraCRUD(detection_session)
     camera = await detection_session.get(Camera, pytest.camera_table[0]["id"])
@@ -537,6 +579,79 @@ def test_resolve_groups_and_locations_no_match_returns_none():
 def test_bboxes_overlap_tolerance(left, right, tolerance, expected):
     assert _bboxes_overlap(left, right, tolerance) is expected
     assert _bboxes_overlap(right, left, tolerance) is expected
+
+
+@pytest.mark.parametrize(
+    ("seq_bbox", "det_bbox", "expected"),
+    [
+        # Identical boxes
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.1, 0.1, 0.3, 0.3, 0.9), 1.0),
+        # A box centered inside a larger one: IoU only
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.15, 0.15, 0.25, 0.25, 0.9), 0.25),
+        # IoU 1/3, centers 0.1 apart, new box diagonal² 0.08
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.2, 0.1, 0.4, 0.3, 0.9), 1 / 3 - 0.01 / 0.08),
+        # Diagonal neighbours within tolerance: two gaps are no intersection, only the distance counts
+        ((0.1, 0.1, 0.3, 0.3, 0.9), (0.32, 0.32, 0.5, 0.5, 0.9), -0.0882 / 0.0648),
+        # Same neighbours, larger new box: the distance is measured in new box diagonals
+        ((0.32, 0.32, 0.5, 0.5, 0.9), (0.1, 0.1, 0.3, 0.3, 0.9), -0.0882 / 0.08),
+        # A zero-width stored box on the new box's edge: no area, so only the distance counts
+        ((0.1, 0.1, 0.1, 0.3, 0.9), (0.1, 0.1, 0.3, 0.3, 0.9), -0.01 / 0.08),
+    ],
+)
+def test_bbox_match_score(seq_bbox, det_bbox, expected):
+    assert _bbox_match_score(seq_bbox, det_bbox) == pytest.approx(expected)
+
+
+GIANT_BBOX = (0.348, 0.070, 0.684, 0.524, 0.5)
+FIRE_A_BBOX = (0.308, 0.524, 0.318, 0.538, 0.21)
+
+
+@pytest.mark.parametrize(
+    ("candidates", "det_bbox", "expected"),
+    [
+        # #662: the giant bbox only touches fire A's box (most recent) and covers fire B's
+        ([("A", FIRE_A_BBOX), ("B", (0.48, 0.2, 0.6, 0.5, 0.6))], GIANT_BBOX, "B"),
+        # Same, with fire B's box just outside the giant one: IoU is 0 for both, the distance decides
+        ([("A", FIRE_A_BBOX), ("B", (0.5, 0.03, 0.56, 0.065, 0.6))], GIANT_BBOX, "B"),
+        # Once fire B holds the giant bbox, fire A's own box still goes back to fire A
+        ([("B", GIANT_BBOX), ("A", FIRE_A_BBOX)], FIRE_A_BBOX, "A"),
+        # ...and so does a drifting fire A box inside the giant one
+        ([("B", GIANT_BBOX), ("A", (0.5, 0.4, 0.6, 0.5, 0.6))], (0.51, 0.41, 0.61, 0.51, 0.6), "A"),
+        # ...and a fire A box partly inside the giant one, near fire A's last box
+        ([("B", GIANT_BBOX), ("A", FIRE_A_BBOX)], (0.33, 0.5, 0.35, 0.53, 0.6), "A"),
+        # A small smoke next to its own last box, within tolerance only, inside the giant box
+        ([("B", GIANT_BBOX), ("A", (0.4, 0.4, 0.41, 0.41, 0.6))], (0.43, 0.4, 0.44, 0.41, 0.6), "A"),
+        ([("A", (0.33, 0.3, 0.34, 0.31, 0.6)), ("B", GIANT_BBOX)], (0.345, 0.3, 0.355, 0.31, 0.6), "A"),
+        # A small smoke that suddenly covers its plume: the new box contains its last box
+        ([("A", (0.4, 0.4, 0.42, 0.42, 0.6)), ("B", (0.47, 0.25, 0.55, 0.4, 0.6))], (0.38, 0.25, 0.46, 0.42, 0.6), "A"),
+        # Known limit: a plume fading back to a small box 0.05 from a neighbour of that size goes to
+        # the neighbour (first-match gave it to the plume, the most recent sequence)
+        ([("A", (0.4, 0.1, 0.6, 0.5, 0.6)), ("B", (0.53, 0.46, 0.56, 0.5, 0.6))], (0.48, 0.44, 0.52, 0.5, 0.6), "B"),
+        # Both intersect: the better match wins over the most recent
+        ([("A", (0.1, 0.1, 0.3, 0.3, 0.6)), ("B", (0.2, 0.1, 0.4, 0.3, 0.6))], (0.25, 0.1, 0.35, 0.3, 0.6), "B"),
+        # A sliver of intersection does not beat a close box matched through the tolerance gap
+        ([("O", (0.0, 0.0, 0.461, 0.401, 0.6)), ("A", (0.4, 0.4, 0.45, 0.45, 0.6))], (0.46, 0.4, 0.51, 0.45, 0.6), "A"),
+        # Two boxes of one frame: A was just matched to the first one (and became the most recent),
+        # the second one, next to it within tolerance, still goes to its own sequence
+        ([("A", (0.1, 0.1, 0.2, 0.2, 0.6)), ("B", (0.22, 0.1, 0.32, 0.2, 0.6))], (0.22, 0.1, 0.32, 0.2, 0.6), "B"),
+        # A box the size of B's, shifted by 0.06, goes to B even inside A's large box (first-match gave A)
+        ([("A", (0.4, 0.1, 0.7, 0.5, 0.6)), ("B", (0.66, 0.4, 0.74, 0.48, 0.6))], (0.6, 0.4, 0.68, 0.48, 0.6), "B"),
+        # Matched only through the tolerance gap: still matched
+        ([("A", (0.1, 0.1, 0.2, 0.2, 0.6))], (0.22, 0.1, 0.32, 0.2, 0.6), "A"),
+        # Exact tie: the most recent sequence keeps the box, as with first-match
+        ([("A", (0.1, 0.1, 0.2, 0.2, 0.6)), ("B", (0.1, 0.1, 0.2, 0.2, 0.6))], (0.22, 0.1, 0.32, 0.2, 0.6), "A"),
+        # Nothing within tolerance
+        ([("A", (0.1, 0.1, 0.2, 0.2, 0.6))], (0.5, 0.5, 0.6, 0.6, 0.6), None),
+    ],
+)
+def test_best_matching_sequence(candidates, det_bbox, expected):
+    now = utcnow()
+    sequences = {
+        name: Sequence(id=idx, camera_id=1, pose_id=1, camera_azimuth=0.0, started_at=now, last_seen_at=now)
+        for idx, (name, _) in enumerate(candidates, start=1)
+    }
+    matched = _best_matching_sequence([(sequences[name], bbox) for name, bbox in candidates], det_bbox)
+    assert matched is (sequences[expected] if expected else None)
 
 
 @pytest.mark.asyncio
@@ -1182,6 +1297,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.2,0.2,0.3,0.3,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_scores=None,
         file=upload,
         crop_files=None,
         detections=detections,
@@ -1217,6 +1333,7 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         bboxes="[(0.25,0.25,0.35,0.35,0.9)]",
         pose_id=pose_id,
         recorded_at=None,
+        temporal_model_scores=None,
         file=upload_again,
         crop_files=None,
         detections=detections,
@@ -1934,6 +2051,113 @@ async def test_create_detection_sequence_starts_at_earliest_capture_on_backlog_f
     seq = await detection_session.get(Sequence, seq_id)
     assert seq is not None
     assert seq.started_at == earliest_capture
+
+
+@pytest.mark.asyncio
+async def test_create_detection_stores_engine_temporal_score(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """A score computed on the device lands on the sequence with 'engine' provenance and only
+    ever rises (a lower later score, or a frame without one, keeps the previous verdict)."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 2)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    for idx, score in enumerate(("[0.15]", "[0.62]")):
+        response = await async_client.post(
+            "/detections",
+            data={
+                "pose_id": pose.id,
+                "bboxes": f"[(0.1{idx},0.1{idx},0.2{idx},0.2{idx},0.9)]",
+                "temporal_model_scores": score,
+            },
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+
+    seq = await detection_session.get(Sequence, response.json()["sequence_id"])
+    assert seq is not None
+    assert seq.temporal_model_score == pytest.approx(0.62)
+    assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
+    assert seq.temporal_model_version is None
+    assert seq.validation_due_at is not None  # still queued: the worker applies the threshold
+
+    for idx, data in enumerate(({"temporal_model_scores": "[0.3]"}, {})):
+        response = await async_client.post(
+            "/detections",
+            data={"pose_id": pose.id, "bboxes": f"[(0.1{idx + 2},0.1{idx + 2},0.2{idx + 2},0.2{idx + 2},0.9)]", **data},
+            files={"file": ("logo.png", mock_img, "image/png")},
+            headers=auth,
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["sequence_id"] == seq.id
+        await detection_session.refresh(seq)
+        assert seq.temporal_model_score == pytest.approx(0.62)
+        assert seq.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE
+
+
+@pytest.mark.asyncio
+async def test_create_detection_scores_each_bbox_sequence(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, monkeypatch
+):
+    """Two objects on one frame: each sequence gets the score of its own bbox."""
+    monkeypatch.setattr(settings, "SEQUENCE_MIN_INTERVAL_DETS", 1)
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    pose = Pose(camera_id=pytest.camera_table[0]["id"], azimuth=130.0)
+    detection_session.add(pose)
+    await detection_session.commit()
+    await detection_session.refresh(pose)
+
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pose.id,
+            "bboxes": "[(0.1,0.1,0.2,0.2,0.9),(0.6,0.6,0.7,0.7,0.8)]",
+            "temporal_model_scores": "[0.62,0.15]",
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 201, response.text
+
+    res = await detection_session.exec(select(Sequence).where(Sequence.pose_id == pose.id).order_by(Sequence.id))
+    assert sorted(seq.temporal_model_score for seq in res.all()) == pytest.approx([0.15, 0.62])
+
+
+@pytest.mark.parametrize("scores", ["[-0.1]", "[1.5]", "[nan]", "0.5", "[0.5,0.6]", "[]"])
+@pytest.mark.asyncio
+async def test_create_detection_rejects_invalid_temporal_scores(
+    async_client: AsyncClient, mock_img: bytes, scores: str
+):
+    """Out-of-range or malformed scores fail the pattern; a count mismatch with bboxes is a 422 too."""
+    auth = pytest.get_token(
+        pytest.camera_table[0]["id"],
+        ["camera"],
+        pytest.camera_table[0]["organization_id"],
+    )
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": pytest.pose_table[0]["id"],
+            "bboxes": "[(0.1,0.1,0.2,0.2,0.9)]",
+            "temporal_model_scores": scores,
+        },
+        files={"file": ("logo.png", mock_img, "image/png")},
+        headers=auth,
+    )
+    assert response.status_code == 422, response.text
 
 
 @pytest.mark.asyncio
