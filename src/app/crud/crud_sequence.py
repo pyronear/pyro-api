@@ -14,7 +14,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.time import utcnow
 from app.crud.base import BaseCRUD
-from app.models import TERMINAL_VALIDATION_STATUSES, VALIDATION_FAILED, Detection, Sequence
+from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
+    TERMINAL_VALIDATION_STATUSES,
+    VALIDATION_FAILED,
+    WINDOW_EXHAUSTED,
+    Detection,
+    Sequence,
+)
 from app.schemas.sequences import SequenceLabel, SequenceUpdate
 
 __all__ = ["SequenceCRUD"]
@@ -51,23 +58,36 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         model_version: Union[str, None] = None,
         api_version: Union[str, None] = None,
     ) -> None:
-        """Persist the latest temporal-model score with its provenance.
+        """Persist a temporal-model score with its provenance, keeping the highest, in the
+        caller's transaction.
 
-        The versions are written unconditionally in the same UPDATE: they describe the
-        stored score, so the triple always moves together (a re-score by a newer release
-        overwrites all three).
+        Like max_conf the score only ever rises: a high score must never decay into a drop,
+        whether the model re-scores a later window or a device score lands after a higher one
+        (backlog: the worker must judge the crossing, not the last upload). The versions move
+        with the score in the same CASE, so the triple always describes one scoring run (the
+        worker picks its path from temporal_api_version).
+
+        A device score also reopens a sequence the API model window-exhausted (the device
+        started scoring after the API gave up), so the next enqueue judges the stored verdict.
         """
-        stmt: Any = (
-            update(Sequence)
-            .where(cast(Any, Sequence.id) == sequence_id)
-            .values(
-                temporal_model_score=score,
-                temporal_model_version=model_version,
-                temporal_api_version=api_version,
-            )
-        )
+        score_col = cast(Any, Sequence.temporal_model_score)
+        model_col = cast(Any, Sequence.temporal_model_version)
+        api_col = cast(Any, Sequence.temporal_api_version)
+        wins = or_(score_col.is_(None), score_col < score)
+        values: dict = {
+            "temporal_model_score": cast(Any, case)((wins, score), else_=score_col),
+            "temporal_model_version": cast(Any, case)(
+                (wins, null() if model_version is None else model_version), else_=model_col
+            ),
+            "temporal_api_version": cast(Any, case)(
+                (wins, null() if api_version is None else api_version), else_=api_col
+            ),
+        }
+        if api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
+            status_col = cast(Any, Sequence.validation_status)
+            values["validation_status"] = cast(Any, case)((status_col == WINDOW_EXHAUSTED, null()), else_=status_col)
+        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
         await self.session.exec(stmt)
-        await self.session.commit()
 
     async def claim_validation(self, sequence_id: int, validation_status: Union[str, None] = None) -> bool:
         """Atomically flip ``is_validated`` from False to True, recording how it concluded.
