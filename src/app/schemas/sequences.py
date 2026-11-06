@@ -4,13 +4,13 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 from datetime import datetime
-from typing import Union
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
 
 from app.models import AnnotationType, Sequence
 
-__all__ = ["SequenceLabel", "SequenceRead", "SequenceUpdate"]
+__all__ = ["SequenceCompletionRead", "SequenceLabel", "SequenceRead", "SequenceUpdate"]
 
 
 # Accesses
@@ -30,3 +30,16 @@ class SequenceRead(Sequence):
     validation_lease_until: Union[datetime, None] = Field(None, exclude=True)
     validation_status: Union[str, None] = Field(None, exclude=True)
     validation_attempts: int = Field(0, exclude=True)
+    completion_status: Union[str, None] = Field(None, exclude=True)
+    completion_attempts: int = Field(0, exclude=True)
+
+
+class SequenceCompletionRead(BaseModel):
+    """Admin-only view of recoverable post-validation work."""
+
+    id: int
+    camera_id: int
+    validation_status: str | None
+    completion_status: Literal["pending", "completed", "failed"]
+    completion_attempts: int
+    validation_due_at: datetime | None

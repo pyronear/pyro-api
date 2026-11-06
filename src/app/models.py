@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Union
 
-from sqlalchemy import Index, text
+from sqlalchemy import CheckConstraint, Index, text
 from sqlmodel import Field, SQLModel
 
 from app.core.config import settings
@@ -121,6 +121,10 @@ WINDOW_EXHAUSTED = "window_exhausted"
 VALIDATION_FAILED = "failed"
 # Terminal states: the queue must never resurrect these.
 TERMINAL_VALIDATION_STATUSES = (WINDOW_EXHAUSTED, VALIDATION_FAILED)
+# Alert completion has its own retry budget; failures must never overwrite a verdict.
+COMPLETION_PENDING = "pending"
+COMPLETION_COMPLETED = "completed"
+COMPLETION_FAILED = "failed"
 # sequences.temporal_api_version value for a score computed on the device and sent with the
 # detection: the worker applies the threshold to it instead of calling the model.
 TEMPORAL_SCORE_SOURCE_ENGINE = "engine"
@@ -129,6 +133,10 @@ TEMPORAL_SCORE_SOURCE_ENGINE = "engine"
 class Sequence(SQLModel, table=True):
     __tablename__ = "sequences"
     __table_args__ = (
+        CheckConstraint(
+            "completion_status IN ('pending', 'completed', 'failed')", name="ck_sequences_completion_status"
+        ),
+        Index("ix_sequences_failed_completion", "id", postgresql_where=text("completion_status = 'failed'")),
         Index("ix_sequences_camera_pose_last_seen", "camera_id", "pose_id", "last_seen_at"),
         Index(
             "ix_sequences_validation_due_at",
@@ -184,16 +192,16 @@ class Sequence(SQLModel, table=True):
             "Only validated sequences are triangulated and notified."
         ),
     )
-    # The three validation-job fields below are internal plumbing (the DB-backed queue);
-    # they are excluded from API serialization.
+    # Job plumbing is excluded from ordinary API responses. The due marker and lease
+    # serve both validation and the subsequent alert-completion phase.
     validation_due_at: Union[datetime, None] = Field(
         None,
         nullable=True,
         exclude=True,
         description=(
-            "When set, the sequence is queued for temporal validation (set on each new detection, "
-            "kept at its oldest value while queued so ordering is FIFO). Cleared once the worker "
-            "reaches a verdict for the current frame set or a terminal state."
+            "When set, the sequence is queued for validation or post-validation alert completion. "
+            "New detections preserve the oldest due time for FIFO ordering. After validation "
+            "passes, the marker stays set until completion succeeds or exhausts its retries."
         ),
     )
     validation_lease_until: Union[datetime, None] = Field(
@@ -215,8 +223,9 @@ class Sequence(SQLModel, table=True):
             "How validation concluded: 'model' (temporal model confirmed), 'fail_open_unavailable' "
             "(model unreachable/breaker open), 'fail_open_stale' (queued past the max age), "
             "'window_exhausted' (scored but never confirmed within the frame window; terminal), "
-            "'failed' (gave up after repeated job errors; terminal). NULL while pending or for "
-            "pre-gate sequences. Allowed values are enforced by a DB CHECK constraint."
+            "'failed' (gave up before reaching a verdict; terminal). NULL while pending, for "
+            "pre-gate sequences, or when a legacy verdict's reason was lost. Allowed values "
+            "are enforced by a DB CHECK constraint."
         ),
     )
     validation_attempts: int = Field(
@@ -224,10 +233,26 @@ class Sequence(SQLModel, table=True):
         nullable=False,
         exclude=True,
         description=(
-            "Consecutive errored validation runs for this sequence (reset on every completed "
-            "job). At MAX_VALIDATION_ATTEMPTS the job dead-letters as validation_status='failed' "
+            "Consecutive errored validation runs (reset on a completed scoring job or a passing "
+            "verdict). At MAX_VALIDATION_ATTEMPTS the job dead-letters as validation_status='failed' "
             "instead of retrying forever."
         ),
+    )
+    completion_status: Union[str, None] = Field(
+        None,
+        nullable=True,
+        max_length=16,
+        exclude=True,
+        description=(
+            "Post-validation alert processing: pending, completed, or failed (requires an admin retry). "
+            "NULL before validation. Completed does not imply notification delivery."
+        ),
+    )
+    completion_attempts: int = Field(
+        default=0,
+        nullable=False,
+        exclude=True,
+        description="Consecutive alert-completion errors; reset on successful completion or an admin retry.",
     )
 
 
