@@ -6,7 +6,7 @@
 import asyncio
 from datetime import timedelta
 from typing import Any, cast
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from sqlalchemy import update
@@ -16,7 +16,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.time import utcnow
 from app.crud import DetectionCRUD, SequenceCRUD
 from app.db import session_factory
-from app.models import TEMPORAL_SCORE_SOURCE_ENGINE, AlertSequence, Detection, Sequence
+from app.models import (
+    COMPLETION_COMPLETED,
+    COMPLETION_FAILED,
+    COMPLETION_PENDING,
+    TEMPORAL_SCORE_SOURCE_ENGINE,
+    Alert,
+    AlertSequence,
+    Detection,
+    Sequence,
+)
 from app.services import validation as validation_service
 from app.services.risk import risk_service
 from app.services.temporal import TemporalPrediction, TemporalUnavailableError, temporal_service
@@ -465,7 +474,7 @@ async def test_process_nothing_due_for_completed_validated_sequence(detection_se
     crud = SequenceCRUD(detection_session)
     await _enqueue(detection_session, cast(int, seq.id))
     await crud.claim_validation(cast(int, seq.id))
-    await crud.finish_validation_job(cast(int, seq.id))
+    await crud.finish_sequence_completion(cast(int, seq.id))
 
     assert await _process_one_due() is False
 
@@ -876,6 +885,136 @@ async def test_attach_failure_keeps_verdict_and_resumes(detection_session: Async
     assert seq.is_validated is True
     assert seq.validation_due_at is None  # job completed
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+
+
+@pytest.mark.parametrize("verdict", [VALIDATED_BY_MODEL, FAIL_OPEN_UNAVAILABLE])
+@pytest.mark.parametrize("commit_before_failure", [False, True])
+@pytest.mark.asyncio
+async def test_exhausted_completion_can_be_retried_without_revalidating(
+    detection_session, async_client, monkeypatch, verdict, commit_before_failure
+):
+    """A failed completion is visible, recoverable and idempotent even days after the event."""
+    from app.api.api_v1.endpoints import detections as detections_api
+
+    seq = await _seed_sequence(detection_session, 5)
+    peer = await _seed_sequence(detection_session, 0)
+    for row in (seq, peer):
+        row.started_at -= timedelta(days=3)
+        row.last_seen_at -= timedelta(days=3)
+        detection_session.add(row)
+    # Validation errors before the verdict must not consume the completion budget.
+    seq.validation_attempts = validation_service.MAX_VALIDATION_ATTEMPTS - 1
+    peer.is_validated = True
+    peer.completion_status = COMPLETION_COMPLETED
+    alert = Alert(organization_id=1, started_at=peer.started_at, last_seen_at=peer.last_seen_at)
+    detection_session.add(alert)
+    await detection_session.flush()
+    detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=peer.id))
+    await detection_session.commit()
+    await _enqueue(detection_session, seq.id)
+
+    real_attach = detections_api._attach_sequence_to_alert
+
+    async def fail_attachment(*args, **kwargs):
+        if commit_before_failure:
+            await real_attach(*args, **kwargs)
+        raise RuntimeError("attachment unavailable")
+
+    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", fail_attachment)
+    monkeypatch.setattr(risk_service, "_scores", {})
+    monkeypatch.setattr(temporal_service, "is_available", lambda: verdict == VALIDATED_BY_MODEL)
+    predict = AsyncMock(return_value=_prediction(0.9))
+    monkeypatch.setattr(temporal_service, "predict", predict)
+    notify = Mock()
+    monkeypatch.setattr(validation_service, "_dispatch_notifications", notify)
+
+    for attempt in range(validation_service.MAX_VALIDATION_ATTEMPTS):
+        assert await _process_one_due() is True
+        await detection_session.refresh(seq)
+        assert seq.validation_status == verdict
+        assert seq.is_validated is True
+        assert seq.validation_attempts == 0
+        assert seq.completion_attempts == attempt + 1
+    assert seq.completion_status == COMPLETION_FAILED
+    assert seq.validation_due_at is None
+    assert seq.validation_lease_until is None
+    assert await _process_one_due() is False
+    notify.assert_not_called()
+
+    auth = pytest.get_token(1, ["admin"], 1)
+    failed = await async_client.get("/sequences/completion/failed", headers=auth)
+    assert failed.status_code == 200
+    assert [item["id"] for item in failed.json()] == [seq.id]
+    assert failed.json()[0]["validation_status"] == verdict
+    assert failed.json()[0]["completion_attempts"] == validation_service.MAX_VALIDATION_ATTEMPTS
+    public = await async_client.get(f"/sequences/{seq.id}", headers=auth)
+    assert "completion_status" not in public.json()
+    assert "completion_attempts" not in public.json()
+
+    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", real_attach)
+    retried = await async_client.post(f"/sequences/{seq.id}/completion/retry", headers=auth)
+    assert retried.status_code == 202
+    assert retried.json()["completion_status"] == COMPLETION_PENDING
+    assert retried.json()["completion_attempts"] == 0
+    duplicate = await async_client.post(f"/sequences/{seq.id}/completion/retry", headers=auth)
+    assert duplicate.status_code == 409
+    assert await _process_one_due() is True
+    assert await _process_one_due() is False
+
+    await detection_session.refresh(seq)
+    assert seq.validation_status == verdict
+    assert seq.completion_status == COMPLETION_COMPLETED
+    assert seq.completion_attempts == 0
+    assert seq.validation_due_at is None
+    assert predict.await_count == (1 if verdict == VALIDATED_BY_MODEL else 0)
+    notify.assert_called_once_with(seq.id, 1, alert.id)
+    # Recovery uses the event's historical window, reusing the peer's original alert.
+    assert (await detection_session.exec(select(Alert))).all() == [alert]
+    links = (await detection_session.exec(select(AlertSequence))).all()
+    assert {(link.alert_id, link.sequence_id) for link in links} == {(alert.id, seq.id), (alert.id, peer.id)}
+    assert (await async_client.get("/sequences/completion/failed", headers=auth)).json() == []
+
+
+@pytest.mark.asyncio
+async def test_late_validation_result_cannot_discard_pending_completion(detection_session):
+    seq = await _seed_sequence(detection_session, 5)
+    crud = SequenceCRUD(detection_session)
+    await _enqueue(detection_session, seq.id)
+    await crud.claim_validation(seq.id, VALIDATED_BY_MODEL)
+    await crud.finish_validation_job(seq.id, validation_status=WINDOW_EXHAUSTED)
+    await detection_session.refresh(seq)
+    assert seq.validation_status == VALIDATED_BY_MODEL
+    assert seq.completion_status == COMPLETION_PENDING
+    assert seq.validation_due_at is not None
+
+
+@pytest.mark.asyncio
+async def test_completion_retry_and_finish_have_one_winner(detection_session):
+    seq = await _seed_sequence(detection_session, 5)
+    crud = SequenceCRUD(detection_session)
+    await _enqueue(detection_session, seq.id)
+    await crud.claim_validation(seq.id, FAIL_OPEN_STALE)
+    await crud.fail_or_retry_validation(seq.id, max_attempts=1, retry_in_seconds=30)
+
+    async with session_factory() as first, session_factory() as second, session_factory() as stale:
+        retried = await asyncio.gather(
+            SequenceCRUD(first).retry_sequence_completion(seq.id),
+            SequenceCRUD(second).retry_sequence_completion(seq.id),
+        )
+        assert sorted(retried) == [False, True]
+        stale_sequence = await stale.get(Sequence, seq.id)
+        assert stale_sequence.validation_due_at is not None
+        completed = await asyncio.gather(
+            SequenceCRUD(first).finish_sequence_completion(seq.id),
+            SequenceCRUD(second).finish_sequence_completion(seq.id),
+        )
+        assert sorted(completed) == [False, True]
+        # A late error, even with a cached pending row, cannot requeue completed work.
+        await SequenceCRUD(stale).fail_or_retry_validation(seq.id, max_attempts=1, retry_in_seconds=30)
+    await detection_session.refresh(seq)
+    assert seq.validation_status == FAIL_OPEN_STALE
+    assert seq.completion_status == COMPLETION_COMPLETED
+    assert seq.validation_due_at is None
 
 
 @pytest.mark.asyncio

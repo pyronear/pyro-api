@@ -17,11 +17,11 @@ from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_
 from app.core.time import utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import get_session
-from app.models import AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
+from app.models import COMPLETION_FAILED, AlertSequence, AnnotationType, Camera, Detection, Sequence, UserRole
 from app.schemas.alerts import AlertCreate
 from app.schemas.detections import DetectionWithUrl
 from app.schemas.login import TokenPayload
-from app.schemas.sequences import SequenceLabel, SequenceRead
+from app.schemas.sequences import SequenceCompletionRead, SequenceLabel, SequenceRead
 from app.services.alerts import refresh_alert_state
 from app.services.risk import FwiClass, risk_service
 from app.services.sequence_confidence import max_conf_filter_clause
@@ -47,6 +47,42 @@ async def verify_org_rights(
 
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
     return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
+
+
+@router.get("/completion/failed", summary="List failed alert completions requiring an admin retry")
+async def fetch_failed_completions(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    _: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> List[SequenceCompletionRead]:
+    failed = await sequences.fetch_all(
+        filters=[("is_validated", True), ("completion_status", COMPLETION_FAILED)],
+        order_by="id",
+        limit=limit,
+        offset=offset,
+    )
+    return [SequenceCompletionRead.model_validate(sequence, from_attributes=True) for sequence in failed]
+
+
+@router.post(
+    "/{sequence_id}/completion/retry",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Retry failed alert completion without revalidating the sequence",
+)
+async def retry_failed_completion(
+    sequence_id: int = Path(..., gt=0),
+    sequences: SequenceCRUD = Depends(get_sequence_crud),
+    token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
+) -> SequenceCompletionRead:
+    sequence = cast(Sequence, await sequences.get(sequence_id, strict=True))
+    if not await sequences.retry_sequence_completion(sequence_id):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Sequence has no failed alert completion.")
+    telemetry_client.capture(
+        token_payload.sub, event="sequence-completion-retry", properties={"sequence_id": sequence_id}
+    )
+    await sequences.session.refresh(sequence)
+    return SequenceCompletionRead.model_validate(sequence, from_attributes=True)
 
 
 @router.get("/{sequence_id}", status_code=status.HTTP_200_OK, summary="Fetch the information of a specific sequence")
