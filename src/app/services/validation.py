@@ -20,7 +20,7 @@ the (slow) model call never holds a DB session.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, List, Optional, Tuple, cast
+from typing import AsyncGenerator, List, Optional, Tuple, cast
 
 from anyio import to_thread
 from fastapi import HTTPException
@@ -34,6 +34,7 @@ from app.db import engine, session_factory
 from app.models import (
     FAIL_OPEN_STALE,
     FAIL_OPEN_UNAVAILABLE,
+    TEMPORAL_SCORE_SOURCE_ENGINE,
     VALIDATED_BY_MODEL,
     VALIDATION_FAILED,
     WINDOW_EXHAUSTED,
@@ -76,7 +77,7 @@ _ALERT_LOCK_NAMESPACE = 7341
 
 
 @asynccontextmanager
-async def _organization_alert_lock(organization_id: int) -> AsyncIterator[None]:
+async def _organization_alert_lock(organization_id: int) -> AsyncGenerator[None, None]:
     """Cross-process mutex serializing alert attachment within an organization.
 
     Uses a Postgres session-level advisory lock on a dedicated connection (the attachment
@@ -245,6 +246,18 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
     prediction: Optional[TemporalPrediction] = None
     validation_status: Optional[str] = None
 
+    # Scored on the device: the engine already ran the temporal model and sent its latest
+    # score with the detection, so only the threshold is applied here. No frame window
+    # either: the engine scores a sliding window and sends a new score with every frame,
+    # so a sequence below threshold just waits for the next one instead of exhausting.
+    prior_score = sequence_.temporal_model_score
+    if prior_score is not None and sequence_.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
+        if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
+            await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)
+        else:
+            await _finish_job(sequence_id, frame_count=total_frames)
+        return
+
     # Window rules past MAX_FRAMES, decided on the stored score. Declined (score <=
     # threshold after its in-window chances) is terminal: don't call the model again and
     # never resurrect via a later fail-open. Scored ABOVE threshold means a previous run
@@ -252,7 +265,6 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
     # validate from the stored score — a high score must never decay into a drop. Never
     # scored (backlog, model freshly configured): score the last MAX_FRAMES anyway —
     # backlog must delay sequences, never silently drop them.
-    prior_score = sequence_.temporal_model_score
     if total_frames > temporal_service.MAX_FRAMES and prior_score is not None:
         if prior_score > settings.TEMPORAL_MODEL_THRESHOLD:
             await _complete_validated_sequence(sequence_id, VALIDATED_BY_MODEL, claim=True)
@@ -305,7 +317,9 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
                 # retry on the next frame set.
                 await _finish_job(sequence_id, frame_count=total_frames)
                 return
-            validated = prediction.probability > settings.TEMPORAL_MODEL_THRESHOLD
+            # Judge the highest score seen: a prior run may have scored high and died before
+            # claiming, and the stored score only ever rises, so the verdict must match it.
+            validated = max(prediction.probability, prior_score or 0.0) > settings.TEMPORAL_MODEL_THRESHOLD
             validation_status = VALIDATED_BY_MODEL if validated else None
 
     # Phase 3 — persist the score (with its version provenance) and, once validated,
@@ -318,6 +332,16 @@ async def _process_claimed_sequence(sequence_id: int) -> None:
                 model_version=prediction.model_version,
                 api_version=prediction.api_version,
             )
+            await session.commit()
+    # A device score that landed during phase 2 (the model call, or its failure) and won the
+    # max owns the sequence now: leave the verdict to the device branch on the next run (the
+    # frame that carried the score keeps the job due) instead of failing open, validating or
+    # window-exhausting on the API's verdict here.
+    async with session_factory() as session:
+        current = await SequenceCRUD(session).get(sequence_id)
+    if current is not None and current.temporal_api_version == TEMPORAL_SCORE_SOURCE_ENGINE:
+        await _finish_job(sequence_id, frame_count=total_frames)
+        return
     if not validated:
         if total_frames > temporal_service.MAX_FRAMES:
             # The model just had its LAST chance (first scoring past the window, on the

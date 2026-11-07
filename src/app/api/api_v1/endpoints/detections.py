@@ -37,12 +37,24 @@ from app.api.dependencies import (
 from app.core.config import settings
 from app.core.time import to_utc_naive, utcnow
 from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD, PoseCRUD, SequenceCRUD
-from app.models import Alert, AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
+from app.models import (
+    TEMPORAL_SCORE_SOURCE_ENGINE,
+    Alert,
+    AlertSequence,
+    Camera,
+    Detection,
+    Pose,
+    Role,
+    Sequence,
+    UserRole,
+)
 from app.schemas.alerts import AlertCreate, AlertUpdate
 from app.schemas.detections import (
     BOX_PATTERN,
     BOXES_PATTERN,
     EMPTY_BBOXES,
+    FLOAT_PATTERN,
+    SCORES_PATTERN,
     DetectionCreate,
     DetectionRead,
     DetectionSequence,
@@ -52,7 +64,7 @@ from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
 from app.services.images import delete_unreferenced_crop, delete_unreferenced_image
-from app.services.overlap import compute_overlap, haversine_km
+from app.services.overlap import compute_overlap_async, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -259,13 +271,14 @@ def _build_overlap_records(
     return records
 
 
-def _resolve_groups_and_locations(
+async def _resolve_groups_and_locations(
     records: List[Dict[str, Any]],
     sequence_id: int,
 ) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
         return None
-    row = next((row for row in compute_overlap(records) if row["id"] == int(sequence_id)), None)
+    result = await compute_overlap_async(records)
+    row = next((row for row in result if row["id"] == int(sequence_id)), None)
     if row is None:
         return None
     groups = [tuple(g) for g in row["event_groups"]]
@@ -501,7 +514,7 @@ async def _attach_sequence_to_alert(
 
     # Build records for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
-    resolved = _resolve_groups_and_locations(records, int(sequence_.id))
+    resolved = await _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:
         return None
     groups, group_locations = resolved
@@ -569,6 +582,16 @@ async def create_detection(
             "converted to UTC; naive values are assumed UTC. Defaults to server now if omitted."
         ),
     ),
+    temporal_model_scores: Optional[str] = Form(
+        None,
+        pattern=SCORES_PATTERN,
+        max_length=settings.MAX_BBOX_STR_LENGTH,
+        description=(
+            "string representation of the list of smoke probabilities (max 3 decimals) from the temporal model "
+            "run on the device, one per bbox in the same order. When given, the API applies its own threshold "
+            "to them instead of scoring the sequences itself."
+        ),
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -603,6 +626,15 @@ async def create_detection(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Number of crops must match the number of bboxes.",
         )
+    # Same alignment rule for the device's temporal scores: one per bbox.
+    scores: Optional[List[float]] = None
+    if temporal_model_scores is not None:
+        scores = [float(value) for value in re.findall(FLOAT_PATTERN, temporal_model_scores)]
+        if len(scores) != len(bbox_strings):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Number of temporal model scores must match the number of bboxes.",
+            )
 
     # The engine may report when the image was actually captured; fall back to now when it doesn't.
     # This is the event time the platform displays, and it sets the sequence's started_at; liveness
@@ -665,6 +697,7 @@ async def create_detection(
         )
 
         det_bbox = _parse_bbox(bbox_str)
+        device_score = scores[idx] if scores is not None else None
         # Sequence handling
         # Check if there is a sequence that was seen recently
         candidate_sequences = await sequences.fetch_all(
@@ -693,6 +726,12 @@ async def create_detection(
             det_max_conf = max_conf_from_bboxes(det.bbox)
             if det_max_conf is not None:
                 await sequences.bump_max_conf(matched_sequence.id, det_max_conf)
+            # A frame without a score (the device skipped its model on this frame) keeps the
+            # previous device verdict: it is never reset to the API path.
+            if device_score is not None:
+                await sequences.set_temporal_score(
+                    matched_sequence.id, device_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
+                )
             affected_sequences.add(matched_sequence.id)
         else:
             det_filters: List[tuple[str, Any]] = [
@@ -745,6 +784,10 @@ async def create_detection(
                     )
                     if det_.id == det.id:
                         det = updated
+                if device_score is not None:
+                    await sequences.set_temporal_score(
+                        sequence_.id, device_score, api_version=TEMPORAL_SCORE_SOURCE_ENGINE
+                    )
                 affected_sequences.add(sequence_.id)
 
         created.append(det)
@@ -767,7 +810,8 @@ async def create_detection(
     # Mark touched sequences due for validation (idempotent: one queue entry per sequence,
     # whichever uvicorn worker received the detection). The per-process validation worker
     # claims due sequences from the DB and runs the gated pipeline: triangulation and ALL
-    # notification channels (webhooks, Telegram, Slack) fire only once validated.
+    # notification channels (webhooks, Telegram, Slack) fire only once validated. A score
+    # computed on the device was stored above, so the worker skips its own model call.
     for seq_id in affected_sequences:
         await sequences.enqueue_validation(seq_id)
 
