@@ -3,13 +3,16 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
+import asyncio
 from datetime import datetime, timedelta
+from threading import Event, get_ident
 
 import pytest
 from shapely.geometry import box
 
 from app.core.time import utcnow
-from app.services.overlap import _find_overlapping_pairs, compute_overlap
+from app.services import overlap
+from app.services.overlap import _find_overlapping_pairs, compute_overlap, compute_overlap_async
 
 
 @pytest.mark.parametrize("relaxation", [0, 30])
@@ -173,3 +176,34 @@ def test_compute_overlap_copies_records_and_handles_empty_input(label) -> None:
     assert result[0]["event_groups"] == [(1,)]
     assert result[0]["event_smoke_locations"] == ([None] if label is None else [])
     assert compute_overlap([]) == []
+
+
+@pytest.mark.asyncio
+async def test_compute_overlap_async_keeps_loop_responsive_and_serializes(monkeypatch) -> None:
+    now = utcnow()
+    records = [_make_sequence(1, 48.3792, 2.8208, 276.5, 3.0, now, now)]
+    expected = compute_overlap(records)
+    entered, release = Event(), Event()
+    loop_thread = get_ident()
+    calls = []
+
+    def blocking_compute(data):
+        assert get_ident() != loop_thread
+        calls.append(data)
+        entered.set()
+        assert release.wait(5)
+        return compute_overlap(data)
+
+    monkeypatch.setattr(overlap, "compute_overlap", blocking_compute)
+    tasks = [asyncio.create_task(compute_overlap_async(records))]
+    try:
+        assert await asyncio.to_thread(entered.wait, 1)
+        assert not tasks[0].done()
+        tasks.append(asyncio.create_task(compute_overlap_async(records)))
+        await asyncio.sleep(0.05)
+        assert calls == [records]
+    finally:
+        release.set()
+        results = await asyncio.gather(*tasks)
+    assert results == [expected, expected]
+    assert calls == [records, records]
