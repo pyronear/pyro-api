@@ -10,6 +10,7 @@ import re
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Iterator
 
 import sentry_sdk
 from fastapi import FastAPI, Request, status
@@ -44,7 +45,30 @@ def scrub_share_token(event: Event, _hint: Hint) -> Event:
         headers = request.get("headers")
         if isinstance(headers, dict):
             request["headers"] = {k: v for k, v in headers.items() if k.lower() != "referer"}
+        # Frame locals hold the token too: the endpoint argument and the ASGI scope's path
+        for frame in _stack_frames(event):
+            frame.pop("vars", None)
     return event
+
+
+def _stack_frames(event: Event) -> Iterator[Dict[str, Any]]:
+    for key in ("exception", "threads"):
+        for value in (event.get(key) or {}).get("values") or []:
+            yield from (value.get("stacktrace") or {}).get("frames") or []
+
+
+class ShareTokenFilter(logging.Filter):
+    """Mask public share tokens in uvicorn access logs, which receive the raw request path."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # uvicorn.access args: (client_addr, method, full_path, http_version, status_code)
+        args = record.args
+        if isinstance(args, tuple) and len(args) > 2 and isinstance(args[2], str) and "/shares/public/" in args[2]:
+            record.args = (*args[:2], _SHARE_TOKEN_PATTERN.sub(r"\1[Filtered]", args[2]), *args[3:])
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(ShareTokenFilter())
 
 
 # Sentry
