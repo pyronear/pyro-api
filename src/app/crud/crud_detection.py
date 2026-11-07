@@ -86,6 +86,30 @@ class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
         stmt: Any = select(latest).where(subq.c.rn == 1)
         return {cast(int, det.sequence_id): det for det in (await self.session.exec(stmt)).all()}
 
+    async def fetch_latest_with_bbox(
+        self, sequence_ids: list[int], limit_per_sequence: int
+    ) -> dict[int, list[Detection]]:
+        """Fetch the latest real detections of each sequence, newest first, in a single query."""
+        if not sequence_ids:
+            return {}
+        sequence = cast(Any, Detection.sequence_id)
+        rank = func.row_number().over(
+            partition_by=sequence,
+            order_by=(cast(Any, Detection.created_at).desc(), cast(Any, Detection.id).desc()),
+        )
+        numbered: Any = (
+            select_sa(Detection, rank.label("rn"))
+            .where(sequence.in_(sequence_ids))
+            .where(cast(Any, Detection.bbox) != EMPTY_BBOXES)
+        )
+        subq = numbered.subquery()
+        latest = aliased(Detection, subq)
+        stmt: Any = select(latest).where(subq.c.rn <= limit_per_sequence).order_by(subq.c.rn)
+        mapping: dict[int, list[Detection]] = {}
+        for det in (await self.session.exec(stmt)).all():
+            mapping.setdefault(cast(int, det.sequence_id), []).append(det)
+        return mapping
+
     async def fetch_by_sequence(
         self,
         sequence_id: int,
