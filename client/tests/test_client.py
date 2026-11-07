@@ -25,24 +25,24 @@ def test_client_forwards_detection_pagination(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("token", "host", "timeout", "expected_error"),
+    ("token", "host", "expected_error"),
     [
-        ("invalid_token", "http://localhost:5050", 10, HTTPRequestError),
-        (pytest.admin_token, "http://localhost:8003", 10, ConnError),
-        (pytest.admin_token, "http://localhost:5050", 10, None),
+        ("invalid_token", "http://localhost:5050", HTTPRequestError),
+        (pytest.admin_token, "http://localhost:8003", ConnError),
+        (pytest.admin_token, "http://localhost:5050", None),
     ],
 )
-def test_client_constructor(token, host, timeout, expected_error):
+def test_client_constructor(token, host, expected_error):
     if expected_error is None:
-        Client(token, host, timeout=timeout)
+        Client(token, host, timeout=10)
     else:
         with pytest.raises(expected_error):
-            Client(token, host, timeout=timeout)
+            Client(token, host, timeout=10)
 
 
 @pytest.fixture
 def silent_host():
-    """URL of a local socket that accepts connections and never responds.
+    """URL of a local socket that queues connections and never responds.
 
     Nothing calls accept(): the kernel completes the handshake and queues the connection, so a client always connects,
     then waits for a response that never comes.
