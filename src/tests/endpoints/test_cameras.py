@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from botocore.exceptions import ClientError
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -725,6 +727,100 @@ async def test_update_camera_trustable(
         event="cameras-update-trustable",
         properties={"camera_id": 1, "is_trustable": False},
     )
+
+
+@pytest.mark.asyncio
+async def test_update_image_same_bytes_same_second(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    mock_img: bytes,
+):
+    """A retry within the same second gets the same key: it must not delete the image it just stored"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        for _ in range(2):
+            response = await async_client.patch(
+                "/cameras/image", files={"file": ("image.jpg", mock_img, "image/jpeg")}, headers=auth
+            )
+            assert response.status_code == 200
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(response.json()["last_image"])
+
+
+@pytest.mark.asyncio
+async def test_update_image_deletes_previous_image(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    mock_img: bytes,
+):
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    keys = []
+    for payload in (mock_img, mock_img + b"next"):
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("image.jpg", payload, "image/jpeg")}, headers=auth
+        )
+        assert response.status_code == 200
+        keys.append(response.json()["last_image"])
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert keys[0] != keys[1]
+    assert not bucket.check_file_existence(keys[0])
+    assert bucket.check_file_existence(keys[1])
+
+
+@pytest.mark.asyncio
+async def test_update_image_keeps_detection_frame(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+):
+    """A detection frame and a last image with the same bytes in the same second share a key:
+    the next last image must not delete the detection frame"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        response = await async_client.post(
+            "/detections",
+            data={"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+            files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+            headers=auth,
+        )
+        assert response.status_code == 201, print(response.__dict__)
+        frame_key = response.json()["bucket_key"]
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("frame.jpg", mock_img, "image/jpeg")}, headers=auth
+        )
+        assert response.status_code == 200
+    assert response.json()["last_image"] == frame_key
+    response = await async_client.patch(
+        "/cameras/image", files={"file": ("frame.jpg", mock_img + b"next", "image/jpeg")}, headers=auth
+    )
+    assert response.status_code == 200
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(frame_key)
+
+
+@pytest.mark.asyncio
+async def test_update_image_survives_failed_deletion(
+    async_client: AsyncClient,
+    camera_session: AsyncSession,
+    mock_img: bytes,
+):
+    """The new image is stored and committed before the old one is deleted: a failed deletion only leaves an object"""
+    cam = pytest.camera_table[0]
+    auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    response = await async_client.patch(
+        "/cameras/image", files={"file": ("image.jpg", mock_img, "image/jpeg")}, headers=auth
+    )
+    assert response.status_code == 200
+    error = ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "DeleteObject")
+    with patch("app.services.storage.S3Bucket.delete_file", side_effect=error):
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("image.jpg", mock_img + b"next", "image/jpeg")}, headers=auth
+        )
+    assert response.status_code == 200
+    assert response.json()["last_image"] != pytest.camera_table[0]["last_image"]
 
 
 @pytest.mark.asyncio
