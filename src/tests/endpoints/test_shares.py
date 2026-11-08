@@ -141,6 +141,7 @@ async def test_public_shared_alert(async_client: AsyncClient, share_session: Asy
     assert len(payload["sequences"]) == 1
     sequence = payload["sequences"][0]
     assert set(sequence) == {
+        "id",
         "started_at",
         "last_seen_at",
         "camera_azimuth",
@@ -150,11 +151,12 @@ async def test_public_shared_alert(async_client: AsyncClient, share_session: Asy
         "detections",
     }
     # Camera position only: no id, organization nor device addresses
+    assert sequence["id"] == 1
     assert set(sequence["camera"]) == {"name", "lat", "lon", "elevation", "angle_of_view"}
     assert sequence["camera"]["name"] == pytest.camera_table[0]["name"]
     assert len(sequence["detections"]) == 3
     for detection in sequence["detections"]:
-        assert set(detection) == {"recorded_at", "bbox", "url"}
+        assert set(detection) == {"id", "created_at", "recorded_at", "bbox", "url", "crop_url"}
         assert detection["url"].startswith("http")
     # Newest first
     recorded = [detection["recorded_at"] for detection in sequence["detections"]]
@@ -237,3 +239,66 @@ async def test_merge_moves_shares_to_surviving_alert(async_client: AsyncClient, 
     assert response.status_code == 200, response.text
     # The merged alert carries the absorbed alert's sequence
     assert len(response.json()["sequences"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("token_idx", "sequence_id", "params", "status_code", "status_detail", "expected_count"),
+    [
+        (0, 1, {}, 200, None, 3),
+        (0, 1, {"limit": 2}, 200, None, 2),
+        # Sequence of another alert, and unknown sequence
+        (0, 2, {}, 404, "Sequence not found in this share.", None),
+        (0, 99, {}, 404, "Sequence not found in this share.", None),
+        (1, 1, {}, 410, "Share link expired.", None),
+        (2, 1, {}, 410, "Share link expired.", None),
+        (None, 1, {}, 404, "Share link not found.", None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_public_shared_sequence_detections(
+    async_client: AsyncClient,
+    share_session: AsyncSession,
+    token_idx: Union[int, None],
+    sequence_id: int,
+    params: dict,
+    status_code: int,
+    status_detail: Union[str, None],
+    expected_count: Union[int, None],
+):
+    token = "unknown-token" if token_idx is None else pytest.share_tokens[token_idx]
+    response = await async_client.get(f"/shares/public/{token}/sequences/{sequence_id}/detections", params=params)
+    assert response.status_code == status_code, response.text
+    if isinstance(status_detail, str):
+        assert response.json()["detail"] == status_detail
+    if expected_count is not None:
+        assert response.headers["cache-control"] == "no-store"
+        payload = response.json()
+        assert len(payload) == expected_count
+        for detection in payload:
+            assert set(detection) == {"id", "created_at", "recorded_at", "bbox", "url", "crop_url"}
+            assert detection["url"].startswith("http")
+
+
+@pytest.mark.parametrize("params", [{}, {"sampling": 2}, {"sampling": 2, "desc": False}, {"limit": 1, "offset": 1}])
+@pytest.mark.asyncio
+async def test_public_shared_sequence_detections_match_platform(
+    async_client: AsyncClient, share_session: AsyncSession, params: dict
+):
+    # A continuity row: the platform returns it, so the recipient sees it too
+    share_session.add(
+        Detection(
+            camera_id=1,
+            pose_id=1,
+            sequence_id=1,
+            bucket_key="my_file",
+            bbox="[]",
+            created_at=datetime.strptime("2023-11-07T15:38:19.226673", "%Y-%m-%dT%H:%M:%S.%f"),
+        )
+    )
+    await share_session.commit()
+    public = await async_client.get(f"/shares/public/{pytest.share_tokens[0]}/sequences/1/detections", params=params)
+    platform = await async_client.get("/sequences/1/detections", params=params, headers=_auth(1))
+    assert public.status_code == platform.status_code == 200, public.text
+    assert [det["id"] for det in public.json()] == [det["id"] for det in platform.json()]
+    for header in ("X-Sampled-Total", "X-Sampled-Truncated"):
+        assert public.headers.get(header) == platform.headers.get(header)

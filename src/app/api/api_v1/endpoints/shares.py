@@ -10,11 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, Se
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.api_v1.endpoints.alerts import verify_org_rights
-from app.api.dependencies import get_alert_crud, get_jwt, get_share_crud
+from app.api.api_v1.endpoints.sequences import MAX_DETECTION_LIMIT, MAX_SAMPLING, fetch_detection_page
+from app.api.dependencies import get_alert_crud, get_detection_crud, get_jwt, get_share_crud
 from app.core.config import settings
 from app.core.security import generate_share_token, hash_share_token
 from app.core.time import utcnow
-from app.crud import AlertCRUD, ShareCRUD
+from app.crud import AlertCRUD, DetectionCRUD, ShareCRUD
 from app.db import get_session
 from app.models import Alert, AlertShare, UserRole
 from app.schemas.login import TokenPayload
@@ -23,11 +24,19 @@ from app.schemas.shares import (
     ShareCreated,
     ShareCreation,
     SharedAlertRead,
+    SharedDetectionRead,
     ShareRead,
     ShareRevocation,
     ShareStatus,
 )
-from app.services.shares import build_shared_alert, serialize_share, share_status
+from app.services.shares import (
+    build_shared_alert,
+    get_shared_sequence_camera,
+    serialize_share,
+    serialize_shared_detection,
+    share_status,
+)
+from app.services.storage import s3_service
 from app.services.telemetry import telemetry_client
 
 router = APIRouter()
@@ -36,6 +45,18 @@ router = APIRouter()
 def verify_share_rights(token_payload: TokenPayload, share: AlertShare) -> None:
     if not token_payload.is_admin and token_payload.organization_id != share.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
+
+
+async def get_active_share(token: str, shares: ShareCRUD, event: str, properties: dict[str, Any]) -> AlertShare:
+    """Resolve a public token: 404 when unknown, 410 once expired or cancelled."""
+    share = await shares.get_by_token(token)
+    if share is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found.")
+    # The token itself never goes to telemetry
+    telemetry_client.capture(f"share-{share.id}", event=event, properties={"alert_id": share.alert_id, **properties})
+    if share_status(share) != ShareStatus.ACTIVE:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share link expired.")
+    return share
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a public link to an alert")
@@ -112,15 +133,43 @@ async def get_shared_alert(
     alerts: AlertCRUD = Depends(get_alert_crud),
     session: AsyncSession = Depends(get_session),
 ) -> SharedAlertRead:
-    share = await shares.get_by_token(token)
-    if share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found.")
-    # The token itself never goes to telemetry
-    telemetry_client.capture(f"share-{share.id}", event="shares-public-get", properties={"alert_id": share.alert_id})
-    if share_status(share) != ShareStatus.ACTIVE:
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Share link expired.")
-
+    share = await get_active_share(token, shares, "shares-public-get", {})
     alert = cast(Alert, await alerts.get(share.alert_id, strict=True))
     # A revoked or expired link must not be served from a cache
     response.headers["Cache-Control"] = "no-store"
     return await build_shared_alert(session, alert, share.expires_at)
+
+
+@router.get(
+    "/public/{token}/sequences/{sequence_id}/detections",
+    status_code=status.HTTP_200_OK,
+    summary="Browse the detections of a shared sequence, without an account",
+    description=(
+        "Same paging, sampling and `X-Sampled-*` headers as `GET /sequences/{sequence_id}/detections`, "
+        "continuity rows included, limited to the sequences of the shared alert."
+    ),
+)
+async def fetch_shared_sequence_detections(
+    response: Response,
+    token: str = Path(..., min_length=1, max_length=128),
+    sequence_id: int = Path(..., gt=0),
+    limit: Union[int, None] = Query(None, ge=1, le=MAX_DETECTION_LIMIT),
+    offset: int = Query(0, ge=0),
+    desc: bool = Query(True),
+    sampling: int = Query(1, ge=1, le=MAX_SAMPLING),
+    with_crop: bool = Query(False),
+    shares: ShareCRUD = Depends(get_share_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
+    session: AsyncSession = Depends(get_session),
+) -> List[SharedDetectionRead]:
+    share = await get_active_share(token, shares, "shares-public-detections", {"sequence_id": sequence_id})
+    camera = await get_shared_sequence_camera(session, share.alert_id, sequence_id)
+    if camera is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sequence not found in this share.")
+
+    response.headers["Cache-Control"] = "no-store"
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
+    fetched = await fetch_detection_page(
+        response, session, detections, sequence_id, limit=limit, offset=offset, desc=desc, sampling=sampling
+    )
+    return [serialize_shared_detection(detection, bucket, with_crop) for detection in fetched]

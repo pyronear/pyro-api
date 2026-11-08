@@ -74,12 +74,17 @@ class SharedCameraRead(BaseModel):
 
 
 class SharedDetectionRead(BaseModel):
+    # Same names as DetectionWithUrl, so the platform's sequence viewer reads both
+    id: int
+    created_at: datetime
     recorded_at: datetime
     bbox: str
     url: str = Field(..., description="temporary URL to access the media content")
+    crop_url: Optional[str] = Field(None, description="temporary URL to access the cropped media content, if any")
 
 
 class SharedSequenceRead(BaseModel):
+    id: int = Field(..., description="sequence to browse with /shares/public/{token}/sequences/{id}/detections")
     started_at: datetime
     last_seen_at: datetime
     camera_azimuth: float

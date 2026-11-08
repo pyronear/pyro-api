@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.core.time import utcnow
 from app.crud import DetectionCRUD
-from app.models import Alert, AlertSequence, AlertShare, Camera, Sequence
+from app.models import Alert, AlertSequence, AlertShare, Camera, Detection, Sequence
 from app.schemas.shares import (
     SharedAlertRead,
     SharedCameraRead,
@@ -22,9 +22,15 @@ from app.schemas.shares import (
     ShareRead,
     ShareStatus,
 )
-from app.services.storage import s3_service
+from app.services.storage import S3Bucket, s3_service
 
-__all__ = ["build_shared_alert", "serialize_share", "share_status"]
+__all__ = [
+    "build_shared_alert",
+    "get_shared_sequence_camera",
+    "serialize_share",
+    "serialize_shared_detection",
+    "share_status",
+]
 
 # Bound the public payload: an alert can gather many sequences, each with many frames.
 _MAX_SEQUENCES = 20
@@ -52,6 +58,33 @@ def serialize_share(share: AlertShare, now: datetime | None = None) -> ShareRead
     )
 
 
+def serialize_shared_detection(detection: Detection, bucket: S3Bucket, with_crop: bool = False) -> SharedDetectionRead:
+    # A fixed lifetime keeps the URL cache effective (it keys on the expiration)
+    def presign(key: str) -> str:
+        return bucket.get_public_url(key, url_expiration=settings.SHARE_URL_EXPIRATION, verify_exists=False)
+
+    return SharedDetectionRead(
+        id=detection.id,
+        created_at=detection.created_at,
+        recorded_at=detection.recorded_at,
+        bbox=detection.bbox,
+        url=presign(detection.bucket_key),
+        crop_url=presign(detection.crop_bucket_key) if with_crop and detection.crop_bucket_key else None,
+    )
+
+
+async def get_shared_sequence_camera(session: AsyncSession, alert_id: int, sequence_id: int) -> Camera | None:
+    """Camera of the sequence, or None when the sequence is not part of the shared alert."""
+    stmt: Any = (
+        select(Camera)
+        .join(Sequence, cast(Any, Sequence.camera_id == Camera.id))
+        .join(AlertSequence, cast(Any, AlertSequence.sequence_id == Sequence.id))
+        .where(AlertSequence.alert_id == alert_id)
+        .where(Sequence.id == sequence_id)
+    )
+    return (await session.exec(stmt)).first()
+
+
 async def build_shared_alert(session: AsyncSession, alert: Alert, expires_at: datetime) -> SharedAlertRead:
     """Project an alert onto the fields readable without an account, with short-lived image URLs."""
     seq_stmt: Any = (
@@ -76,6 +109,7 @@ async def build_shared_alert(session: AsyncSession, alert: Alert, expires_at: da
         bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
         shared_sequences.append(
             SharedSequenceRead(
+                id=sequence.id,
                 started_at=sequence.started_at,
                 last_seen_at=sequence.last_seen_at,
                 camera_azimuth=sequence.camera_azimuth,
@@ -89,15 +123,7 @@ async def build_shared_alert(session: AsyncSession, alert: Alert, expires_at: da
                     angle_of_view=camera.angle_of_view,
                 ),
                 detections=[
-                    SharedDetectionRead(
-                        recorded_at=detection.recorded_at,
-                        bbox=detection.bbox,
-                        # A fixed lifetime keeps the URL cache effective (it keys on the expiration)
-                        url=bucket.get_public_url(
-                            detection.bucket_key, url_expiration=settings.SHARE_URL_EXPIRATION, verify_exists=False
-                        ),
-                    )
-                    for detection in detections.get(sequence.id, [])
+                    serialize_shared_detection(detection, bucket) for detection in detections.get(sequence.id, [])
                 ],
             )
         )
