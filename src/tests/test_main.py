@@ -4,6 +4,7 @@
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
 import asyncio
+import logging
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -13,7 +14,13 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from app.main import _risk_refresh_loop, _seconds_until_next_utc_hour, lifespan
+from app.main import (
+    ShareTokenFilter,
+    _risk_refresh_loop,
+    _seconds_until_next_utc_hour,
+    lifespan,
+    scrub_share_token,
+)
 
 
 class _CancelledTask:
@@ -171,3 +178,37 @@ async def test_sampling_headers_are_exposed_to_browsers(async_client: AsyncClien
     response = await async_client.get("/status", headers={"Origin": "http://localhost:5173"})
     exposed = {h.strip() for h in response.headers.get("access-control-expose-headers", "").split(",")}
     assert {"X-Sampled-Total", "X-Sampled-Truncated"} <= exposed
+
+
+def test_scrub_share_token():
+    event = {
+        "request": {
+            "url": "http://api.localhost:8050/api/v1/shares/public/secret-token?foo=bar",
+            "headers": {"Referer": "https://platform.localhost/share/secret-token", "Accept": "*/*"},
+        },
+        "exception": {
+            "values": [
+                {"stacktrace": {"frames": [{"function": "get_shared_alert", "vars": {"token": "secret-token"}}]}}
+            ]
+        },
+    }
+    scrubbed = scrub_share_token(event, {})
+    assert scrubbed["request"]["url"] == "http://api.localhost:8050/api/v1/shares/public/[Filtered]?foo=bar"
+    assert scrubbed["request"]["headers"] == {"Accept": "*/*"}
+    assert scrubbed["exception"]["values"][0]["stacktrace"]["frames"] == [{"function": "get_shared_alert"}]
+    # Other routes are left untouched
+    other = {"request": {"url": "http://api.localhost:8050/api/v1/alerts/1", "headers": {"Referer": "x"}}}
+    assert scrub_share_token(other, {}) == other
+
+
+def test_share_token_filter():
+    def access_record(path: str) -> logging.LogRecord:
+        args = ("127.0.0.1:5000", "GET", path, "1.1", 200)
+        return logging.LogRecord("uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d', args, None)
+
+    record = access_record("/api/v1/shares/public/secret-token?foo=bar")
+    assert ShareTokenFilter().filter(record)
+    assert record.getMessage() == '127.0.0.1:5000 - "GET /api/v1/shares/public/[Filtered]?foo=bar HTTP/1.1" 200'
+    other = access_record("/api/v1/alerts/1")
+    assert ShareTokenFilter().filter(other)
+    assert "/api/v1/alerts/1" in other.getMessage()

@@ -45,6 +45,33 @@ async def verify_org_rights(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
 
+async def fetch_detection_page(
+    response: Response,
+    session: AsyncSession,
+    detections: DetectionCRUD,
+    sequence_id: int,
+    *,
+    limit: Union[int, None],
+    offset: int,
+    desc: bool,
+    sampling: int,
+) -> List[Detection]:
+    """Page through a sequence's detections, shared by the platform and the public share routes."""
+    if sampling > 1:
+        # limit still truncates the thinned set, invisibly: you get what looks like a spread but is
+        # only its tail. Size the set so an omitted limit spans it, and report it either way.
+        counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
+        sampled_total = math.ceil(max(0, counts.get(sequence_id, 0) - offset) / sampling)
+        effective_limit = limit if limit is not None else min(MAX_DETECTION_LIMIT, sampled_total)
+        response.headers["X-Sampled-Total"] = str(sampled_total)
+        response.headers["X-Sampled-Truncated"] = str(effective_limit < sampled_total).lower()
+    else:
+        effective_limit = limit if limit is not None else DEFAULT_DETECTION_LIMIT
+    return await detections.fetch_by_sequence(
+        sequence_id, sampling=sampling, order_desc=desc, limit=effective_limit, offset=offset
+    )
+
+
 def _serialize_sequence(sequence: Sequence, detections_count: int = 0) -> SequenceRead:
     return SequenceRead(**sequence.model_dump(), detections_count=detections_count)
 
@@ -130,21 +157,10 @@ async def fetch_sequence_detections(
     if not token_payload.is_admin and token_payload.organization_id != camera.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
 
-    if sampling > 1:
-        # limit still truncates the thinned set, invisibly: you get what looks like a spread but is
-        # only its tail. Size the set so an omitted limit spans it, and report it either way.
-        counts = await get_detection_counts_by_sequence_ids(session, [sequence_id])
-        sampled_total = math.ceil(max(0, counts.get(sequence_id, 0) - offset) / sampling)
-        effective_limit = limit if limit is not None else min(MAX_DETECTION_LIMIT, sampled_total)
-        response.headers["X-Sampled-Total"] = str(sampled_total)
-        response.headers["X-Sampled-Truncated"] = str(effective_limit < sampled_total).lower()
-    else:
-        effective_limit = limit if limit is not None else DEFAULT_DETECTION_LIMIT
-
     # Get the bucket of the camera's organization
     bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    fetched = await detections.fetch_by_sequence(
-        sequence_id, sampling=sampling, order_desc=desc, limit=effective_limit, offset=offset
+    fetched = await fetch_detection_page(
+        response, session, detections, sequence_id, limit=limit, offset=offset, desc=desc, sampling=sampling
     )
     return [
         DetectionWithUrl(
