@@ -254,6 +254,12 @@ class Sequence(SQLModel, table=True):
         exclude=True,
         description="Consecutive alert-completion errors; reset on successful completion or an admin retry.",
     )
+    completion_suppress_notifications: bool = Field(
+        default=False,
+        nullable=False,
+        exclude=True,
+        description="Set by admin retry so recovered events never send new notifications, even after worker restarts.",
+    )
 
 
 class Alert(SQLModel, table=True):

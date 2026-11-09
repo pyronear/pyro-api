@@ -216,11 +216,14 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
 
     async def finish_sequence_completion(self, sequence_id: int) -> bool:
         """Complete alert processing once, preserving the validation verdict."""
+        status_col = cast(Any, Sequence.completion_status)
         stmt: Any = (
             update(Sequence)
             .where(cast(Any, Sequence.id) == sequence_id)
             .where(cast(Any, Sequence.is_validated).is_(True))
-            .where(cast(Any, Sequence.completion_status) == COMPLETION_PENDING)
+            # An old worker can validate a row after migration without setting this
+            # field. Treat that legacy NULL as pending, while retaining one winner.
+            .where(or_(status_col.is_(None), status_col == COMPLETION_PENDING))
             .values(
                 completion_status=COMPLETION_COMPLETED,
                 completion_attempts=0,
@@ -242,6 +245,7 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             .values(
                 completion_status=COMPLETION_PENDING,
                 completion_attempts=0,
+                completion_suppress_notifications=True,
                 validation_due_at=utcnow(),
                 validation_lease_until=None,
             )

@@ -32,6 +32,7 @@ class SequenceRead(Sequence):
     validation_attempts: int = Field(0, exclude=True)
     completion_status: Union[str, None] = Field(None, exclude=True)
     completion_attempts: int = Field(0, exclude=True)
+    completion_suppress_notifications: bool = Field(False, exclude=True)
 
 
 class SequenceCompletionRead(BaseModel):

@@ -55,8 +55,11 @@ After resolving the underlying error reported in the worker logs, an administrat
 
 Recovery resumes alert attachment using the sequence's historical time window, preserving
 the validation verdict and any already committed alert links. It does not run the risk gate
-or model again. A successful completion leaves the failed list. `completed` describes alert
-processing, not notification delivery; notifications remain best-effort.
+or model again. Admin retries never send webhook, Telegram, or Slack notifications, so
+recovering an old event cannot trigger a fresh notification. This choice persists across
+worker restarts and further attachment errors. A successful completion leaves the failed
+list. `completed` describes alert processing, not notification delivery; notifications for
+ordinary processing remain best-effort.
 
 The migration marks previously stranded validated sequences as failed completions, ready for
 admin retry. For those rows the old worker already overwrote the validation reason with

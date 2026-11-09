@@ -446,17 +446,24 @@ async def test_process_scoreless_response_does_not_validate(detection_session: A
     assert seq.validation_due_at is None
 
 
+@pytest.mark.parametrize("legacy_worker", [False, True])
 @pytest.mark.asyncio
-async def test_process_resumes_post_claim_crash(detection_session: AsyncSession, monkeypatch):
+async def test_process_resumes_post_claim_crash(detection_session: AsyncSession, monkeypatch, legacy_worker):
     """A worker dying after winning the claim leaves a validated-but-due row: it must be
     resumed (triangulated + completed), not skipped forever."""
     seq = await _seed_sequence(detection_session, 5)
     crud = SequenceCRUD(detection_session)
     await _enqueue(detection_session, cast(int, seq.id))
     await crud.claim_validation(cast(int, seq.id))  # crash right after the claim: due survives
+    if legacy_worker:
+        # A pre-upgrade worker validates after migration, leaving completion_status NULL.
+        await detection_session.exec(update(Sequence).where(Sequence.id == seq.id).values(completion_status=None))
+        await detection_session.commit()
     predict = AsyncMock(return_value=_prediction(0.9))
     monkeypatch.setattr(temporal_service, "is_available", lambda: True)
     monkeypatch.setattr(temporal_service, "predict", predict)
+    notify = Mock()
+    monkeypatch.setattr(validation_service, "_dispatch_notifications", notify)
 
     assert await _process_one_due() is True  # resumed, not skipped
 
@@ -464,7 +471,11 @@ async def test_process_resumes_post_claim_crash(detection_session: AsyncSession,
     await detection_session.refresh(seq)
     assert seq.is_validated is True
     assert seq.validation_due_at is None  # job completed this time
+    assert seq.validation_lease_until is None
+    assert seq.completion_status == COMPLETION_COMPLETED
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+    assert await _process_one_due() is False
+    notify.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -891,10 +902,11 @@ async def test_attach_failure_keeps_verdict_and_resumes(detection_session: Async
 @pytest.mark.parametrize("commit_before_failure", [False, True])
 @pytest.mark.asyncio
 async def test_exhausted_completion_can_be_retried_without_revalidating(
-    detection_session, async_client, monkeypatch, verdict, commit_before_failure
+    detection_session, webhook_session, async_client, monkeypatch, verdict, commit_before_failure
 ):
     """A failed completion is visible, recoverable and idempotent even days after the event."""
     from app.api.api_v1.endpoints import detections as detections_api
+    from app.models import Organization
 
     seq = await _seed_sequence(detection_session, 5)
     peer = await _seed_sequence(detection_session, 0)
@@ -910,6 +922,10 @@ async def test_exhausted_completion_can_be_retried_without_revalidating(
     detection_session.add(alert)
     await detection_session.flush()
     detection_session.add(AlertSequence(alert_id=alert.id, sequence_id=peer.id))
+    org = await detection_session.get(Organization, 1)
+    org.telegram_id = "tg"
+    org.slack_hook = "http://example.com/hook"
+    detection_session.add(org)
     await detection_session.commit()
     await _enqueue(detection_session, seq.id)
 
@@ -925,8 +941,14 @@ async def test_exhausted_completion_can_be_retried_without_revalidating(
     monkeypatch.setattr(temporal_service, "is_available", lambda: verdict == VALIDATED_BY_MODEL)
     predict = AsyncMock(return_value=_prediction(0.9))
     monkeypatch.setattr(temporal_service, "predict", predict)
-    notify = Mock()
-    monkeypatch.setattr(validation_service, "_dispatch_notifications", notify)
+    webhook = AsyncMock()
+    telegram = Mock()
+    slack = Mock()
+    monkeypatch.setattr(validation_service, "dispatch_webhook", webhook)
+    monkeypatch.setattr(validation_service.telegram_client, "is_enabled", True)
+    monkeypatch.setattr(validation_service.telegram_client, "notify", telegram)
+    monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
+    monkeypatch.setattr(validation_service.slack_client, "notify", slack)
 
     for attempt in range(validation_service.MAX_VALIDATION_ATTEMPTS):
         assert await _process_one_due() is True
@@ -939,7 +961,9 @@ async def test_exhausted_completion_can_be_retried_without_revalidating(
     assert seq.validation_due_at is None
     assert seq.validation_lease_until is None
     assert await _process_one_due() is False
-    notify.assert_not_called()
+    webhook.assert_not_awaited()
+    telegram.assert_not_called()
+    slack.assert_not_called()
 
     auth = pytest.get_token(1, ["admin"], 1)
     failed = await async_client.get("/sequences/completion/failed", headers=auth)
@@ -950,15 +974,24 @@ async def test_exhausted_completion_can_be_retried_without_revalidating(
     public = await async_client.get(f"/sequences/{seq.id}", headers=auth)
     assert "completion_status" not in public.json()
     assert "completion_attempts" not in public.json()
+    assert "completion_suppress_notifications" not in public.json()
 
-    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", real_attach)
     retried = await async_client.post(f"/sequences/{seq.id}/completion/retry", headers=auth)
     assert retried.status_code == 202
     assert retried.json()["completion_status"] == COMPLETION_PENDING
     assert retried.json()["completion_attempts"] == 0
     duplicate = await async_client.post(f"/sequences/{seq.id}/completion/retry", headers=auth)
     assert duplicate.status_code == 409
+    # Another attachment error must not lose the persisted suppression. Each worker
+    # run uses fresh sessions, as it would after a process restart.
     assert await _process_one_due() is True
+    await detection_session.refresh(seq)
+    assert seq.completion_status == COMPLETION_PENDING
+    assert seq.completion_attempts == 1
+    assert seq.completion_suppress_notifications is True
+    monkeypatch.setattr(detections_api, "_attach_sequence_to_alert", real_attach)
+    assert await _process_one_due() is True
+    await _drain_notifications()
     assert await _process_one_due() is False
 
     await detection_session.refresh(seq)
@@ -967,7 +1000,9 @@ async def test_exhausted_completion_can_be_retried_without_revalidating(
     assert seq.completion_attempts == 0
     assert seq.validation_due_at is None
     assert predict.await_count == (1 if verdict == VALIDATED_BY_MODEL else 0)
-    notify.assert_called_once_with(seq.id, 1, alert.id)
+    webhook.assert_not_awaited()
+    telegram.assert_not_called()
+    slack.assert_not_called()
     # Recovery uses the event's historical window, reusing the peer's original alert.
     assert (await detection_session.exec(select(Alert))).all() == [alert]
     links = (await detection_session.exec(select(AlertSequence))).all()
@@ -1140,16 +1175,16 @@ async def test_notification_channel_failures_never_abort_the_job(detection_sessi
     detection_session.add(Webhook(url="http://example.com/webhook"))
     await detection_session.commit()
 
-    def sync_boom(*_args, **_kwargs):
-        raise RuntimeError("channel down")
-
     monkeypatch.setattr(risk_service, "_scores", {})
     monkeypatch.setattr(temporal_service, "is_available", lambda: False)  # fail open -> validated
-    monkeypatch.setattr(validation_service, "dispatch_webhook", AsyncMock(side_effect=RuntimeError("down")))
+    webhook = AsyncMock(side_effect=RuntimeError("down"))
+    telegram = Mock(side_effect=RuntimeError("channel down"))
+    slack = Mock(side_effect=RuntimeError("channel down"))
+    monkeypatch.setattr(validation_service, "dispatch_webhook", webhook)
     monkeypatch.setattr(validation_service.telegram_client, "is_enabled", True)
-    monkeypatch.setattr(validation_service.telegram_client, "notify", sync_boom)
+    monkeypatch.setattr(validation_service.telegram_client, "notify", telegram)
     monkeypatch.setattr(validation_service.slack_client, "is_enabled", True)
-    monkeypatch.setattr(validation_service.slack_client, "notify", sync_boom)
+    monkeypatch.setattr(validation_service.slack_client, "notify", slack)
 
     assert await _process_one_due() is True
     await _drain_notifications()  # notifications run detached, off the worker's critical path
@@ -1158,6 +1193,9 @@ async def test_notification_channel_failures_never_abort_the_job(detection_sessi
     assert seq.is_validated is True
     assert seq.validation_due_at is None  # job completed despite every channel failing
     assert await _has_alert_link(detection_session, cast(int, seq.id)) is True
+    webhook.assert_awaited_once()
+    telegram.assert_called_once()
+    slack.assert_called_once()
 
 
 @pytest.mark.asyncio

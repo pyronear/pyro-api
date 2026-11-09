@@ -54,6 +54,19 @@ async def test_completion_migration_preserves_verdicts_and_recovers_legacy_failu
             (6, None, 0, "failed", 5, False, False),
             (7, None, 0, "completed", 0, False, False),
         ]
+        assert (
+            connection.execute(text("SELECT completion_suppress_notifications FROM sequences")).scalars().all()
+            == [False] * 7
+        )
+        # Old workers omit this new column when inserting; its server default is required.
+        connection.execute(text("INSERT INTO sequences (id, is_validated, validation_attempts) VALUES (8, false, 0)"))
+        assert (
+            connection.execute(
+                text("SELECT completion_suppress_notifications FROM sequences WHERE id = 8")
+            ).scalar_one()
+            is False
+        )
+        connection.execute(text("DELETE FROM sequences WHERE id = 8"))
         migration.downgrade()
         rows = connection.execute(
             text("""

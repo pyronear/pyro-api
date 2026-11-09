@@ -1,7 +1,53 @@
+import asyncio
+
 import pytest
 from sqlalchemy import update
 
+from app.core.time import utcnow
+from app.crud import SequenceCRUD
+from app.db import session_factory
 from app.models import COMPLETION_COMPLETED, COMPLETION_FAILED, COMPLETION_PENDING, Sequence
+
+
+@pytest.mark.parametrize(
+    ("validated", "completion", "eligible"),
+    [
+        (False, None, False),
+        (False, COMPLETION_PENDING, False),
+        (True, None, True),
+        (True, COMPLETION_PENDING, True),
+        (True, COMPLETION_FAILED, False),
+        (True, COMPLETION_COMPLETED, False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_completion_finish_has_one_winner_including_legacy_null(
+    sequence_session, validated, completion, eligible
+):
+    now = utcnow()
+    await sequence_session.exec(
+        update(Sequence)
+        .where(Sequence.id == 1)
+        .values(
+            is_validated=validated,
+            completion_status=completion,
+            validation_status="model" if validated else None,
+            validation_due_at=now,
+            validation_lease_until=now,
+        )
+    )
+    await sequence_session.commit()
+    async with session_factory() as first, session_factory() as second:
+        finished = await asyncio.gather(
+            SequenceCRUD(first).finish_sequence_completion(1),
+            SequenceCRUD(second).finish_sequence_completion(1),
+        )
+    assert sorted(finished) == [False, eligible]
+    row = await sequence_session.get(Sequence, 1, populate_existing=True)
+    assert row.validation_status == ("model" if validated else None)
+    assert row.completion_status == (COMPLETION_COMPLETED if eligible else completion)
+    assert row.validation_due_at == (None if eligible else now)
+    assert row.validation_lease_until == (None if eligible else now)
 
 
 @pytest.mark.parametrize("scope", ["agent", "user", "camera", None])

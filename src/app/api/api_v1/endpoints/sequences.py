@@ -69,6 +69,7 @@ async def fetch_failed_completions(
     "/{sequence_id}/completion/retry",
     status_code=status.HTTP_202_ACCEPTED,
     summary="Retry failed alert completion without revalidating the sequence",
+    description="Repairs alert attachment without sending webhook, Telegram, or Slack notifications for the recovered event.",
 )
 async def retry_failed_completion(
     sequence_id: int = Path(..., gt=0),

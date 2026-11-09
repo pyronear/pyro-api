@@ -145,14 +145,15 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
     a crash between completion and delivery loses the notification — consistent with the
     channels being best-effort (errors swallowed, no retries), while the durable artifact
     is the alert row created by triangulation. Each channel is independent: one failing
-    never blocks the others. Owns its session so it can outlive the worker's.
+    never blocks the others. Owns its session so it can outlive the worker's. Admin
+    recovery suppresses every channel using a durable flag read from this fresh session.
     """
     try:
         async with session_factory() as session:
             sequences = SequenceCRUD(session)
             detections = DetectionCRUD(session)
             sequence_ = await sequences.get(sequence_id)
-            if sequence_ is None:
+            if sequence_ is None or sequence_.completion_suppress_notifications:
                 return
             camera = await CameraCRUD(session).get(sequence_.camera_id)
             # Latest real detection: continuity rows (empty bbox) must never reach a channel.

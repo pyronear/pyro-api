@@ -20,6 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column("sequences", sa.Column("completion_status", sa.String(length=16), nullable=True))
     op.add_column("sequences", sa.Column("completion_attempts", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "sequences",
+        sa.Column("completion_suppress_notifications", sa.Boolean(), nullable=False, server_default=sa.false()),
+    )
     op.create_check_constraint(
         "ck_sequences_completion_status", "sequences", "completion_status IN ('pending', 'completed', 'failed')"
     )
@@ -58,5 +62,6 @@ def downgrade() -> None:
     )
     op.drop_index("ix_sequences_failed_completion", table_name="sequences")
     op.drop_constraint("ck_sequences_completion_status", "sequences", type_="check")
+    op.drop_column("sequences", "completion_suppress_notifications")
     op.drop_column("sequences", "completion_attempts")
     op.drop_column("sequences", "completion_status")
