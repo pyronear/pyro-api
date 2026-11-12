@@ -362,10 +362,17 @@ async def test_delete_camera_survives_failed_image_deletion(
     admin_auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
     )
+    # The fixture frames all share a key that camera 2 keeps: give camera 1 a key of its own to delete
+    camera = await detection_session.get(Camera, 1)
+    assert camera is not None
+    camera.last_image = "camera-1-last-image.jpg"
+    detection_session.add(camera)
+    await detection_session.commit()
     error = ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "DeleteObjects")
-    with patch("app.services.storage.S3Bucket.delete_files", side_effect=error):
+    with patch("app.services.storage.S3Bucket.delete_files", side_effect=error) as delete_files:
         response = await async_client.delete("/cameras/1", headers=admin_auth)
     assert response.status_code == 200, print(response.__dict__)
+    delete_files.assert_called_once_with(["camera-1-last-image.jpg"])
     assert await _ids(detection_session, Camera.id) == {2}
 
 
