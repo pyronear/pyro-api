@@ -1,4 +1,5 @@
 import io
+import logging
 
 import boto3
 import pytest
@@ -221,6 +222,29 @@ def test_s3_bucket_url_cache_evicts_coldest_entry_only(monkeypatch, pinned_url_w
         assert len(bucket._url_cache) == 2
     finally:
         s3.delete_bucket(Bucket=bucket_name)
+
+
+def test_s3_bucket_delete_files_batches_keys_and_logs_errors(caplog):
+    """delete_objects takes at most 1000 keys per request, and reports failures in the response, not as an error"""
+
+    class FakeS3:
+        def __init__(self) -> None:
+            self.batches: list = []
+
+        def head_bucket(self, **_kwargs: str) -> dict:
+            return {}
+
+        def delete_objects(self, **kwargs: dict) -> dict:
+            self.batches.append([obj["Key"] for obj in kwargs["Delete"]["Objects"]])
+            return {"Errors": [{"Key": "key-0", "Message": "denied"}]} if len(self.batches) == 1 else {}
+
+    s3 = FakeS3()
+    bucket = S3Bucket(s3, "dummy-bucket-delete-files")
+    keys = [f"key-{idx}" for idx in range(1001)]
+    with caplog.at_level(logging.WARNING, logger="uvicorn.warning"):
+        bucket.delete_files(keys)
+    assert s3.batches == [keys[:1000], keys[1000:]]
+    assert "Could not delete object key-0: denied" in caplog.text
 
 
 @pytest.mark.asyncio

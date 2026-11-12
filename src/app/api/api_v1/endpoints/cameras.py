@@ -8,14 +8,17 @@ from typing import Any, List, cast
 
 from anyio import CapacityLimiter, to_thread
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Security, UploadFile, status
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.dependencies import get_camera_crud, get_detection_crud, get_jwt, get_pose_crud
+from app.api.dependencies import get_alert_crud, get_camera_crud, get_detection_crud, get_jwt, get_pose_crud
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.time import utcnow
-from app.crud import CameraCRUD, DetectionCRUD
+from app.crud import AlertCRUD, CameraCRUD, DetectionCRUD
 from app.crud.crud_pose import PoseCRUD
-from app.models import Camera, Role, UserRole
+from app.db import get_session
+from app.models import AlertSequence, Camera, Detection, Pose, Role, Sequence, UserRole
 from app.schemas.cameras import (
     CameraAngleOfView,
     CameraCreate,
@@ -30,7 +33,8 @@ from app.schemas.cameras import (
 )
 from app.schemas.login import Token, TokenPayload
 from app.schemas.poses import PoseReadWithoutImgInfo
-from app.services.images import delete_unreferenced_image
+from app.services.alerts import refresh_alert_state
+from app.services.images import delete_unreferenced_image, delete_unreferenced_objects
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
 
@@ -238,10 +242,36 @@ async def update_camera_trustable(
 async def delete_camera(
     camera_id: int = Path(..., gt=0),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
+    detections: DetectionCRUD = Depends(get_detection_crud),
+    alerts: AlertCRUD = Depends(get_alert_crud),
+    session: AsyncSession = Depends(get_session),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="cameras-deletion", properties={"camera_id": camera_id})
-    await cameras.delete(camera_id)
+    camera = cast(Camera, await cameras.get(camera_id, strict=True))
+    # Read before the deletion: the alerts holding a sequence of the camera, and the keys of its stored objects
+    alerts_stmt: Any = (
+        select(AlertSequence.alert_id)
+        .join(Sequence, cast(Any, Sequence.id == AlertSequence.sequence_id))
+        .where(Sequence.camera_id == camera_id)
+        .distinct()
+    )
+    alert_ids = list((await session.exec(alerts_stmt)).all())
+    bucket_keys = [camera.last_image] if camera.last_image else []
+    images: Any = select(Pose.image).where(Pose.camera_id == camera_id, cast(Any, Pose.image).is_not(None))
+    frames: Any = select(Detection.bucket_key, Detection.crop_bucket_key).where(Detection.camera_id == camera_id)
+    bucket_keys.extend((await session.exec(images)).all())
+    for frame_key, crop_key in (await session.exec(frames)).all():
+        bucket_keys.extend(key for key in (frame_key, crop_key) if key)
+    # The database deletes its poses, sequences and detections, their occlusion masks and alert links (ON DELETE CASCADE)
+    await cameras.delete(camera_id, commit=False)
+    # Alerts left without sequences are deleted, the others are recomputed from the sequences of other cameras
+    for alert_id in alert_ids:
+        await refresh_alert_state(alert_id, session, alerts, commit=False)
+    await session.commit()
+    # Then delete the stored objects, once the rows referencing them are gone
+    await delete_unreferenced_objects(camera.organization_id, bucket_keys, cameras, poses, detections)
 
 
 @router.patch(
