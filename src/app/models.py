@@ -68,7 +68,8 @@ class Camera(SQLModel, table=True):
 class Pose(SQLModel, table=True):
     __tablename__ = "poses"
     id: int = Field(default=None, primary_key=True)
-    camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    # Cascades: deleting a camera deletes its poses, sequences and detections, then their masks and alert links
+    camera_id: int = Field(..., foreign_key="cameras.id", ondelete="CASCADE", nullable=False)
     azimuth: float = Field(..., ge=0, lt=360)
     patrol_id: int | None = Field(default=None, max_length=100)
     active: bool = Field(default=True, nullable=False)
@@ -78,7 +79,7 @@ class Pose(SQLModel, table=True):
 class OcclusionMask(SQLModel, table=True):
     __tablename__ = "occlusion_masks"
     id: int = Field(default=None, primary_key=True)
-    pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
+    pose_id: int = Field(..., foreign_key="poses.id", ondelete="CASCADE", nullable=False)
     mask: str = Field(..., min_length=2, max_length=255, nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
 
@@ -97,7 +98,7 @@ class Detection(SQLModel, table=True):
         ),
     )
     id: int = Field(None, primary_key=True)
-    camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    camera_id: int = Field(..., foreign_key="cameras.id", ondelete="CASCADE", nullable=False)
     pose_id: int = Field(..., foreign_key="poses.id", nullable=False)
     sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
     bucket_key: str
@@ -137,7 +138,7 @@ class Sequence(SQLModel, table=True):
         ),
     )
     id: int = Field(None, primary_key=True)
-    camera_id: int = Field(..., foreign_key="cameras.id", nullable=False)
+    camera_id: int = Field(..., foreign_key="cameras.id", ondelete="CASCADE", nullable=False)
     pose_id: Union[int, None] = Field(None, foreign_key="poses.id", nullable=True)
     camera_azimuth: float = Field(..., ge=0, lt=360)
     is_wildfire: Union[AnnotationType, None] = None
@@ -246,7 +247,7 @@ class Alert(SQLModel, table=True):
 class AlertSequence(SQLModel, table=True):
     __tablename__ = "alerts_sequences"
     alert_id: int = Field(primary_key=True, foreign_key="alerts.id")
-    sequence_id: int = Field(primary_key=True, foreign_key="sequences.id")
+    sequence_id: int = Field(primary_key=True, foreign_key="sequences.id", ondelete="CASCADE")
 
 
 class AlertShare(SQLModel, table=True):

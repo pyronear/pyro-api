@@ -4,13 +4,15 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import logging
+from typing import Iterable
 
+from anyio import to_thread
 from botocore.exceptions import BotoCoreError, ClientError
 
 from app.crud import CameraCRUD, DetectionCRUD, PoseCRUD
 from app.services.storage import s3_service
 
-__all__ = ["delete_unreferenced_crop", "delete_unreferenced_image"]
+__all__ = ["delete_unreferenced_crop", "delete_unreferenced_image", "delete_unreferenced_objects"]
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -48,3 +50,32 @@ async def delete_unreferenced_crop(organization_id: int, crop_bucket_key: str, d
     # Same key format, with a crop prefix: only another crop can share it
     if not await detections.fetch_all(filters=("crop_bucket_key", crop_bucket_key), limit=1):
         _delete_object(organization_id, crop_bucket_key)
+
+
+async def delete_unreferenced_objects(
+    organization_id: int,
+    bucket_keys: Iterable[str],
+    cameras: CameraCRUD,
+    poses: PoseCRUD,
+    detections: DetectionCRUD,
+) -> None:
+    """Delete the objects of many keys (images and crops), except those a camera, pose or detection still references,
+    to call after the rows are deleted"""
+    keys = sorted(set(bucket_keys))
+    unreferenced = []
+    # Checked in chunks, with one query per column, instead of three queries per key
+    for start in range(0, len(keys), 1000):
+        chunk = keys[start : start + 1000]
+        referenced = {cam.last_image for cam in await cameras.get_in(chunk, "last_image")}
+        referenced |= {pose.image for pose in await poses.get_in(chunk, "image")}
+        for det in await detections.get_in(chunk, "bucket_key") + await detections.get_in(chunk, "crop_bucket_key"):
+            referenced |= {det.bucket_key, det.crop_bucket_key}
+        unreferenced.extend(key for key in chunk if key not in referenced)
+    if not unreferenced:
+        return
+    try:
+        bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(organization_id))
+        await to_thread.run_sync(bucket.delete_files, unreferenced)
+    except (ClientError, BotoCoreError, ValueError) as e:
+        # The rows are already committed: leftover objects are harmless, a failed request is not
+        logger.warning(f"Could not delete {len(unreferenced)} unreferenced objects: {e}")

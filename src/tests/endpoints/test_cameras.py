@@ -5,12 +5,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.dependencies import get_camera_crud, get_jwt
 from app.core.time import utcnow
 from app.main import app
-from app.models import Camera, Role
+from app.models import Alert, AlertSequence, AlertShare, Camera, Detection, OcclusionMask, Pose, Role, Sequence
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_service
 
@@ -261,6 +262,111 @@ async def test_delete_camera(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+
+
+async def _ids(session: AsyncSession, column: object) -> set:
+    return set((await session.exec(select(column))).all())  # type: ignore[call-overload]
+
+
+@pytest.mark.asyncio
+async def test_delete_camera_removes_its_history(
+    async_client: AsyncClient,
+    occlusion_mask_session: AsyncSession,
+    share_session: AsyncSession,
+):
+    """Deleting a camera removes its poses, masks, sequences and detections, and updates the alerts they belonged to"""
+    session = share_session
+    # Alert 2 also holds sequence 1 (camera 1), as a triangulated alert would: it must survive on camera 2 alone
+    session.add(AlertSequence(alert_id=2, sequence_id=1))
+    alert = await session.get(Alert, 2)
+    assert alert is not None
+    alert.started_at = datetime.fromisoformat(pytest.sequence_table[0]["started_at"])
+    alert.lat, alert.lon = 3.7, -45.1
+    session.add(alert)
+    await session.commit()
+
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.delete("/cameras/1", headers=admin_auth)
+    assert response.status_code == 200, print(response.__dict__)
+
+    assert await _ids(session, Camera.id) == {2}
+    assert await _ids(session, Pose.id) == {3}
+    assert await _ids(session, OcclusionMask.id) == {4}
+    assert await _ids(session, Sequence.id) == {2}
+    assert await _ids(session, Detection.id) == {4}
+    # Alert 1 only had camera 1: deleted with its share links. Alert 2 is recomputed from sequence 2.
+    assert await _ids(session, Alert.id) == {2}
+    assert await _ids(session, AlertSequence.sequence_id) == {2}
+    assert await _ids(session, AlertShare.alert_id) == {2}
+    seq = pytest.sequence_table[1]
+    row = (
+        await session.exec(select(Alert.started_at, Alert.last_seen_at, Alert.lat, Alert.lon).where(Alert.id == 2))
+    ).one()
+    expected = (datetime.fromisoformat(seq["started_at"]), datetime.fromisoformat(seq["last_seen_at"]), None, None)
+    assert tuple(row) == expected
+
+
+@pytest.mark.asyncio
+async def test_delete_camera_deletes_its_images(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+):
+    cam, other_cam = pytest.camera_table[0], pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    other_auth = pytest.get_token(other_cam["id"], ["camera"], other_cam["organization_id"])
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={"file": ("frame.jpg", mock_img, "image/jpeg"), "crop": ("crop.jpg", mock_img, "image/jpeg")},
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    keys = [response.json()["bucket_key"], response.json()["crop_bucket_key"]]
+    response = await async_client.patch(
+        "/cameras/image", files={"file": ("image.jpg", mock_img + b"last", "image/jpeg")}, headers=cam_auth
+    )
+    assert response.status_code == 200
+    keys.append(response.json()["last_image"])
+    response = await async_client.patch(
+        "/poses/1/image", files={"file": ("pose.jpg", mock_img + b"pose", "image/jpeg")}, headers=cam_auth
+    )
+    assert response.status_code == 200
+    keys.append(response.json()["image"])
+    response = await async_client.patch(
+        "/cameras/image", files={"file": ("image.jpg", mock_img, "image/jpeg")}, headers=other_auth
+    )
+    assert response.status_code == 200
+    other_key = response.json()["last_image"]
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert all(bucket.check_file_existence(key) for key in keys)
+
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.delete(f"/cameras/{cam['id']}", headers=admin_auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert not any(bucket.check_file_existence(key) for key in keys)
+    other_bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(other_cam["organization_id"]))
+    assert other_bucket.check_file_existence(other_key)
+
+
+@pytest.mark.asyncio
+async def test_delete_camera_survives_failed_image_deletion(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """The rows are committed before the objects are deleted: a storage failure only leaves objects"""
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    error = ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "DeleteObjects")
+    with patch("app.services.storage.S3Bucket.delete_files", side_effect=error):
+        response = await async_client.delete("/cameras/1", headers=admin_auth)
+    assert response.status_code == 200, print(response.__dict__)
+    assert await _ids(detection_session, Camera.id) == {2}
 
 
 @pytest.mark.parametrize(
