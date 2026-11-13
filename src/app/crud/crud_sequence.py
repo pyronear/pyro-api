@@ -15,6 +15,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.time import utcnow
 from app.crud.base import BaseCRUD
 from app.models import (
+    COMPLETION_COMPLETED,
+    COMPLETION_FAILED,
+    COMPLETION_PENDING,
     TEMPORAL_SCORE_SOURCE_ENGINE,
     TERMINAL_VALIDATION_STATUSES,
     VALIDATION_FAILED,
@@ -99,7 +102,12 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         """
         id_col = cast(Any, Sequence.id)
         validated_col = cast(Any, Sequence.is_validated)
-        values: dict = {"is_validated": True}
+        values: dict = {
+            "is_validated": True,
+            "validation_attempts": 0,
+            "completion_status": COMPLETION_PENDING,
+            "completion_attempts": 0,
+        }
         if validation_status is not None:
             values["validation_status"] = validation_status
         stmt: Any = update(Sequence).where(id_col == sequence_id).where(validated_col.is_(False)).values(**values)
@@ -195,27 +203,90 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         values: dict = {"validation_due_at": new_due, "validation_lease_until": None, "validation_attempts": 0}
         if validation_status is not None:
             values["validation_status"] = validation_status
-        stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
+        # A late scoring run must not clear the work or overwrite the verdict of a
+        # sibling that has already validated this sequence.
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.is_validated).is_(False))
+            .values(**values)
+        )
         await self.session.exec(stmt)
         await self.session.commit()
 
-    async def fail_or_retry_validation(self, sequence_id: int, *, max_attempts: int, retry_in_seconds: float) -> None:
-        """Error path: release the lease and either back off the retry or dead-letter.
+    async def finish_sequence_completion(self, sequence_id: int) -> bool:
+        """Complete alert processing once, preserving the validation verdict."""
+        status_col = cast(Any, Sequence.completion_status)
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.is_validated).is_(True))
+            # An old worker can validate a row after migration without setting this
+            # field. Treat that legacy NULL as pending, while retaining one winner.
+            .where(or_(status_col.is_(None), status_col == COMPLETION_PENDING))
+            .values(
+                completion_status=COMPLETION_COMPLETED,
+                completion_attempts=0,
+                validation_due_at=None,
+                validation_lease_until=None,
+            )
+        )
+        result = await self.session.exec(stmt)
+        await self.session.commit()
+        return bool(getattr(result, "rowcount", 0))
 
-        Increments the consecutive-error counter; below ``max_attempts`` the job stays due,
-        pushed ``retry_in_seconds`` into the future (no tight retry loop). At the cap the
-        job dead-letters: terminal ``validation_status='failed'``, due cleared, never
-        retried nor re-enqueued — a poison job must not starve the serial worker forever.
-        Note the staleness fail-open can't bound this (each retry refreshes the due time),
-        hence the explicit attempts cap.
+    async def retry_sequence_completion(self, sequence_id: int) -> bool:
+        """Atomically requeue a failed completion; concurrent retries have one winner."""
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.is_validated).is_(True))
+            .where(cast(Any, Sequence.completion_status) == COMPLETION_FAILED)
+            .values(
+                completion_status=COMPLETION_PENDING,
+                completion_attempts=0,
+                completion_suppress_notifications=True,
+                validation_due_at=utcnow(),
+                validation_lease_until=None,
+            )
+        )
+        result = await self.session.exec(stmt)
+        await self.session.commit()
+        return bool(getattr(result, "rowcount", 0))
+
+    async def fail_or_retry_validation(self, sequence_id: int, *, max_attempts: int, retry_in_seconds: float) -> None:
+        """Back off errors using the current phase's independent retry budget.
+
+        Before a verdict, exhaustion is a terminal validation failure. After a verdict,
+        exhaustion marks completion failed for admin recovery without changing that verdict.
         """
-        sequence_ = cast(Sequence, await self.get(sequence_id, strict=True))
-        attempts = (sequence_.validation_attempts or 0) + 1
-        values: dict = {"validation_attempts": attempts, "validation_lease_until": None}
+        # Serialize the counter update and re-read state: a sibling may have completed
+        # the job while this worker was failing. A late error must not resurrect it.
+        stmt: Any = (
+            select_model(Sequence)
+            .where(Sequence.id == sequence_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        sequence_ = (await self.session.exec(stmt)).first()
+        if sequence_ is None or sequence_.validation_due_at is None:
+            await self.session.commit()
+            return
+        completing = sequence_.is_validated
+        attempts_field = "completion_attempts" if completing else "validation_attempts"
+        status_field = "completion_status" if completing else "validation_status"
+        attempts = getattr(sequence_, attempts_field) + 1
+        values: dict = {attempts_field: attempts, "validation_lease_until": None}
         if attempts >= max_attempts:
-            values["validation_status"] = VALIDATION_FAILED
+            values[status_field] = COMPLETION_FAILED if completing else VALIDATION_FAILED
             values["validation_due_at"] = None
-            logger.error("Sequence %s failed validation %d times; giving up", sequence_id, attempts)
+            logger.error(
+                "Sequence %s failed %s %d times; %s",
+                sequence_id,
+                "alert completion" if completing else "validation",
+                attempts,
+                "admin retry required" if completing else "giving up",
+            )
         else:
             values["validation_due_at"] = utcnow() + timedelta(seconds=retry_in_seconds)
         stmt: Any = update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values)
