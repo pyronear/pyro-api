@@ -37,7 +37,7 @@ async def create_pose(
     camera = cast(Camera, await cameras.get(payload.camera_id, strict=True))
 
     if Role.CAMERA in token_payload.scopes:
-        if payload.camera_id != token_payload.sub:
+        if payload.camera_id != token_payload.camera_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -52,7 +52,7 @@ async def list_current_poses(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> List[PoseRead]:
     telemetry_client.capture(f"camera|{token_payload.sub}", event="poses-list")
-    rows = await poses.fetch_all(filters=[("camera_id", token_payload.sub), ("active", True)], order_by="id")
+    rows = await poses.fetch_all(filters=[("camera_id", token_payload.camera_id), ("active", True)], order_by="id")
     return [PoseRead(**row.model_dump()) for row in rows]
 
 
@@ -90,7 +90,7 @@ async def update_pose(
     camera = cast(Camera, await cameras.get(pose.camera_id, strict=True))
 
     if Role.CAMERA in token_payload.scopes:
-        if pose.camera_id != token_payload.sub:
+        if pose.camera_id != token_payload.camera_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
@@ -115,7 +115,7 @@ async def update_pose_image(
 
     # Authorization checks
     if Role.CAMERA in token_payload.scopes:
-        if pose.camera_id != token_payload.sub:
+        if pose.camera_id != token_payload.camera_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")
     elif token_payload.organization_id != camera.organization_id and not token_payload.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden.")

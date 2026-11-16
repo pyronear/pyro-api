@@ -134,6 +134,12 @@ None :)
 
 #### Other optional values
 - `JWT_SECRET`: if set, tokens can be reused between sessions. All instances sharing the same secret key can use the same token.
+- `KEYCLOAK_ISSUER`: the Keycloak realm URL users authenticate against (e.g. `http://localhost:9310/realms/pyronear`). It must match the `iss` claim of the tokens, a trailing slash aside. If unset, Keycloak tokens are rejected.
+- `KEYCLOAK_CLIENT_ID` / `KEYCLOAK_CLIENT_SECRET`: the API's confidential client in the realm (default id: `pyro-api`). Tokens must list the client id in their audience, and the API authenticates as this client to introspect every Keycloak token, so a revoked session or disabled user is rejected on its next request. The secret is required when `KEYCLOAK_ISSUER` is set.
+- `KEYCLOAK_BACKCHANNEL_URL`: the realm URL the API uses to call Keycloak (signing keys and introspection). Defaults to `KEYCLOAK_ISSUER`; set it when the API reaches Keycloak through another host than the browser (e.g. `http://keycloak:9310/realms/pyronear` inside Docker).
+- `JWKS_CACHE_SECONDS`: how long the realm signing keys are cached (default: 3600). An unknown key id triggers a refetch, at most once every 30 seconds. Expired or forged tokens are rejected with these keys before any call to Keycloak. After a failed call to Keycloak, Keycloak tokens get a 503 for 10 seconds without retrying, so an outage can't tie up the API.
+- `JWT_LEEWAY_SECONDS`: clock skew tolerated on Keycloak token timestamps (default: 30). API-issued tokens get none.
+- `LEGACY_USER_TOKENS_ENABLED`: if set to false, `/login/creds` answers 410 and the user tokens it issued earlier are rejected. Camera tokens are always accepted.
 - `SENTRY_DSN`: the DSN for your [Sentry](https://sentry.io/) project, which monitors back-end errors and report them back.
 - `SERVER_NAME`: the server tag that will be used to report events to Sentry.
 - `POSTHOG_HOST`: the host for PostHog [PostHog](https://eu.posthog.com/settings/project-details).

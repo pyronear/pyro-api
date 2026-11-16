@@ -261,7 +261,8 @@ class AlertShare(SQLModel, table=True):
     alert_id: int = Field(..., foreign_key="alerts.id", ondelete="CASCADE", index=True, nullable=False)
     # Organization owning the alert, copied at creation so listing and cancelling need no join
     organization_id: int = Field(..., foreign_key="organizations.id", nullable=False)
-    created_by: Union[int, None] = Field(None, foreign_key="users.id", ondelete="SET NULL", nullable=True)
+    # Token subject: legacy user id or Keycloak subject, independent of the users table.
+    created_by: Union[str, None] = Field(None, nullable=True)
     token_hash: str = Field(..., max_length=64, unique=True, index=True, nullable=False)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)
     expires_at: datetime = Field(..., nullable=False)

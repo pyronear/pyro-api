@@ -135,7 +135,7 @@ async def heartbeat(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-heartbeat")
-    camera = await cameras.update(token_payload.sub, LastActive(last_active_at=utcnow()))
+    camera = await cameras.update(token_payload.camera_id, LastActive(last_active_at=utcnow()))
     return CameraOut(**camera.model_dump())
 
 
@@ -148,12 +148,12 @@ async def update_image(
     token_payload: TokenPayload = Security(get_jwt, scopes=[Role.CAMERA]),
 ) -> CameraOut:
     # telemetry_client.capture(f"camera|{token_payload.sub}", event="cameras-image")
-    cam = cast(Camera, await cameras.get(token_payload.sub, strict=True))
+    cam = cast(Camera, await cameras.get(token_payload.camera_id, strict=True))
     # Read before the update, which mutates the same instance
     previous_image = cam.last_image
-    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.sub)
+    bucket_key = await upload_file(file, token_payload.organization_id, token_payload.camera_id)
     # Update the DB entry
-    camera = await cameras.update(token_payload.sub, LastImage(last_image=bucket_key, last_active_at=utcnow()))
+    camera = await cameras.update(token_payload.camera_id, LastImage(last_image=bucket_key, last_active_at=utcnow()))
     # Then delete the previous image, unless the key is still in use (same key re-sent, pose image, detection frame)
     if isinstance(previous_image, str):
         await delete_unreferenced_image(token_payload.organization_id, previous_image, cameras, poses, detections)
