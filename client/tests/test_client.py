@@ -1,3 +1,5 @@
+import socket
+import threading
 from datetime import datetime
 from unittest.mock import Mock
 
@@ -23,20 +25,40 @@ def test_client_forwards_detection_pagination(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("token", "host", "timeout", "expected_error"),
+    ("token", "host", "expected_error"),
     [
-        ("invalid_token", "http://localhost:5050", 10, HTTPRequestError),
-        (pytest.admin_token, "http://localhost:8003", 10, ConnError),
-        (pytest.admin_token, "http://localhost:5050", 0.00001, ReadTimeout),
-        (pytest.admin_token, "http://localhost:5050", 10, None),
+        ("invalid_token", "http://localhost:5050", HTTPRequestError),
+        (pytest.admin_token, "http://localhost:8003", ConnError),
+        (pytest.admin_token, "http://localhost:5050", None),
     ],
 )
-def test_client_constructor(token, host, timeout, expected_error):
+def test_client_constructor(token, host, expected_error):
     if expected_error is None:
-        Client(token, host, timeout=timeout)
+        Client(token, host, timeout=10)
     else:
         with pytest.raises(expected_error):
-            Client(token, host, timeout=timeout)
+            Client(token, host, timeout=10)
+
+
+@pytest.fixture
+def silent_host():
+    """URL of a local socket that queues connections and never responds.
+
+    Nothing calls accept(): the kernel completes the handshake and queues the connection, so a client always connects,
+    then waits for a response that never comes.
+    """
+    with socket.create_server(("127.0.0.1", 0)) as server:
+        # Should the client lose its timeout, closing the socket fails the test instead of hanging the job
+        guard = threading.Timer(10, server.close)
+        guard.start()
+        yield f"http://127.0.0.1:{server.getsockname()[1]}"
+        guard.cancel()
+
+
+def test_client_constructor_read_timeout(silent_host):
+    # A real server can answer within the shortest timeout a socket can wait (1 ms), so it cannot be relied on to be late
+    with pytest.raises(ReadTimeout):
+        Client("any-token", silent_host, timeout=0.1)
 
 
 def test_create_detection_forwards_recorded_at(monkeypatch):
