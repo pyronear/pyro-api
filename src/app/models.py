@@ -278,7 +278,8 @@ class Alert(SQLModel, table=True):
 class AlertSequence(SQLModel, table=True):
     __tablename__ = "alerts_sequences"
     alert_id: int = Field(primary_key=True, foreign_key="alerts.id")
-    sequence_id: int = Field(primary_key=True, foreign_key="sequences.id", ondelete="CASCADE")
+    # Indexed: the primary key starts with alert_id, so it cannot serve lookups by sequence (cascades included)
+    sequence_id: int = Field(primary_key=True, foreign_key="sequences.id", ondelete="CASCADE", index=True)
 
 
 class AlertShare(SQLModel, table=True):

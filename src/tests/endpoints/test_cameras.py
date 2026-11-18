@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import Any, Dict, List, Union
 from unittest.mock import AsyncMock, patch
@@ -14,6 +15,7 @@ from app.main import app
 from app.models import Alert, AlertSequence, AlertShare, Camera, Detection, OcclusionMask, Pose, Role, Sequence
 from app.schemas.login import TokenPayload
 from app.services.storage import s3_service
+from app.services.validation import _organization_alert_lock
 
 
 @pytest.mark.parametrize(
@@ -362,17 +364,30 @@ async def test_delete_camera_survives_failed_image_deletion(
     admin_auth = pytest.get_token(
         pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
     )
-    # The fixture frames all share a key that camera 2 keeps: give camera 1 a key of its own to delete
-    camera = await detection_session.get(Camera, 1)
-    assert camera is not None
-    camera.last_image = "camera-1-last-image.jpg"
-    detection_session.add(camera)
-    await detection_session.commit()
     error = ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "DeleteObjects")
     with patch("app.services.storage.S3Bucket.delete_files", side_effect=error) as delete_files:
         response = await async_client.delete("/cameras/1", headers=admin_auth)
     assert response.status_code == 200, print(response.__dict__)
-    delete_files.assert_called_once_with(["camera-1-last-image.jpg"])
+    # The frame of the fixture detections of camera 1, listed once
+    delete_files.assert_called_once_with(["my_file"])
+    assert await _ids(detection_session, Camera.id) == {2}
+
+
+@pytest.mark.asyncio
+async def test_delete_camera_waits_for_alert_attachment(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+):
+    """While a validation run attaches sequences of the organization to alerts, the deletion waits for it"""
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    async with _organization_alert_lock(pytest.camera_table[0]["organization_id"]):
+        deletion = asyncio.create_task(async_client.delete("/cameras/1", headers=admin_auth))
+        await asyncio.sleep(0.5)
+        assert not deletion.done()
+    response = await deletion
+    assert response.status_code == 200, print(response.__dict__)
     assert await _ids(detection_session, Camera.id) == {2}
 
 
