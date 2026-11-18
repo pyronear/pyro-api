@@ -16,6 +16,7 @@ from app.models import Detection, Sequence
         ),
         (Sequence, "ix_sequences_camera_pose_last_seen", ["camera_id", "pose_id", "last_seen_at"], None),
         (Sequence, "ix_sequences_validation_due_at", ["validation_due_at"], "validation_due_at IS NOT NULL"),
+        (Sequence, "ix_sequences_failed_completion", ["id"], "completion_status = 'failed'"),
     ],
 )
 def test_lookup_index_columns_and_predicates(model, name, columns, predicate):

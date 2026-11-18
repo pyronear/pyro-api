@@ -63,7 +63,7 @@ __all__ = [
 # Backoff before retrying a job that errored (keeps a persistently failing job from
 # spinning the worker; the job stays due so it is never lost prematurely).
 RETRY_DELAY_SECONDS = 30.0
-# Consecutive errors before a job dead-letters as validation_status='failed': a poison job
+# Consecutive errors per phase before a job stops retrying: a poison job
 # must not starve the serial worker forever (the staleness fail-open can't bound this, as
 # each retry refreshes the due time).
 MAX_VALIDATION_ATTEMPTS = 5
@@ -145,14 +145,15 @@ async def _notify_for_sequence(sequence_id: int, organization_id: int, alert_id:
     a crash between completion and delivery loses the notification — consistent with the
     channels being best-effort (errors swallowed, no retries), while the durable artifact
     is the alert row created by triangulation. Each channel is independent: one failing
-    never blocks the others. Owns its session so it can outlive the worker's.
+    never blocks the others. Owns its session so it can outlive the worker's. Admin
+    recovery suppresses every channel using a durable flag read from this fresh session.
     """
     try:
         async with session_factory() as session:
             sequences = SequenceCRUD(session)
             detections = DetectionCRUD(session)
             sequence_ = await sequences.get(sequence_id)
-            if sequence_ is None:
+            if sequence_ is None or sequence_.completion_suppress_notifications:
                 return
             camera = await CameraCRUD(session).get(sequence_.camera_id)
             # Latest real detection: continuity rows (empty bbox) must never reach a channel.
@@ -388,20 +389,23 @@ async def _complete_validated_sequence(sequence_id: int, validation_status: Opti
         # Two workers validating two sequences of the same event concurrently must not
         # both create an alert: serialize attachment per organization.
         async with _organization_alert_lock(organization_id):
-            alert_id = await _attach_sequence_to_alert(sequence_, camera, cameras, sequences, alerts)
+            alert_id = await _attach_sequence_to_alert(
+                sequence_, camera, cameras, sequences, alerts, anchor_on_sequence=not claim
+            )
         # Validated is terminal: complete the job (the due marker is the completion record
         # that makes this block resumable), THEN notify off the critical path — a slow
         # channel must never delay the next sequence's scoring.
-        await sequences.finish_validation_job(sequence_id)
-    _dispatch_notifications(sequence_id, organization_id, alert_id)
+        completed = await sequences.finish_sequence_completion(sequence_id)
+    if completed:
+        _dispatch_notifications(sequence_id, organization_id, alert_id)
 
 
 async def process_next_due_validation() -> bool:
     """Claim and process one due sequence. Returns True when a job was claimed.
 
     An error releases the lease and backs the retry off; after MAX_VALIDATION_ATTEMPTS
-    consecutive errors the job dead-letters (validation_status='failed') so a poison job
-    can't starve the serial worker.
+    consecutive errors in the current phase the job stops retrying so a poison job
+    can't starve the serial worker. Failed alert completions remain recoverable by admins.
     """
     async with session_factory() as session:
         sequence_ = await SequenceCRUD(session).claim_due_validation(settings.TEMPORAL_VALIDATION_LEASE_SECONDS)

@@ -39,6 +39,34 @@ With the previously described tables, here are all the steps to send a wildfire 
 - Create a camera token: create non-user token for the camera to access the API.
 - Create a detection: using the camera credentials, upload the image content and the detection metadata.
 
+### Recovering failed alert completion
+
+Validation records a durable verdict before alert attachment runs. The worker tracks alert
+completion separately as `pending`, `completed`, or `failed`, with its own consecutive-error
+counter. Each phase allows five consecutive failed attempts, with a 30-second retry delay. Exhausted completion retries
+preserve `is_validated` and `validation_status` and stop consuming worker time.
+
+After resolving the underlying error reported in the worker logs, an administrator can:
+
+1. Fetch `GET /api/v1/sequences/completion/failed?limit=100&offset=0` to find affected sequences.
+2. Call `POST /api/v1/sequences/{sequence_id}/completion/retry` to reset the completion budget
+   and queue another attempt. The endpoint returns 202; a sequence without a failed completion
+   returns 409. Agent, user, and camera tokens cannot use these endpoints.
+
+Recovery resumes alert attachment using the sequence's historical time window, preserving
+the validation verdict and any already committed alert links. It does not run the risk gate
+or model again. Admin retries never send webhook, Telegram, or Slack notifications, so
+recovering an old event cannot trigger a fresh notification. This choice persists across
+worker restarts and further attachment errors. A successful completion leaves the failed
+list. `completed` describes alert processing, not notification delivery; notifications for
+ordinary processing remain best-effort.
+
+The migration marks previously stranded validated sequences as failed completions, ready for
+admin retry. For those rows the old worker already overwrote the validation reason with
+`failed`, so the migration records an unknown reason (`validation_status = NULL`) rather than
+inventing a model or fail-open verdict. Apply the migration before starting the updated worker;
+stop old workers during deployment so they cannot overwrite the separated state.
+
 ## Codebase structure
 
 - [`src/app`](https://github.com/pyronear/pyro-api/blob/main/src/app) - The actual API codebase
