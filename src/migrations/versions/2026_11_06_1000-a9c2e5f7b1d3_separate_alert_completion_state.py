@@ -1,7 +1,7 @@
 """separate alert completion state from the validation verdict
 
 Revision ID: a9c2e5f7b1d3
-Revises: ff5b6d1f9e3f
+Revises: f8b5c0d4e6a3
 Create Date: 2026-11-06 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "a9c2e5f7b1d3"
-down_revision: Union[str, None] = "ff5b6d1f9e3f"
+down_revision: Union[str, None] = "f8b5c0d4e6a3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
