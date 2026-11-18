@@ -24,6 +24,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import update
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -41,6 +42,7 @@ from app.models import (
     TEMPORAL_SCORE_SOURCE_ENGINE,
     Alert,
     AlertSequence,
+    AlertShare,
     Camera,
     Detection,
     Pose,
@@ -63,7 +65,8 @@ from app.schemas.detections import (
 from app.schemas.login import TokenPayload
 from app.schemas.sequences import SequenceUpdate
 from app.services.cones import resolve_cone
-from app.services.overlap import compute_overlap, haversine_km
+from app.services.images import delete_unreferenced_crop, delete_unreferenced_image
+from app.services.overlap import compute_overlap_async, haversine_km
 from app.services.sequence_confidence import max_conf_from_bboxes
 from app.services.storage import s3_service, upload_file
 from app.services.telemetry import telemetry_client
@@ -270,13 +273,14 @@ def _build_overlap_records(
     return records
 
 
-def _resolve_groups_and_locations(
+async def _resolve_groups_and_locations(
     records: List[Dict[str, Any]],
     sequence_id: int,
 ) -> Optional[Tuple[List[Tuple[int, ...]], Dict[Tuple[int, ...], Optional[Tuple[float, float]]]]]:
     if not records:
         return None
-    row = next((row for row in compute_overlap(records) if row["id"] == int(sequence_id)), None)
+    result = await compute_overlap_async(records)
+    row = next((row for row in result if row["id"] == int(sequence_id)), None)
     if row is None:
         return None
     groups = [tuple(g) for g in row["event_groups"]]
@@ -393,6 +397,13 @@ async def _merge_alerts(
 
     delete_links_stmt: Any = delete(AlertSequence).where(cast(Any, AlertSequence.alert_id).in_(list(absorbed_ids)))
     await session.exec(delete_links_stmt)
+    # Public links follow the merge, otherwise a link sent just before it would die with the absorbed alert
+    repoint_shares_stmt: Any = (
+        update(AlertShare)
+        .where(cast(Any, AlertShare.alert_id).in_(list(absorbed_ids)))
+        .values(alert_id=target_alert_id)
+    )
+    await session.exec(repoint_shares_stmt)
     delete_alerts_stmt: Any = delete(Alert).where(cast(Any, Alert.id).in_(list(absorbed_ids)))
     await session.exec(delete_alerts_stmt)
     await session.flush()
@@ -512,7 +523,7 @@ async def _attach_sequence_to_alert(
 
     # Build records for overlap computation
     records = _build_overlap_records(recent_sequences, camera_by_id)
-    resolved = _resolve_groups_and_locations(records, int(sequence_.id))
+    resolved = await _resolve_groups_and_locations(records, int(sequence_.id))
     if resolved is None:
         return None
     groups, group_locations = resolved
@@ -665,7 +676,7 @@ async def create_detection(
     crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
     for idx, crop in enumerate(crops):
         # Prefix with the bbox index so byte-identical crops in the same request still get
-        # distinct keys; each detection then owns its crop object (safe to delete independently).
+        # distinct keys. Two requests in the same second can still share one: see delete_unreferenced_crop.
         crop_bucket_keys[idx] = await upload_file(
             crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
@@ -884,17 +895,16 @@ async def delete_detection(
     detection_id: int = Path(..., gt=0),
     detections: DetectionCRUD = Depends(get_detection_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
+    poses: PoseCRUD = Depends(get_pose_crud),
     token_payload: TokenPayload = Security(get_jwt, scopes=[UserRole.ADMIN]),
 ) -> None:
     telemetry_client.capture(token_payload.sub, event="detections-deletion", properties={"detection_id": detection_id})
     detection = cast(Detection, await detections.get(detection_id, strict=True))
     camera = cast(Camera, await cameras.get(detection.camera_id, strict=True))
-    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(camera.organization_id))
-    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
-    # continuity rows): only delete it once no other row references it. Crops are per-row.
-    sharing = await detections.fetch_all(filters=("bucket_key", detection.bucket_key), limit=2)
-    if all(d.id == detection_id for d in sharing):
-        bucket.delete_file(detection.bucket_key)
-    if detection.crop_bucket_key:
-        bucket.delete_file(detection.crop_bucket_key)
     await detections.delete(detection_id)
+    if detection.crop_bucket_key:
+        await delete_unreferenced_crop(camera.organization_id, detection.crop_bucket_key, detections)
+    # The frame object is shared by every detection of the same upload (multi-bbox siblings,
+    # continuity rows), and can back a last image or a pose image: only delete it once no row
+    # references it.
+    await delete_unreferenced_image(camera.organization_id, detection.bucket_key, cameras, poses, detections)

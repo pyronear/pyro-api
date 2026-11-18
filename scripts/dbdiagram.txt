@@ -136,3 +136,20 @@ Table "alerts_sequences" as AS {
     (alert_id, sequence_id) [pk]
   }
 }
+
+Table "alert_shares" as ASH {
+  "id" int [not null]
+  "alert_id" int [ref: > A.id, not null]
+  "organization_id" int [ref: > O.id, not null]
+  "created_by" int [ref: > U.id]
+  "token_hash" varchar [not null]
+  "created_at" timestamp [not null]
+  "expires_at" timestamp [not null]
+  "revoked_at" timestamp
+
+  Indexes {
+    (id) [pk]
+    (alert_id)
+    (token_hash) [unique]
+  }
+}

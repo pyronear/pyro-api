@@ -5,9 +5,10 @@ from ast import literal_eval
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
+from botocore.exceptions import ClientError, EndpointConnectionError
 from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
 from sqlmodel import select, text
@@ -403,6 +404,23 @@ async def test_latest_bbox_batch_skips_continuity_and_breaks_ties(sequence_sessi
     assert await DetectionCRUD(sequence_session).get_latest_bboxes([]) == {}
 
 
+@pytest.mark.asyncio
+async def test_latest_bboxes_per_sequence_limits_and_orders(sequence_session, select_queries):
+    now = utcnow()
+    sequence_session.add_all([
+        Detection(
+            camera_id=1, pose_id=1, sequence_id=1, bucket_key=key, bbox=box, created_at=now + timedelta(seconds=age)
+        )
+        for key, box, age in [("old", "[(.1,.1,.2,.2,.1)]", 0), ("new", "[(.2,.2,.3,.3,.9)]", 0), ("empty", "[]", 1)]
+    ])
+    await sequence_session.commit()
+    latest = await DetectionCRUD(sequence_session).fetch_latest_with_bbox([1, 2], limit_per_sequence=2)
+    assert set(latest) == {1}
+    assert [det.bucket_key for det in latest[1]] == ["new", "old"]
+    assert sum("FROM detections" in sql for sql, _ in select_queries) == 1
+    assert await DetectionCRUD(sequence_session).fetch_latest_with_bbox([], limit_per_sequence=2) == {}
+
+
 @pytest.mark.parametrize("stored_bbox", [None, "[]", "invalid", "[(.1,.1,.2,.2,.9)]"])
 @pytest.mark.asyncio
 async def test_matching_uses_latest_real_bbox(async_client, sequence_session, monkeypatch, stored_bbox):
@@ -523,11 +541,13 @@ async def test_build_overlap_records_skips_missing_cone_data(detection_session: 
     assert records == []
 
 
-def test_resolve_groups_and_locations_empty_records_returns_none():
-    assert _resolve_groups_and_locations([], 1) is None
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_empty_records_returns_none():
+    assert await _resolve_groups_and_locations([], 1) is None
 
 
-def test_resolve_groups_and_locations_no_match_returns_none():
+@pytest.mark.asyncio
+async def test_resolve_groups_and_locations_no_match_returns_none():
     now = utcnow()
     records = [
         {
@@ -541,7 +561,7 @@ def test_resolve_groups_and_locations_no_match_returns_none():
             "last_seen_at": now,
         }
     ]
-    assert _resolve_groups_and_locations(records, 999) is None
+    assert await _resolve_groups_and_locations(records, 999) is None
 
 
 @pytest.mark.parametrize(
@@ -1520,6 +1540,208 @@ async def test_delete_detection(
         assert response.json()["detail"] == status_detail
     if response.status_code // 100 == 2:
         assert response.json() is None
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_frame_until_last_reference(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    cam = pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"},
+        files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    bucket_key = response.json()["bucket_key"]
+    dets = (await detection_session.exec(select(Detection).where(Detection.bucket_key == bucket_key))).all()  # type: ignore[attr-defined]
+    assert len(dets) == 2
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    # The sibling detection still uses the frame
+    response = await async_client.delete(f"/detections/{dets[0].id}", headers=admin_auth)
+    assert response.status_code == 200
+    assert bucket.check_file_existence(bucket_key)
+    response = await async_client.delete(f"/detections/{dets[1].id}", headers=admin_auth)
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(bucket_key)
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_camera_image(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    """A detection frame and a last image with the same bytes in the same second share a key"""
+    cam = pytest.camera_table[0]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        response = await async_client.post(
+            "/detections",
+            data={"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+            files={"file": ("frame.jpg", mock_img, "image/jpeg")},
+            headers=cam_auth,
+        )
+        assert response.status_code == 201, response.text
+        detection = response.json()
+        response = await async_client.patch(
+            "/cameras/image", files={"file": ("frame.jpg", mock_img, "image/jpeg")}, headers=cam_auth
+        )
+        assert response.status_code == 200
+    assert response.json()["last_image"] == detection["bucket_key"]
+    response = await async_client.delete(f"/detections/{detection['id']}", headers=admin_auth)
+    assert response.status_code == 200
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(detection["bucket_key"])
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_deletes_crop(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    cam = pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={
+            "file": ("frame.jpg", mock_img, "image/jpeg"),
+            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+        },
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    detection = response.json()
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.check_file_existence(detection["crop_bucket_key"])
+    response = await async_client.delete(f"/detections/{detection['id']}", headers=admin_auth)
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(detection["crop_bucket_key"])
+    assert not bucket.check_file_existence(detection["bucket_key"])
+
+
+async def _post_detection_with_crop(async_client: AsyncClient, frame: bytes, crop: bytes) -> Dict[str, Any]:
+    cam = pytest.camera_table[1]
+    response = await async_client.post(
+        "/detections",
+        data={"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={"file": ("frame.jpg", frame, "image/jpeg"), "crop": ("crop.jpg", crop, "image/jpeg")},
+        headers=pytest.get_token(cam["id"], ["camera"], cam["organization_id"]),
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def _admin_auth() -> Dict[str, str]:
+    user = pytest.user_table[0]
+    return pytest.get_token(user["id"], user["role"].split(), user["organization_id"])
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_crop_until_last_reference(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    """Two requests in the same second with the same crop share its key, whatever their frames"""
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        first = await _post_detection_with_crop(async_client, mock_img, mock_img + b"crop")
+        second = await _post_detection_with_crop(async_client, mock_img + b"next", mock_img + b"crop")
+    assert first["crop_bucket_key"] == second["crop_bucket_key"]
+    assert first["bucket_key"] != second["bucket_key"]
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    response = await async_client.delete(f"/detections/{first['id']}", headers=_admin_auth())
+    assert response.status_code == 200
+    assert bucket.check_file_existence(first["crop_bucket_key"])
+    assert not bucket.check_file_existence(first["bucket_key"])
+    response = await async_client.delete(f"/detections/{second['id']}", headers=_admin_auth())
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(second["crop_bucket_key"])
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_deletes_own_crop_of_shared_frame(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    with patch("app.services.storage.utcnow", return_value=datetime(2026, 7, 29, 12, 0, 5)):
+        first = await _post_detection_with_crop(async_client, mock_img, mock_img + b"crop")
+        second = await _post_detection_with_crop(async_client, mock_img, mock_img + b"other crop")
+    assert first["bucket_key"] == second["bucket_key"]
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    response = await async_client.delete(f"/detections/{first['id']}", headers=_admin_auth())
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(first["crop_bucket_key"])
+    assert bucket.check_file_existence(second["crop_bucket_key"])
+    assert bucket.check_file_existence(first["bucket_key"])
+
+
+@pytest.mark.asyncio
+async def test_delete_detection_keeps_objects_when_row_deletion_fails(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    detection = await _post_detection_with_crop(async_client, mock_img, mock_img + b"crop")
+    error = HTTPException(status_code=500, detail="Database failure.")
+    with patch.object(DetectionCRUD, "delete", side_effect=error):
+        response = await async_client.delete(f"/detections/{detection['id']}", headers=_admin_auth())
+    assert response.status_code == 500
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(pytest.camera_table[1]["organization_id"]))
+    assert bucket.check_file_existence(detection["crop_bucket_key"])
+    assert bucket.check_file_existence(detection["bucket_key"])
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "DeleteObject"),
+        EndpointConnectionError(endpoint_url="http://s3"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_delete_detection_survives_failed_object_deletions(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, error: Exception
+):
+    """The row is committed before the objects are deleted: a failure only leaves objects, and one does not stop the other"""
+    detection = await _post_detection_with_crop(async_client, mock_img, mock_img + b"crop")
+    with patch("app.services.storage.S3Bucket.delete_file", side_effect=error) as delete_file:
+        response = await async_client.delete(f"/detections/{detection['id']}", headers=_admin_auth())
+    assert response.status_code == 200
+    assert {call.args[0] for call in delete_file.call_args_list} == {
+        detection["crop_bucket_key"],
+        detection["bucket_key"],
+    }
+    response = await async_client.get(f"/detections/{detection['id']}", headers=_admin_auth())
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ClientError({"Error": {"Code": "AccessDenied", "Message": "denied"}}, "HeadBucket"),
+        EndpointConnectionError(endpoint_url="http://s3"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_delete_detection_survives_unreachable_uncached_bucket(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes, error: Exception
+):
+    """A worker without the bucket in cache gets a ValueError from S3Bucket, not a botocore error"""
+    detection = await _post_detection_with_crop(async_client, mock_img, mock_img + b"crop")
+    with (
+        patch.dict(s3_service._buckets, clear=True),
+        patch.object(s3_service._s3, "head_bucket", side_effect=error) as head_bucket,
+    ):
+        response = await async_client.delete(f"/detections/{detection['id']}", headers=_admin_auth())
+    assert response.status_code == 200
+    assert head_bucket.call_count == 2
+    response = await async_client.get(f"/detections/{detection['id']}", headers=_admin_auth())
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

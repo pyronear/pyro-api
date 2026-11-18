@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60
     JWT_UNLIMITED: int = 60 * 24 * 365
     JWT_ALGORITHM: str = "HS256"
+    # Public alert share links
+    SHARE_EXPIRE_HOURS: int = 48
+    # Presigned image URLs on the public share route, short so they stop soon after the link
+    SHARE_URL_EXPIRATION: int = 15 * 60
 
     @field_validator("JWT_SECRET")
     @classmethod

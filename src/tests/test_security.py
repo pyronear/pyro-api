@@ -4,7 +4,13 @@ import jwt
 import pytest
 
 from app.core.config import settings
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    generate_share_token,
+    hash_password,
+    hash_share_token,
+    verify_password,
+)
 from app.core.time import utcnow
 
 
@@ -59,3 +65,18 @@ def test_create_access_token(content, expires_minutes, expected_delta):
     assert all(v == decoded_data[k] for k, v in content.items())
     # Check expiration
     assert datetime.utcfromtimestamp(decoded_data["exp"]) - timedelta(minutes=expected_delta) < after
+
+
+def test_generate_share_token():
+    token = generate_share_token()
+    # 32 random bytes, base64url without padding
+    assert len(token) == 43
+    assert token != generate_share_token()
+
+
+def test_hash_share_token():
+    digest = hash_share_token("my_token")
+    assert digest == hash_share_token("my_token")
+    assert digest != hash_share_token("my_token_bis")
+    assert len(digest) == 64
+    assert int(digest, 16) >= 0
