@@ -3,7 +3,8 @@
 # This program is licensed under the Apache License 2.0.
 # See LICENSE or go to <https://www.apache.org/licenses/LICENSE-2.0> for full license details.
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
+from typing import Union
 from unittest.mock import AsyncMock, patch
 
 import pytest  # type: ignore
@@ -31,8 +32,9 @@ async def _seed_unlabeled_sequence(
     pose_id: int,
     max_conf: float,
     minutes_ago: int = 30,
+    reference: Union[datetime, None] = None,
 ) -> Sequence:
-    now = utcnow()
+    now = reference or utcnow()
     seq = Sequence(
         camera_id=camera_id,
         pose_id=pose_id,
@@ -197,8 +199,15 @@ async def test_unlabeled_latest_keeps_seq_for_camera_unknown_to_risk_api(
     assert unknown_kept.id in {item["id"] for item in resp2.json()}
 
 
-async def _seed_alert_with_sequence(session: AsyncSession, organization_id: int, seq: Sequence) -> Alert:
-    now = utcnow()
+def _noon_yesterday() -> datetime:
+    """Noon UTC yesterday: seeds a few minutes before it stay on one UTC day, whatever the time of the run."""
+    return datetime.combine(utcnow().date() - timedelta(days=1), time(12))
+
+
+async def _seed_alert_with_sequence(
+    session: AsyncSession, organization_id: int, seq: Sequence, reference: Union[datetime, None] = None
+) -> Alert:
+    now = reference or utcnow()
     alert = Alert(
         organization_id=organization_id,
         started_at=now - timedelta(minutes=20),
@@ -370,12 +379,13 @@ async def test_sequences_fromdate_risk_score_moderate_disables_filter(
     """``risk_score=moderate`` is the kill switch: every seed seq comes back regardless of max_conf."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    target_date = utcnow().date().isoformat()
+    reference = _noon_yesterday()
+    target_date = reference.date().isoformat()
 
     seeded = []
     for max_conf, minutes_ago in [(0.05, 50), (0.20, 45), (0.55, 30)]:
         seq = await _seed_unlabeled_sequence(
-            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago
+            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago, reference=reference
         )
         seeded.append(seq.id)
 
@@ -438,9 +448,12 @@ async def test_alerts_fromdate_risk_score_override_drops_low_conf_alert(
 ):
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    target_date = utcnow().date().isoformat()
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20)
-    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+    reference = _noon_yesterday()
+    target_date = reference.date().isoformat()
+    seq = await _seed_unlabeled_sequence(
+        detection_session, camera_id, pose_id, max_conf=0.20, minutes_ago=20, reference=reference
+    )
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq, reference=reference)
 
     auth = pytest.get_token(
         pytest.user_table[2]["id"],
@@ -460,9 +473,12 @@ async def test_alerts_fromdate_risk_score_moderate_or_above_keeps_alert(
     """No-filter override (``moderate`` and above) keeps the alert on ``/alerts/all/fromdate`` too."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    target_date = utcnow().date().isoformat()
-    seq = await _seed_unlabeled_sequence(detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20)
-    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq)
+    reference = _noon_yesterday()
+    target_date = reference.date().isoformat()
+    seq = await _seed_unlabeled_sequence(
+        detection_session, camera_id, pose_id, max_conf=0.10, minutes_ago=20, reference=reference
+    )
+    alert = await _seed_alert_with_sequence(detection_session, organization_id=2, seq=seq, reference=reference)
 
     # Cache says very_low (would drop everything), but the override forces a no-filter class.
     risk_service._scores = {camera_id: "very_low"}
@@ -608,12 +624,13 @@ async def test_sequences_fromdate_pagination_filters_before_limit(
     """A page must come back full when the filter would otherwise consume the whole limit."""
     camera_id = pytest.camera_table[1]["id"]
     pose_id = pytest.pose_table[2]["id"]
-    target_date = utcnow().date().isoformat()
+    reference = _noon_yesterday()
+    target_date = reference.date().isoformat()
 
     # 2 below threshold + 3 above. With LIMIT 3, naive post-filter would return at most 1.
     for max_conf, minutes_ago in [(0.10, 50), (0.20, 45), (0.50, 40), (0.60, 35), (0.80, 30)]:
         await _seed_unlabeled_sequence(
-            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago
+            detection_session, camera_id, pose_id, max_conf=max_conf, minutes_ago=minutes_ago, reference=reference
         )
 
     auth = pytest.get_token(
