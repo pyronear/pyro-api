@@ -28,6 +28,11 @@ async def login_with_creds(
 
     By default, the token expires after 1 year.
     """
+    if not settings.LEGACY_USER_TOKENS_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="API-issued user tokens are disabled, sign in with Keycloak.",
+        )
     # Verify credentials
     user = await users.get_by_login(form_data.username)
     if user is None or user.hashed_password is None or not verify_password(form_data.password, user.hashed_password):

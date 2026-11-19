@@ -36,7 +36,7 @@ class ShareCreate(BaseModel):
 class ShareCreation(BaseModel):
     alert_id: int = Field(..., gt=0)
     organization_id: int = Field(..., gt=0)
-    created_by: Optional[int] = Field(None, gt=0)
+    created_by: Optional[str] = Field(None, min_length=1, description="creator's token subject")
     token_hash: str = Field(..., min_length=64, max_length=64)
     expires_at: datetime
 
@@ -56,7 +56,7 @@ class ShareRead(BaseModel):
     id: int
     alert_id: int
     organization_id: int
-    created_by: Optional[int] = None
+    created_by: Optional[str] = Field(None, description="creator's token subject")
     created_at: datetime
     expires_at: datetime
     revoked_at: Optional[datetime] = None

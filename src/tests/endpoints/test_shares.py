@@ -58,8 +58,94 @@ async def test_create_share(
         assert share is not None
         # Only the hash is stored, and it matches the token handed out
         assert share.token_hash == hash_share_token(payload["token"])
-        assert share.created_by == pytest.user_table[user_idx]["id"]
+        assert share.created_by == str(pytest.user_table[user_idx]["id"])
         assert share.organization_id == pytest.alert_table[alert_id - 1]["organization_id"]
+
+
+@pytest.mark.parametrize(
+    ("roles", "organization_id", "alert_id", "status_code"),
+    [
+        (["viewer"], 1, 1, 201),
+        (["operator"], 1, 1, 201),
+        (["viewer"], 2, 1, 403),
+        (["operator"], 1, 2, 403),
+        (["admin"], 1, 2, 201),
+        (["offline_access"], 1, 1, 403),
+        (["camera"], 1, 1, 403),
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_share_with_keycloak_token(
+    async_client: AsyncClient,
+    share_session: AsyncSession,
+    roles,
+    organization_id: int,
+    alert_id: int,
+    status_code: int,
+):
+    subject = "aa6ec0f1-bbbb-426e-b4fb-414b1c114fd1"
+    # There is deliberately no local user corresponding to this subject.
+    auth = pytest.get_keycloak_token(roles, organization_id, sub=subject)
+    before = set((await share_session.exec(select(AlertShare.id))).all())
+    response = await async_client.post("/shares", json={"alert_id": alert_id}, headers=auth)
+    assert response.status_code == status_code, response.text
+    if status_code == 201:
+        payload = response.json()
+        share = await share_session.get(AlertShare, payload["share_id"])
+        assert share.created_by == subject
+        assert share.organization_id == pytest.alert_table[alert_id - 1]["organization_id"]
+        assert share.token_hash == hash_share_token(payload["token"])
+        listed = await async_client.get("/shares", headers=auth)
+        assert listed.status_code == 200, listed.text
+        entry = next(entry for entry in listed.json() if entry["id"] == share.id)
+        assert entry["created_by"] == subject
+        public = await async_client.get(f"/shares/public/{payload['token']}")
+        assert public.status_code == 200, public.text
+    else:
+        assert set((await share_session.exec(select(AlertShare.id))).all()) == before
+
+
+@pytest.mark.parametrize(
+    ("auth_kind", "roles", "organization_id", "expected_ids", "share_id", "status_code"),
+    [
+        ("keycloak", ["viewer"], 1, [3, 2, 1], 1, 200),
+        ("keycloak", ["operator"], 1, [3, 2, 1], 4, 403),
+        ("keycloak", ["viewer"], 2, [4], 1, 403),
+        ("keycloak", ["admin"], 2, [4, 3, 2, 1], 1, 200),
+        ("keycloak", ["offline_access"], 1, None, 1, 403),
+        ("camera", [], 1, None, 1, 403),
+    ],
+)
+@pytest.mark.asyncio
+async def test_share_authorization_with_keycloak_and_camera_tokens(
+    async_client: AsyncClient,
+    share_session: AsyncSession,
+    auth_kind: str,
+    roles,
+    organization_id: int,
+    expected_ids,
+    share_id: int,
+    status_code: int,
+):
+    auth = (
+        pytest.get_keycloak_token(roles, organization_id)
+        if auth_kind == "keycloak"
+        else pytest.get_token(1, ["camera"], organization_id)
+    )
+    listed = await async_client.get("/shares", headers=auth)
+    assert listed.status_code == (200 if expected_ids is not None else 403), listed.text
+    if expected_ids is not None:
+        assert [entry["id"] for entry in listed.json()] == expected_ids
+    revoked = await async_client.delete(f"/shares/{share_id}", headers=auth)
+    assert revoked.status_code == status_code, revoked.text
+    share = await share_session.get(AlertShare, share_id)
+    await share_session.refresh(share)
+    assert (share.revoked_at is not None) == (status_code == 200)
+    if status_code == 200:
+        assert revoked.json()["created_by"] == pytest.share_table[share_id - 1]["created_by"]
+    if auth_kind == "camera":
+        created = await async_client.post("/shares", json={"alert_id": 1}, headers=auth)
+        assert created.status_code == 403, created.text
 
 
 @pytest.mark.parametrize(
@@ -88,6 +174,7 @@ async def test_fetch_shares(
     statuses = {1: "active", 2: "expired", 3: "revoked", 4: "active"}
     for entry in payload:
         assert entry["status"] == statuses[entry["id"]]
+        assert entry["created_by"] == pytest.share_table[entry["id"] - 1]["created_by"]
         assert "token" not in entry
         assert "token_hash" not in entry
 
