@@ -8,7 +8,7 @@ import logging
 import time
 from collections import OrderedDict
 from mimetypes import guess_extension
-from typing import Any, BinaryIO, Dict, Tuple, Union
+from typing import Any, BinaryIO, Dict, List, Tuple, Union
 
 import boto3
 import magic
@@ -94,6 +94,15 @@ class S3Bucket:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object
         self._s3.delete_object(Bucket=self.name, Key=bucket_key)
+
+    def delete_files(self, bucket_keys: List[str]) -> None:
+        """Remove bucket files, in requests of at most 1000 keys (the S3 limit)"""
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_objects
+        for start in range(0, len(bucket_keys), 1000):
+            objects = [{"Key": key} for key in bucket_keys[start : start + 1000]]
+            response = self._s3.delete_objects(Bucket=self.name, Delete={"Objects": objects, "Quiet": True})
+            for error in response.get("Errors", []):
+                logger.warning(f"Could not delete object {error.get('Key')}: {error.get('Message')}")
 
     def get_public_url(
         self, bucket_key: str, url_expiration: int = settings.S3_URL_EXPIRATION, verify_exists: bool = True
