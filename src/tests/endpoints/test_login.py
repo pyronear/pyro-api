@@ -31,3 +31,14 @@ async def test_login_with_creds(
         assert response_json["token_type"] == "bearer"  # ruff:ignore[hardcoded-password-string]
         assert isinstance(response_json["access_token"], str)
         assert len(response_json["access_token"]) == 171
+
+
+@pytest.mark.asyncio
+async def test_login_with_creds_disabled(async_client: AsyncClient, user_session: AsyncSession, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "LEGACY_USER_TOKENS_ENABLED", False)
+    for password in ("first_pwd", "wrong"):
+        response = await async_client.post("/login/creds", data={"username": "first_login", "password": password})
+        assert response.status_code == 410
+        assert response.json()["detail"] == "API-issued user tokens are disabled, sign in with Keycloak."

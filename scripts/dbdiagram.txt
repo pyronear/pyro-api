@@ -141,7 +141,7 @@ Table "alert_shares" as ASH {
   "id" int [not null]
   "alert_id" int [ref: > A.id, not null]
   "organization_id" int [ref: > O.id, not null]
-  "created_by" int [ref: > U.id]
+  "created_by" varchar [note: 'Creator token subject (legacy user id or Keycloak subject)']
   "token_hash" varchar [not null]
   "created_at" timestamp [not null]
   "expires_at" timestamp [not null]
