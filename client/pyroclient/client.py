@@ -47,11 +47,11 @@ class ClientRoute(str, Enum):
     ORGS_FETCH = "organizations"
 
 
-def _to_str(coord: float) -> str:
+def _to_str(coord: float, ndigits: int = 3) -> str:
     """Format string conditionally"""
     # Round first so values like 0.9996 dump as "1", not "1.000" (rejected by the API pattern)
-    coord = round(coord, 3)
-    return f"{coord:.0f}" if coord == round(coord) else f"{coord:.3f}"
+    coord = round(coord, ndigits)
+    return f"{coord:.0f}" if coord == round(coord) else f"{coord:.{ndigits}f}"
 
 
 def _dump_bbox_to_json(
@@ -362,6 +362,8 @@ class Client:
         crops: List[bytes] | None = None,
         recorded_at: str | None = None,
         temporal_model_scores: List[float] | None = None,
+        native_crops: List[bytes] | None = None,
+        native_crop_windows: List[Tuple[float, float, float, float]] | None = None,
     ) -> Response:
         """Notify the detection of a wildfire on the picture taken by a camera.
 
@@ -384,6 +386,10 @@ class Client:
             temporal_model_scores: optional smoke probabilities (0 to 1) from the temporal model run on the
                 device, one per bbox (must align with `bboxes`). When given, the API applies its own
                 threshold to them instead of scoring the sequences itself.
+            native_crops: optional list of regions of the camera frame at its native resolution (not
+                downscaled like `media`), one per bbox (must align with `bboxes`).
+            native_crop_windows: position of each native crop in the full frame, as relative coordinates
+                in order xmin, ymin, xmax, ymax. Required with `native_crops`, one per native crop.
 
         Returns:
             HTTP response
@@ -392,6 +398,13 @@ class Client:
             raise ValueError("bboxes must be a list of tuples with a maximum of 5 boxes")
         if crops is not None and len(crops) != len(bboxes):
             raise ValueError("crops must have the same length as bboxes")
+        if (native_crops is None) != (native_crop_windows is None):
+            raise ValueError("native_crops and native_crop_windows must be given together")
+        if native_crops is not None and native_crop_windows is not None:
+            if not len(native_crops) == len(native_crop_windows) == len(bboxes):
+                raise ValueError("native_crops and native_crop_windows must have the same length as bboxes")
+            if any(len(window) != 4 or min(window) < 0 or max(window) > 1 for window in native_crop_windows):
+                raise ValueError("native_crop_windows are expected to be relative xmin, ymin, xmax, ymax")
         if temporal_model_scores is not None:
             if len(temporal_model_scores) != len(bboxes):
                 raise ValueError("temporal_model_scores must have the same length as bboxes")
@@ -410,6 +423,11 @@ class Client:
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", ("frame.jpg", media, "image/jpeg"))]
         if crops is not None:
             files.extend(("crop", ("crop.jpg", crop, "image/jpeg")) for crop in crops)
+        if native_crops is not None and native_crop_windows is not None:
+            # 6 decimals: 3 would be about 4 px on a 4K frame
+            windows = (f"({','.join(_to_str(coord, 6) for coord in window)})" for window in native_crop_windows)
+            data["native_crop_windows"] = f"[{','.join(windows)}]"
+            files.extend(("native_crop", ("native_crop.jpg", crop, "image/jpeg")) for crop in native_crops)
         return requests.post(
             urljoin(self._route_prefix, ClientRoute.DETECTIONS_CREATE),
             headers=self.headers,
