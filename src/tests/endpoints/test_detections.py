@@ -2922,3 +2922,49 @@ async def test_create_detection_rejects_invalid_native_crops(
         assert response.json()["detail"].startswith(detail)
     # Rejected before any upload: no orphan object
     assert upload_calls == []
+
+
+@pytest.mark.parametrize(
+    ("bboxes", "native_crop_size", "status_code", "detail"),
+    [
+        # 6 bboxes, short enough to fit in the length limit of the field
+        ("[" + ",".join(["(0,0,1,1,.5)"] * 6) + "]", None, 422, "A detection holds at most 5 bboxes."),
+        ("[(0.6,0.6,0.7,0.7,0.6)]", 1024 * 1024 + 1, 413, "A native crop is at most 1048576 bytes."),
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_detection_rejects_oversized_requests(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+    monkeypatch,
+    bboxes: str,
+    native_crop_size: Union[int, None],
+    status_code: int,
+    detail: str,
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(  # ruff:ignore[unused-async]
+        file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
+    ) -> str:
+        upload_calls.append(file.filename or "")
+        return f"{key_prefix}should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    cam = pytest.camera_table[1]
+    data = {"pose_id": 3, "bboxes": bboxes}
+    files = [("file", ("frame.jpg", mock_img, "image/jpeg"))]
+    if native_crop_size is not None:
+        data["native_crop_windows"] = "[(0.1,0.1,0.4,0.4)]"
+        files.append(("native_crop", ("native.jpg", bytes(native_crop_size), "image/jpeg")))
+    response = await async_client.post(
+        "/detections",
+        data=data,
+        files=files,
+        headers=pytest.get_token(cam["id"], ["camera"], cam["organization_id"]),
+    )
+    assert response.status_code == status_code, response.text
+    assert response.json()["detail"] == detail
+    assert upload_calls == []

@@ -59,6 +59,8 @@ class Settings(BaseSettings):
 
     # DB conversion
     MAX_BOXES_PER_DETECTION: int = 5
+    # Per native crop (a 1280x720 JPEG is a few hundred kB): stops a device sending whole frames as crops
+    MAX_NATIVE_CROP_BYTES: int = 1024 * 1024
     DECIMALS_PER_COORD: int = 3
     MAX_BBOX_STR_LENGTH: int = (
         2 + MAX_BOXES_PER_DETECTION * (2 + 5 * (2 + DECIMALS_PER_COORD) + 4 * 2) + (MAX_BOXES_PER_DETECTION - 1) * 2
