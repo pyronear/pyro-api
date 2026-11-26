@@ -10,6 +10,10 @@ returns up to 100 detections by default, with a maximum page size of 500. Advanc
 full list. Alert and sequence date-list endpoints accept page sizes from 1 to
 100 and nonnegative offsets.
 
+``Client.create_detection`` accepts ``native_crops`` and ``native_crop_windows``:
+one region of the camera frame per bbox, at the camera's native resolution, with
+its position in the full frame.
+
 v0.1.2 (2022-07-01)
 -------------------
 Release note: `v0.1.2 <https://github.com/pyronear/pyro-api/releases/tag/v0.1.2>`_

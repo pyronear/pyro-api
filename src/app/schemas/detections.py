@@ -33,6 +33,13 @@ BOX_PATTERN = rf"\({FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTERN},{FLOAT_PATTER
 BOXES_PATTERN = rf"^\[({BOX_PATTERN}(,{BOX_PATTERN})*)?\]$"
 # Temporal-model scores computed on the device, one per bbox in the same order.
 SCORES_PATTERN = rf"^\[({FLOAT_PATTERN}(,{FLOAT_PATTERN})*)?\]$"
+# Position of each native crop in the full frame (xmin, ymin, xmax, ymax), one per bbox in the same
+# order. Up to 6 decimals: 3 would be about 4 px on a 4K frame, too coarse to map labels to the crop.
+WINDOW_FLOAT_PATTERN = r"(0?\.[0-9]{1,6}|0|1)"
+WINDOW_PATTERN = rf"\({WINDOW_FLOAT_PATTERN},{WINDOW_FLOAT_PATTERN},{WINDOW_FLOAT_PATTERN},{WINDOW_FLOAT_PATTERN}\)"
+WINDOWS_PATTERN = rf"^\[({WINDOW_PATTERN}(,{WINDOW_PATTERN})*)?\]$"
+# 37 chars per window, plus the separating commas and the brackets
+MAX_WINDOWS_STR_LENGTH = settings.MAX_BOXES_PER_DETECTION * 38 + 1
 
 # Stored bbox of a continuity detection: a frame attached to a sequence with no detection on it.
 EMPTY_BBOXES = "[]"
@@ -43,6 +50,8 @@ class DetectionCreate(BaseModel):
     pose_id: int = Field(..., gt=0)
     bucket_key: str
     crop_bucket_key: Optional[str] = None
+    native_crop_bucket_key: Optional[str] = None
+    native_crop_window: Optional[str] = None
     bbox: str = Field(
         ...,
         min_length=2,

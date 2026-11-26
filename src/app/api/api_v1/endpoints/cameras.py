@@ -262,10 +262,12 @@ async def delete_camera(
         alert_ids = list((await session.exec(alerts_stmt)).all())
         bucket_keys = [camera.last_image] if camera.last_image else []
         images: Any = select(Pose.image).where(Pose.camera_id == camera_id, cast(Any, Pose.image).is_not(None))
-        frames: Any = select(Detection.bucket_key, Detection.crop_bucket_key).where(Detection.camera_id == camera_id)
+        frames: Any = select(Detection.bucket_key, Detection.crop_bucket_key, Detection.native_crop_bucket_key).where(
+            Detection.camera_id == camera_id
+        )
         bucket_keys.extend((await session.exec(images)).all())
-        for frame_key, crop_key in (await session.exec(frames)).all():
-            bucket_keys.extend(key for key in (frame_key, crop_key) if key)
+        for detection_keys in (await session.exec(frames)).all():
+            bucket_keys.extend(key for key in detection_keys if key)
         # The database deletes its poses, sequences and detections, their occlusion masks and alert links
         # (ON DELETE CASCADE)
         await cameras.delete(camera_id, commit=False)

@@ -45,10 +45,15 @@ async def delete_unreferenced_image(
     _delete_object(organization_id, bucket_key)
 
 
-async def delete_unreferenced_crop(organization_id: int, crop_bucket_key: str, detections: DetectionCRUD) -> None:
-    """Delete a crop object once no detection references its key, to call after the row deletion"""
-    # Same key format, with a crop prefix: only another crop can share it
-    if not await detections.fetch_all(filters=("crop_bucket_key", crop_bucket_key), limit=1):
+async def delete_unreferenced_crop(
+    organization_id: int, crop_bucket_key: str, detections: DetectionCRUD, column: str = "crop_bucket_key"
+) -> None:
+    """Delete a crop object once no detection references its key, to call after the row deletion.
+
+    `column` is the detection column holding the key: `crop_bucket_key` or `native_crop_bucket_key`.
+    """
+    # Same key format, with a prefix of its own: only another crop of the same column can share it
+    if not await detections.fetch_all(filters=(column, crop_bucket_key), limit=1):
         _delete_object(organization_id, crop_bucket_key)
 
 

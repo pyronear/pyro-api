@@ -103,6 +103,10 @@ class Detection(SQLModel, table=True):
     sequence_id: Union[int, None] = Field(None, foreign_key="sequences.id", nullable=True)
     bucket_key: str
     crop_bucket_key: Union[str, None] = Field(default=None, nullable=True)
+    # Region of the camera frame around the bbox, at the camera's native resolution (not downscaled
+    # like the frame in bucket_key), and its "(xmin,ymin,xmax,ymax)" position in the full frame.
+    native_crop_bucket_key: Union[str, None] = Field(default=None, nullable=True)
+    native_crop_window: Union[str, None] = Field(default=None, nullable=True)
     bbox: str = Field(..., min_length=2, max_length=settings.MAX_BBOX_STR_LENGTH_SINGLE, nullable=False)
     others_bboxes: Union[str, None] = Field(default=None, max_length=settings.MAX_BBOX_STR_LENGTH_OTHERS, nullable=True)
     created_at: datetime = Field(default_factory=utcnow, nullable=False)

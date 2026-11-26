@@ -200,6 +200,35 @@ def test_cam_workflow(cam_token, cam_pose_id, mock_img):
             pose_id=cam_pose_id,
             crops=[mock_img],
         )
+    # One native crop per bbox, with its window, is accepted over HTTP
+    response = cam_client.create_detection(
+        mock_img,
+        [(0, 0, 1.0, 0.9, 0.5)],
+        pose_id=cam_pose_id,
+        native_crops=[mock_img],
+        native_crop_windows=[(0, 0.1234567, 1 / 3, 1.0)],
+    )
+    assert response.status_code == 201, response.__dict__
+    assert response.json()["native_crop_window"] == "(0,0.123457,0.333333,1)"
+    # Native crops without windows, or not one per bbox, are rejected client-side before any request
+    with pytest.raises(ValueError, match="must be given together"):
+        cam_client.create_detection(mock_img, [(0, 0, 1.0, 0.9, 0.5)], pose_id=cam_pose_id, native_crops=[mock_img])
+    with pytest.raises(ValueError, match="must have the same length as bboxes"):
+        cam_client.create_detection(
+            mock_img,
+            [(0, 0, 1.0, 0.9, 0.5), (0.2, 0.2, 0.7, 0.7, 0.8)],
+            pose_id=cam_pose_id,
+            native_crops=[mock_img],
+            native_crop_windows=[(0, 0, 0.5, 0.5)],
+        )
+    with pytest.raises(ValueError, match="native_crops must be at most"):
+        cam_client.create_detection(
+            mock_img,
+            [(0, 0, 1.0, 0.9, 0.5)],
+            pose_id=cam_pose_id,
+            native_crops=[bytes(1024 * 1024 + 1)],
+            native_crop_windows=[(0, 0, 0.5, 0.5)],
+        )
     detection_id = response.json()["id"]
     # An empty frame extends the freshly created sequence with a continuity detection
     response = cam_client.create_detection(mock_img, [], pose_id=cam_pose_id)
@@ -248,9 +277,9 @@ def test_user_workflow(test_cam_workflow, user_token):
     sequence_id = response.json()[0]["id"]
     response = user_client.fetch_sequences_detections(sequence_id)
     assert response.status_code == 200, response.__dict__
-    # 4 real detections + the continuity row added by the empty frame in test_cam_workflow
+    # 5 real detections + the continuity row added by the empty frame in test_cam_workflow
     detections = response.json()
-    assert len(detections) == 5
+    assert len(detections) == 6
     assert sum(det["bbox"] == "[]" for det in detections) == 1
     # An explicit limit is forwarded, an omitted one is left to the API.
     response = user_client.fetch_sequences_detections(sequence_id, limit=2)
@@ -259,7 +288,7 @@ def test_user_workflow(test_cam_workflow, user_token):
     # With sampling and no limit, the API sizes the response to span the sampled set.
     response = user_client.fetch_sequences_detections(sequence_id, sampling=2)
     assert response.status_code == 200, response.__dict__
-    assert len(response.json()) == 3  # ceil(5 / 2)
+    assert len(response.json()) == 3  # ceil(6 / 2)
     assert response.headers["x-sampled-total"] == "3"
     assert response.headers["x-sampled-truncated"] == "false"
 
