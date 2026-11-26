@@ -26,6 +26,7 @@ from sentry_sdk.types import Event, Hint
 from app.api.api_v1.router import api_router
 from app.core.config import settings
 from app.schemas.base import Status
+from app.services.crops import crop_worker_loop
 from app.services.risk import risk_service
 from app.services.temporal import temporal_service
 from app.services.validation import validation_worker_loop
@@ -122,10 +123,13 @@ async def lifespan(_: FastAPI):
     # number of processes is safe. Runs even without the temporal API configured: the
     # pipeline then validates on the risk gate alone (fail-open).
     validation_task = asyncio.create_task(validation_worker_loop())
+    # Same design for the crops of validated sequences, in a loop of its own: cutting crops
+    # must never delay a validation.
+    crop_task = asyncio.create_task(crop_worker_loop())
     try:
         yield
     finally:
-        for task in (risk_task, validation_task):
+        for task in (risk_task, validation_task, crop_task):
             if task is not None:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):

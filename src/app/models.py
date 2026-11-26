@@ -148,6 +148,7 @@ class Sequence(SQLModel, table=True):
             "validation_due_at",
             postgresql_where=text("validation_due_at IS NOT NULL"),
         ),
+        Index("ix_sequences_crops_due_at", "crops_due_at", postgresql_where=text("crops_due_at IS NOT NULL")),
     )
     id: int = Field(None, primary_key=True)
     camera_id: int = Field(..., foreign_key="cameras.id", ondelete="CASCADE", nullable=False)
@@ -258,6 +259,27 @@ class Sequence(SQLModel, table=True):
         nullable=False,
         exclude=True,
         description="Consecutive alert-completion errors; reset on successful completion or an admin retry.",
+    )
+    crop_box: Union[str, None] = Field(
+        None,
+        nullable=True,
+        description=(
+            "Region of the full frame, as relative '(xmin,ymin,xmax,ymax)', that the crop of every detection "
+            "of the sequence is cut from. It covers all their bboxes and only changes when one leaves it: "
+            "the crops of the sequence are then all cut again."
+        ),
+    )
+    crops_due_at: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description="When set, the crops of the sequence have to be refreshed. Each change sets a new value.",
+    )
+    crops_lease_until: Union[datetime, None] = Field(
+        None,
+        nullable=True,
+        exclude=True,
+        description="Lease of the crop worker refreshing this sequence; other workers skip the row until it expires.",
     )
     completion_suppress_notifications: bool = Field(
         default=False,

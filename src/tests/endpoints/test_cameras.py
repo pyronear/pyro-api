@@ -321,20 +321,27 @@ async def test_delete_camera_deletes_its_images(
     other_auth = pytest.get_token(other_cam["id"], ["camera"], other_cam["organization_id"])
     response = await async_client.post(
         "/detections",
+        data={"pose_id": 1, "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]"},
+        files={"file": ("frame.jpg", mock_img, "image/jpeg"), "crop": ("crop.jpg", mock_img, "image/jpeg")},
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    keys = [response.json()["bucket_key"], response.json()["crop_bucket_key"]]
+    response = await async_client.post(
+        "/detections",
         data={
             "pose_id": 1,
-            "bboxes": "[(0.6,0.6,0.7,0.7,0.6)]",
-            "native_crop_windows": "[(0.483333,0.483333,0.816667,0.816667)]",
+            "bboxes": "[(0.2,0.2,0.3,0.3,0.6)]",
+            "native_crop_windows": "[(0.083333,0.083333,0.416667,0.416667)]",
         },
         files={
-            "file": ("frame.jpg", mock_img, "image/jpeg"),
-            "crop": ("crop.jpg", mock_img, "image/jpeg"),
+            "file": ("frame.jpg", mock_img + b"native", "image/jpeg"),
             "native_crop": ("native_crop.jpg", mock_img, "image/jpeg"),
         },
         headers=cam_auth,
     )
     assert response.status_code == 201, response.text
-    keys = [response.json()[field] for field in ("bucket_key", "crop_bucket_key", "native_crop_bucket_key")]
+    keys += [response.json()["bucket_key"], response.json()["native_crop_bucket_key"]]
     response = await async_client.patch(
         "/cameras/image", files={"file": ("image.jpg", mock_img + b"last", "image/jpeg")}, headers=cam_auth
     )

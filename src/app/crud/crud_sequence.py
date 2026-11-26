@@ -5,8 +5,8 @@
 
 
 import logging
-from datetime import timedelta
-from typing import Any, Union, cast
+from datetime import datetime, timedelta
+from typing import Any, Tuple, Union, cast
 
 from sqlalchemy import case, distinct, func, null, or_, select, text, update
 from sqlmodel import select as select_model
@@ -229,11 +229,96 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
                 completion_attempts=0,
                 validation_due_at=None,
                 validation_lease_until=None,
+                # Crops are only cut for validated sequences: this queues the first cut
+                crops_due_at=utcnow(),
             )
         )
         result = await self.session.exec(stmt)
         await self.session.commit()
         return bool(getattr(result, "rowcount", 0))
+
+    async def mark_crops_due(self, sequence_id: int) -> None:
+        """Queue a crop refresh of a validated sequence, in the caller's transaction.
+
+        Always a new value, unlike ``enqueue_validation``: this is how a refresh in progress
+        knows that the sequence changed since it was claimed (see ``release_crops``).
+        """
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.is_validated).is_(True))
+            .values(crops_due_at=utcnow())
+        )
+        await self.session.exec(stmt)
+
+    async def set_crop_box(self, sequence_id: int, crop_box: str) -> None:
+        """Set the region the crops of the sequence are cut from, in the caller's transaction"""
+        await self.session.exec(update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(crop_box=crop_box))
+
+    async def holds_crops_lease(self, sequence_id: int, lease_until: datetime) -> bool:
+        """Whether the crop job claimed with this lease still owns the sequence.
+
+        Locks the row, so no other worker can claim it before the caller commits.
+        """
+        stmt: Any = (
+            select_model(Sequence.id)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.crops_lease_until) == lease_until)
+            .with_for_update()
+        )
+        return (await self.session.exec(stmt)).first() is not None
+
+    async def claim_due_crops(self, lease_seconds: float) -> Union[Tuple[int, datetime, datetime], None]:
+        """Claim the oldest sequence due for a crop refresh: its id, due marker and lease, or None.
+
+        Same queue design as ``claim_due_validation``: the marker stays set until the job is
+        released, so a worker dying mid-job leaves a row that is claimed again once its lease expires.
+        """
+        now = utcnow()
+        due_col = cast(Any, Sequence.crops_due_at)
+        lease_col = cast(Any, Sequence.crops_lease_until)
+        stmt: Any = (
+            select_model(Sequence)
+            .where(due_col.is_not(None))
+            .where(or_(lease_col.is_(None), lease_col < now))
+            .order_by(due_col)
+            .limit(1)
+            .with_for_update(skip_locked=True)
+        )
+        sequence_ = (await self.session.exec(stmt)).first()
+        if sequence_ is None:
+            await self.session.commit()
+            return None
+        lease_until = now + timedelta(seconds=lease_seconds)
+        claimed = sequence_.id, cast(datetime, sequence_.crops_due_at), lease_until
+        sequence_.crops_lease_until = lease_until
+        self.session.add(sequence_)
+        await self.session.commit()
+        return claimed
+
+    async def release_crops(
+        self, sequence_id: int, due_at: datetime, lease_until: datetime, retry_in_seconds: Union[float, None] = None
+    ) -> None:
+        """End a claimed crop job: done unless ``retry_in_seconds`` is given (the job failed).
+
+        A job that is done only clears the marker it claimed: a marker set since then means
+        the sequence changed during the refresh, and it stays due. No-op for a job whose lease
+        was taken over by another worker.
+        """
+        due_col = cast(Any, Sequence.crops_due_at)
+        values: dict[str, Any] = (
+            {"crops_due_at": case((due_col == due_at, null()), else_=due_col), "crops_lease_until": None}
+            if retry_in_seconds is None
+            else {"crops_lease_until": utcnow() + timedelta(seconds=retry_in_seconds)}
+        )
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.crops_lease_until) == lease_until)
+            .values(**values)
+        )
+        await self.session.exec(stmt)
+        await self.session.commit()
 
     async def retry_sequence_completion(self, sequence_id: int) -> bool:
         """Atomically requeue a failed completion; concurrent retries have one winner."""

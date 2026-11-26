@@ -123,7 +123,7 @@ async def test_risk_refresh_loop_swallows_refresh_errors_and_continues():
 @pytest.mark.asyncio
 async def test_lifespan_refreshes_and_cancels_background_tasks_when_risk_api_configured():
     fake_service = SimpleNamespace(is_configured=True, refresh=AsyncMock(), aclose=AsyncMock())
-    fake_tasks = [_CancelledTask(), _CancelledTask()]
+    fake_tasks = [_CancelledTask(), _CancelledTask(), _CancelledTask()]
 
     def fake_create_task(coro):
         coro.close()
@@ -136,7 +136,7 @@ async def test_lifespan_refreshes_and_cancels_background_tasks_when_risk_api_con
     ):
         async with lifespan(FastAPI()):
             fake_service.refresh.assert_awaited_once()
-            assert create_task_mock.call_count == 2  # risk refresh + validation worker
+            assert create_task_mock.call_count == 3  # risk refresh + validation worker + crop worker
             assert all(task.cancel_called is False for task in fake_tasks)
 
     assert all(task.cancel_called is True for task in fake_tasks)
@@ -160,7 +160,7 @@ async def test_lifespan_skips_risk_refresh_but_starts_validation_worker_when_ris
     ):
         async with lifespan(FastAPI()):
             fake_service.refresh.assert_not_awaited()
-            create_task_mock.assert_called_once()  # the validation worker always runs
+            assert create_task_mock.call_count == 2  # the validation and crop workers always run
             close_client.assert_not_awaited()
 
     assert fake_task.cancel_called is True
