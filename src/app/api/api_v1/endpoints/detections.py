@@ -56,7 +56,10 @@ from app.schemas.detections import (
     BOXES_PATTERN,
     EMPTY_BBOXES,
     FLOAT_PATTERN,
+    MAX_WINDOWS_STR_LENGTH,
     SCORES_PATTERN,
+    WINDOW_PATTERN,
+    WINDOWS_PATTERN,
     DetectionCreate,
     DetectionRead,
     DetectionSequence,
@@ -601,8 +604,26 @@ async def create_detection(
             "to them instead of scoring the sequences itself."
         ),
     ),
+    native_crop_windows: Optional[str] = Form(
+        None,
+        pattern=WINDOWS_PATTERN,
+        max_length=MAX_WINDOWS_STR_LENGTH,
+        description=(
+            "string representation of the list of native crop positions in the full frame, as relative "
+            "coordinates in order xmin, ymin, xmax, ymax (max 6 decimals), one per bbox in the same order"
+        ),
+        json_schema_extra={"examples": ["[(0.25,0.3,0.583333,0.633333)]"]},
+    ),
     file: UploadFile = File(..., alias="file"),
     crop_files: Optional[List[UploadFile]] = File(None, alias="crop"),
+    native_crop_files: Optional[List[UploadFile]] = File(
+        None,
+        alias="native_crop",
+        description=(
+            "regions of the camera frame at its native resolution (not downscaled like `file`), "
+            "one per bbox in the same order, each located by its entry in `native_crop_windows`"
+        ),
+    ),
     detections: DetectionCRUD = Depends(get_detection_crud),
     sequences: SequenceCRUD = Depends(get_sequence_crud),
     cameras: CameraCRUD = Depends(get_camera_crud),
@@ -634,6 +655,19 @@ async def create_detection(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Number of crops must match the number of bboxes.",
+        )
+    # Same alignment rule for native crops, each with the window locating it in the full frame.
+    native_crops = native_crop_files or []
+    windows: List[Tuple[str, ...]] = re.findall(WINDOW_PATTERN, native_crop_windows or "")
+    if len(native_crops) != len(windows) or (native_crops and len(native_crops) != len(bbox_strings)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Number of native crops and of native crop windows must match the number of bboxes.",
+        )
+    if any(float(w[0]) >= float(w[2]) or float(w[1]) >= float(w[3]) for w in windows):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="xmin & ymin of a native crop window are expected to be respectively smaller than xmax & ymax",
         )
     # Same alignment rule for the device's temporal scores: one per bbox.
     scores: Optional[List[float]] = None
@@ -680,6 +714,11 @@ async def create_detection(
         crop_bucket_keys[idx] = await upload_file(
             crop, token_payload.organization_id, token_payload.sub, key_prefix=f"crop_{idx}_"
         )
+    native_crop_bucket_keys: List[Optional[str]] = [None] * len(bbox_strings)
+    for idx, native_crop in enumerate(native_crops):
+        native_crop_bucket_keys[idx] = await upload_file(
+            native_crop, token_payload.organization_id, token_payload.sub, key_prefix=f"native_crop_{idx}_"
+        )
 
     # Keep media I/O outside the lock; serialize matching and every write for this pose.
     await sequences.lock_pose(pose_id)
@@ -698,6 +737,8 @@ async def create_detection(
                 pose_id=pose_id,
                 bucket_key=bucket_key,
                 crop_bucket_key=crop_bucket_keys[idx],
+                native_crop_bucket_key=native_crop_bucket_keys[idx],
+                native_crop_window=f"({','.join(windows[idx])})" if windows else None,
                 bbox=single_bboxes,
                 others_bboxes=others_bboxes,
                 recorded_at=effective_recorded_at,
@@ -904,6 +945,10 @@ async def delete_detection(
     await detections.delete(detection_id)
     if detection.crop_bucket_key:
         await delete_unreferenced_crop(camera.organization_id, detection.crop_bucket_key, detections)
+    if detection.native_crop_bucket_key:
+        await delete_unreferenced_crop(
+            camera.organization_id, detection.native_crop_bucket_key, detections, column="native_crop_bucket_key"
+        )
     # The frame object is shared by every detection of the same upload (multi-bbox siblings,
     # continuity rows), and can back a last image or a pose image: only delete it once no row
     # references it.

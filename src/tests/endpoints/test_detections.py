@@ -1303,6 +1303,8 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         temporal_model_scores=None,
         file=upload,
         crop_files=None,
+        native_crop_files=None,
+        native_crop_windows=None,
         detections=detections,
         sequences=sequences,
         cameras=cameras,
@@ -1339,6 +1341,8 @@ async def test_create_detection_sequence_flow_direct(detection_session: AsyncSes
         temporal_model_scores=None,
         file=upload_again,
         crop_files=None,
+        native_crop_files=None,
+        native_crop_windows=None,
         detections=detections,
         sequences=sequences,
         cameras=cameras,
@@ -2812,3 +2816,109 @@ async def test_concurrent_ingestion_serializes_only_the_same_pose(
             rows = (await observer.exec(select(Detection).where(Detection.bucket_key == key))).all()
             assert len(rows) == 2
             assert {row.sequence_id for row in rows} == {1, other.id}
+
+
+@pytest.mark.asyncio
+async def test_create_detection_stores_native_crop_per_bbox(
+    async_client: AsyncClient, detection_session: AsyncSession, mock_img: bytes
+):
+    cam = pytest.camera_table[1]
+    cam_auth = pytest.get_token(cam["id"], ["camera"], cam["organization_id"])
+    admin_auth = pytest.get_token(
+        pytest.user_table[0]["id"], pytest.user_table[0]["role"].split(), pytest.user_table[0]["organization_id"]
+    )
+    native_0 = mock_img + b"native-0"
+    native_1 = mock_img + b"native-1"
+    response = await async_client.post(
+        "/detections",
+        data={
+            "pose_id": 3,
+            "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]",
+            "native_crop_windows": "[(0.483333,0.483333,0.816667,0.816667),(0.083333,0.083333,0.416667,0.416667)]",
+        },
+        files=[
+            ("file", ("frame.jpg", mock_img, "image/jpeg")),
+            ("native_crop", ("native-0.jpg", native_0, "image/jpeg")),
+            ("native_crop", ("native-1.jpg", native_1, "image/jpeg")),
+        ],
+        headers=cam_auth,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["crop_bucket_key"] is None
+
+    dets_res = await detection_session.exec(
+        select(Detection)
+        .where(Detection.bucket_key == response.json()["bucket_key"])  # type: ignore[attr-defined]
+        .order_by(Detection.id)  # type: ignore[attr-defined]
+    )
+    dets = dets_res.all()
+    # The first bbox maps to the first native crop and window, the second to the second.
+    assert [det.native_crop_window for det in dets] == [
+        "(0.483333,0.483333,0.816667,0.816667)",
+        "(0.083333,0.083333,0.416667,0.416667)",
+    ]
+    keys = [str(det.native_crop_bucket_key) for det in dets]
+    assert all(key.startswith(f"native_crop_{idx}_") for idx, key in enumerate(keys))
+    bucket = s3_service.get_bucket(s3_service.resolve_bucket_name(cam["organization_id"]))
+    assert bucket.get_file_metadata(keys[0])["ETag"].replace('"', "") == hashlib.md5(native_0).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+    assert bucket.get_file_metadata(keys[1])["ETag"].replace('"', "") == hashlib.md5(native_1).hexdigest()  # ruff:ignore[hashlib-insecure-hash-function]
+
+    # Deleting a detection deletes its own native crop only
+    response = await async_client.delete(f"/detections/{dets[0].id}", headers=admin_auth)
+    assert response.status_code == 200
+    assert not bucket.check_file_existence(keys[0])
+    assert bucket.check_file_existence(keys[1])
+
+
+@pytest.mark.parametrize(
+    ("native_crop_count", "windows", "detail"),
+    [
+        # One native crop for two bboxes
+        (1, "[(0.1,0.1,0.4,0.4)]", "Number of native crops and of native crop windows must match"),
+        # Native crops without their windows, and the other way around
+        (2, None, "Number of native crops and of native crop windows must match"),
+        (0, "[(0.1,0.1,0.4,0.4),(0.5,0.5,0.8,0.8)]", "Number of native crops and of native crop windows must match"),
+        (2, "[(0.1,0.1,0.4,0.4)]", "Number of native crops and of native crop windows must match"),
+        # Empty window
+        (2, "[(0.4,0.1,0.4,0.4),(0.5,0.5,0.8,0.8)]", "xmin & ymin of a native crop window"),
+        # Not relative coordinates
+        (2, "[(0.1,0.1,1.4,0.4),(0.5,0.5,0.8,0.8)]", None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_detection_rejects_invalid_native_crops(
+    async_client: AsyncClient,
+    detection_session: AsyncSession,
+    mock_img: bytes,
+    monkeypatch,
+    native_crop_count: int,
+    windows: Union[str, None],
+    detail: Union[str, None],
+):
+    upload_calls: List[str] = []
+
+    async def fake_upload_file(  # ruff:ignore[unused-async]
+        file: UploadFile, organization_id: int, camera_id: int, key_prefix: str = ""
+    ) -> str:
+        upload_calls.append(file.filename or "")
+        return f"{key_prefix}should-never-persist"
+
+    monkeypatch.setattr(detections_api, "upload_file", fake_upload_file)
+
+    cam = pytest.camera_table[1]
+    data = {"pose_id": 3, "bboxes": "[(0.6,0.6,0.7,0.7,0.6),(0.2,0.2,0.3,0.3,0.8)]"}
+    if windows is not None:
+        data["native_crop_windows"] = windows
+    files = [("file", ("frame.jpg", mock_img, "image/jpeg"))]
+    files.extend(("native_crop", (f"native-{idx}.jpg", mock_img, "image/jpeg")) for idx in range(native_crop_count))
+    response = await async_client.post(
+        "/detections",
+        data=data,
+        files=files,
+        headers=pytest.get_token(cam["id"], ["camera"], cam["organization_id"]),
+    )
+    assert response.status_code == 422, response.text
+    if detail is not None:
+        assert response.json()["detail"].startswith(detail)
+    # Rejected before any upload: no orphan object
+    assert upload_calls == []
