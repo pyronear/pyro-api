@@ -5,7 +5,7 @@
 
 from typing import Any, List, Union, cast
 
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, update
 from sqlalchemy import select as select_sa
 from sqlalchemy.orm import aliased
 from sqlmodel import select
@@ -21,6 +21,16 @@ __all__ = ["DetectionCRUD"]
 class DetectionCRUD(BaseCRUD[Detection, DetectionCreate, DetectionSequence]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, Detection)
+
+    async def set_crop(self, detection_id: int, sequence_id: int, crop_bucket_key: str) -> bool:
+        """Set the crop of a detection if it still belongs to the sequence, in the caller's transaction"""
+        stmt: Any = (
+            update(Detection)
+            .where(cast(Any, Detection.id) == detection_id)
+            .where(cast(Any, Detection.sequence_id) == sequence_id)
+            .values(crop_bucket_key=crop_bucket_key)
+        )
+        return bool(getattr(await self.session.exec(stmt), "rowcount", 0))
 
     async def fetch_page(self, *, organization_id: int | None, limit: int, offset: int) -> List[Detection]:
         stmt: Any = select(Detection)

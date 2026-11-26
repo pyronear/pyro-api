@@ -236,6 +236,7 @@ SEQ_TABLE = [
         "temporal_model_score": None,
         "temporal_model_version": None,
         "temporal_api_version": None,
+        "crop_box": None,
         "is_validated": True,
     },
     {
@@ -252,6 +253,7 @@ SEQ_TABLE = [
         "temporal_model_score": None,
         "temporal_model_version": None,
         "temporal_api_version": None,
+        "crop_box": None,
         "is_validated": True,
     },
 ]

@@ -33,6 +33,8 @@ class SequenceRead(Sequence):
     completion_status: Union[str, None] = Field(None, exclude=True)
     completion_attempts: int = Field(0, exclude=True)
     completion_suppress_notifications: bool = Field(False, exclude=True)
+    crops_due_at: Union[datetime, None] = Field(None, exclude=True)
+    crops_lease_until: Union[datetime, None] = Field(None, exclude=True)
 
 
 class SequenceCompletionRead(BaseModel):
