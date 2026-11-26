@@ -255,8 +255,21 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         """Set the region the crops of the sequence are cut from, in the caller's transaction"""
         await self.session.exec(update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(crop_box=crop_box))
 
-    async def claim_due_crops(self, lease_seconds: float) -> Union[Tuple[int, datetime], None]:
-        """Claim the oldest sequence due for a crop refresh: its id and due marker, or None.
+    async def holds_crops_lease(self, sequence_id: int, lease_until: datetime) -> bool:
+        """Whether the crop job claimed with this lease still owns the sequence.
+
+        Locks the row, so no other worker can claim it before the caller commits.
+        """
+        stmt: Any = (
+            select_model(Sequence.id)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.crops_lease_until) == lease_until)
+            .with_for_update()
+        )
+        return (await self.session.exec(stmt)).first() is not None
+
+    async def claim_due_crops(self, lease_seconds: float) -> Union[Tuple[int, datetime, datetime], None]:
+        """Claim the oldest sequence due for a crop refresh: its id, due marker and lease, or None.
 
         Same queue design as ``claim_due_validation``: the marker stays set until the job is
         released, so a worker dying mid-job leaves a row that is claimed again once its lease expires.
@@ -276,19 +289,21 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
         if sequence_ is None:
             await self.session.commit()
             return None
-        claimed = sequence_.id, cast(datetime, sequence_.crops_due_at)
-        sequence_.crops_lease_until = now + timedelta(seconds=lease_seconds)
+        lease_until = now + timedelta(seconds=lease_seconds)
+        claimed = sequence_.id, cast(datetime, sequence_.crops_due_at), lease_until
+        sequence_.crops_lease_until = lease_until
         self.session.add(sequence_)
         await self.session.commit()
         return claimed
 
     async def release_crops(
-        self, sequence_id: int, due_at: datetime, retry_in_seconds: Union[float, None] = None
+        self, sequence_id: int, due_at: datetime, lease_until: datetime, retry_in_seconds: Union[float, None] = None
     ) -> None:
         """End a claimed crop job: done unless ``retry_in_seconds`` is given (the job failed).
 
         A job that is done only clears the marker it claimed: a marker set since then means
-        the sequence changed during the refresh, and it stays due.
+        the sequence changed during the refresh, and it stays due. No-op for a job whose lease
+        was taken over by another worker.
         """
         due_col = cast(Any, Sequence.crops_due_at)
         values: dict[str, Any] = (
@@ -296,7 +311,13 @@ class SequenceCRUD(BaseCRUD[Sequence, Sequence, Union[SequenceUpdate, SequenceLa
             if retry_in_seconds is None
             else {"crops_lease_until": utcnow() + timedelta(seconds=retry_in_seconds)}
         )
-        await self.session.exec(update(Sequence).where(cast(Any, Sequence.id) == sequence_id).values(**values))
+        stmt: Any = (
+            update(Sequence)
+            .where(cast(Any, Sequence.id) == sequence_id)
+            .where(cast(Any, Sequence.crops_lease_until) == lease_until)
+            .values(**values)
+        )
+        await self.session.exec(stmt)
         await self.session.commit()
 
     async def retry_sequence_completion(self, sequence_id: int) -> bool:

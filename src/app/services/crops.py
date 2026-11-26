@@ -17,6 +17,7 @@ loop per uvicorn process, like the validation jobs: nothing is lost on a restart
 import asyncio
 import io
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from anyio import to_thread
@@ -28,7 +29,7 @@ from app.crud import CameraCRUD, DetectionCRUD, SequenceCRUD
 from app.db import session_factory
 from app.models import Detection
 from app.schemas.detections import EMPTY_BBOXES
-from app.services.images import delete_objects, delete_unreferenced_crop
+from app.services.images import delete_objects
 from app.services.storage import S3Bucket, s3_service, upload_file
 
 logger = logging.getLogger("uvicorn.error")
@@ -45,8 +46,8 @@ CROP_PADDING = 0.2
 CROP_JPEG_QUALITY = 90
 
 POLL_SECONDS = 2.0
-# ponytail: a refresh longer than the lease is claimed by a second worker, which only wastes work
-# (the last one to finish wins). Refresh in batches if sequences get long enough for that.
+# ponytail: a refresh longer than the lease is taken over by a second worker and its work is thrown
+# away. Refresh in batches if sequences get long enough for that.
 LEASE_SECONDS = 600.0
 # ponytail: no cap on attempts, a job that always fails is retried at this pace until it is fixed
 RETRY_DELAY_SECONDS = 30.0
@@ -149,11 +150,12 @@ def _detection_crop(bucket: S3Bucket, detection: Detection, box: Box) -> Optiona
     return None
 
 
-async def refresh_sequence_crops(sequence_id: int) -> None:
+async def refresh_sequence_crops(sequence_id: int, lease_until: Optional[datetime] = None) -> None:
     """Cut the missing crops of a validated sequence, or all of them when its crop box has to grow.
 
     Only detections sent with a native crop get one. Three phases so that the S3 transfers never
     hold a DB session: read the sequence, cut and upload, then publish all the new keys at once.
+    `lease_until` is the lease of the job: nothing is published if another worker took it over.
     """
     async with session_factory() as session:
         sequence_ = await SequenceCRUD(session).get(sequence_id)
@@ -195,6 +197,9 @@ async def refresh_sequence_crops(sequence_id: int) -> None:
         return
     box_str = f"({','.join(f'{value:.6f}' for value in box)})"
 
+    # Identical crops uploaded within the same second share their key: one a detection already
+    # has is not a new object, and must survive the cleanups below.
+    current_keys = {det.id: det.crop_bucket_key for det in to_crop}
     new_keys: Dict[int, str] = {}
     try:
         for det in to_crop:
@@ -208,23 +213,37 @@ async def refresh_sequence_crops(sequence_id: int) -> None:
                 )
     except Exception:
         # The job is retried: don't leave the crops it already uploaded behind
-        await delete_objects(camera.organization_id, new_keys.values())
+        await delete_objects(
+            camera.organization_id, [key for det_id, key in new_keys.items() if key != current_keys[det_id]]
+        )
         raise
 
     async with session_factory() as session:
-        detection_crud = DetectionCRUD(session)
-        # A detection deleted or moved to another sequence in the meantime keeps what it has
-        published = {
-            det_id: key for det_id, key in new_keys.items() if await detection_crud.set_crop(det_id, sequence_id, key)
-        }
-        if box_str != sequence_.crop_box:
-            await SequenceCRUD(session).set_crop_box(sequence_id, box_str)
+        sequences, detection_crud = SequenceCRUD(session), DetectionCRUD(session)
+        published: Dict[int, str] = {}
+        # A worker that outlived its lease read an older sequence than the one that took over
+        if lease_until is None or await sequences.holds_crops_lease(sequence_id, lease_until):
+            # A detection deleted or moved to another sequence in the meantime keeps what it has
+            published = {
+                det_id: key
+                for det_id, key in new_keys.items()
+                if await detection_crud.set_crop(det_id, sequence_id, key)
+            }
+            if box_str != sequence_.crop_box:
+                await sequences.set_crop_box(sequence_id, box_str)
         await session.commit()
-        # Then delete the crops that were replaced, once no row references them
-        for det in to_crop:
-            if det.crop_bucket_key and published.get(det.id, det.crop_bucket_key) != det.crop_bucket_key:
-                await delete_unreferenced_crop(camera.organization_id, det.crop_bucket_key, detection_crud)
-    await delete_objects(camera.organization_id, [key for det_id, key in new_keys.items() if det_id not in published])
+        # Objects to delete: the crops that were not published, and the ones that were replaced
+        # once no row references them
+        unused = [key for det_id, key in new_keys.items() if det_id not in published and key != current_keys[det_id]]
+        for det_id, key in published.items():
+            replaced = current_keys[det_id]
+            if (
+                replaced
+                and replaced != key
+                and not await detection_crud.fetch_all(filters=("crop_bucket_key", replaced), limit=1)
+            ):
+                unused.append(replaced)
+    await delete_objects(camera.organization_id, unused)
 
 
 async def process_next_due_crops() -> bool:
@@ -233,15 +252,15 @@ async def process_next_due_crops() -> bool:
         claimed = await SequenceCRUD(session).claim_due_crops(LEASE_SECONDS)
     if claimed is None:
         return False
-    sequence_id, due_at = claimed
+    sequence_id, due_at, lease_until = claimed
     retry_in_seconds: Optional[float] = None
     try:
-        await refresh_sequence_crops(sequence_id)
+        await refresh_sequence_crops(sequence_id, lease_until)
     except Exception:
         logger.exception("Crop refresh failed for sequence %s", sequence_id)
         retry_in_seconds = RETRY_DELAY_SECONDS
     async with session_factory() as session:
-        await SequenceCRUD(session).release_crops(sequence_id, due_at, retry_in_seconds)
+        await SequenceCRUD(session).release_crops(sequence_id, due_at, lease_until, retry_in_seconds)
     return True
 
 

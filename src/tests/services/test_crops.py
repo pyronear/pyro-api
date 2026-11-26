@@ -210,12 +210,25 @@ async def test_crop_queue(detection_session: AsyncSession, monkeypatch):
     detection_session.add(sequence_)
     await detection_session.commit()
     claimed = await sequences.claim_due_crops(60)
-    assert claimed == (sequence_.id, sequence_.crops_due_at)
+    assert claimed[:2] == (sequence_.id, sequence_.crops_due_at)
     await sequences.mark_crops_due(sequence_.id)
     await sequences.release_crops(*claimed)
     await detection_session.refresh(sequence_)
     assert sequence_.crops_due_at > claimed[1]
     assert sequence_.crops_lease_until is None
+
+    # A worker that outlived its lease publishes nothing and leaves the job to the one that took over
+    stale = await sequences.claim_due_crops(60)
+    sequence_.crops_lease_until = None
+    detection_session.add(sequence_)
+    await detection_session.commit()
+    current = await sequences.claim_due_crops(60)
+    await refresh_sequence_crops(sequence_.id, stale[2])
+    await sequences.release_crops(*stale)
+    await detection_session.refresh(sequence_)
+    assert (sequence_.crop_box, sequence_.crops_lease_until) == (None, current[2])
+    assert await _crop_keys(detection_session, [detection]) == [None]
+    await sequences.release_crops(sequence_.id, current[1], current[2], retry_in_seconds=-1)
 
     # A job that is done leaves the queue
     assert await process_next_due_crops() is True
