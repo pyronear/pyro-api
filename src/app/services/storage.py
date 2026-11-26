@@ -90,6 +90,11 @@ class S3Bucket:
         )
         return True
 
+    def download_file(self, bucket_key: str) -> bytes:
+        """Read the content of a bucket file"""
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.get_object
+        return self._s3.get_object(Bucket=self.name, Key=bucket_key)["Body"].read()
+
     def delete_file(self, bucket_key: str) -> None:
         """Remove bucket file and return whether the deletion succeeded"""
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.delete_object

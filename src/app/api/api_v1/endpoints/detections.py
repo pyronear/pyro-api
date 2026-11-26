@@ -621,7 +621,8 @@ async def create_detection(
         alias="native_crop",
         description=(
             "regions of the camera frame at its native resolution (not downscaled like `file`), "
-            "one per bbox in the same order, each located by its entry in `native_crop_windows`"
+            "one per bbox in the same order, each located by its entry in `native_crop_windows`. "
+            "The API then cuts the crop of each detection itself, and the `crop` files are ignored."
         ),
     ),
     detections: DetectionCRUD = Depends(get_detection_crud),
@@ -669,6 +670,10 @@ async def create_detection(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="xmin & ymin of a native crop window are expected to be respectively smaller than xmax & ymax",
         )
+    if native_crops:
+        # The crops are cut from the native ones once the sequence is validated (services/crops.py),
+        # and a detection with a native crop and no crop is one that still needs its crop.
+        crops = []
     # Same alignment rule for the device's temporal scores: one per bbox.
     scores: Optional[List[float]] = None
     if temporal_model_scores is not None:
@@ -864,6 +869,9 @@ async def create_detection(
     # computed on the device was stored above, so the worker skips its own model call.
     for seq_id in affected_sequences:
         await sequences.enqueue_validation(seq_id)
+        if native_crops:
+            # Already validated: the new detection needs its crop (no-op otherwise, the validation queues it)
+            await sequences.mark_crops_due(seq_id)
 
     # Detection rows, sequence membership/confidence and validation jobs become visible together.
     await detections.session.commit()
