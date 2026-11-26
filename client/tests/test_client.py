@@ -221,6 +221,14 @@ def test_cam_workflow(cam_token, cam_pose_id, mock_img):
             native_crops=[mock_img],
             native_crop_windows=[(0, 0, 0.5, 0.5)],
         )
+    with pytest.raises(ValueError, match="native_crops must be at most"):
+        cam_client.create_detection(
+            mock_img,
+            [(0, 0, 1.0, 0.9, 0.5)],
+            pose_id=cam_pose_id,
+            native_crops=[bytes(1024 * 1024 + 1)],
+            native_crop_windows=[(0, 0, 0.5, 0.5)],
+        )
     detection_id = response.json()["id"]
     # An empty frame extends the freshly created sequence with a continuity detection
     response = cam_client.create_detection(mock_img, [], pose_id=cam_pose_id)

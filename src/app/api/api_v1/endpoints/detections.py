@@ -635,6 +635,12 @@ async def create_detection(
     # The Form regex already constrains the format; parse to validate coordinate ordering on
     # every box (an empty list parses to no box at all and is a valid frame with no detection).
     bbox_strings = _extract_bbox_strings(bboxes)
+    # The length limit of the form field only stops 6 boxes written with every decimal
+    if len(bbox_strings) > settings.MAX_BOXES_PER_DETECTION:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"A detection holds at most {settings.MAX_BOXES_PER_DETECTION} bboxes.",
+        )
     if any(box[0] >= box[2] or box[1] >= box[3] for box in map(_parse_bbox, bbox_strings)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -668,6 +674,11 @@ async def create_detection(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="xmin & ymin of a native crop window are expected to be respectively smaller than xmax & ymax",
+        )
+    if any((native_crop.size or 0) > settings.MAX_NATIVE_CROP_BYTES for native_crop in native_crops):
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"A native crop is at most {settings.MAX_NATIVE_CROP_BYTES} bytes.",
         )
     # Same alignment rule for the device's temporal scores: one per bbox.
     scores: Optional[List[float]] = None
